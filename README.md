@@ -21,6 +21,7 @@ This repository contains a comprehensive technical blueprint for building a larg
 - `26-native-onboarding-mobitru.zh-CN.md` — Mobitru native onboarding 计划
 - `27-native-onboarding-results.zh-CN.md` — Mobitru native onboarding 结果
 - `28-native-harness-progress.zh-CN.md` — native harness 当前进展与下一步
+- `29-flutter-onboarding-plan.zh-CN.md` — Flutter onboarding 计划与当前阻塞
 - `flows/native/*.yaml` — native harness flow baselines for Mobitru
 - `00-overview.md` — goals, scope, and principles
 - `01-capability-map.md` — complete capability taxonomy and maturity model
