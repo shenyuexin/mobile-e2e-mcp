@@ -26,7 +26,7 @@
 - React Native profile 已有 sample baseline
 - Native sample onboarding 已完成第一轮 Mobitru 双端验证
 - Native harness baseline 已落地（Android 登录 flow 已通过，iOS baseline 与输入型 flow 均已通过）
-- Flutter onboarding 方案已明确，但当前缺少本机 Flutter SDK
+- Flutter onboarding 方案与 harness flow 骨架已明确，但当前缺少本机 Flutter SDK
 
 ### Phase 4
 

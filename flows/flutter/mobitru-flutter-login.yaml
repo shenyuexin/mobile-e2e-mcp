@@ -1,0 +1,10 @@
+appId: com.epam.mobitru.demoapp
+---
+- assertVisible: "Login"
+- tapOn: "Login"
+- inputText: "testuser@mobitru.com"
+- tapOn: "Password"
+- inputText: "password1"
+- tapOn: "Sign In"
+- assertVisible:
+    id: "category"
