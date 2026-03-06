@@ -10,4 +10,11 @@ appId: host.exp.Exponent
 - tapOn:
     id: "login-button"
 - runFlow: "/Users/linan/Documents/mobile-e2e-mcp/flows/shared/handle-interruptions-ios.yaml"
+- runFlow:
+    when:
+      visible: "登录"
+    commands:
+      - tapOn:
+          id: "login-button"
+      - runFlow: "/Users/linan/Documents/mobile-e2e-mcp/flows/shared/handle-interruptions-ios.yaml"
 - assertVisible: "欢迎进入首页"

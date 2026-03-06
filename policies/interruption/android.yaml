@@ -1,0 +1,47 @@
+platform: android
+rules:
+  - id: expo-intro
+    match:
+      any_text:
+        - Continue
+    action:
+      tap_text: Continue
+    priority: high
+    auto: true
+  - id: expo-dev-ui
+    match:
+      any_text:
+        - Reload
+        - Go home
+        - TOOLS
+    action:
+      tap_text: Reload
+    priority: high
+    auto: true
+  - id: generic-permission-en
+    match:
+      any_text:
+        - Allow
+        - Only this time
+        - While using the app
+    action:
+      first_available_text:
+        - While using the app
+        - Only this time
+        - Allow
+    priority: medium
+    auto: true
+  - id: generic-permission-zh
+    match:
+      any_text:
+        - 允许
+        - 以后再说
+    action:
+      first_available_text:
+        - 允许
+        - 以后再说
+    priority: medium
+    auto: true
+notes:
+  - Android Expo sample execution requires adb reverse tcp:8081 tcp:8081.
+  - Expo-specific interruption rules are sample-harness assumptions, not general production-app rules.
