@@ -2,9 +2,9 @@
 
 ## 1. Current Program State
 
-- Current phase: Phase 2 (in progress)
+- Current phase: Phase 3 groundwork (in progress)
 - Target completion date: TBD
-- Next review checkpoint: Phase 2 reliability review after interruption-policy consolidation
+- Next review checkpoint: framework onboarding review after first non-RN sample is introduced
 
 ## 2. Owners and DRIs
 
@@ -26,22 +26,22 @@
 
 | Workstream | Status | Owner | Dependency | Evidence | Next Milestone |
 |---|---|---|---|---|---|
-| WS-A | active | TBD | None | phase-1-closeout.zh-CN.md | Phase 2 policy/reporting normalization |
-| WS-B | phase1_done | TBD | WS-A | artifacts/phase1-android/ | Phase 2 Android interruption policy library |
-| WS-C | phase1_done | TBD | WS-A | artifacts/phase1-ios/ | Phase 2 iOS interruption policy library |
-| WS-D | active | TBD | WS-A/B/C | flows/shared/ | Phase 2 interruption/fallback consolidation |
-| WS-E | pending | TBD | WS-A/B/C/D | TBD | Phase 2 session report normalization |
+| WS-A | phase2_done | TBD | None | 21-phase-2-closeout.zh-CN.md | Phase 3 onboarding contracts |
+| WS-B | phase2_done | TBD | WS-A | artifacts/phase1-android/ | Native/Flutter adapter onboarding |
+| WS-C | phase2_done | TBD | WS-A | artifacts/phase1-ios/ | Native/Flutter adapter onboarding |
+| WS-D | phase2_done | TBD | WS-A/B/C | policies/interruption/ | Framework-specific interruption expansion |
+| WS-E | baseline_defined | TBD | WS-A/B/C/D | 23-phase-4-governance-baseline.zh-CN.md | Runtime enforcement later |
 
 ## 5. Evidence Links
 
-- Phase review packet: 18-phase-1-closeout.zh-CN.md
+- Phase review packet: 18-phase-1-closeout.zh-CN.md, 21-phase-2-closeout.zh-CN.md
 - CI baseline: TBD
 - Flakiness baseline: artifacts/phase1-ios/ and artifacts/phase1-android/
 - Security checklist report: TBD
 
 ## 6. Next Actions
 
-1. Consolidate interruption handling into reusable Phase 2 policy library.
-2. Add structured interruption telemetry/report export.
-3. Normalize Android/iOS shared execution wrappers for reliability reruns.
-4. Record Phase 2 closeout conditions before framework expansion.
+1. Onboard first non-RN sample against profile contracts.
+2. Decide whether next validation target is Native or Flutter.
+3. Keep governance and agentic baselines as configuration contracts until runtime enforcement exists.
+4. Preserve distinction between “baseline defined” and “phase fully productionized.”
