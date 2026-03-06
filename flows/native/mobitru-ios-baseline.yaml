@@ -1,0 +1,5 @@
+appId: com.epam.mobitru.demoapp
+---
+- assertVisible: "Sign in with correct user"
+- tapOn: "Sign in with correct user"
+- assertVisible: "Mobile phones.*"
