@@ -1,12 +1,39 @@
 appId: com.epam.mobitru.demoapp
 ---
+- launchApp:
+    appId: com.epam.mobitru.demoapp
+    clearState: true
+    clearKeychain: true
+    stopApp: true
 - assertVisible: "Login"
 - tapOn:
     id: "Login"
+- eraseText
 - inputText: "testuser@mobitru.com"
 - tapOn:
     id: "Password"
+- eraseText
 - inputText: "password1"
-- tapOn: "Sign in"
-- assertVisible:
-    id: "productHeaderViewLabel"
+- hideKeyboard
+- runFlow:
+    when:
+      visible: "Mobile phones.*"
+    commands:
+      - assertVisible: "Mobile phones.*"
+- runFlow:
+    when:
+      visible: "Sign in"
+    commands:
+      - tapOn: "Sign in"
+      - runFlow:
+          when:
+            visible:
+              id: "errorMessage"
+          commands:
+            - assertVisible:
+                id: "errorMessage"
+      - runFlow:
+          when:
+            visible: "Mobile phones.*"
+          commands:
+            - assertVisible: "Mobile phones.*"
