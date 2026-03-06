@@ -18,6 +18,8 @@ This repository contains a comprehensive technical blueprint for building a larg
 - `23-phase-4-governance-baseline.zh-CN.md` — Phase 4 治理基线
 - `24-phase-5-agentic-baseline.zh-CN.md` — Phase 5 agentic 基线
 - `25-program-status.zh-CN.md` — 当前项目阶段状态与剩余工作
+- `26-native-onboarding-mobitru.zh-CN.md` — Mobitru native onboarding 计划
+- `27-native-onboarding-results.zh-CN.md` — Mobitru native onboarding 结果
 - `00-overview.md` — goals, scope, and principles
 - `01-capability-map.md` — complete capability taxonomy and maturity model
 - `02-architecture.md` — reference architecture (control plane + execution plane)

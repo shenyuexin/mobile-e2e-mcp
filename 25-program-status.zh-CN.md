@@ -24,7 +24,8 @@
 
 - 已建立 framework profile contracts
 - React Native profile 已有 sample baseline
-- Native / Flutter 仍缺少实际 sample 验证
+- Native sample onboarding 已完成第一轮 Mobitru 双端验证
+- Flutter 仍缺少实际 sample 验证
 
 ### Phase 4
 
@@ -41,7 +42,7 @@
 ## 当前最重要的剩余工作
 
 1. 选择下一个非 RN 目标（Native 或 Flutter）
-2. 按 profile contract 做第一次 onboarding
+2. 将 native 项目的黄金链路迁移进自有 harness
 3. 在新的 sample 上验证 Phase 3 的扩展有效性
 
 ---
@@ -53,5 +54,6 @@
 - **Phase 1：完成**
 - **Phase 2：完成**
 - **Phase 3：基线已建，等待新 sample 实证**
+- **Phase 3：native sample 已完成首轮实证，等待 harness 化收敛与更多 profile 扩展**
 - **Phase 4：基线已建，等待运行时接入**
 - **Phase 5：基线已建，等待真实 agentic integration**
