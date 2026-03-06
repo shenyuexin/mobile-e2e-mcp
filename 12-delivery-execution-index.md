@@ -2,9 +2,9 @@
 
 ## 1. Current Program State
 
-- Current phase: TBD
+- Current phase: Phase 2 (in progress)
 - Target completion date: TBD
-- Next review checkpoint: TBD
+- Next review checkpoint: Phase 2 reliability review after interruption-policy consolidation
 
 ## 2. Owners and DRIs
 
@@ -26,22 +26,22 @@
 
 | Workstream | Status | Owner | Dependency | Evidence | Next Milestone |
 |---|---|---|---|---|---|
-| WS-A | TBD | TBD | None | TBD | TBD |
-| WS-B | TBD | TBD | WS-A | TBD | TBD |
-| WS-C | TBD | TBD | WS-A | TBD | TBD |
-| WS-D | TBD | TBD | WS-A/B/C | TBD | TBD |
-| WS-E | TBD | TBD | WS-A/B/C/D | TBD | TBD |
+| WS-A | active | TBD | None | phase-1-closeout.zh-CN.md | Phase 2 policy/reporting normalization |
+| WS-B | phase1_done | TBD | WS-A | artifacts/phase1-android/ | Phase 2 Android interruption policy library |
+| WS-C | phase1_done | TBD | WS-A | artifacts/phase1-ios/ | Phase 2 iOS interruption policy library |
+| WS-D | active | TBD | WS-A/B/C | flows/shared/ | Phase 2 interruption/fallback consolidation |
+| WS-E | pending | TBD | WS-A/B/C/D | TBD | Phase 2 session report normalization |
 
 ## 5. Evidence Links
 
-- Phase review packet: TBD
+- Phase review packet: 18-phase-1-closeout.zh-CN.md
 - CI baseline: TBD
-- Flakiness baseline: TBD
+- Flakiness baseline: artifacts/phase1-ios/ and artifacts/phase1-android/
 - Security checklist report: TBD
 
 ## 6. Next Actions
 
-1. Assign owners.
-2. Resolve blocking ADRs.
-3. Freeze phase acceptance criteria.
-4. Schedule first go/no-go review.
+1. Consolidate interruption handling into reusable Phase 2 policy library.
+2. Add structured interruption telemetry/report export.
+3. Normalize Android/iOS shared execution wrappers for reliability reruns.
+4. Record Phase 2 closeout conditions before framework expansion.

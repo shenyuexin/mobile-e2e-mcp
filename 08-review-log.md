@@ -66,3 +66,13 @@ For each open decision, create ADR entry with:
 | ADR ID | Decision | Owner | Due Date | Status | Blocking Phase | Revisit Trigger |
 |---|---|---|---|---|---|---|
 | ADR-0001 | iOS backend strategy | TBD | TBD | Proposed | Phase 1 | Failure rate above threshold |
+
+---
+
+## 6. Phase 1 Execution Findings
+
+- Sample baseline completed with iOS 5/5 and Android 5/5.
+- iOS interruption handling confirmed for save-password style prompts.
+- Android execution requires `adb reverse tcp:8081 tcp:8081` for Expo/Metro connectivity.
+- Android execution also required handling Expo-specific transient UI (`Continue`, `Reload`) before reaching the sample login screen.
+- These behaviors are now treated as formal execution assumptions, not one-off troubleshooting notes.
