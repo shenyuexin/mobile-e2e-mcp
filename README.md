@@ -13,6 +13,10 @@ This repository contains a comprehensive technical blueprint for building a larg
 - `18-phase-1-closeout.zh-CN.md` — Phase 1 收尾记录
 - `19-phase-2-minimal-scope.zh-CN.md` — Phase 2 最小范围定义
 - `20-sample-harness-contract.zh-CN.md` — Sample harness 执行合同
+- `21-phase-2-closeout.zh-CN.md` — Phase 2 收尾记录
+- `22-phase-3-framework-profiles.zh-CN.md` — Phase 3 框架 profile 基线
+- `23-phase-4-governance-baseline.zh-CN.md` — Phase 4 治理基线
+- `24-phase-5-agentic-baseline.zh-CN.md` — Phase 5 agentic 基线
 - `00-overview.md` — goals, scope, and principles
 - `01-capability-map.md` — complete capability taxonomy and maturity model
 - `02-architecture.md` — reference architecture (control plane + execution plane)
@@ -33,6 +37,10 @@ This repository contains a comprehensive technical blueprint for building a larg
 - `templates/acceptance-evidence-template.md` — acceptance evidence template
 - `templates/dependency-decision-register.md` — blockers and decision register
 - `templates/sample-app-matrix-template.md` — compatibility sample matrix template
+- `templates/bug-packet-template.md` — bug packet template
+- `profiles/*.yaml` — framework profile contracts
+- `policies/**/*.yaml` — interruption/governance policy baselines
+- `scripts/*.sh` / `scripts/*.py` — sample harness runners and reporting tools
 - `examples/rn-login-demo/App.tsx.template` — 最小登录样例页面模板（Expo RN）
 
 ## Positioning
