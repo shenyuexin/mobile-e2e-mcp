@@ -45,6 +45,7 @@ Owner roles:
 - Implement app lifecycle.
 - Implement deterministic interaction backend (idb/WDA lane).
 - Implement screenshot/log/crash pipeline.
+- Implement known iOS interruption handling for golden flows.
 
 Acceptance:
 
@@ -147,7 +148,17 @@ mobile-e2e-mcp/
 
 ---
 
-## 6. Failure Taxonomy and Retry Rules
+## 6. Interruption Handling Checklist
+
+- Known system prompts enumerated per platform and app profile
+- Supported interruption rules defined with priority and action policy
+- Unknown interruption prompts captured with screenshot + tree + logs
+- Interrupted action resume policy defined with bounded retry
+- Interruption telemetry included in session report
+
+---
+
+## 7. Failure Taxonomy and Retry Rules
 
 Standard categories:
 
@@ -156,6 +167,8 @@ Standard categories:
 - environment_drift
 - adapter_error
 - unsupported_flow
+- interruption_blocking
+- interruption_unknown
 
 Retry policy:
 
@@ -165,16 +178,33 @@ Retry policy:
 
 ---
 
-## 7. Fallback Triage Rules
+## 8. Fallback Triage Rules
 
 - Prefer deterministic path for actioning.
 - OCR/CV actioning allowed only if policy scope permits and confidence threshold passes.
 - If confidence threshold fails, emit fail with escalation guidance and artifacts.
 
+---
+
+## 9. Discovery-Driven Update Workflow
+
+When acceptance uncovers a previously undocumented behavior (for example: system save-password prompt, permission alert, or unexpected bottom sheet), always execute the following loop:
+
+1. Capture evidence (screenshot, tree, logs, action timeline)
+2. Classify the gap (capability / adapter / environment / policy / test-data)
+3. Update the authoritative docs:
+   - capability map
+   - architecture or adapter doc
+   - roadmap/phase scope if ownership changes
+   - validation doc if acceptance criteria change
+4. Add or revise the corresponding rule/flow/test
+5. Re-run the affected acceptance path from the beginning
+6. Record the outcome in review log / execution index
+
 
 ---
 
-## 4. Architecture Decision Records (ADR) Required
+## 10. Architecture Decision Records (ADR) Required
 
 Minimum ADR topics:
 

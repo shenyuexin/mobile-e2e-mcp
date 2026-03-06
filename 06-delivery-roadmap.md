@@ -41,12 +41,15 @@ Scope:
 - Tree/screenshot/log retrieval.
 - Essential assertions.
 - Action timeline and report export.
+- Minimal interruption handling for known system prompts in golden flows.
 
 Exit criteria:
 
-- Golden login flow pass rate >= 95% over 20 CI runs per platform on defined sample app.
+- Golden login flow pass rate >= 95% over 5 repeated runs per platform on the defined sample/demo app.
 - Failure packet completeness >= 99% (screenshot + tree + logs + action timeline).
 - OCR/CV action path usage remains bounded and reported.
+- Known interruption prompts in target golden flow are detected and handled with explicit evidence.
+- If the target app is more complex than the sample/demo app, increase the run count to 10+ based on risk and flow variability.
 
 ---
 
@@ -58,11 +61,17 @@ Scope:
 - OCR/CV fallback module.
 - Overlay/animation stabilization.
 - Crash signal capture.
+- Reusable interruption policy library and interruption telemetry/reporting.
 
 Exit criteria:
 
 - Flakiness reduced by agreed threshold versus Phase 1 baseline with explicit measurement method.
 - Fallback usage telemetry and confidence traces present in all relevant action reports.
+- Interruption auto-resolution success rate reaches agreed threshold for supported prompt classes.
+
+Transition rule:
+
+- Phase 2 can start once Phase 1 exit criteria are met on both iOS and Android for the agreed golden flow, and all known P0 blockers are either fixed or explicitly accepted with owner + follow-up plan.
 
 ---
 
@@ -78,6 +87,10 @@ Exit criteria:
 
 - Native and at least one framework profile (RN or Flutter) pass compatibility matrix acceptance targets.
 - Framework onboarding checklist adopted for supported sample apps.
+
+Transition rule:
+
+- Phase 3 starts after Phase 2 stabilizes the execution core sufficiently that newly added framework support does not immediately collapse under unresolved interruption/fallback instability.
 
 ---
 
