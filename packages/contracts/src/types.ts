@@ -43,6 +43,16 @@ export interface DeviceInfo {
   available: boolean;
 }
 
+export interface DoctorCheck {
+  name: string;
+  status: "pass" | "warn" | "fail";
+  detail: string;
+}
+
+export interface DoctorInput {
+  includeUnavailable?: boolean;
+}
+
 export interface ListDevicesInput {
   includeUnavailable?: boolean;
 }
