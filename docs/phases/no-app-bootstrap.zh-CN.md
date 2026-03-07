@@ -8,7 +8,8 @@
 
 你本机现状：
 
-- 已有 Node/npm/npx
+- 已有 Node / npx
+- 建议改为使用 `pnpm`
 - 已有 iOS/Android 模拟器环境
 - 没有 Flutter（所以不建议先走 Flutter）
 
@@ -21,6 +22,7 @@ mkdir -p ~/Documents/mobile-e2e-mcp-samples
 cd ~/Documents/mobile-e2e-mcp-samples
 npx create-expo-app rn-login-demo --template blank-typescript
 cd rn-login-demo
+pnpm install
 ```
 
 ---
@@ -42,9 +44,9 @@ cp <repo-root>/examples/rn-login-demo/App.tsx.template ./App.tsx
 ## 3) 启动并在模拟器运行
 
 ```bash
-npm run ios
+pnpm ios
 # 或
-npm run android
+pnpm android
 ```
 
 默认测试账号（模板内置）：

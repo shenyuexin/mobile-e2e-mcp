@@ -25,7 +25,7 @@
 用户至少需要：
 
 - Git
-- Node.js 和包管理器
+- Node.js 和 `pnpm`
 - Python，如果报告脚本仍有 Python 依赖
 - 可执行 shell 环境
 
@@ -59,10 +59,10 @@
 ```bash
 git clone <repo-url>
 cd mobile-e2e-mcp
-npm install
+pnpm install
 ```
 
-如果项目是 monorepo，可使用后续选定的 workspace 方案完成安装。
+仓库当前使用 `pnpm workspace` 统一管理 `packages/*` 与 `examples/*` 下的 Node/TypeScript 包。
 
 ### 4.2 二进制/包安装
 
@@ -70,15 +70,22 @@ npm install
 
 例如未来可支持：
 
-- `npm install -g`
-- `npx mobile-e2e-mcp`
+- `pnpm add -g mobile-e2e-mcp`
+- `pnpm dlx mobile-e2e-mcp`
 - Homebrew
 
 但在第一阶段，源码安装更现实，也更利于贡献者理解结构。
 
 ## 5. 建议提供的基础命令
 
-将来建议提供以下 CLI：
+当前最小仓库级入口：
+
+- `pnpm build`
+- `pnpm typecheck`
+- `pnpm validate:dry-run`
+- `pnpm mcp:dev -- --platform android --dry-run`
+
+未来建议补齐：
 
 - `mobile-e2e-mcp doctor`
 - `mobile-e2e-mcp server start`
@@ -143,13 +150,13 @@ npm install
 推荐启动方式：
 
 ```bash
-mobile-e2e-mcp server start
+pnpm mcp:dev -- --platform android --dry-run
 ```
 
-或在源码期使用：
+或直接进入包目录使用：
 
 ```bash
-npm run server
+pnpm --filter @mobile-e2e-mcp/mcp-server dev -- --platform android --dry-run
 ```
 
 ### 8.2 传输模式
@@ -195,97 +202,15 @@ npm run server
 1. 启动 sample app
 2. 启动 MCP server
 3. 调用 `start_session`
-4. 调用 `run_flow` 或逐步执行 `tap` / `type_text`
-5. 调用 `collect_artifacts`
-6. 调用 `end_session`
+4. 调用 `run_flow`
+5. 调用 `end_session`
 
 ## 11. 首批 MCP 工具建议
 
 建议首版优先暴露以下工具：
 
 - `start_session`
-- `list_devices`
-- `launch_app`
-- `open_deep_link`
-- `inspect_ui`
-- `take_screenshot`
-- `tap`
-- `type_text`
 - `run_flow`
-- `collect_logs`
 - `end_session`
 
-这些工具应足以覆盖：
-
-- session 建立
-- 基础页面感知
-- 基础交互
-- 样例流程执行
-- 证据收集
-- session 收尾
-
-## 12. 统一返回结构
-
-所有工具都应返回统一 envelope，至少包含：
-
-```json
-{
-  "status": "success|failed|partial",
-  "reasonCode": "ENUM_VALUE",
-  "sessionId": "string",
-  "durationMs": 1234,
-  "attempts": 1,
-  "artifacts": [],
-  "data": {},
-  "nextSuggestions": []
-}
-```
-
-这样用户才能在本地、CI、Agent 自动化场景中统一消费结果。
-
-## 13. 本地模式推荐执行流程
-
-建议未来 Quickstart 设计成下面的顺序：
-
-1. 安装依赖
-2. 运行 `doctor`
-3. 启动 Android 模拟器或 iOS Simulator
-4. 启动 sample app
-5. 启动 MCP server
-6. 在 Agent 中连接 MCP
-7. 运行登录 smoke flow
-8. 查看 artifact 和 report
-
-## 14. CI 模式推荐执行流程
-
-建议未来 CI 文档明确：
-
-1. 准备 runner 镜像
-2. 安装 SDK 和 backend
-3. 启动模拟器或连接设备
-4. 启动 MCP server
-5. 执行 sample / smoke 流程
-6. 保存 artifact 和 report
-
-## 15. 常见失败场景
-
-未来安装文档应显式处理以下问题：
-
-- `adb` 不可用
-- `xcrun` 不可用
-- iOS 不在 macOS 环境
-- `maestro` 未安装
-- 设备未连接或未启动
-- sample app 未启动或 App ID 不匹配
-- Agent 能启动 MCP，但 MCP 无法访问本地设备资源
-
-## 16. 文档落地标准
-
-当以下内容都能被实际写进仓库并跑通时，说明安装与接入文档达标：
-
-- 一个明确的安装入口
-- 一个明确的 server 启动命令
-- 一个 `doctor` 或同等检查入口
-- 一个 sample 快速开始路径
-- 一个 MCP client 接入示例
-- 一个 CI 最小示例
+首版最小目标是先打通 `TS server -> TS adapter -> 现有 shell runner` 的执行闭环，再逐步补齐更细粒度工具。

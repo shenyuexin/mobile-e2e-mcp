@@ -21,6 +21,8 @@
   说明哪些目录和能力应开源、哪些内容不应公开，以及推荐的分阶段发布方案。
 - `05-post-migration-implementation-brief.zh-CN.md`
   说明目录迁移完成后，后续 AI 和工程实现应如何继续推进。
+- `minimal-mcp-contracts-and-boundaries.zh-CN.md`
+  说明当前阶段 `contracts`、`adapter-maestro`、`mcp-server` 与脚本层的最小职责边界。
 
 ## 当前结论
 
