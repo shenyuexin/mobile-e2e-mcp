@@ -1,10 +1,18 @@
-appId: com.epam.mobitru.demoapp
+appId: com.epam.mobitru
 ---
+- launchApp:
+    appId: com.epam.mobitru
+    clearState: true
+    stopApp: true
 - assertVisible: "Login"
-- tapOn: "Login"
+- tapOn:
+    below:
+      text: "Login"
 - inputText: "testuser@mobitru.com"
-- tapOn: "Password"
+- tapOn:
+    below:
+      text: "Password"
 - inputText: "password1"
+- hideKeyboard
 - tapOn: "Sign In"
-- assertVisible:
-    id: "category"
+- assertVisible: "category"

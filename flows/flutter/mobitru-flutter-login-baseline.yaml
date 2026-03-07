@@ -1,6 +1,9 @@
-appId: com.epam.mobitru.demoapp
+appId: com.epam.mobitru
 ---
+- launchApp:
+    appId: com.epam.mobitru
+    clearState: true
+    stopApp: true
 - assertVisible: "Sign in with correct user"
 - tapOn: "Sign in with correct user"
-- assertVisible:
-    id: "category"
+- assertVisible: "category"
