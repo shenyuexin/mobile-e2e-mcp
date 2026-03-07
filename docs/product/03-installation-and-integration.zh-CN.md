@@ -159,6 +159,13 @@ pnpm mcp:dev -- --platform android --dry-run
 pnpm --filter @mobile-e2e-mcp/mcp-server dev -- --platform android --dry-run
 ```
 
+扩展 profile 示例：
+
+```bash
+pnpm --filter @mobile-e2e-mcp/mcp-server dev -- --platform ios --runner-profile native_ios --dry-run
+pnpm --filter @mobile-e2e-mcp/mcp-server dev -- --platform android --runner-profile flutter_android --dry-run
+```
+
 ### 8.2 传输模式
 
 开源首版建议优先支持：

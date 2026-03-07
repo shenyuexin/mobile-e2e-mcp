@@ -16,6 +16,7 @@
 3. 把 `packages/contracts` 固化为共享强类型边界
 4. 把 `packages/adapter-maestro` 落为最小 TS adapter，并复用现有 shell runner
 5. 把 `packages/mcp-server` 接到真实 adapter，并提供 `dev-cli.ts`
+6. 为 `run_flow` 增加 `runnerProfile`，可选择 `phase1`、`native_android`、`native_ios`、`flutter_android`
 
 ## 当前最小验证入口
 
@@ -27,14 +28,30 @@ pnpm validate:dry-run
 pnpm mcp:dev -- --platform android --run-count 1
 ```
 
+## 扩展后的 profile 示例
+
+```bash
+pnpm --filter @mobile-e2e-mcp/mcp-server exec tsx src/dev-cli.ts --platform android --runner-profile phase1 --dry-run
+pnpm --filter @mobile-e2e-mcp/mcp-server exec tsx src/dev-cli.ts --platform ios --runner-profile native_ios --dry-run
+pnpm --filter @mobile-e2e-mcp/mcp-server exec tsx src/dev-cli.ts --platform android --runner-profile flutter_android --dry-run
+```
+
+## 已验证结果
+
+- `phase1` dry-run：成功解析到 RN sample runner
+- `native_ios` dry-run：成功解析到 phase3 native iOS runner，并识别 bundled flows
+- `flutter_android` dry-run：成功解析到 phase3 flutter Android runner，并识别 bundled flows
+- `native_android` 真实执行：成功触发脚本，但因 `INSTALL_FAILED_VERSION_DOWNGRADE` 返回 `CONFIGURATION_ERROR`
+- `native_ios` 指定单个 `flowPath` dry-run：返回 `UNSUPPORTED_OPERATION`，明确提示底层脚本是 bundled flow runner
+
 ## 已知限制
 
-- 当前 adapter 的默认真实执行优先复用 RN sample phase runner
-- 自定义 `flowPath` 还没有全面映射到各类 runner；这类输入会返回明确的部分支持状态，而不会伪装成已完成能力
-- 真实执行是否通过仍取决于本机 `maestro`、模拟器、Expo dev server 等运行环境
+- 当前 adapter 的真实执行仍优先复用现有 shell runner，不是直接重写底层执行逻辑
+- `native_ios` 与 `flutter_android` 的底层脚本会执行一组预定义 flows，因此不能假装支持精确单 flow 选择
+- 真实执行是否通过仍取决于本机 `maestro`、模拟器、设备、安装包版本和 Expo dev server 等运行环境
 
 ## 下一轮建议
 
-- 把 phase3 native/flutter 的 runner 映射也纳入 adapter
-- 将 shell 脚本中的公共环境准备逻辑逐步下沉到 TS
-- 增加 `doctor` 和 `list_devices` 等 MCP-ready 工具
+- 把 phase3 runner 的环境准备逻辑逐步下沉到 TS，而不是长期留在 shell 里
+- 增加 `doctor` / `list_devices`，在执行前提前暴露设备与安装问题
+- 再继续补 MCP transport（如 stdio）与更细粒度工具
