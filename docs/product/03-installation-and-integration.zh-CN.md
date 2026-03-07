@@ -84,10 +84,12 @@ pnpm install
 - `pnpm typecheck`
 - `pnpm validate:dry-run`
 - `pnpm mcp:dev -- --platform android --dry-run`
+- `pnpm --filter @mobile-e2e-mcp/mcp-server exec tsx src/dev-cli.ts --list-devices --include-unavailable`
 
 未来建议补齐：
 
 - `mobile-e2e-mcp doctor`
+- `mobile-e2e-mcp list-devices`
 - `mobile-e2e-mcp server start`
 - `mobile-e2e-mcp config validate`
 - `mobile-e2e-mcp sample run`
