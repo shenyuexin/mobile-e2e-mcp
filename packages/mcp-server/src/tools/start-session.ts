@@ -9,13 +9,28 @@ function buildDefaultAppId(platform: StartSessionInput["platform"]): string {
   return platform === "android" ? "host.exp.exponent" : "host.exp.Exponent";
 }
 
-function buildDefaultArtifactsRoot(sessionId: string, platform: StartSessionInput["platform"]): string {
-  return path.posix.join("artifacts", "mcp-server", sessionId, platform);
+function buildDefaultArtifactsRoot(sessionId: string, platform: StartSessionInput["platform"], profile?: string | null): string {
+  return profile
+    ? path.posix.join("artifacts", "mcp-server", sessionId, platform, profile)
+    : path.posix.join("artifacts", "mcp-server", sessionId, platform);
+}
+
+function buildDefaultSampleName(profile?: string | null): string {
+  if (profile === "native_android" || profile === "native_ios") {
+    return "mobitru-native";
+  }
+
+  if (profile === "flutter_android") {
+    return "mobitru-flutter";
+  }
+
+  return "rn-login-demo";
 }
 
 export async function startSession(input: StartSessionInput): Promise<ToolResult<Session>> {
   const sessionId = input.sessionId ?? `session-${Date.now()}`;
-  const artifactsRoot = input.artifactsRoot ?? buildDefaultArtifactsRoot(sessionId, input.platform);
+  const profile = input.profile ?? null;
+  const artifactsRoot = input.artifactsRoot ?? buildDefaultArtifactsRoot(sessionId, input.platform, profile);
 
   const session: Session = {
     sessionId,
@@ -25,9 +40,9 @@ export async function startSession(input: StartSessionInput): Promise<ToolResult
     policyProfile: input.policyProfile ?? "sample-harness-default",
     startedAt: new Date().toISOString(),
     artifactsRoot,
-    profile: input.profile ?? null,
+    profile,
     phase: input.phase ?? "phase2",
-    sampleName: input.sampleName ?? "rn-login-demo",
+    sampleName: input.sampleName ?? buildDefaultSampleName(profile),
     timeline: [
       {
         timestamp: new Date().toISOString(),
