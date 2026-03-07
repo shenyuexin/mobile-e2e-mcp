@@ -16,8 +16,8 @@
 
 ### 尚未具备
 
-- Native sample app 实证
-- Flutter sample app 实证
+- 新 sample 上的持续扩展实证
+- 兼容矩阵在更多 sample 上的持续实例化
 
 ---
 
@@ -32,6 +32,12 @@
 - 当前状态（validated / contract-only）
 - 接入前提
 - 已知约束
+
+其中当前实证状态已经推进为：
+
+- `profiles/react-native.yaml`：validated-sample-baseline
+- `profiles/native.yaml`：validated-sample-baseline
+- `profiles/flutter.yaml`：validated-sample-baseline（当前先覆盖 Android）
 
 ---
 

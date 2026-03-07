@@ -1,8 +1,13 @@
 profile: flutter
-status: contract-only
+status: validated-sample-baseline
+validated_with:
+  sample: mobitru-flutter
+  platforms:
+    - android
 requirements:
   - semantic labels or stable keys for critical widgets
   - deterministic start path and reset strategy
   - fallback expectations documented where semantics are insufficient
 notes:
-  - No Flutter sample has been validated in this repository yet.
+  - Flutter baseline is validated on the Mobitru Android sample.
+  - iOS Flutter validation is not yet folded into the unified runner/report path.

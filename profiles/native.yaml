@@ -1,8 +1,14 @@
 profile: native
-status: contract-only
+status: validated-sample-baseline
+validated_with:
+  sample: mobitru-native
+  platforms:
+    - ios
+    - android
 requirements:
   - platform-native accessibility identifiers on critical flows
   - deep-link or deterministic start state for golden path
   - permission and interruption assumptions documented per platform
 notes:
-  - No native sample app has been validated in this repository yet.
+  - Native baseline is validated on Mobitru Android and iOS sample flows.
+  - Native execution is now wired into the shared matrix runner/report path for Android and iOS sample validation.
