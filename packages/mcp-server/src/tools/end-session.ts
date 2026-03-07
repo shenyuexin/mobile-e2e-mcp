@@ -1,15 +1,16 @@
-import { REASON_CODES } from "../../../contracts/reason-codes";
+import { REASON_CODES, type EndSessionInput, type ToolResult } from "@mobile-e2e-mcp/contracts";
 
-export async function endSession(input: Record<string, unknown>): Promise<Record<string, unknown>> {
+export async function endSession(input: EndSessionInput): Promise<ToolResult<{ closed: boolean; endedAt: string }>> {
   return {
     status: "success",
     reasonCode: REASON_CODES.ok,
-    sessionId: String(input.sessionId ?? ""),
+    sessionId: input.sessionId,
     durationMs: 0,
     attempts: 1,
-    artifacts: Array.isArray(input.artifacts) ? input.artifacts : [],
+    artifacts: input.artifacts ?? [],
     data: {
       closed: true,
+      endedAt: new Date().toISOString(),
     },
     nextSuggestions: [],
   };
