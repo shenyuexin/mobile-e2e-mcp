@@ -1,22 +1,31 @@
 import { existsSync } from "node:fs";
 import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
+import { spawn } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { spawn } from "node:child_process";
+import {
+  REASON_CODES,
+  type Platform,
+  type ReasonCode,
+  type RunFlowInput,
+  type RunnerProfile,
+  type ToolResult,
+} from "@mobile-e2e-mcp/contracts";
 import { parse } from "yaml";
-import { REASON_CODES, type Platform, type ReasonCode, type RunFlowInput, type ToolResult } from "@mobile-e2e-mcp/contracts";
 
 interface ArtifactDirectory {
   absolutePath: string;
   relativePath: string;
 }
 
-interface PlatformHarnessConfig {
+interface HarnessSelection {
+  runnerProfile: RunnerProfile;
   runnerScript: string;
-  deviceId: string;
+  deviceId?: string;
   appId: string;
   launchUrl?: string;
   runCountDefault: number;
+  configuredFlows: string[];
 }
 
 interface CommandExecution {
@@ -28,8 +37,11 @@ interface CommandExecution {
 interface BasicRunData {
   dryRun: boolean;
   harnessConfigPath: string;
+  runnerProfile: RunnerProfile;
   runnerScript: string;
   flowPath: string;
+  requestedFlowPath?: string;
+  configuredFlows: string[];
   artifactsDir: string;
   totalRuns: number;
   passedRuns: number;
@@ -40,6 +52,7 @@ interface BasicRunData {
 }
 
 const DEFAULT_HARNESS_CONFIG_PATH = "configs/harness/sample-harness.yaml";
+const DEFAULT_RUNNER_PROFILE: RunnerProfile = "phase1";
 const DEFAULT_FLOWS: Record<Platform, string> = {
   android: "flows/samples/react-native/android-login-smoke.yaml",
   ios: "flows/samples/react-native/ios-login-smoke.yaml",
@@ -59,8 +72,27 @@ function readPositiveNumber(record: Record<string, unknown>, key: string): numbe
   return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : undefined;
 }
 
+function readStringArray(record: Record<string, unknown>, key: string): string[] {
+  const value = record[key];
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.filter((item): item is string => typeof item === "string" && item.length > 0);
+}
+
 function toRelativePath(repoRoot: string, targetPath: string): string {
   return path.relative(repoRoot, targetPath).split(path.sep).join("/");
+}
+
+function ensureRunnerProfilePlatform(platform: Platform, runnerProfile: RunnerProfile): void {
+  if (runnerProfile === "native_ios" && platform !== "ios") {
+    throw new Error(`Runner profile ${runnerProfile} requires platform ios.`);
+  }
+
+  if ((runnerProfile === "native_android" || runnerProfile === "flutter_android") && platform !== "android") {
+    throw new Error(`Runner profile ${runnerProfile} requires platform android.`);
+  }
 }
 
 async function listArtifacts(rootPath: string, repoRoot: string): Promise<string[]> {
@@ -83,7 +115,7 @@ async function listArtifacts(rootPath: string, repoRoot: string): Promise<string
   }
 }
 
-async function loadPlatformHarnessConfig(repoRoot: string, platform: Platform, harnessConfigPath: string): Promise<PlatformHarnessConfig> {
+async function parseHarnessConfig(repoRoot: string, harnessConfigPath: string): Promise<Record<string, unknown>> {
   const absoluteConfigPath = path.resolve(repoRoot, harnessConfigPath);
   const rawConfig = await readFile(absoluteConfigPath, "utf8");
   const parsedConfig: unknown = parse(rawConfig);
@@ -92,32 +124,82 @@ async function loadPlatformHarnessConfig(repoRoot: string, platform: Platform, h
     throw new Error(`Invalid harness config structure: ${harnessConfigPath}`);
   }
 
-  const platforms = parsedConfig["platforms"];
+  return parsedConfig;
+}
+
+function loadPlatformDefaults(parsedConfig: Record<string, unknown>, platform: Platform, harnessConfigPath: string): Record<string, unknown> {
+  const platforms = parsedConfig.platforms;
   if (!isRecord(platforms)) {
     throw new Error(`Missing platforms section in harness config: ${harnessConfigPath}`);
   }
 
-  const platformConfigUnknown = platforms[platform];
-  if (!isRecord(platformConfigUnknown)) {
+  const platformConfig = platforms[platform];
+  if (!isRecord(platformConfig)) {
     throw new Error(`Missing platform config for ${platform} in ${harnessConfigPath}`);
   }
 
-  const runnerScript = readNonEmptyString(platformConfigUnknown, "runner_script");
-  const deviceId = readNonEmptyString(platformConfigUnknown, "device_udid");
-  const appId = readNonEmptyString(platformConfigUnknown, "app_id");
-  const launchUrl = readNonEmptyString(platformConfigUnknown, "launch_url");
-  const runCountDefault = readPositiveNumber(platformConfigUnknown, "run_count_default") ?? 1;
+  return platformConfig;
+}
 
-  if (!runnerScript || !deviceId || !appId) {
-    throw new Error(`Incomplete platform config for ${platform} in ${harnessConfigPath}`);
+async function loadHarnessSelection(
+  repoRoot: string,
+  platform: Platform,
+  runnerProfile: RunnerProfile,
+  harnessConfigPath: string,
+): Promise<HarnessSelection> {
+  ensureRunnerProfilePlatform(platform, runnerProfile);
+  const parsedConfig = await parseHarnessConfig(repoRoot, harnessConfigPath);
+  const platformDefaults = loadPlatformDefaults(parsedConfig, platform, harnessConfigPath);
+
+  if (runnerProfile === "phase1") {
+    const runnerScript = readNonEmptyString(platformDefaults, "runner_script");
+    const deviceId = readNonEmptyString(platformDefaults, "device_udid");
+    const appId = readNonEmptyString(platformDefaults, "app_id");
+    const launchUrl = readNonEmptyString(platformDefaults, "launch_url");
+    const runCountDefault = readPositiveNumber(platformDefaults, "run_count_default") ?? 1;
+
+    if (!runnerScript || !deviceId || !appId) {
+      throw new Error(`Incomplete phase1 config for ${platform} in ${harnessConfigPath}`);
+    }
+
+    return {
+      runnerProfile,
+      runnerScript,
+      deviceId,
+      appId,
+      launchUrl,
+      runCountDefault,
+      configuredFlows: [DEFAULT_FLOWS[platform]],
+    };
+  }
+
+  const phase3Validations = parsedConfig.phase3_validations;
+  if (!isRecord(phase3Validations)) {
+    throw new Error(`Missing phase3_validations section in harness config: ${harnessConfigPath}`);
+  }
+
+  const profileConfig = phase3Validations[runnerProfile];
+  if (!isRecord(profileConfig)) {
+    throw new Error(`Missing runner profile ${runnerProfile} in ${harnessConfigPath}`);
+  }
+
+  const runnerScript = readNonEmptyString(profileConfig, "runner_script");
+  const appId = readNonEmptyString(profileConfig, "app_id");
+  const runCountDefault = readPositiveNumber(profileConfig, "run_count_default") ?? 1;
+  const configuredFlows = readStringArray(profileConfig, "flows");
+  const deviceId = readNonEmptyString(platformDefaults, "device_udid");
+
+  if (!runnerScript || !appId || configuredFlows.length === 0) {
+    throw new Error(`Incomplete runner profile ${runnerProfile} in ${harnessConfigPath}`);
   }
 
   return {
+    runnerProfile,
     runnerScript,
     deviceId,
     appId,
-    launchUrl,
     runCountDefault,
+    configuredFlows,
   };
 }
 
@@ -143,12 +225,18 @@ export function resolveRepoPath(startPath?: string): string {
   }
 }
 
-export function buildArtifactsDir(repoRoot: string, sessionId: string, platform: Platform, artifactRoot?: string): ArtifactDirectory {
+export function buildArtifactsDir(
+  repoRoot: string,
+  sessionId: string,
+  platform: Platform,
+  runnerProfile: RunnerProfile,
+  artifactRoot?: string,
+): ArtifactDirectory {
   if (artifactRoot && path.isAbsolute(artifactRoot)) {
     throw new Error("artifactRoot must be relative to the repository root.");
   }
 
-  const relativePath = artifactRoot ?? path.posix.join("artifacts", "mcp-server", sessionId, platform);
+  const relativePath = artifactRoot ?? path.posix.join("artifacts", "mcp-server", sessionId, platform, runnerProfile);
   return {
     absolutePath: path.resolve(repoRoot, relativePath),
     relativePath,
@@ -157,6 +245,9 @@ export function buildArtifactsDir(repoRoot: string, sessionId: string, platform:
 
 function buildFailureReason(stderr: string, exitCode: number | null): ReasonCode {
   const combined = stderr.toLowerCase();
+  if (combined.includes("install_failed_version_downgrade") || combined.includes("failed to install")) {
+    return REASON_CODES.configurationError;
+  }
   if (combined.includes("maestro") && combined.includes("not found")) {
     return REASON_CODES.adapterError;
   }
@@ -232,8 +323,11 @@ export async function collectBasicRunResult(params: {
   attempts: number;
   artifactsDir: ArtifactDirectory;
   harnessConfigPath: string;
+  runnerProfile: RunnerProfile;
   runnerScript: string;
   flowPath: string;
+  requestedFlowPath?: string;
+  configuredFlows: string[];
   command: string[];
   dryRun: boolean;
   execution?: CommandExecution;
@@ -249,13 +343,16 @@ export async function collectBasicRunResult(params: {
   if (params.unsupportedCustomFlow) {
     status = "partial";
     reasonCode = REASON_CODES.unsupportedOperation;
-    nextSuggestions.push("The current adapter wraps the existing RN sample runner. Use the default sample flow or pass a runnerScript explicitly.");
+    nextSuggestions.push("The selected runner profile bundles predefined flows. Omit flowPath or pass a custom runnerScript if you need exact single-flow control.");
   } else if (params.dryRun) {
     nextSuggestions.push("Run the same command without --dry-run to execute the underlying sample runner.");
   } else if (params.execution && params.execution.exitCode !== 0) {
     status = "failed";
     reasonCode = buildFailureReason(params.execution.stderr, params.execution.exitCode);
     nextSuggestions.push("Check command.stderr.log and command.stdout.log under the artifacts directory for the runner failure details.");
+    if (reasonCode === REASON_CODES.configurationError) {
+      nextSuggestions.push("The current app install failed. Remove the installed app or provide a newer build artifact before retrying.");
+    }
   } else if (totalRuns === 0) {
     status = "partial";
     reasonCode = REASON_CODES.adapterError;
@@ -264,6 +361,10 @@ export async function collectBasicRunResult(params: {
     status = "failed";
     reasonCode = REASON_CODES.flowFailed;
     nextSuggestions.push("Inspect per-run result.txt and maestro.out artifacts to determine why the sample flow failed.");
+  }
+
+  if (params.configuredFlows.length > 1) {
+    nextSuggestions.push("This runner profile executes a bundled validation set defined in configs/harness/sample-harness.yaml.");
   }
 
   return {
@@ -276,8 +377,11 @@ export async function collectBasicRunResult(params: {
     data: {
       dryRun: params.dryRun,
       harnessConfigPath: params.harnessConfigPath,
+      runnerProfile: params.runnerProfile,
       runnerScript: params.runnerScript,
       flowPath: params.flowPath,
+      requestedFlowPath: params.requestedFlowPath,
+      configuredFlows: params.configuredFlows,
       artifactsDir: params.artifactsDir.relativePath,
       totalRuns,
       passedRuns,
@@ -294,19 +398,20 @@ export async function runFlowWithMaestro(input: RunFlowInput): Promise<ToolResul
   const startTime = Date.now();
   const repoRoot = resolveRepoPath();
   const harnessConfigPath = input.harnessConfigPath ?? DEFAULT_HARNESS_CONFIG_PATH;
-  const platformConfig = await loadPlatformHarnessConfig(repoRoot, input.platform, harnessConfigPath);
-  const flowPath = input.flowPath ?? DEFAULT_FLOWS[input.platform];
-  const defaultFlowPath = DEFAULT_FLOWS[input.platform];
-  const unsupportedCustomFlow = !input.runnerScript && flowPath !== defaultFlowPath;
-  const runnerScript = input.runnerScript ?? platformConfig.runnerScript;
-  const artifactsDir = buildArtifactsDir(repoRoot, input.sessionId, input.platform, input.artifactRoot);
+  const runnerProfile = input.runnerProfile ?? DEFAULT_RUNNER_PROFILE;
+  const selection = await loadHarnessSelection(repoRoot, input.platform, runnerProfile, harnessConfigPath);
+  const requestedFlowPath = input.flowPath;
+  const unsupportedCustomFlow = Boolean(
+    !input.runnerScript && requestedFlowPath && (selection.configuredFlows.length > 1 || !selection.configuredFlows.includes(requestedFlowPath)),
+  );
+  const effectiveFlowPath = requestedFlowPath ?? selection.configuredFlows[0];
+  const runnerScript = input.runnerScript ?? selection.runnerScript;
+  const artifactsDir = buildArtifactsDir(repoRoot, input.sessionId, input.platform, runnerProfile, input.artifactRoot);
   const absoluteRunnerScript = path.resolve(repoRoot, runnerScript);
-  const absoluteFlowPath = path.resolve(repoRoot, flowPath);
-  const runCount = input.runCount ?? platformConfig.runCountDefault;
+  const runCount = input.runCount ?? selection.runCountDefault;
+  const command = ["bash", toRelativePath(repoRoot, absoluteRunnerScript), String(runCount)];
 
   await mkdir(artifactsDir.absolutePath, { recursive: true });
-
-  const command = ["bash", toRelativePath(repoRoot, absoluteRunnerScript), String(runCount)];
 
   if (unsupportedCustomFlow || input.dryRun) {
     return collectBasicRunResult({
@@ -316,33 +421,38 @@ export async function runFlowWithMaestro(input: RunFlowInput): Promise<ToolResul
       attempts: 1,
       artifactsDir,
       harnessConfigPath,
+      runnerProfile,
       runnerScript,
-      flowPath,
+      flowPath: effectiveFlowPath,
+      requestedFlowPath,
+      configuredFlows: selection.configuredFlows,
       command,
       dryRun: Boolean(input.dryRun),
       unsupportedCustomFlow,
     });
   }
 
-  const execution = await executeRunner(
-    ["bash", absoluteRunnerScript, String(runCount)],
-    repoRoot,
-    {
-      ...process.env,
-      ...(input.env ?? {}),
-      OUT_DIR: artifactsDir.absolutePath,
-      FLOW: absoluteFlowPath,
-      ...(input.platform === "android"
-        ? {
-            DEVICE_ID: input.deviceId ?? platformConfig.deviceId,
-            EXPO_URL: input.launchUrl ?? platformConfig.launchUrl,
-          }
-        : {
-            SIM_UDID: input.deviceId ?? platformConfig.deviceId,
-            EXPO_URL: input.launchUrl ?? platformConfig.launchUrl,
-          }),
-    },
-  );
+  const env: NodeJS.ProcessEnv = {
+    ...process.env,
+    ...(input.env ?? {}),
+    OUT_DIR: artifactsDir.absolutePath,
+    APP_ID: input.appId ?? selection.appId,
+    FLOW: path.resolve(repoRoot, effectiveFlowPath),
+  };
+
+  if (input.platform === "android") {
+    env.DEVICE_ID = input.deviceId ?? selection.deviceId ?? "emulator-5554";
+    if (selection.launchUrl || input.launchUrl) {
+      env.EXPO_URL = input.launchUrl ?? selection.launchUrl;
+    }
+  } else {
+    env.SIM_UDID = input.deviceId ?? selection.deviceId ?? "ADA078B9-3C6B-4875-8B85-A7789F368816";
+    if (selection.launchUrl || input.launchUrl) {
+      env.EXPO_URL = input.launchUrl ?? selection.launchUrl;
+    }
+  }
+
+  const execution = await executeRunner(["bash", absoluteRunnerScript, String(runCount)], repoRoot, env);
 
   await writeFile(path.join(artifactsDir.absolutePath, "command.stdout.log"), execution.stdout, "utf8");
   await writeFile(path.join(artifactsDir.absolutePath, "command.stderr.log"), execution.stderr, "utf8");
@@ -354,8 +464,11 @@ export async function runFlowWithMaestro(input: RunFlowInput): Promise<ToolResul
     attempts: 1,
     artifactsDir,
     harnessConfigPath,
+    runnerProfile,
     runnerScript,
-    flowPath,
+    flowPath: effectiveFlowPath,
+    requestedFlowPath,
+    configuredFlows: selection.configuredFlows,
     command,
     dryRun: false,
     execution,
