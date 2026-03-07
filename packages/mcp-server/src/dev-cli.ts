@@ -1,10 +1,12 @@
 import process from "node:process";
-import type { Platform, RunFlowInput, RunnerProfile, StartSessionInput } from "@mobile-e2e-mcp/contracts";
+import type { ListDevicesInput, Platform, RunFlowInput, RunnerProfile, StartSessionInput } from "@mobile-e2e-mcp/contracts";
 import { createServer } from "./index.js";
 
 interface CliOptions {
   platform: Platform;
   dryRun: boolean;
+  includeUnavailable: boolean;
+  listDevices: boolean;
   runCount: number;
   runnerProfile?: RunnerProfile;
   flowPath?: string;
@@ -21,6 +23,8 @@ function isRunnerProfile(value: string | undefined): value is RunnerProfile {
 function parseCliArgs(argv: string[]): CliOptions {
   let platform: Platform = "android";
   let dryRun = false;
+  let includeUnavailable = false;
+  let listDevices = false;
   let runCount = 1;
   let runnerProfile: RunnerProfile | undefined;
   let flowPath: string | undefined;
@@ -36,6 +40,10 @@ function parseCliArgs(argv: string[]): CliOptions {
       index += 1;
     } else if (arg === "--dry-run") {
       dryRun = true;
+    } else if (arg === "--include-unavailable") {
+      includeUnavailable = true;
+    } else if (arg === "--list-devices") {
+      listDevices = true;
     } else if (arg === "--run-count" && nextValue) {
       const parsed = Number(nextValue);
       if (Number.isFinite(parsed) && parsed > 0) {
@@ -57,16 +65,26 @@ function parseCliArgs(argv: string[]): CliOptions {
     }
   }
 
-  return { platform, dryRun, runCount, runnerProfile, flowPath, harnessConfigPath, sessionId };
+  return { platform, dryRun, includeUnavailable, listDevices, runCount, runnerProfile, flowPath, harnessConfigPath, sessionId };
 }
 
 async function main(): Promise<void> {
   const cliOptions = parseCliArgs(process.argv.slice(2));
   const server = createServer();
 
+  if (cliOptions.listDevices) {
+    const result = await server.invoke("list_devices", { includeUnavailable: cliOptions.includeUnavailable } satisfies ListDevicesInput);
+    console.log(JSON.stringify({ tools: server.listTools(), listDevicesResult: result }, null, 2));
+    if (result.status === "failed") {
+      process.exitCode = 1;
+    }
+    return;
+  }
+
   const startInput: StartSessionInput = {
     platform: cliOptions.platform,
     profile: cliOptions.runnerProfile ?? null,
+    harnessConfigPath: cliOptions.harnessConfigPath,
     sessionId: cliOptions.sessionId,
   };
 

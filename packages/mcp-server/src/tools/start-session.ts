@@ -1,4 +1,4 @@
-import path from "node:path";
+import { resolveSessionDefaults } from "@mobile-e2e-mcp/adapter-maestro";
 import { REASON_CODES, type Session, type StartSessionInput, type ToolResult } from "@mobile-e2e-mcp/contracts";
 
 function buildDefaultDeviceId(platform: StartSessionInput["platform"]): string {
@@ -9,40 +9,28 @@ function buildDefaultAppId(platform: StartSessionInput["platform"]): string {
   return platform === "android" ? "host.exp.exponent" : "host.exp.Exponent";
 }
 
-function buildDefaultArtifactsRoot(sessionId: string, platform: StartSessionInput["platform"], profile?: string | null): string {
-  return profile
-    ? path.posix.join("artifacts", "mcp-server", sessionId, platform, profile)
-    : path.posix.join("artifacts", "mcp-server", sessionId, platform);
-}
-
-function buildDefaultSampleName(profile?: string | null): string {
-  if (profile === "native_android" || profile === "native_ios") {
-    return "mobitru-native";
-  }
-
-  if (profile === "flutter_android") {
-    return "mobitru-flutter";
-  }
-
-  return "rn-login-demo";
-}
-
 export async function startSession(input: StartSessionInput): Promise<ToolResult<Session>> {
   const sessionId = input.sessionId ?? `session-${Date.now()}`;
   const profile = input.profile ?? null;
-  const artifactsRoot = input.artifactsRoot ?? buildDefaultArtifactsRoot(sessionId, input.platform, profile);
+  const sessionDefaults = await resolveSessionDefaults({
+    sessionId,
+    platform: input.platform,
+    runnerProfile: profile,
+    harnessConfigPath: input.harnessConfigPath,
+    artifactRoot: input.artifactsRoot,
+  });
 
   const session: Session = {
     sessionId,
     platform: input.platform,
     deviceId: input.deviceId ?? buildDefaultDeviceId(input.platform),
-    appId: input.appId ?? buildDefaultAppId(input.platform),
+    appId: input.appId ?? sessionDefaults.appId ?? buildDefaultAppId(input.platform),
     policyProfile: input.policyProfile ?? "sample-harness-default",
     startedAt: new Date().toISOString(),
-    artifactsRoot,
+    artifactsRoot: sessionDefaults.artifactsRoot,
     profile,
     phase: input.phase ?? "phase2",
-    sampleName: input.sampleName ?? buildDefaultSampleName(profile),
+    sampleName: input.sampleName ?? sessionDefaults.sampleName,
     timeline: [
       {
         timestamp: new Date().toISOString(),
