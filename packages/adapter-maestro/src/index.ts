@@ -563,7 +563,7 @@ function parseIosDevices(stdout: string, includeUnavailable: boolean): DeviceInf
     return [];
   }
 
-  const devicesById = new Map<string, DeviceInfo>();
+  const devicesByName = new Map<string, DeviceInfo>();
   for (const runtimeDevices of Object.values(devicesSection)) {
     if (!Array.isArray(runtimeDevices)) {
       continue;
@@ -578,7 +578,7 @@ function parseIosDevices(stdout: string, includeUnavailable: boolean): DeviceInf
       const name = readNonEmptyString(device, "name");
       const state = readNonEmptyString(device, "state") ?? "unknown";
       const isAvailable = device.isAvailable === true;
-      if (!id) {
+      if (!id || !name) {
         continue;
       }
 
@@ -590,14 +590,16 @@ function parseIosDevices(stdout: string, includeUnavailable: boolean): DeviceInf
         available: isAvailable && state.toLowerCase() !== "unavailable",
       };
 
-      const existing = devicesById.get(id);
-      if (!existing || (!existing.available && normalizedDevice.available)) {
-        devicesById.set(id, normalizedDevice);
+      const existing = devicesByName.get(name);
+      const existingScore = existing ? Number(existing.available) * 10 + Number(existing.state === "Booted") : -1;
+      const nextScore = Number(normalizedDevice.available) * 10 + Number(normalizedDevice.state === "Booted");
+      if (!existing || nextScore > existingScore) {
+        devicesByName.set(name, normalizedDevice);
       }
     }
   }
 
-  return Array.from(devicesById.values()).filter((device) => includeUnavailable || device.available);
+  return Array.from(devicesByName.values()).filter((device) => includeUnavailable || device.available);
 }
 
 export async function listAvailableDevices(
@@ -695,6 +697,52 @@ function summarizeDeviceCheck(name: string, count: number): DoctorCheck {
   };
 }
 
+function summarizeFileCheck(name: string, filePath: string): DoctorCheck {
+  const exists = existsSync(filePath);
+  return {
+    name,
+    status: exists ? "pass" : "fail",
+    detail: exists ? `${filePath} exists.` : `${filePath} is missing.`,
+  };
+}
+
+async function collectHarnessChecks(repoRoot: string): Promise<DoctorCheck[]> {
+  const harnessConfigPath = path.resolve(repoRoot, DEFAULT_HARNESS_CONFIG_PATH);
+  const checks: DoctorCheck[] = [summarizeFileCheck("sample harness config", harnessConfigPath)];
+  if (!existsSync(harnessConfigPath)) {
+    return checks;
+  }
+
+  const parsedConfig = await parseHarnessConfig(repoRoot, DEFAULT_HARNESS_CONFIG_PATH);
+  const platforms = parsedConfig.platforms;
+  if (isRecord(platforms)) {
+    for (const [platform, config] of Object.entries(platforms)) {
+      if (!isRecord(config)) {
+        continue;
+      }
+      const runnerScript = readNonEmptyString(config, "runner_script");
+      if (runnerScript) {
+        checks.push(summarizeFileCheck(`${platform} phase1 runner`, path.resolve(repoRoot, runnerScript)));
+      }
+    }
+  }
+
+  const phase3Validations = parsedConfig.phase3_validations;
+  if (isRecord(phase3Validations)) {
+    for (const [profile, config] of Object.entries(phase3Validations)) {
+      if (!isRecord(config)) {
+        continue;
+      }
+      const runnerScript = readNonEmptyString(config, "runner_script");
+      if (runnerScript) {
+        checks.push(summarizeFileCheck(`${profile} runner`, path.resolve(repoRoot, runnerScript)));
+      }
+    }
+  }
+
+  return checks;
+}
+
 export async function runDoctor(
   input: DoctorInput = {},
 ): Promise<ToolResult<{ checks: DoctorCheck[]; devices: { android: DeviceInfo[]; ios: DeviceInfo[] } }>> {
@@ -738,6 +786,8 @@ export async function runDoctor(
       detail: error instanceof Error ? error.message : String(error),
     });
   }
+
+  checks.push(...(await collectHarnessChecks(repoRoot)));
 
   const deviceResult = await listAvailableDevices({ includeUnavailable: input.includeUnavailable });
   checks.push(summarizeDeviceCheck("android devices", deviceResult.data.android.filter((device) => device.available).length));
