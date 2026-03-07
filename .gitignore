@@ -18,3 +18,8 @@ examples/build/
 examples/demo-android-app/
 examples/demo-ios-app/
 examples/demo-flutter-app/
+# Node / PNPM workspace outputs
+node_modules/
+packages/*/node_modules/
+packages/*/dist/
+*.tsbuildinfo
