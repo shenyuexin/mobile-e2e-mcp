@@ -14,6 +14,7 @@ import {
   type LaunchAppInput,
   type ListDevicesInput,
   type ScreenshotInput,
+  type TapInput,
   type TerminateAppInput,
   type Platform,
   type ReasonCode,
@@ -53,6 +54,15 @@ interface InspectUiData {
   command: string[];
   exitCode: number | null;
   content?: string;
+}
+
+interface TapData {
+  dryRun: boolean;
+  runnerProfile: RunnerProfile;
+  x: number;
+  y: number;
+  command: string[];
+  exitCode: number | null;
 }
 
 interface ScreenshotData {
@@ -1081,6 +1091,53 @@ async function collectInstallStateChecks(repoRoot: string): Promise<DoctorCheck[
   }
 
   return checks;
+}
+
+export async function tapWithMaestro(input: TapInput): Promise<ToolResult<TapData>> {
+  const startTime = Date.now();
+  const repoRoot = resolveRepoPath();
+  const runnerProfile = input.runnerProfile ?? DEFAULT_RUNNER_PROFILE;
+  const selection = await loadHarnessSelection(repoRoot, input.platform, runnerProfile, input.harnessConfigPath ?? DEFAULT_HARNESS_CONFIG_PATH);
+  const deviceId = input.deviceId ?? selection.deviceId ?? (input.platform === "android" ? "emulator-5554" : "ADA078B9-3C6B-4875-8B85-A7789F368816");
+
+  if (input.platform === "ios") {
+    return {
+      status: "partial",
+      reasonCode: REASON_CODES.unsupportedOperation,
+      sessionId: input.sessionId,
+      durationMs: Date.now() - startTime,
+      attempts: 1,
+      artifacts: [],
+      data: { dryRun: Boolean(input.dryRun), runnerProfile, x: input.x, y: input.y, command: [], exitCode: null },
+      nextSuggestions: ["tap currently supports Android coordinate taps only. Use inspect_ui output to derive Android coordinates."],
+    };
+  }
+
+  const command = ["adb", "-s", deviceId, "shell", "input", "tap", String(input.x), String(input.y)];
+  if (input.dryRun) {
+    return {
+      status: "success",
+      reasonCode: REASON_CODES.ok,
+      sessionId: input.sessionId,
+      durationMs: Date.now() - startTime,
+      attempts: 1,
+      artifacts: [],
+      data: { dryRun: true, runnerProfile, x: input.x, y: input.y, command, exitCode: 0 },
+      nextSuggestions: ["Run tap without dryRun to perform the actual Android coordinate tap."],
+    };
+  }
+
+  const execution = await executeRunner(command, repoRoot, process.env);
+  return {
+    status: execution.exitCode === 0 ? "success" : "failed",
+    reasonCode: execution.exitCode === 0 ? REASON_CODES.ok : buildFailureReason(execution.stderr, execution.exitCode),
+    sessionId: input.sessionId,
+    durationMs: Date.now() - startTime,
+    attempts: 1,
+    artifacts: [],
+    data: { dryRun: false, runnerProfile, x: input.x, y: input.y, command, exitCode: execution.exitCode },
+    nextSuggestions: execution.exitCode === 0 ? [] : ["Check Android device state and coordinates before retrying tap."],
+  };
 }
 
 export async function inspectUiWithMaestro(input: InspectUiInput): Promise<ToolResult<InspectUiData>> {

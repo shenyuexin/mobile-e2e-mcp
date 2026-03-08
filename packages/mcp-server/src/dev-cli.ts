@@ -1,5 +1,5 @@
 import process from "node:process";
-import type { DoctorInput, InspectUiInput, InstallAppInput, LaunchAppInput, ListDevicesInput, Platform, RunFlowInput, RunnerProfile, ScreenshotInput, StartSessionInput, TerminateAppInput } from "@mobile-e2e-mcp/contracts";
+import type { DoctorInput, InspectUiInput, InstallAppInput, LaunchAppInput, ListDevicesInput, Platform, RunFlowInput, RunnerProfile, ScreenshotInput, StartSessionInput, TapInput, TerminateAppInput } from "@mobile-e2e-mcp/contracts";
 import { createServer } from "./index.js";
 
 interface CliOptions {
@@ -12,10 +12,13 @@ interface CliOptions {
   launchApp: boolean;
   listDevices: boolean;
   takeScreenshot: boolean;
+  tap: boolean;
   terminateApp: boolean;
   runCount: number;
   artifactPath?: string;
   outputPath?: string;
+  x?: number;
+  y?: number;
   launchUrl?: string;
   appId?: string;
   deviceId?: string;
@@ -38,10 +41,13 @@ function parseCliArgs(argv: string[]): CliOptions {
   let launchApp = false;
   let listDevices = false;
   let takeScreenshot = false;
+  let tap = false;
   let terminateApp = false;
   let runCount = 1;
   let artifactPath: string | undefined;
   let outputPath: string | undefined;
+  let x: number | undefined;
+  let y: number | undefined;
   let launchUrl: string | undefined;
   let appId: string | undefined;
   let deviceId: string | undefined;
@@ -62,10 +68,13 @@ function parseCliArgs(argv: string[]): CliOptions {
     else if (arg === "--launch-app") { launchApp = true; }
     else if (arg === "--list-devices") { listDevices = true; }
     else if (arg === "--take-screenshot") { takeScreenshot = true; }
+    else if (arg === "--tap") { tap = true; }
     else if (arg === "--terminate-app") { terminateApp = true; }
     else if (arg === "--run-count" && nextValue) { const parsed = Number(nextValue); if (Number.isFinite(parsed) && parsed > 0) runCount = parsed; index += 1; }
     else if (arg === "--artifact-path" && nextValue) { artifactPath = nextValue; index += 1; }
     else if (arg === "--output-path" && nextValue) { outputPath = nextValue; index += 1; }
+    else if (arg === "--x" && nextValue) { const parsed = Number(nextValue); if (Number.isFinite(parsed)) x = parsed; index += 1; }
+    else if (arg === "--y" && nextValue) { const parsed = Number(nextValue); if (Number.isFinite(parsed)) y = parsed; index += 1; }
     else if (arg === "--launch-url" && nextValue) { launchUrl = nextValue; index += 1; }
     else if (arg === "--app-id" && nextValue) { appId = nextValue; index += 1; }
     else if (arg === "--device-id" && nextValue) { deviceId = nextValue; index += 1; }
@@ -75,7 +84,7 @@ function parseCliArgs(argv: string[]): CliOptions {
     else if (arg === "--session-id" && nextValue) { sessionId = nextValue; index += 1; }
   }
 
-  return { platform, doctor, dryRun, includeUnavailable, inspectUi, installApp, launchApp, listDevices, takeScreenshot, terminateApp, runCount, artifactPath, outputPath, launchUrl, appId, deviceId, runnerProfile, flowPath, harnessConfigPath, sessionId };
+  return { platform, doctor, dryRun, includeUnavailable, inspectUi, installApp, launchApp, listDevices, takeScreenshot, tap, terminateApp, runCount, artifactPath, outputPath, x, y, launchUrl, appId, deviceId, runnerProfile, flowPath, harnessConfigPath, sessionId };
 }
 
 async function main(): Promise<void> {
@@ -119,6 +128,13 @@ async function main(): Promise<void> {
     const terminateInput: TerminateAppInput = { sessionId: cliOptions.sessionId ?? `terminate-${Date.now()}`, platform: cliOptions.platform, runnerProfile: cliOptions.runnerProfile, harnessConfigPath: cliOptions.harnessConfigPath, deviceId: cliOptions.deviceId, appId: cliOptions.appId, dryRun: cliOptions.dryRun };
     const result = await server.invoke("terminate_app", terminateInput);
     console.log(JSON.stringify({ tools: server.listTools(), terminateAppResult: result }, null, 2));
+    if (result.status === "failed") process.exitCode = 1;
+    return;
+  }
+  if (cliOptions.tap) {
+    const tapInput: TapInput = { sessionId: cliOptions.sessionId ?? `tap-${Date.now()}`, platform: cliOptions.platform, runnerProfile: cliOptions.runnerProfile, harnessConfigPath: cliOptions.harnessConfigPath, deviceId: cliOptions.deviceId, x: cliOptions.x ?? 100, y: cliOptions.y ?? 100, dryRun: cliOptions.dryRun };
+    const result = await server.invoke("tap", tapInput);
+    console.log(JSON.stringify({ tools: server.listTools(), tapResult: result }, null, 2));
     if (result.status === "failed") process.exitCode = 1;
     return;
   }
