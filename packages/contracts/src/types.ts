@@ -78,6 +78,16 @@ export interface ListDevicesInput {
   includeUnavailable?: boolean;
 }
 
+export interface ScreenshotInput {
+  sessionId: string;
+  platform: Platform;
+  runnerProfile?: RunnerProfile;
+  harnessConfigPath?: string;
+  deviceId?: string;
+  outputPath?: string;
+  dryRun?: boolean;
+}
+
 export interface RunFlowInput {
   sessionId: string;
   platform: Platform;

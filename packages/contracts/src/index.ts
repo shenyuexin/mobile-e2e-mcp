@@ -10,6 +10,7 @@ export type {
   Platform,
   RunFlowInput,
   RunnerProfile,
+  ScreenshotInput,
   Session,
   SessionTimelineEvent,
   StartSessionInput,
