@@ -16,6 +16,7 @@ import {
   type ScreenshotInput,
   type TapInput,
   type TerminateAppInput,
+  type TypeTextInput,
   type Platform,
   type ReasonCode,
   type RunFlowInput,
@@ -54,6 +55,14 @@ interface InspectUiData {
   command: string[];
   exitCode: number | null;
   content?: string;
+}
+
+interface TypeTextData {
+  dryRun: boolean;
+  runnerProfile: RunnerProfile;
+  text: string;
+  command: string[];
+  exitCode: number | null;
 }
 
 interface TapData {
@@ -1091,6 +1100,54 @@ async function collectInstallStateChecks(repoRoot: string): Promise<DoctorCheck[
   }
 
   return checks;
+}
+
+export async function typeTextWithMaestro(input: TypeTextInput): Promise<ToolResult<TypeTextData>> {
+  const startTime = Date.now();
+  const repoRoot = resolveRepoPath();
+  const runnerProfile = input.runnerProfile ?? DEFAULT_RUNNER_PROFILE;
+  const selection = await loadHarnessSelection(repoRoot, input.platform, runnerProfile, input.harnessConfigPath ?? DEFAULT_HARNESS_CONFIG_PATH);
+  const deviceId = input.deviceId ?? selection.deviceId ?? (input.platform === "android" ? "emulator-5554" : "ADA078B9-3C6B-4875-8B85-A7789F368816");
+
+  if (input.platform === "ios") {
+    return {
+      status: "partial",
+      reasonCode: REASON_CODES.unsupportedOperation,
+      sessionId: input.sessionId,
+      durationMs: Date.now() - startTime,
+      attempts: 1,
+      artifacts: [],
+      data: { dryRun: Boolean(input.dryRun), runnerProfile, text: input.text, command: [], exitCode: null },
+      nextSuggestions: ["type_text currently supports Android input text only. iOS text entry is not yet wired in this repo."],
+    };
+  }
+
+  const escaped = input.text.replaceAll(" ", "%s");
+  const command = ["adb", "-s", deviceId, "shell", "input", "text", escaped];
+  if (input.dryRun) {
+    return {
+      status: "success",
+      reasonCode: REASON_CODES.ok,
+      sessionId: input.sessionId,
+      durationMs: Date.now() - startTime,
+      attempts: 1,
+      artifacts: [],
+      data: { dryRun: true, runnerProfile, text: input.text, command, exitCode: 0 },
+      nextSuggestions: ["Run type_text without dryRun to perform Android text entry."],
+    };
+  }
+
+  const execution = await executeRunner(command, repoRoot, process.env);
+  return {
+    status: execution.exitCode === 0 ? "success" : "failed",
+    reasonCode: execution.exitCode === 0 ? REASON_CODES.ok : buildFailureReason(execution.stderr, execution.exitCode),
+    sessionId: input.sessionId,
+    durationMs: Date.now() - startTime,
+    attempts: 1,
+    artifacts: [],
+    data: { dryRun: false, runnerProfile, text: input.text, command, exitCode: execution.exitCode },
+    nextSuggestions: execution.exitCode === 0 ? [] : ["Check Android device state and focused input field before retrying type_text."],
+  };
 }
 
 export async function tapWithMaestro(input: TapInput): Promise<ToolResult<TapData>> {

@@ -42,6 +42,7 @@ function buildToolList() {
     { name: "list_devices", description: "List Android devices and iOS simulators." },
     { name: "take_screenshot", description: "Capture a screenshot from a target device or simulator." },
     { name: "tap", description: "Perform an Android coordinate tap or return partial support for iOS." },
+    { name: "type_text", description: "Perform Android text input or return partial support for iOS." },
     { name: "terminate_app", description: "Terminate the selected app on a target device or simulator." },
     { name: "start_session", description: "Create a typed mobile execution session." },
     { name: "run_flow", description: "Run the selected flow through the Maestro adapter." },

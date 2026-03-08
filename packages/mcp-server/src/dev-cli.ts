@@ -1,5 +1,5 @@
 import process from "node:process";
-import type { DoctorInput, InspectUiInput, InstallAppInput, LaunchAppInput, ListDevicesInput, Platform, RunFlowInput, RunnerProfile, ScreenshotInput, StartSessionInput, TapInput, TerminateAppInput } from "@mobile-e2e-mcp/contracts";
+import type { DoctorInput, InspectUiInput, InstallAppInput, LaunchAppInput, ListDevicesInput, Platform, RunFlowInput, RunnerProfile, ScreenshotInput, StartSessionInput, TapInput, TerminateAppInput, TypeTextInput } from "@mobile-e2e-mcp/contracts";
 import { createServer } from "./index.js";
 
 interface CliOptions {
@@ -14,6 +14,7 @@ interface CliOptions {
   takeScreenshot: boolean;
   tap: boolean;
   terminateApp: boolean;
+  typeText: boolean;
   runCount: number;
   artifactPath?: string;
   outputPath?: string;
@@ -22,6 +23,7 @@ interface CliOptions {
   launchUrl?: string;
   appId?: string;
   deviceId?: string;
+  text?: string;
   runnerProfile?: RunnerProfile;
   flowPath?: string;
   harnessConfigPath?: string;
@@ -43,6 +45,7 @@ function parseCliArgs(argv: string[]): CliOptions {
   let takeScreenshot = false;
   let tap = false;
   let terminateApp = false;
+  let typeText = false;
   let runCount = 1;
   let artifactPath: string | undefined;
   let outputPath: string | undefined;
@@ -51,6 +54,7 @@ function parseCliArgs(argv: string[]): CliOptions {
   let launchUrl: string | undefined;
   let appId: string | undefined;
   let deviceId: string | undefined;
+  let textValue: string | undefined;
   let runnerProfile: RunnerProfile | undefined;
   let flowPath: string | undefined;
   let harnessConfigPath: string | undefined;
@@ -70,6 +74,7 @@ function parseCliArgs(argv: string[]): CliOptions {
     else if (arg === "--take-screenshot") { takeScreenshot = true; }
     else if (arg === "--tap") { tap = true; }
     else if (arg === "--terminate-app") { terminateApp = true; }
+    else if (arg === "--type-text") { typeText = true; }
     else if (arg === "--run-count" && nextValue) { const parsed = Number(nextValue); if (Number.isFinite(parsed) && parsed > 0) runCount = parsed; index += 1; }
     else if (arg === "--artifact-path" && nextValue) { artifactPath = nextValue; index += 1; }
     else if (arg === "--output-path" && nextValue) { outputPath = nextValue; index += 1; }
@@ -78,13 +83,14 @@ function parseCliArgs(argv: string[]): CliOptions {
     else if (arg === "--launch-url" && nextValue) { launchUrl = nextValue; index += 1; }
     else if (arg === "--app-id" && nextValue) { appId = nextValue; index += 1; }
     else if (arg === "--device-id" && nextValue) { deviceId = nextValue; index += 1; }
+    else if (arg === "--text" && nextValue) { textValue = nextValue; index += 1; }
     else if (arg === "--runner-profile" && isRunnerProfile(nextValue)) { runnerProfile = nextValue; index += 1; }
     else if (arg === "--flow-path" && nextValue) { flowPath = nextValue; index += 1; }
     else if (arg === "--harness-config-path" && nextValue) { harnessConfigPath = nextValue; index += 1; }
     else if (arg === "--session-id" && nextValue) { sessionId = nextValue; index += 1; }
   }
 
-  return { platform, doctor, dryRun, includeUnavailable, inspectUi, installApp, launchApp, listDevices, takeScreenshot, tap, terminateApp, runCount, artifactPath, outputPath, x, y, launchUrl, appId, deviceId, runnerProfile, flowPath, harnessConfigPath, sessionId };
+  return { platform, doctor, dryRun, includeUnavailable, inspectUi, installApp, launchApp, listDevices, takeScreenshot, tap, terminateApp, typeText, runCount, artifactPath, outputPath, x, y, launchUrl, appId, deviceId, text: textValue, runnerProfile, flowPath, harnessConfigPath, sessionId };
 }
 
 async function main(): Promise<void> {
@@ -128,6 +134,13 @@ async function main(): Promise<void> {
     const terminateInput: TerminateAppInput = { sessionId: cliOptions.sessionId ?? `terminate-${Date.now()}`, platform: cliOptions.platform, runnerProfile: cliOptions.runnerProfile, harnessConfigPath: cliOptions.harnessConfigPath, deviceId: cliOptions.deviceId, appId: cliOptions.appId, dryRun: cliOptions.dryRun };
     const result = await server.invoke("terminate_app", terminateInput);
     console.log(JSON.stringify({ tools: server.listTools(), terminateAppResult: result }, null, 2));
+    if (result.status === "failed") process.exitCode = 1;
+    return;
+  }
+  if (cliOptions.typeText) {
+    const typeTextInput: TypeTextInput = { sessionId: cliOptions.sessionId ?? `type-${Date.now()}`, platform: cliOptions.platform, runnerProfile: cliOptions.runnerProfile, harnessConfigPath: cliOptions.harnessConfigPath, deviceId: cliOptions.deviceId, text: cliOptions.text ?? "hello", dryRun: cliOptions.dryRun };
+    const result = await server.invoke("type_text", typeTextInput);
+    console.log(JSON.stringify({ tools: server.listTools(), typeTextResult: result }, null, 2));
     if (result.status === "failed") process.exitCode = 1;
     return;
   }

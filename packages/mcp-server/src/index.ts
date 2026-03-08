@@ -10,6 +10,7 @@ import { startSession } from "./tools/start-session.js";
 import { takeScreenshot } from "./tools/take-screenshot.js";
 import { tap } from "./tools/tap.js";
 import { terminateApp } from "./tools/terminate-app.js";
+import { typeText } from "./tools/type-text.js";
 
 export function createServer(): MobileE2EMcpServer {
   return new MobileE2EMcpServer({
@@ -23,6 +24,7 @@ export function createServer(): MobileE2EMcpServer {
     take_screenshot: takeScreenshot,
     tap,
     terminate_app: terminateApp,
+    type_text: typeText,
     end_session: endSession,
   });
 }

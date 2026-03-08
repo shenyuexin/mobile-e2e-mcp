@@ -14,6 +14,7 @@ import type {
   TapInput,
   TerminateAppInput,
   ToolResult,
+  TypeTextInput,
 } from "@mobile-e2e-mcp/contracts";
 
 export interface MobileE2EMcpToolRegistry {
@@ -27,6 +28,7 @@ export interface MobileE2EMcpToolRegistry {
   take_screenshot: (input: ScreenshotInput) => Promise<ToolResult>;
   tap: (input: TapInput) => Promise<ToolResult>;
   terminate_app: (input: TerminateAppInput) => Promise<ToolResult>;
+  type_text: (input: TypeTextInput) => Promise<ToolResult>;
   end_session: (input: EndSessionInput) => Promise<ToolResult<{ closed: boolean; endedAt: string }>>;
 }
 
@@ -34,7 +36,7 @@ export class MobileE2EMcpServer {
   constructor(private readonly tools: MobileE2EMcpToolRegistry) {}
 
   listTools(): Array<keyof MobileE2EMcpToolRegistry> {
-    return ["doctor", "inspect_ui", "install_app", "launch_app", "list_devices", "start_session", "run_flow", "take_screenshot", "tap", "terminate_app", "end_session"];
+    return ["doctor", "inspect_ui", "install_app", "launch_app", "list_devices", "start_session", "run_flow", "take_screenshot", "tap", "terminate_app", "type_text", "end_session"];
   }
 
   async invoke(toolName: "doctor", input: DoctorInput): Promise<ToolResult<{ checks: DoctorCheck[]; devices: { android: DeviceInfo[]; ios: DeviceInfo[] } }>>;
@@ -47,10 +49,11 @@ export class MobileE2EMcpServer {
   async invoke(toolName: "take_screenshot", input: ScreenshotInput): Promise<ToolResult>;
   async invoke(toolName: "tap", input: TapInput): Promise<ToolResult>;
   async invoke(toolName: "terminate_app", input: TerminateAppInput): Promise<ToolResult>;
+  async invoke(toolName: "type_text", input: TypeTextInput): Promise<ToolResult>;
   async invoke(toolName: "end_session", input: EndSessionInput): Promise<ToolResult<{ closed: boolean; endedAt: string }>>;
   async invoke(
     toolName: keyof MobileE2EMcpToolRegistry,
-    input: DoctorInput | InspectUiInput | InstallAppInput | LaunchAppInput | ListDevicesInput | StartSessionInput | RunFlowInput | ScreenshotInput | TapInput | TerminateAppInput | EndSessionInput,
+    input: DoctorInput | InspectUiInput | InstallAppInput | LaunchAppInput | ListDevicesInput | StartSessionInput | RunFlowInput | ScreenshotInput | TapInput | TerminateAppInput | TypeTextInput | EndSessionInput,
   ): Promise<
     | ToolResult<{ checks: DoctorCheck[]; devices: { android: DeviceInfo[]; ios: DeviceInfo[] } }>
     | ToolResult<{ android: DeviceInfo[]; ios: DeviceInfo[] }>
@@ -68,6 +71,7 @@ export class MobileE2EMcpServer {
     if (toolName === "take_screenshot") return this.tools.take_screenshot(input as ScreenshotInput);
     if (toolName === "tap") return this.tools.tap(input as TapInput);
     if (toolName === "terminate_app") return this.tools.terminate_app(input as TerminateAppInput);
+    if (toolName === "type_text") return this.tools.type_text(input as TypeTextInput);
     return this.tools.end_session(input as EndSessionInput);
   }
 }
