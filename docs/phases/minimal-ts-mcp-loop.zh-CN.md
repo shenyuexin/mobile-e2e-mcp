@@ -70,6 +70,7 @@ pnpm --filter @mobile-e2e-mcp/mcp-server exec tsx src/dev-cli.ts --type-text --p
 - `take_screenshot` 实机验证：Android dry-run 成功，真实截图 artifact 已输出
 - `terminate_app` 实机验证：Android dry-run 与真实终止均成功
 - `inspect_ui` 实机验证：Android hierarchy dump 成功，iOS 明确返回 partial 支持
+- `inspect_ui` 现已附带结构化摘要（节点数、可点击节点、sample nodes），便于后续 `tap` / `type_text` 消费
 - `tap` 实机验证：Android 坐标点击 dry-run 与真实执行均成功
 - `type_text` 实机验证：Android 文本输入 dry-run 与真实执行均成功
 

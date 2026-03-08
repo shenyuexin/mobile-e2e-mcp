@@ -250,3 +250,6 @@ pnpm mcp:stdio
 - `end_session`
 
 首版最小目标是先打通 `TS server -> TS adapter -> 现有 shell runner` 的执行闭环，再逐步补齐更细粒度工具。
+
+
+当前 `inspect_ui` 在 Android 上除了原始 XML，还会返回结构化摘要，包括节点总数、可点击节点数量、带 content-desc/text 的 sample nodes，作为后续元素级交互的基础输入。
