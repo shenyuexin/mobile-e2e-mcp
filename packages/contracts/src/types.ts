@@ -10,6 +10,26 @@ export interface ToolResult<TData = unknown> { status: ToolStatus; reasonCode: R
 export interface DeviceInfo { id: string; name?: string; platform: Platform; state: string; available: boolean; }
 export interface DoctorCheck { name: string; status: "pass" | "warn" | "fail"; detail: string; }
 export interface DoctorInput { includeUnavailable?: boolean; }
+export interface InspectUiNode {
+  index?: number;
+  text?: string;
+  resourceId?: string;
+  className?: string;
+  packageName?: string;
+  contentDesc?: string;
+  clickable: boolean;
+  enabled: boolean;
+  scrollable: boolean;
+  bounds?: string;
+}
+export interface InspectUiSummary {
+  totalNodes: number;
+  clickableNodes: number;
+  scrollableNodes: number;
+  nodesWithText: number;
+  nodesWithContentDesc: number;
+  sampleNodes: InspectUiNode[];
+}
 export interface InspectUiInput { sessionId: string; platform: Platform; runnerProfile?: RunnerProfile; harnessConfigPath?: string; deviceId?: string; outputPath?: string; dryRun?: boolean; }
 export interface InstallAppInput { sessionId: string; platform: Platform; runnerProfile?: RunnerProfile; harnessConfigPath?: string; artifactPath?: string; deviceId?: string; dryRun?: boolean; }
 export interface LaunchAppInput { sessionId: string; platform: Platform; runnerProfile?: RunnerProfile; harnessConfigPath?: string; deviceId?: string; appId?: string; launchUrl?: string; dryRun?: boolean; }

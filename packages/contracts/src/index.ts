@@ -5,6 +5,8 @@ export type {
   DoctorInput,
   EndSessionInput,
   InspectUiInput,
+  InspectUiNode,
+  InspectUiSummary,
   InstallAppInput,
   LaunchAppInput,
   ListDevicesInput,
