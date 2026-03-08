@@ -1260,15 +1260,59 @@ export async function inspectUiWithMaestro(input: InspectUiInput): Promise<ToolR
   const absoluteOutputPath = path.resolve(repoRoot, relativeOutputPath);
 
   if (input.platform === "ios") {
+    const iosRelativeOutputPath = input.outputPath ?? path.posix.join("artifacts", "ui-dumps", input.sessionId, `${input.platform}-${runnerProfile}.json`);
+    const iosAbsoluteOutputPath = path.resolve(repoRoot, iosRelativeOutputPath);
+    const idbCommand = ["idb", "--udid", deviceId, "ui", "describe-all", "--json", "--nested"];
+
+    if (input.dryRun) {
+      return {
+        status: "success",
+        reasonCode: REASON_CODES.ok,
+        sessionId: input.sessionId,
+        durationMs: Date.now() - startTime,
+        attempts: 1,
+        artifacts: [],
+        data: { dryRun: true, runnerProfile, outputPath: iosRelativeOutputPath, command: idbCommand, exitCode: 0 },
+        nextSuggestions: ["Run inspect_ui without dryRun to capture an actual iOS hierarchy dump through idb."],
+      };
+    }
+
+    const idbProbe = await executeRunner(["idb", "--help"], repoRoot, process.env).catch(() => undefined);
+    if (!idbProbe || idbProbe.exitCode !== 0) {
+      return {
+        status: "partial",
+        reasonCode: REASON_CODES.configurationError,
+        sessionId: input.sessionId,
+        durationMs: Date.now() - startTime,
+        attempts: 1,
+        artifacts: [],
+        data: { dryRun: false, runnerProfile, outputPath: iosRelativeOutputPath, command: idbCommand, exitCode: idbProbe?.exitCode ?? null },
+        nextSuggestions: ["iOS inspect_ui in this repo requires idb. Install idb-companion and fb-idb, then retry inspect_ui."],
+      };
+    }
+
+    await mkdir(path.dirname(iosAbsoluteOutputPath), { recursive: true });
+    const idbExecution = await executeRunner(idbCommand, repoRoot, process.env);
+    if (idbExecution.exitCode === 0) {
+      await writeFile(iosAbsoluteOutputPath, idbExecution.stdout, "utf8");
+    }
+
     return {
-      status: "partial",
-      reasonCode: REASON_CODES.unsupportedOperation,
+      status: idbExecution.exitCode === 0 ? "success" : "partial",
+      reasonCode: idbExecution.exitCode === 0 ? REASON_CODES.ok : REASON_CODES.configurationError,
       sessionId: input.sessionId,
       durationMs: Date.now() - startTime,
       attempts: 1,
-      artifacts: [],
-      data: { dryRun: Boolean(input.dryRun), runnerProfile, outputPath: relativeOutputPath, command: [], exitCode: null },
-      nextSuggestions: ["inspect_ui currently supports Android via uiautomator dump. iOS hierarchy export is not yet wired in this repo."],
+      artifacts: idbExecution.exitCode === 0 ? [toRelativePath(repoRoot, iosAbsoluteOutputPath)] : [],
+      data: {
+        dryRun: false,
+        runnerProfile,
+        outputPath: iosRelativeOutputPath,
+        command: idbCommand,
+        exitCode: idbExecution.exitCode,
+        content: idbExecution.exitCode === 0 ? idbExecution.stdout : undefined,
+      },
+      nextSuggestions: idbExecution.exitCode === 0 ? [] : ["Ensure idb companion is available for the selected simulator and retry inspect_ui."],
     };
   }
 
@@ -1592,6 +1636,7 @@ export async function runDoctor(
   checks.push(await checkCommandVersion(repoRoot, "adb", ["version"], "adb"));
   checks.push(await checkCommandVersion(repoRoot, "xcrun", ["simctl", "help"], "xcrun simctl"));
   checks.push(await checkCommandVersion(repoRoot, "maestro", ["--version"], "maestro"));
+  checks.push(await checkCommandVersion(repoRoot, "idb", ["--help"], "idb"));
 
   checks.push(...(await collectHarnessChecks(repoRoot)));
   checks.push(...collectArtifactChecks(repoRoot));
