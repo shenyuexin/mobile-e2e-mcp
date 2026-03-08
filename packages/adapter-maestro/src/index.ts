@@ -13,6 +13,7 @@ import {
   type LaunchAppInput,
   type ListDevicesInput,
   type ScreenshotInput,
+  type TerminateAppInput,
   type Platform,
   type ReasonCode,
   type RunFlowInput,
@@ -48,6 +49,14 @@ interface ScreenshotData {
   dryRun: boolean;
   runnerProfile: RunnerProfile;
   outputPath: string;
+  command: string[];
+  exitCode: number | null;
+}
+
+interface TerminateAppData {
+  dryRun: boolean;
+  runnerProfile: RunnerProfile;
+  appId: string;
   command: string[];
   exitCode: number | null;
 }
@@ -1062,6 +1071,34 @@ async function collectInstallStateChecks(repoRoot: string): Promise<DoctorCheck[
   }
 
   return checks;
+}
+
+export async function terminateAppWithMaestro(input: TerminateAppInput): Promise<ToolResult<TerminateAppData>> {
+  const startTime = Date.now();
+  const repoRoot = resolveRepoPath();
+  const runnerProfile = input.runnerProfile ?? DEFAULT_RUNNER_PROFILE;
+  const selection = await loadHarnessSelection(repoRoot, input.platform, runnerProfile, input.harnessConfigPath ?? DEFAULT_HARNESS_CONFIG_PATH);
+  const deviceId = input.deviceId ?? selection.deviceId ?? (input.platform === "android" ? "emulator-5554" : "ADA078B9-3C6B-4875-8B85-A7789F368816");
+  const appId = input.appId ?? selection.appId;
+  const command = input.platform === "android"
+    ? ["adb", "-s", deviceId, "shell", "am", "force-stop", appId]
+    : ["xcrun", "simctl", "terminate", deviceId, appId];
+
+  if (input.dryRun) {
+    return { status: "success", reasonCode: REASON_CODES.ok, sessionId: input.sessionId, durationMs: Date.now() - startTime, attempts: 1, artifacts: [], data: { dryRun: true, runnerProfile, appId, command, exitCode: 0 }, nextSuggestions: ["Run terminate_app without dryRun to stop the target app."] };
+  }
+
+  const execution = await executeRunner(command, repoRoot, process.env);
+  return {
+    status: execution.exitCode === 0 ? "success" : "failed",
+    reasonCode: execution.exitCode === 0 ? REASON_CODES.ok : buildFailureReason(execution.stderr, execution.exitCode),
+    sessionId: input.sessionId,
+    durationMs: Date.now() - startTime,
+    attempts: 1,
+    artifacts: [],
+    data: { dryRun: false, runnerProfile, appId, command, exitCode: execution.exitCode },
+    nextSuggestions: execution.exitCode === 0 ? [] : ["Check device state and appId before retrying terminate_app."],
+  };
 }
 
 export async function takeScreenshotWithMaestro(input: ScreenshotInput): Promise<ToolResult<ScreenshotData>> {
