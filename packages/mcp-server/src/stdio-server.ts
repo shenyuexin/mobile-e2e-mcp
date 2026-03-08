@@ -37,6 +37,7 @@ function buildToolList() {
   return [
     { name: "doctor", description: "Check command availability and device readiness." },
     { name: "install_app", description: "Install a native or flutter artifact onto a target device/simulator." },
+    { name: "launch_app", description: "Launch the selected app or Expo URL on a target device/simulator." },
     { name: "list_devices", description: "List Android devices and iOS simulators." },
     { name: "start_session", description: "Create a typed mobile execution session." },
     { name: "run_flow", description: "Run the selected flow through the Maestro adapter." },

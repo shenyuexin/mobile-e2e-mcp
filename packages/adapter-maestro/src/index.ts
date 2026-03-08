@@ -10,6 +10,7 @@ import {
   type DoctorCheck,
   type DoctorInput,
   type InstallAppInput,
+  type LaunchAppInput,
   type ListDevicesInput,
   type Platform,
   type ReasonCode,
@@ -46,6 +47,15 @@ interface InstallArtifactSpec {
   kind: "file" | "directory";
   envVar: string;
   relativePath: string;
+}
+
+interface LaunchAppData {
+  dryRun: boolean;
+  runnerProfile: RunnerProfile;
+  appId: string;
+  launchUrl?: string;
+  launchCommand: string[];
+  exitCode: number | null;
 }
 
 interface InstallAppData {
@@ -1043,6 +1053,63 @@ async function collectInstallStateChecks(repoRoot: string): Promise<DoctorCheck[
   }
 
   return checks;
+}
+
+export async function launchAppWithMaestro(input: LaunchAppInput): Promise<ToolResult<LaunchAppData>> {
+  const startTime = Date.now();
+  const repoRoot = resolveRepoPath();
+  const runnerProfile = input.runnerProfile ?? DEFAULT_RUNNER_PROFILE;
+  const selection = await loadHarnessSelection(repoRoot, input.platform, runnerProfile, input.harnessConfigPath ?? DEFAULT_HARNESS_CONFIG_PATH);
+  const deviceId = input.deviceId ?? selection.deviceId ?? (input.platform === "android" ? "emulator-5554" : "ADA078B9-3C6B-4875-8B85-A7789F368816");
+  const appId = input.appId ?? selection.appId;
+  const launchUrl = input.launchUrl ?? selection.launchUrl;
+
+  const launchCommand =
+    runnerProfile === "phase1"
+      ? input.platform === "android"
+        ? ["adb", "-s", deviceId, "shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", launchUrl ?? "", appId]
+        : ["xcrun", "simctl", "openurl", deviceId, launchUrl ?? ""]
+      : input.platform === "android"
+        ? ["adb", "-s", deviceId, "shell", "monkey", "-p", appId, "-c", "android.intent.category.LAUNCHER", "1"]
+        : ["xcrun", "simctl", "launch", deviceId, appId];
+
+  if (runnerProfile === "phase1" && !launchUrl) {
+    return {
+      status: "partial",
+      reasonCode: REASON_CODES.configurationError,
+      sessionId: input.sessionId,
+      durationMs: Date.now() - startTime,
+      attempts: 1,
+      artifacts: [],
+      data: { dryRun: Boolean(input.dryRun), runnerProfile, appId, launchCommand, exitCode: null },
+      nextSuggestions: ["Provide launchUrl or ensure the harness config includes a phase1 launch_url before calling launch_app."],
+    };
+  }
+
+  if (input.dryRun) {
+    return {
+      status: "success",
+      reasonCode: REASON_CODES.ok,
+      sessionId: input.sessionId,
+      durationMs: Date.now() - startTime,
+      attempts: 1,
+      artifacts: [],
+      data: { dryRun: true, runnerProfile, appId, launchUrl, launchCommand, exitCode: 0 },
+      nextSuggestions: ["Run launch_app without dryRun to perform the actual launch."],
+    };
+  }
+
+  const execution = await executeRunner(launchCommand, repoRoot, process.env);
+  return {
+    status: execution.exitCode === 0 ? "success" : "failed",
+    reasonCode: execution.exitCode === 0 ? REASON_CODES.ok : buildFailureReason(execution.stderr, execution.exitCode),
+    sessionId: input.sessionId,
+    durationMs: Date.now() - startTime,
+    attempts: 1,
+    artifacts: [],
+    data: { dryRun: false, runnerProfile, appId, launchUrl, launchCommand, exitCode: execution.exitCode },
+    nextSuggestions: execution.exitCode === 0 ? [] : ["Check device/simulator state and launchUrl/appId values before retrying launch_app."],
+  };
 }
 
 export async function installAppWithMaestro(input: InstallAppInput): Promise<ToolResult<InstallAppData>> {
