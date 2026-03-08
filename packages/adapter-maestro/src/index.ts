@@ -18,6 +18,8 @@ import {
   type RunFlowInput,
   type RunnerProfile,
   type ScreenshotInput,
+  type TapElementData,
+  type TapElementInput,
   type TapInput,
   type TerminateAppInput,
   type ToolResult,
@@ -411,6 +413,24 @@ function queryAndroidUiNodes(nodes: InspectUiNode[], query: QueryUiSelector): { 
   return {
     totalMatches: allMatches.length,
     matches: query.limit === undefined ? allMatches : allMatches.slice(0, query.limit),
+  };
+}
+
+function parseBoundsCenter(bounds: string | undefined): { x: number; y: number } | undefined {
+  if (!bounds) {
+    return undefined;
+  }
+  const match = bounds.match(/^\[(\d+),(\d+)\]\[(\d+),(\d+)\]$/);
+  if (!match) {
+    return undefined;
+  }
+  const left = Number(match[1]);
+  const top = Number(match[2]);
+  const right = Number(match[3]);
+  const bottom = Number(match[4]);
+  return {
+    x: Math.round((left + right) / 2),
+    y: Math.round((top + bottom) / 2),
   };
 }
 
@@ -1369,6 +1389,120 @@ export async function typeTextWithMaestro(input: TypeTextInput): Promise<ToolRes
     artifacts: [],
     data: { dryRun: false, runnerProfile, text: input.text, command, exitCode: execution.exitCode },
     nextSuggestions: execution.exitCode === 0 ? [] : ["Check Android device state and focused input field before retrying type_text."],
+  };
+}
+
+export async function tapElementWithMaestro(input: TapElementInput): Promise<ToolResult<TapElementData>> {
+  const startTime = Date.now();
+  const repoRoot = resolveRepoPath();
+  const runnerProfile = input.runnerProfile ?? DEFAULT_RUNNER_PROFILE;
+  const query = normalizeQueryUiSelector({
+    resourceId: input.resourceId,
+    contentDesc: input.contentDesc,
+    text: input.text,
+    className: input.className,
+    clickable: input.clickable,
+    limit: 1,
+  });
+
+  if (!hasQueryUiSelector(query)) {
+    return {
+      status: "failed",
+      reasonCode: REASON_CODES.configurationError,
+      sessionId: input.sessionId,
+      durationMs: Date.now() - startTime,
+      attempts: 1,
+      artifacts: [],
+      data: { dryRun: Boolean(input.dryRun), runnerProfile, query, command: [], exitCode: null, supportLevel: input.platform === "android" ? "full" : "partial" },
+      nextSuggestions: ["Provide at least one selector field before calling tap_element."],
+    };
+  }
+
+  if (input.platform === "ios") {
+    return {
+      status: "partial",
+      reasonCode: REASON_CODES.unsupportedOperation,
+      sessionId: input.sessionId,
+      durationMs: Date.now() - startTime,
+      attempts: 1,
+      artifacts: [],
+      data: { dryRun: Boolean(input.dryRun), runnerProfile, query, command: [], exitCode: null, supportLevel: "partial" },
+      nextSuggestions: ["tap_element currently supports Android only. Use inspect_ui/query_ui artifacts for iOS manual inspection."],
+    };
+  }
+
+  const selection = await loadHarnessSelection(repoRoot, input.platform, runnerProfile, input.harnessConfigPath ?? DEFAULT_HARNESS_CONFIG_PATH);
+  const deviceId = input.deviceId ?? selection.deviceId ?? "emulator-5554";
+  const { dumpCommand, readCommand } = buildAndroidUiDumpCommands(deviceId);
+  const dumpExecution = await executeRunner(dumpCommand, repoRoot, process.env);
+  if (dumpExecution.exitCode !== 0) {
+    return {
+      status: "failed",
+      reasonCode: buildFailureReason(dumpExecution.stderr, dumpExecution.exitCode),
+      sessionId: input.sessionId,
+      durationMs: Date.now() - startTime,
+      attempts: 1,
+      artifacts: [],
+      data: { dryRun: Boolean(input.dryRun), runnerProfile, query, command: dumpCommand, exitCode: dumpExecution.exitCode, supportLevel: "full" },
+      nextSuggestions: ["Could not refresh Android UI tree before tap_element. Check device state and retry."],
+    };
+  }
+
+  const readExecution = await executeRunner(readCommand, repoRoot, process.env);
+  if (readExecution.exitCode !== 0) {
+    return {
+      status: "failed",
+      reasonCode: buildFailureReason(readExecution.stderr, readExecution.exitCode),
+      sessionId: input.sessionId,
+      durationMs: Date.now() - startTime,
+      attempts: 1,
+      artifacts: [],
+      data: { dryRun: Boolean(input.dryRun), runnerProfile, query, command: readCommand, exitCode: readExecution.exitCode, supportLevel: "full" },
+      nextSuggestions: ["Could not read Android UI tree before tap_element. Check device state and retry."],
+    };
+  }
+
+  const nodes = parseAndroidUiHierarchyNodes(readExecution.stdout);
+  const queryResult = queryAndroidUiNodes(nodes, query);
+  const firstMatch = queryResult.matches[0];
+  const center = parseBoundsCenter(firstMatch?.node.bounds);
+  if (!firstMatch || !center) {
+    return {
+      status: "partial",
+      reasonCode: REASON_CODES.unsupportedOperation,
+      sessionId: input.sessionId,
+      durationMs: Date.now() - startTime,
+      attempts: 1,
+      artifacts: [],
+      data: { dryRun: Boolean(input.dryRun), runnerProfile, query, matchedNode: firstMatch?.node, command: [], exitCode: null, supportLevel: "full" },
+      nextSuggestions: ["No tappable element with parseable bounds matched the provided selector."],
+    };
+  }
+
+  const tapCommand = ["adb", "-s", deviceId, "shell", "input", "tap", String(center.x), String(center.y)];
+  if (input.dryRun) {
+    return {
+      status: "success",
+      reasonCode: REASON_CODES.ok,
+      sessionId: input.sessionId,
+      durationMs: Date.now() - startTime,
+      attempts: 1,
+      artifacts: [],
+      data: { dryRun: true, runnerProfile, query, matchedNode: firstMatch.node, resolvedX: center.x, resolvedY: center.y, command: tapCommand, exitCode: 0, supportLevel: "full" },
+      nextSuggestions: ["Run tap_element without dryRun to perform the resolved Android tap."],
+    };
+  }
+
+  const execution = await executeRunner(tapCommand, repoRoot, process.env);
+  return {
+    status: execution.exitCode === 0 ? "success" : "failed",
+    reasonCode: execution.exitCode === 0 ? REASON_CODES.ok : buildFailureReason(execution.stderr, execution.exitCode),
+    sessionId: input.sessionId,
+    durationMs: Date.now() - startTime,
+    attempts: 1,
+    artifacts: [],
+    data: { dryRun: false, runnerProfile, query, matchedNode: firstMatch.node, resolvedX: center.x, resolvedY: center.y, command: tapCommand, exitCode: execution.exitCode, supportLevel: "full" },
+    nextSuggestions: execution.exitCode === 0 ? [] : ["Check Android device state before retrying tap_element."],
   };
 }
 

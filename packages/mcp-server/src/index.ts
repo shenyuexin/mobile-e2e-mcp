@@ -9,6 +9,7 @@ import { queryUi } from "./tools/query-ui.js";
 import { runFlow } from "./tools/run-flow.js";
 import { startSession } from "./tools/start-session.js";
 import { takeScreenshot } from "./tools/take-screenshot.js";
+import { tapElement } from "./tools/tap-element.js";
 import { tap } from "./tools/tap.js";
 import { terminateApp } from "./tools/terminate-app.js";
 import { typeText } from "./tools/type-text.js";
@@ -25,6 +26,7 @@ export function createServer(): MobileE2EMcpServer {
     run_flow: runFlow,
     take_screenshot: takeScreenshot,
     tap,
+    tap_element: tapElement,
     terminate_app: terminateApp,
     type_text: typeText,
     end_session: endSession,

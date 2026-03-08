@@ -1,4 +1,4 @@
-import type { DoctorInput, InspectUiInput, InstallAppInput, LaunchAppInput, ListDevicesInput, Platform, QueryUiInput, RunFlowInput, RunnerProfile, ScreenshotInput, StartSessionInput, TapInput, TerminateAppInput, TypeTextInput } from "@mobile-e2e-mcp/contracts";
+import type { DoctorInput, InspectUiInput, InstallAppInput, LaunchAppInput, ListDevicesInput, Platform, QueryUiInput, RunFlowInput, RunnerProfile, ScreenshotInput, StartSessionInput, TapElementInput, TapInput, TerminateAppInput, TypeTextInput } from "@mobile-e2e-mcp/contracts";
 import process from "node:process";
 import { createServer } from "./index.js";
 
@@ -14,6 +14,7 @@ interface CliOptions {
   queryUi: boolean;
   takeScreenshot: boolean;
   tap: boolean;
+  tapElement: boolean;
   terminateApp: boolean;
   typeText: boolean;
   runCount: number;
@@ -57,6 +58,7 @@ function parseCliArgs(argv: string[]): CliOptions {
   let queryUi = false;
   let takeScreenshot = false;
   let tap = false;
+  let tapElement = false;
   let terminateApp = false;
   let typeText = false;
   let runCount = 1;
@@ -93,6 +95,7 @@ function parseCliArgs(argv: string[]): CliOptions {
     else if (arg === "--query-ui") { queryUi = true; }
     else if (arg === "--take-screenshot") { takeScreenshot = true; }
     else if (arg === "--tap") { tap = true; }
+    else if (arg === "--tap-element") { tapElement = true; }
     else if (arg === "--terminate-app") { terminateApp = true; }
     else if (arg === "--type-text") { typeText = true; }
     else if (arg === "--run-count" && nextValue) { const parsed = Number(nextValue); if (Number.isFinite(parsed) && parsed > 0) runCount = parsed; index += 1; }
@@ -128,6 +131,7 @@ function parseCliArgs(argv: string[]): CliOptions {
     queryUi,
     takeScreenshot,
     tap,
+    tapElement,
     terminateApp,
     typeText,
     runCount,
@@ -221,6 +225,25 @@ async function main(): Promise<void> {
     const typeTextInput: TypeTextInput = { sessionId: cliOptions.sessionId ?? `type-${Date.now()}`, platform: cliOptions.platform, runnerProfile: cliOptions.runnerProfile, harnessConfigPath: cliOptions.harnessConfigPath, deviceId: cliOptions.deviceId, text: cliOptions.text ?? "hello", dryRun: cliOptions.dryRun };
     const result = await server.invoke("type_text", typeTextInput);
     console.log(JSON.stringify({ tools: server.listTools(), typeTextResult: result }, null, 2));
+    if (result.status === "failed") process.exitCode = 1;
+    return;
+  }
+  if (cliOptions.tapElement) {
+    const tapElementInput: TapElementInput = {
+      sessionId: cliOptions.sessionId ?? `tap-element-${Date.now()}`,
+      platform: cliOptions.platform,
+      runnerProfile: cliOptions.runnerProfile,
+      harnessConfigPath: cliOptions.harnessConfigPath,
+      deviceId: cliOptions.deviceId,
+      resourceId: cliOptions.queryResourceId,
+      contentDesc: cliOptions.queryContentDesc,
+      text: cliOptions.queryText ?? cliOptions.text,
+      className: cliOptions.queryClassName,
+      clickable: cliOptions.queryClickable,
+      dryRun: cliOptions.dryRun,
+    };
+    const result = await server.invoke("tap_element", tapElementInput);
+    console.log(JSON.stringify({ tools: server.listTools(), tapElementResult: result }, null, 2));
     if (result.status === "failed") process.exitCode = 1;
     return;
   }
