@@ -25,6 +25,7 @@
 12. 新增最小 terminate_app 工具
 13. 新增最小 inspect_ui 工具
 14. 新增最小 tap 工具
+15. 新增最小 type_text 工具
 
 ## 当前最小验证入口
 
@@ -51,6 +52,7 @@ pnpm --filter @mobile-e2e-mcp/mcp-server exec tsx src/dev-cli.ts --take-screensh
 pnpm --filter @mobile-e2e-mcp/mcp-server exec tsx src/dev-cli.ts --terminate-app --platform android --runner-profile phase1 --dry-run
 pnpm --filter @mobile-e2e-mcp/mcp-server exec tsx src/dev-cli.ts --inspect-ui --platform android --runner-profile phase1 --dry-run
 pnpm --filter @mobile-e2e-mcp/mcp-server exec tsx src/dev-cli.ts --tap --platform android --runner-profile phase1 --x 900 --y 140 --dry-run
+pnpm --filter @mobile-e2e-mcp/mcp-server exec tsx src/dev-cli.ts --type-text --platform android --runner-profile phase1 --text hello --dry-run
 ```
 
 ## 已验证结果
@@ -69,6 +71,7 @@ pnpm --filter @mobile-e2e-mcp/mcp-server exec tsx src/dev-cli.ts --tap --platfor
 - `terminate_app` 实机验证：Android dry-run 与真实终止均成功
 - `inspect_ui` 实机验证：Android hierarchy dump 成功，iOS 明确返回 partial 支持
 - `tap` 实机验证：Android 坐标点击 dry-run 与真实执行均成功
+- `type_text` 实机验证：Android 文本输入 dry-run 与真实执行均成功
 
 ## 已知限制
 
