@@ -774,6 +774,121 @@ function collectArtifactChecks(repoRoot: string): DoctorCheck[] {
   ];
 }
 
+async function collectInstallStateChecks(repoRoot: string): Promise<DoctorCheck[]> {
+  const checks: DoctorCheck[] = [];
+
+  try {
+    const androidPackage = await executeRunner(["adb", "-s", process.env.DEVICE_ID ?? "emulator-5554", "shell", "pm", "path", "com.epam.mobitru"], repoRoot, process.env);
+    checks.push({
+      name: "native_android install state",
+      status: androidPackage.exitCode === 0 && androidPackage.stdout.includes("package:") ? "pass" : "warn",
+      detail:
+        androidPackage.exitCode === 0 && androidPackage.stdout.includes("package:")
+          ? "com.epam.mobitru is installed on the selected Android device."
+          : "com.epam.mobitru is not confirmed as installed on the selected Android device.",
+    });
+  } catch {
+    checks.push({
+      name: "native_android install state",
+      status: "warn",
+      detail: "Android install state could not be verified.",
+    });
+  }
+
+  try {
+    const flutterPackage = await executeRunner(["adb", "-s", process.env.DEVICE_ID ?? "emulator-5554", "shell", "pm", "path", "com.epam.mobitru"], repoRoot, process.env);
+    checks.push({
+      name: "flutter_android install state",
+      status: flutterPackage.exitCode === 0 && flutterPackage.stdout.includes("package:") ? "pass" : "warn",
+      detail:
+        flutterPackage.exitCode === 0 && flutterPackage.stdout.includes("package:")
+          ? "Flutter Android app id is installed on the selected Android device."
+          : "Flutter Android app id is not confirmed as installed on the selected Android device.",
+    });
+  } catch {
+    checks.push({
+      name: "flutter_android install state",
+      status: "warn",
+      detail: "Flutter Android install state could not be verified.",
+    });
+  }
+
+  try {
+    const iosPackage = await executeRunner(
+      ["xcrun", "simctl", "get_app_container", process.env.SIM_UDID ?? "ADA078B9-3C6B-4875-8B85-A7789F368816", "com.epam.mobitru.demoapp"],
+      repoRoot,
+      process.env,
+    );
+    checks.push({
+      name: "native_ios install state",
+      status: iosPackage.exitCode === 0 ? "pass" : "warn",
+      detail:
+        iosPackage.exitCode === 0
+          ? "com.epam.mobitru.demoapp is installed on the selected iOS simulator."
+          : "com.epam.mobitru.demoapp is not confirmed as installed on the selected iOS simulator.",
+    });
+  } catch {
+    checks.push({
+      name: "native_ios install state",
+      status: "warn",
+      detail: "iOS install state could not be verified.",
+    });
+  }
+
+  try {
+    const artifactRoot = path.resolve(repoRoot, "artifacts");
+    if (existsSync(artifactRoot)) {
+      const artifactFiles = await listArtifacts(artifactRoot, repoRoot);
+      const errorLogs = artifactFiles.filter((filePath) => filePath.endsWith("command.stderr.log"));
+      let detectedConflict = false;
+
+      for (const relativePath of errorLogs) {
+        const absolutePath = path.resolve(repoRoot, relativePath);
+        const content = (await readFile(absolutePath, "utf8")).toLowerCase();
+        if (content.includes("install_failed_version_downgrade")) {
+          checks.push({
+            name: "android install conflict signal",
+            status: "warn",
+            detail: `Detected INSTALL_FAILED_VERSION_DOWNGRADE in ${relativePath}. Installed app may be newer than the artifact being deployed.`,
+          });
+          detectedConflict = true;
+          break;
+        }
+        if (
+          content.includes("install_failed_update_incompatible") ||
+          content.includes("signatures do not match") ||
+          content.includes("signature") && content.includes("incompatible") ||
+          content.includes("certificate") && content.includes("mismatch")
+        ) {
+          checks.push({
+            name: "android install conflict signal",
+            status: "warn",
+            detail: `Detected a signature or certificate install conflict in ${relativePath}. You may need to manually uninstall the existing app before installing a differently signed build.`,
+          });
+          detectedConflict = true;
+          break;
+        }
+      }
+
+      if (!detectedConflict) {
+        checks.push({
+          name: "android install conflict signal",
+          status: "pass",
+          detail: "No recent Android install conflict signal was detected in recorded stderr logs.",
+        });
+      }
+    }
+  } catch {
+    checks.push({
+      name: "android install conflict signal",
+      status: "warn",
+      detail: "Recent Android install conflict logs could not be inspected.",
+    });
+  }
+
+  return checks;
+}
+
 export async function runDoctor(
   input: DoctorInput = {},
 ): Promise<ToolResult<{ checks: DoctorCheck[]; devices: { android: DeviceInfo[]; ios: DeviceInfo[] } }>> {
@@ -820,6 +935,7 @@ export async function runDoctor(
 
   checks.push(...(await collectHarnessChecks(repoRoot)));
   checks.push(...collectArtifactChecks(repoRoot));
+  checks.push(...(await collectInstallStateChecks(repoRoot)));
 
   const deviceResult = await listAvailableDevices({ includeUnavailable: input.includeUnavailable });
   checks.push(summarizeDeviceCheck("android devices", deviceResult.data.android.filter((device) => device.available).length));
