@@ -743,6 +743,37 @@ async function collectHarnessChecks(repoRoot: string): Promise<DoctorCheck[]> {
   return checks;
 }
 
+function summarizeOptionalArtifactCheck(name: string, artifactPath: string, kind: "file" | "directory"): DoctorCheck {
+  const exists = kind === "directory" ? existsSync(artifactPath) : existsSync(artifactPath);
+  return {
+    name,
+    status: exists ? "pass" : "warn",
+    detail: exists
+      ? `${artifactPath} is available for installation.`
+      : `${artifactPath} is not present. The runner can still proceed if the app is already installed or an override env is provided.`,
+  };
+}
+
+function collectArtifactChecks(repoRoot: string): DoctorCheck[] {
+  return [
+    summarizeOptionalArtifactCheck(
+      "native_android artifact",
+      process.env.NATIVE_ANDROID_APK_PATH ?? path.resolve(repoRoot, "examples/demo-android-app/app/build/outputs/apk/debug/app-debug.apk"),
+      "file",
+    ),
+    summarizeOptionalArtifactCheck(
+      "native_ios artifact",
+      process.env.NATIVE_IOS_APP_PATH ?? path.resolve(repoRoot, "examples/demo-ios-app/build/Build/Products/Debug-iphonesimulator/MobiTruKotlin.app"),
+      "directory",
+    ),
+    summarizeOptionalArtifactCheck(
+      "flutter_android artifact",
+      process.env.FLUTTER_APK_PATH ?? path.resolve(repoRoot, "examples/demo-flutter-app/build/app/outputs/flutter-apk/app-debug.apk"),
+      "file",
+    ),
+  ];
+}
+
 export async function runDoctor(
   input: DoctorInput = {},
 ): Promise<ToolResult<{ checks: DoctorCheck[]; devices: { android: DeviceInfo[]; ios: DeviceInfo[] } }>> {
@@ -788,6 +819,7 @@ export async function runDoctor(
   }
 
   checks.push(...(await collectHarnessChecks(repoRoot)));
+  checks.push(...collectArtifactChecks(repoRoot));
 
   const deviceResult = await listAvailableDevices({ includeUnavailable: input.includeUnavailable });
   checks.push(summarizeDeviceCheck("android devices", deviceResult.data.android.filter((device) => device.available).length));
