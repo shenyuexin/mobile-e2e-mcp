@@ -53,6 +53,16 @@ export interface DoctorInput {
   includeUnavailable?: boolean;
 }
 
+export interface InstallAppInput {
+  sessionId: string;
+  platform: Platform;
+  runnerProfile?: RunnerProfile;
+  harnessConfigPath?: string;
+  artifactPath?: string;
+  deviceId?: string;
+  dryRun?: boolean;
+}
+
 export interface ListDevicesInput {
   includeUnavailable?: boolean;
 }
