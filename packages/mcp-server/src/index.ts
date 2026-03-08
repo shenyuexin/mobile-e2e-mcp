@@ -6,6 +6,7 @@ import { launchApp } from "./tools/launch-app.js";
 import { listDevices } from "./tools/list-devices.js";
 import { runFlow } from "./tools/run-flow.js";
 import { startSession } from "./tools/start-session.js";
+import { takeScreenshot } from "./tools/take-screenshot.js";
 
 export function createServer(): MobileE2EMcpServer {
   return new MobileE2EMcpServer({
@@ -15,6 +16,7 @@ export function createServer(): MobileE2EMcpServer {
     list_devices: listDevices,
     start_session: startSession,
     run_flow: runFlow,
+    take_screenshot: takeScreenshot,
     end_session: endSession,
   });
 }

@@ -12,6 +12,7 @@ import {
   type InstallAppInput,
   type LaunchAppInput,
   type ListDevicesInput,
+  type ScreenshotInput,
   type Platform,
   type ReasonCode,
   type RunFlowInput,
@@ -41,6 +42,14 @@ interface CommandExecution {
   exitCode: number | null;
   stdout: string;
   stderr: string;
+}
+
+interface ScreenshotData {
+  dryRun: boolean;
+  runnerProfile: RunnerProfile;
+  outputPath: string;
+  command: string[];
+  exitCode: number | null;
 }
 
 interface InstallArtifactSpec {
@@ -1053,6 +1062,71 @@ async function collectInstallStateChecks(repoRoot: string): Promise<DoctorCheck[
   }
 
   return checks;
+}
+
+export async function takeScreenshotWithMaestro(input: ScreenshotInput): Promise<ToolResult<ScreenshotData>> {
+  const startTime = Date.now();
+  const repoRoot = resolveRepoPath();
+  const runnerProfile = input.runnerProfile ?? DEFAULT_RUNNER_PROFILE;
+  const selection = await loadHarnessSelection(repoRoot, input.platform, runnerProfile, input.harnessConfigPath ?? DEFAULT_HARNESS_CONFIG_PATH);
+  const deviceId = input.deviceId ?? selection.deviceId ?? (input.platform === "android" ? "emulator-5554" : "ADA078B9-3C6B-4875-8B85-A7789F368816");
+  const relativeOutputPath = input.outputPath ?? path.posix.join("artifacts", "screenshots", input.sessionId, `${input.platform}-${runnerProfile}.png`);
+  const absoluteOutputPath = path.resolve(repoRoot, relativeOutputPath);
+  const command = input.platform === "android"
+    ? ["adb", "-s", deviceId, "exec-out", "screencap", "-p"]
+    : ["xcrun", "simctl", "io", deviceId, "screenshot", absoluteOutputPath];
+
+  await mkdir(path.dirname(absoluteOutputPath), { recursive: true });
+
+  if (input.dryRun) {
+    return {
+      status: "success",
+      reasonCode: REASON_CODES.ok,
+      sessionId: input.sessionId,
+      durationMs: Date.now() - startTime,
+      attempts: 1,
+      artifacts: [],
+      data: { dryRun: true, runnerProfile, outputPath: relativeOutputPath, command, exitCode: 0 },
+      nextSuggestions: ["Run take_screenshot without dryRun to capture an actual screenshot."],
+    };
+  }
+
+  if (input.platform === "android") {
+    const execution = await new Promise<CommandExecution>((resolve, reject) => {
+      const child = spawn(command[0], command.slice(1), { cwd: repoRoot, env: process.env, stdio: ["ignore", "pipe", "pipe"] });
+      const stdoutChunks: Buffer[] = [];
+      let stderr = "";
+      child.stdout.on("data", (chunk: Buffer) => stdoutChunks.push(chunk));
+      child.stderr.on("data", (chunk: Buffer | string) => { stderr += chunk.toString(); });
+      child.on("error", reject);
+      child.on("close", async (exitCode) => {
+        await writeFile(absoluteOutputPath, Buffer.concat(stdoutChunks));
+        resolve({ exitCode, stdout: absoluteOutputPath, stderr });
+      });
+    });
+    return {
+      status: execution.exitCode === 0 ? "success" : "failed",
+      reasonCode: execution.exitCode === 0 ? REASON_CODES.ok : buildFailureReason(execution.stderr, execution.exitCode),
+      sessionId: input.sessionId,
+      durationMs: Date.now() - startTime,
+      attempts: 1,
+      artifacts: [toRelativePath(repoRoot, absoluteOutputPath)],
+      data: { dryRun: false, runnerProfile, outputPath: relativeOutputPath, command, exitCode: execution.exitCode },
+      nextSuggestions: execution.exitCode === 0 ? [] : ["Check device state before retrying take_screenshot."],
+    };
+  }
+
+  const execution = await executeRunner(command, repoRoot, process.env);
+  return {
+    status: execution.exitCode === 0 ? "success" : "failed",
+    reasonCode: execution.exitCode === 0 ? REASON_CODES.ok : buildFailureReason(execution.stderr, execution.exitCode),
+    sessionId: input.sessionId,
+    durationMs: Date.now() - startTime,
+    attempts: 1,
+    artifacts: execution.exitCode === 0 ? [toRelativePath(repoRoot, absoluteOutputPath)] : [],
+    data: { dryRun: false, runnerProfile, outputPath: relativeOutputPath, command, exitCode: execution.exitCode },
+    nextSuggestions: execution.exitCode === 0 ? [] : ["Check simulator boot state before retrying take_screenshot."],
+  };
 }
 
 export async function launchAppWithMaestro(input: LaunchAppInput): Promise<ToolResult<LaunchAppData>> {
