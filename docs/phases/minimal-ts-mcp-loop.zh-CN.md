@@ -21,6 +21,7 @@
 8. 新增最小 stdio transport 入口
 9. 新增最小 install_app 工具
 10. 新增最小 launch_app 工具
+11. 新增最小 take_screenshot 工具
 
 ## 当前最小验证入口
 
@@ -43,6 +44,7 @@ pnpm --filter @mobile-e2e-mcp/mcp-server exec tsx src/dev-cli.ts --doctor --incl
 printf '%s\n%s\n' '{"id":1,"method":"initialize"}' '{"id":2,"method":"list_tools"}' | pnpm --filter @mobile-e2e-mcp/mcp-server exec tsx src/stdio-server.ts
 pnpm --filter @mobile-e2e-mcp/mcp-server exec tsx src/dev-cli.ts --install-app --platform android --runner-profile native_android --dry-run
 pnpm --filter @mobile-e2e-mcp/mcp-server exec tsx src/dev-cli.ts --launch-app --platform android --runner-profile phase1 --dry-run
+pnpm --filter @mobile-e2e-mcp/mcp-server exec tsx src/dev-cli.ts --take-screenshot --platform android --runner-profile phase1 --dry-run
 ```
 
 ## 已验证结果
@@ -57,6 +59,7 @@ pnpm --filter @mobile-e2e-mcp/mcp-server exec tsx src/dev-cli.ts --launch-app --
 - `stdio` 实机验证：成功完成 initialize / list_tools / invoke(doctor) 的 stdin/stdout 往返
 - `install_app` 实机验证：dry-run 成功，真实 Android 安装如实返回 `CONFIGURATION_ERROR` 与人工处理建议
 - `launch_app` 实机验证：phase1 Android/iOS dry-run 成功，Android 真实启动成功
+- `take_screenshot` 实机验证：Android dry-run 成功，真实截图 artifact 已输出
 
 ## 已知限制
 
