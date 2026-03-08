@@ -37,6 +37,7 @@ function buildToolList() {
   return [
     { name: "doctor", description: "Check command availability and device readiness." },
     { name: "inspect_ui", description: "Capture an Android UI hierarchy dump or return partial support for iOS." },
+    { name: "query_ui", description: "Query Android hierarchy dumps by selector fields and return partial support for iOS." },
     { name: "install_app", description: "Install a native or flutter artifact onto a target device/simulator." },
     { name: "launch_app", description: "Launch the selected app or Expo URL on a target device/simulator." },
     { name: "list_devices", description: "List Android devices and iOS simulators." },

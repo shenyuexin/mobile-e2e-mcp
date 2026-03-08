@@ -5,6 +5,7 @@ import { inspectUi } from "./tools/inspect-ui.js";
 import { installApp } from "./tools/install-app.js";
 import { launchApp } from "./tools/launch-app.js";
 import { listDevices } from "./tools/list-devices.js";
+import { queryUi } from "./tools/query-ui.js";
 import { runFlow } from "./tools/run-flow.js";
 import { startSession } from "./tools/start-session.js";
 import { takeScreenshot } from "./tools/take-screenshot.js";
@@ -16,6 +17,7 @@ export function createServer(): MobileE2EMcpServer {
   return new MobileE2EMcpServer({
     doctor,
     inspect_ui: inspectUi,
+    query_ui: queryUi,
     install_app: installApp,
     launch_app: launchApp,
     list_devices: listDevices,

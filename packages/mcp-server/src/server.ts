@@ -7,6 +7,8 @@ import type {
   InstallAppInput,
   LaunchAppInput,
   ListDevicesInput,
+  QueryUiData,
+  QueryUiInput,
   RunFlowInput,
   ScreenshotInput,
   Session,
@@ -20,6 +22,7 @@ import type {
 export interface MobileE2EMcpToolRegistry {
   doctor: (input: DoctorInput) => Promise<ToolResult<{ checks: DoctorCheck[]; devices: { android: DeviceInfo[]; ios: DeviceInfo[] } }>>;
   inspect_ui: (input: InspectUiInput) => Promise<ToolResult>;
+  query_ui: (input: QueryUiInput) => Promise<ToolResult<QueryUiData>>;
   install_app: (input: InstallAppInput) => Promise<ToolResult>;
   launch_app: (input: LaunchAppInput) => Promise<ToolResult>;
   list_devices: (input: ListDevicesInput) => Promise<ToolResult<{ android: DeviceInfo[]; ios: DeviceInfo[] }>>;
@@ -36,11 +39,12 @@ export class MobileE2EMcpServer {
   constructor(private readonly tools: MobileE2EMcpToolRegistry) {}
 
   listTools(): Array<keyof MobileE2EMcpToolRegistry> {
-    return ["doctor", "inspect_ui", "install_app", "launch_app", "list_devices", "start_session", "run_flow", "take_screenshot", "tap", "terminate_app", "type_text", "end_session"];
+    return ["doctor", "inspect_ui", "query_ui", "install_app", "launch_app", "list_devices", "start_session", "run_flow", "take_screenshot", "tap", "terminate_app", "type_text", "end_session"];
   }
 
   async invoke(toolName: "doctor", input: DoctorInput): Promise<ToolResult<{ checks: DoctorCheck[]; devices: { android: DeviceInfo[]; ios: DeviceInfo[] } }>>;
   async invoke(toolName: "inspect_ui", input: InspectUiInput): Promise<ToolResult>;
+  async invoke(toolName: "query_ui", input: QueryUiInput): Promise<ToolResult<QueryUiData>>;
   async invoke(toolName: "install_app", input: InstallAppInput): Promise<ToolResult>;
   async invoke(toolName: "launch_app", input: LaunchAppInput): Promise<ToolResult>;
   async invoke(toolName: "list_devices", input: ListDevicesInput): Promise<ToolResult<{ android: DeviceInfo[]; ios: DeviceInfo[] }>>;
@@ -53,16 +57,18 @@ export class MobileE2EMcpServer {
   async invoke(toolName: "end_session", input: EndSessionInput): Promise<ToolResult<{ closed: boolean; endedAt: string }>>;
   async invoke(
     toolName: keyof MobileE2EMcpToolRegistry,
-    input: DoctorInput | InspectUiInput | InstallAppInput | LaunchAppInput | ListDevicesInput | StartSessionInput | RunFlowInput | ScreenshotInput | TapInput | TerminateAppInput | TypeTextInput | EndSessionInput,
+    input: DoctorInput | InspectUiInput | QueryUiInput | InstallAppInput | LaunchAppInput | ListDevicesInput | StartSessionInput | RunFlowInput | ScreenshotInput | TapInput | TerminateAppInput | TypeTextInput | EndSessionInput,
   ): Promise<
     | ToolResult<{ checks: DoctorCheck[]; devices: { android: DeviceInfo[]; ios: DeviceInfo[] } }>
     | ToolResult<{ android: DeviceInfo[]; ios: DeviceInfo[] }>
     | ToolResult<Session>
+    | ToolResult<QueryUiData>
     | ToolResult
     | ToolResult<{ closed: boolean; endedAt: string }>
   > {
     if (toolName === "doctor") return this.tools.doctor(input as DoctorInput);
     if (toolName === "inspect_ui") return this.tools.inspect_ui(input as InspectUiInput);
+    if (toolName === "query_ui") return this.tools.query_ui(input as QueryUiInput);
     if (toolName === "install_app") return this.tools.install_app(input as InstallAppInput);
     if (toolName === "launch_app") return this.tools.launch_app(input as LaunchAppInput);
     if (toolName === "list_devices") return this.tools.list_devices(input as ListDevicesInput);

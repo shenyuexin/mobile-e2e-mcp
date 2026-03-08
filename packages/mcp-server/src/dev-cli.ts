@@ -1,5 +1,5 @@
+import type { DoctorInput, InspectUiInput, InstallAppInput, LaunchAppInput, ListDevicesInput, Platform, QueryUiInput, RunFlowInput, RunnerProfile, ScreenshotInput, StartSessionInput, TapInput, TerminateAppInput, TypeTextInput } from "@mobile-e2e-mcp/contracts";
 import process from "node:process";
-import type { DoctorInput, InspectUiInput, InstallAppInput, LaunchAppInput, ListDevicesInput, Platform, RunFlowInput, RunnerProfile, ScreenshotInput, StartSessionInput, TapInput, TerminateAppInput, TypeTextInput } from "@mobile-e2e-mcp/contracts";
 import { createServer } from "./index.js";
 
 interface CliOptions {
@@ -11,6 +11,7 @@ interface CliOptions {
   installApp: boolean;
   launchApp: boolean;
   listDevices: boolean;
+  queryUi: boolean;
   takeScreenshot: boolean;
   tap: boolean;
   terminateApp: boolean;
@@ -23,6 +24,12 @@ interface CliOptions {
   launchUrl?: string;
   appId?: string;
   deviceId?: string;
+  queryClassName?: string;
+  queryClickable?: boolean;
+  queryContentDesc?: string;
+  queryLimit?: number;
+  queryResourceId?: string;
+  queryText?: string;
   text?: string;
   runnerProfile?: RunnerProfile;
   flowPath?: string;
@@ -32,6 +39,11 @@ interface CliOptions {
 
 const RUNNER_PROFILES: RunnerProfile[] = ["phase1", "native_android", "native_ios", "flutter_android"];
 function isRunnerProfile(value: string | undefined): value is RunnerProfile { return typeof value === "string" && RUNNER_PROFILES.includes(value as RunnerProfile); }
+function parseBooleanArg(value: string | undefined): boolean | undefined {
+  if (value === "true") return true;
+  if (value === "false") return false;
+  return undefined;
+}
 
 function parseCliArgs(argv: string[]): CliOptions {
   let platform: Platform = "android";
@@ -42,6 +54,7 @@ function parseCliArgs(argv: string[]): CliOptions {
   let installApp = false;
   let launchApp = false;
   let listDevices = false;
+  let queryUi = false;
   let takeScreenshot = false;
   let tap = false;
   let terminateApp = false;
@@ -54,6 +67,12 @@ function parseCliArgs(argv: string[]): CliOptions {
   let launchUrl: string | undefined;
   let appId: string | undefined;
   let deviceId: string | undefined;
+  let queryClassName: string | undefined;
+  let queryClickable: boolean | undefined;
+  let queryContentDesc: string | undefined;
+  let queryLimit: number | undefined;
+  let queryResourceId: string | undefined;
+  let queryText: string | undefined;
   let textValue: string | undefined;
   let runnerProfile: RunnerProfile | undefined;
   let flowPath: string | undefined;
@@ -71,6 +90,7 @@ function parseCliArgs(argv: string[]): CliOptions {
     else if (arg === "--install-app") { installApp = true; }
     else if (arg === "--launch-app") { launchApp = true; }
     else if (arg === "--list-devices") { listDevices = true; }
+    else if (arg === "--query-ui") { queryUi = true; }
     else if (arg === "--take-screenshot") { takeScreenshot = true; }
     else if (arg === "--tap") { tap = true; }
     else if (arg === "--terminate-app") { terminateApp = true; }
@@ -83,6 +103,12 @@ function parseCliArgs(argv: string[]): CliOptions {
     else if (arg === "--launch-url" && nextValue) { launchUrl = nextValue; index += 1; }
     else if (arg === "--app-id" && nextValue) { appId = nextValue; index += 1; }
     else if (arg === "--device-id" && nextValue) { deviceId = nextValue; index += 1; }
+    else if ((arg === "--query-class-name" || arg === "--class-name") && nextValue) { queryClassName = nextValue; index += 1; }
+    else if ((arg === "--query-clickable" || arg === "--clickable") && nextValue) { const parsed = parseBooleanArg(nextValue); if (parsed !== undefined) queryClickable = parsed; index += 1; }
+    else if ((arg === "--query-content-desc" || arg === "--content-desc") && nextValue) { queryContentDesc = nextValue; index += 1; }
+    else if (arg === "--query-limit" && nextValue) { const parsed = Number(nextValue); if (Number.isFinite(parsed) && parsed > 0) queryLimit = Math.floor(parsed); index += 1; }
+    else if ((arg === "--query-resource-id" || arg === "--resource-id") && nextValue) { queryResourceId = nextValue; index += 1; }
+    else if (arg === "--query-text" && nextValue) { queryText = nextValue; index += 1; }
     else if (arg === "--text" && nextValue) { textValue = nextValue; index += 1; }
     else if (arg === "--runner-profile" && isRunnerProfile(nextValue)) { runnerProfile = nextValue; index += 1; }
     else if (arg === "--flow-path" && nextValue) { flowPath = nextValue; index += 1; }
@@ -90,7 +116,40 @@ function parseCliArgs(argv: string[]): CliOptions {
     else if (arg === "--session-id" && nextValue) { sessionId = nextValue; index += 1; }
   }
 
-  return { platform, doctor, dryRun, includeUnavailable, inspectUi, installApp, launchApp, listDevices, takeScreenshot, tap, terminateApp, typeText, runCount, artifactPath, outputPath, x, y, launchUrl, appId, deviceId, text: textValue, runnerProfile, flowPath, harnessConfigPath, sessionId };
+  return {
+    platform,
+    doctor,
+    dryRun,
+    includeUnavailable,
+    inspectUi,
+    installApp,
+    launchApp,
+    listDevices,
+    queryUi,
+    takeScreenshot,
+    tap,
+    terminateApp,
+    typeText,
+    runCount,
+    artifactPath,
+    outputPath,
+    x,
+    y,
+    launchUrl,
+    appId,
+    deviceId,
+      queryClassName,
+      queryClickable,
+      queryContentDesc,
+      queryLimit,
+      queryResourceId,
+      queryText,
+    text: textValue,
+    runnerProfile,
+    flowPath,
+    harnessConfigPath,
+    sessionId,
+  };
 }
 
 async function main(): Promise<void> {
@@ -113,6 +172,27 @@ async function main(): Promise<void> {
     const inspectInput: InspectUiInput = { sessionId: cliOptions.sessionId ?? `inspect-${Date.now()}`, platform: cliOptions.platform, runnerProfile: cliOptions.runnerProfile, harnessConfigPath: cliOptions.harnessConfigPath, deviceId: cliOptions.deviceId, outputPath: cliOptions.outputPath, dryRun: cliOptions.dryRun };
     const result = await server.invoke("inspect_ui", inspectInput);
     console.log(JSON.stringify({ tools: server.listTools(), inspectUiResult: result }, null, 2));
+    if (result.status === "failed") process.exitCode = 1;
+    return;
+  }
+  if (cliOptions.queryUi) {
+    const queryInput: QueryUiInput = {
+      sessionId: cliOptions.sessionId ?? `query-${Date.now()}`,
+      platform: cliOptions.platform,
+      runnerProfile: cliOptions.runnerProfile,
+      harnessConfigPath: cliOptions.harnessConfigPath,
+      deviceId: cliOptions.deviceId,
+      outputPath: cliOptions.outputPath,
+      resourceId: cliOptions.queryResourceId,
+      contentDesc: cliOptions.queryContentDesc,
+      text: cliOptions.queryText ?? cliOptions.text,
+      className: cliOptions.queryClassName,
+      clickable: cliOptions.queryClickable,
+      limit: cliOptions.queryLimit,
+      dryRun: cliOptions.dryRun,
+    };
+    const result = await server.invoke("query_ui", queryInput);
+    console.log(JSON.stringify({ tools: server.listTools(), queryUiResult: result }, null, 2));
     if (result.status === "failed") process.exitCode = 1;
     return;
   }
