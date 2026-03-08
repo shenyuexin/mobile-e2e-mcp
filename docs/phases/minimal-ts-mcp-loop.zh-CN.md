@@ -19,6 +19,7 @@
 6. 为 `run_flow` 增加 `runnerProfile`，可选择 `phase1`、`native_android`、`native_ios`、`flutter_android`
 7. 新增最小 `doctor` 与 `list_devices` 诊断入口
 8. 新增最小 stdio transport 入口
+9. 新增最小 install_app 工具
 
 ## 当前最小验证入口
 
@@ -39,6 +40,7 @@ pnpm --filter @mobile-e2e-mcp/mcp-server exec tsx src/dev-cli.ts --platform andr
 pnpm --filter @mobile-e2e-mcp/mcp-server exec tsx src/dev-cli.ts --list-devices --include-unavailable
 pnpm --filter @mobile-e2e-mcp/mcp-server exec tsx src/dev-cli.ts --doctor --include-unavailable
 printf '%s\n%s\n' '{"id":1,"method":"initialize"}' '{"id":2,"method":"list_tools"}' | pnpm --filter @mobile-e2e-mcp/mcp-server exec tsx src/stdio-server.ts
+pnpm --filter @mobile-e2e-mcp/mcp-server exec tsx src/dev-cli.ts --install-app --platform android --runner-profile native_android --dry-run
 ```
 
 ## 已验证结果
@@ -51,6 +53,7 @@ printf '%s\n%s\n' '{"id":1,"method":"initialize"}' '{"id":2,"method":"list_tools
 - `doctor` 实机验证：成功检查 Node/pnpm/Python、`adb`、`xcrun simctl`、`maestro`、flow/policy 文件、launch URL、adb reverse、artifact readiness、install state、install conflict 与设备可用性
 - `list_devices` 实机验证：成功返回 Android emulator 与 iOS simulators 的结构化清单
 - `stdio` 实机验证：成功完成 initialize / list_tools / invoke(doctor) 的 stdin/stdout 往返
+- `install_app` 实机验证：dry-run 成功，真实 Android 安装如实返回 `CONFIGURATION_ERROR` 与人工处理建议
 
 ## 已知限制
 
