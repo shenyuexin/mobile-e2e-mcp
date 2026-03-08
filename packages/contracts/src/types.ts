@@ -63,6 +63,17 @@ export interface InstallAppInput {
   dryRun?: boolean;
 }
 
+export interface LaunchAppInput {
+  sessionId: string;
+  platform: Platform;
+  runnerProfile?: RunnerProfile;
+  harnessConfigPath?: string;
+  deviceId?: string;
+  appId?: string;
+  launchUrl?: string;
+  dryRun?: boolean;
+}
+
 export interface ListDevicesInput {
   includeUnavailable?: boolean;
 }

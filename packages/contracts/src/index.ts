@@ -5,6 +5,7 @@ export type {
   DoctorInput,
   EndSessionInput,
   InstallAppInput,
+  LaunchAppInput,
   ListDevicesInput,
   Platform,
   RunFlowInput,
