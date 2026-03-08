@@ -12,7 +12,8 @@
     "lint": "pnpm -r --if-present lint",
     "test": "pnpm run validate:dry-run",
     "validate:dry-run": "pnpm build && pnpm --filter @mobile-e2e-mcp/mcp-server exec tsx src/dev-cli.ts --platform android --dry-run --run-count 1",
-    "mcp:dev": "pnpm build && pnpm --filter @mobile-e2e-mcp/mcp-server dev"
+    "mcp:dev": "pnpm build && pnpm --filter @mobile-e2e-mcp/mcp-server dev",
+    "mcp:stdio": "pnpm build && pnpm --filter @mobile-e2e-mcp/mcp-server stdio"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",

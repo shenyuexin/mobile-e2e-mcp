@@ -18,6 +18,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "dev": "tsx src/dev-cli.ts"
+    "dev": "tsx src/dev-cli.ts",
+    "stdio": "tsx src/stdio-server.ts"
   }
 }
