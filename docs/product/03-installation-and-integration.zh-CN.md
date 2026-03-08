@@ -110,6 +110,10 @@ pnpm install
 - Android 设备是否在线
 - iOS Simulator 是否可用
 - 关键配置文件是否存在
+- Expo dev server / launch URL 是否可达
+- Android `adb reverse` 映射是否到位
+- 安装包 artifact 是否存在
+- 已安装 app 与安装冲突信号（如 downgrade / 签名不兼容）
 
 理想输出应告诉用户：
 

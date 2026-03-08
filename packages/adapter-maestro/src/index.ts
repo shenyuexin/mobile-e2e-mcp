@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import { spawn } from "node:child_process";
+import net from "node:net";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
@@ -665,22 +666,6 @@ export async function listAvailableDevices(
   };
 }
 
-function summarizeCommandAvailability(name: string, execution: CommandExecution): DoctorCheck {
-  if (execution.exitCode === 0) {
-    return {
-      name,
-      status: "pass",
-      detail: execution.stdout.trim() || `${name} is available.`,
-    };
-  }
-
-  return {
-    name,
-    status: "fail",
-    detail: execution.stderr.trim() || `${name} returned exit code ${String(execution.exitCode)}.`,
-  };
-}
-
 function summarizeDeviceCheck(name: string, count: number): DoctorCheck {
   if (count > 0) {
     return {
@@ -695,6 +680,67 @@ function summarizeDeviceCheck(name: string, count: number): DoctorCheck {
     status: "warn",
     detail: "No available devices detected.",
   };
+}
+
+function summarizeInfoCheck(name: string, status: DoctorCheck["status"], detail: string): DoctorCheck {
+  return { name, status, detail };
+}
+
+async function checkCommandVersion(repoRoot: string, command: string, args: string[], label: string): Promise<DoctorCheck> {
+  try {
+    const result = await executeRunner([command, ...args], repoRoot, process.env);
+    return result.exitCode === 0
+      ? summarizeInfoCheck(label, "pass", result.stdout.trim() || `${label} is available.`)
+      : summarizeInfoCheck(label, "fail", result.stderr.trim() || `${label} returned exit code ${String(result.exitCode)}.`);
+  } catch (error) {
+    return summarizeInfoCheck(label, "fail", error instanceof Error ? error.message : String(error));
+  }
+}
+
+async function checkTcpReachability(label: string, host: string, port: number): Promise<DoctorCheck> {
+  return new Promise((resolve) => {
+    const socket = net.createConnection({ host, port });
+    const timeoutMs = 1500;
+
+    const finish = (status: DoctorCheck["status"], detail: string) => {
+      socket.destroy();
+      resolve(summarizeInfoCheck(label, status, detail));
+    };
+
+    socket.setTimeout(timeoutMs);
+    socket.once("connect", () => finish("pass", `${host}:${String(port)} is reachable.`));
+    socket.once("timeout", () => finish("warn", `${host}:${String(port)} did not respond within ${String(timeoutMs)}ms.`));
+    socket.once("error", (error) => finish("warn", error.message));
+  });
+}
+
+async function checkAdbReverseMappings(label: string, deviceId: string, mappings: string[], repoRoot: string): Promise<DoctorCheck> {
+  if (mappings.length === 0) {
+    return summarizeInfoCheck(label, "pass", "No adb reverse mappings configured.");
+  }
+
+  try {
+    const result = await executeRunner(["adb", "-s", deviceId, "reverse", "--list"], repoRoot, process.env);
+    if (result.exitCode !== 0) {
+      return summarizeInfoCheck(label, "warn", "adb reverse mappings could not be inspected.");
+    }
+
+    const lines = result.stdout
+      .replaceAll(String.fromCharCode(13), "")
+      .split(String.fromCharCode(10))
+      .filter(Boolean);
+
+    const missing = mappings.filter((mapping) => {
+      const parts = mapping.split(/\s+/).filter(Boolean);
+      return !lines.some((line) => parts.every((part) => line.includes(part)));
+    });
+
+    return missing.length === 0
+      ? summarizeInfoCheck(label, "pass", `Configured adb reverse mappings are active for ${deviceId}.`)
+      : summarizeInfoCheck(label, "warn", `Missing adb reverse mapping(s) for ${deviceId}: ${missing.join(", ")}`);
+  } catch {
+    return summarizeInfoCheck(label, "warn", "adb reverse mappings could not be inspected.");
+  }
 }
 
 function summarizeFileCheck(name: string, filePath: string): DoctorCheck {
@@ -714,6 +760,14 @@ async function collectHarnessChecks(repoRoot: string): Promise<DoctorCheck[]> {
   }
 
   const parsedConfig = await parseHarnessConfig(repoRoot, DEFAULT_HARNESS_CONFIG_PATH);
+  const sample = parsedConfig.sample;
+  if (isRecord(sample)) {
+    const goldenFlow = readNonEmptyString(sample, "golden_flow");
+    if (goldenFlow) {
+      checks.push(summarizeInfoCheck("sample golden flow", "pass", `Configured golden flow: ${goldenFlow}`));
+    }
+  }
+
   const platforms = parsedConfig.platforms;
   if (isRecord(platforms)) {
     for (const [platform, config] of Object.entries(platforms)) {
@@ -721,8 +775,30 @@ async function collectHarnessChecks(repoRoot: string): Promise<DoctorCheck[]> {
         continue;
       }
       const runnerScript = readNonEmptyString(config, "runner_script");
+      const interruptionPolicy = readNonEmptyString(config, "interruption_policy");
+      const launchUrl = readNonEmptyString(config, "launch_url");
+      const deviceId = readNonEmptyString(config, "device_udid") ?? (platform === "android" ? "emulator-5554" : "ADA078B9-3C6B-4875-8B85-A7789F368816");
+      const adbReverseMappings = readStringArray(config, "adb_reverse");
       if (runnerScript) {
         checks.push(summarizeFileCheck(`${platform} phase1 runner`, path.resolve(repoRoot, runnerScript)));
+      }
+      if (interruptionPolicy) {
+        checks.push(summarizeFileCheck(`${platform} interruption policy`, path.resolve(repoRoot, interruptionPolicy)));
+      }
+      const phase1Flow = path.resolve(repoRoot, DEFAULT_FLOWS[platform as Platform]);
+      checks.push(summarizeFileCheck(`${platform} phase1 flow`, phase1Flow));
+      if (launchUrl) {
+        try {
+          const url = new URL(launchUrl);
+          if (url.hostname && url.port) {
+            checks.push(await checkTcpReachability(`${platform} launch URL`, url.hostname, Number(url.port)));
+          }
+        } catch {
+          checks.push(summarizeInfoCheck(`${platform} launch URL`, "warn", `${launchUrl} could not be parsed for reachability checks.`));
+        }
+      }
+      if (platform === "android") {
+        checks.push(await checkAdbReverseMappings("android adb reverse", deviceId, adbReverseMappings, repoRoot));
       }
     }
   }
@@ -734,8 +810,12 @@ async function collectHarnessChecks(repoRoot: string): Promise<DoctorCheck[]> {
         continue;
       }
       const runnerScript = readNonEmptyString(config, "runner_script");
+      const flows = readStringArray(config, "flows");
       if (runnerScript) {
         checks.push(summarizeFileCheck(`${profile} runner`, path.resolve(repoRoot, runnerScript)));
+      }
+      for (const flow of flows) {
+        checks.push(summarizeFileCheck(`${profile} flow`, path.resolve(repoRoot, flow)));
       }
     }
   }
@@ -772,6 +852,38 @@ function collectArtifactChecks(repoRoot: string): DoctorCheck[] {
       "file",
     ),
   ];
+}
+
+async function collectRuntimeStateChecks(repoRoot: string): Promise<DoctorCheck[]> {
+  const checks: DoctorCheck[] = [];
+
+  try {
+    const androidState = await executeRunner(["adb", "-s", process.env.DEVICE_ID ?? "emulator-5554", "get-state"], repoRoot, process.env);
+    checks.push(
+      summarizeInfoCheck(
+        "android target state",
+        androidState.exitCode === 0 && androidState.stdout.trim() === "device" ? "pass" : "warn",
+        androidState.exitCode === 0 ? `Android target state: ${androidState.stdout.trim() || "unknown"}` : "Android target state could not be confirmed.",
+      ),
+    );
+  } catch {
+    checks.push(summarizeInfoCheck("android target state", "warn", "Android target state could not be confirmed."));
+  }
+
+  try {
+    const iosBoot = await executeRunner(["xcrun", "simctl", "bootstatus", process.env.SIM_UDID ?? "ADA078B9-3C6B-4875-8B85-A7789F368816", "-b"], repoRoot, process.env);
+    checks.push(
+      summarizeInfoCheck(
+        "ios target boot status",
+        iosBoot.exitCode === 0 ? "pass" : "warn",
+        iosBoot.exitCode === 0 ? "Selected iOS simulator is booted." : "Selected iOS simulator is not booted.",
+      ),
+    );
+  } catch {
+    checks.push(summarizeInfoCheck("ios target boot status", "warn", "Selected iOS simulator is not booted."));
+  }
+
+  return checks;
 }
 
 async function collectInstallStateChecks(repoRoot: string): Promise<DoctorCheck[]> {
@@ -897,45 +1009,17 @@ export async function runDoctor(
   const sessionId = `doctor-${Date.now()}`;
   const checks: DoctorCheck[] = [];
 
-  let adbExecution: CommandExecution | undefined;
-  try {
-    adbExecution = await executeRunner(["adb", "version"], repoRoot, process.env);
-    checks.push(summarizeCommandAvailability("adb", adbExecution));
-  } catch (error) {
-    checks.push({
-      name: "adb",
-      status: "fail",
-      detail: error instanceof Error ? error.message : String(error),
-    });
-  }
-
-  let simctlExecution: CommandExecution | undefined;
-  try {
-    simctlExecution = await executeRunner(["xcrun", "simctl", "help"], repoRoot, process.env);
-    checks.push(summarizeCommandAvailability("xcrun simctl", simctlExecution));
-  } catch (error) {
-    checks.push({
-      name: "xcrun simctl",
-      status: "fail",
-      detail: error instanceof Error ? error.message : String(error),
-    });
-  }
-
-  let maestroExecution: CommandExecution | undefined;
-  try {
-    maestroExecution = await executeRunner(["maestro", "--version"], repoRoot, process.env);
-    checks.push(summarizeCommandAvailability("maestro", maestroExecution));
-  } catch (error) {
-    checks.push({
-      name: "maestro",
-      status: "fail",
-      detail: error instanceof Error ? error.message : String(error),
-    });
-  }
+  checks.push(await checkCommandVersion(repoRoot, "node", ["--version"], "node"));
+  checks.push(await checkCommandVersion(repoRoot, "pnpm", ["--version"], "pnpm"));
+  checks.push(await checkCommandVersion(repoRoot, "python3", ["--version"], "python3"));
+  checks.push(await checkCommandVersion(repoRoot, "adb", ["version"], "adb"));
+  checks.push(await checkCommandVersion(repoRoot, "xcrun", ["simctl", "help"], "xcrun simctl"));
+  checks.push(await checkCommandVersion(repoRoot, "maestro", ["--version"], "maestro"));
 
   checks.push(...(await collectHarnessChecks(repoRoot)));
   checks.push(...collectArtifactChecks(repoRoot));
   checks.push(...(await collectInstallStateChecks(repoRoot)));
+  checks.push(...(await collectRuntimeStateChecks(repoRoot)));
 
   const deviceResult = await listAvailableDevices({ includeUnavailable: input.includeUnavailable });
   checks.push(summarizeDeviceCheck("android devices", deviceResult.data.android.filter((device) => device.available).length));

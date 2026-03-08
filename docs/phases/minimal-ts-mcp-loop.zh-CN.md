@@ -48,7 +48,7 @@ printf '%s\n%s\n' '{"id":1,"method":"initialize"}' '{"id":2,"method":"list_tools
 - `flutter_android` dry-run：成功解析到 phase3 flutter Android runner，并识别 bundled flows
 - `native_android` 真实执行：成功触发脚本，但因 `INSTALL_FAILED_VERSION_DOWNGRADE` 返回 `CONFIGURATION_ERROR`
 - `native_ios` 指定单个 `flowPath` dry-run：返回 `UNSUPPORTED_OPERATION`，明确提示底层脚本是 bundled flow runner
-- `doctor` 实机验证：成功检查 `adb`、`xcrun simctl`、`maestro` 与设备可用性
+- `doctor` 实机验证：成功检查 Node/pnpm/Python、`adb`、`xcrun simctl`、`maestro`、flow/policy 文件、launch URL、adb reverse、artifact readiness、install state、install conflict 与设备可用性
 - `list_devices` 实机验证：成功返回 Android emulator 与 iOS simulators 的结构化清单
 - `stdio` 实机验证：成功完成 initialize / list_tools / invoke(doctor) 的 stdin/stdout 往返
 
@@ -63,3 +63,14 @@ printf '%s\n%s\n' '{"id":1,"method":"initialize"}' '{"id":2,"method":"list_tools
 - 把 phase3 runner 的环境准备逻辑逐步下沉到 TS，而不是长期留在 shell 里
 - 增加 `doctor` / `list_devices`，在执行前提前暴露设备与安装问题
 - 再继续补 MCP transport（如 stdio）与更细粒度工具
+
+## 当前 doctor 已覆盖
+
+- Node / pnpm / Python / adb / xcrun simctl / maestro 可用性
+- sample harness、runner、policy、flow 文件存在性
+- Phase1 Expo launch URL 可达性
+- Android `adb reverse` 端口映射状态
+- phase3 artifact readiness
+- native / flutter / iOS install state
+- Android 安装冲突信号（downgrade / 签名不兼容）
+- Android device state 与 iOS simulator boot status
