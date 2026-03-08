@@ -1,11 +1,4 @@
-import { existsSync } from "node:fs";
-import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
-import { spawn } from "node:child_process";
-import net from "node:net";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
 import {
-  REASON_CODES,
   type DeviceInfo,
   type DoctorCheck,
   type DoctorInput,
@@ -15,16 +8,28 @@ import {
   type InstallAppInput,
   type LaunchAppInput,
   type ListDevicesInput,
-  type ScreenshotInput,
-  type TapInput,
-  type TerminateAppInput,
-  type TypeTextInput,
   type Platform,
+  type QueryUiData,
+  type QueryUiInput,
+  type QueryUiMatch,
+  type QueryUiMatchField,
+  type QueryUiSelector,
   type ReasonCode,
   type RunFlowInput,
   type RunnerProfile,
+  type ScreenshotInput,
+  type TapInput,
+  type TerminateAppInput,
   type ToolResult,
+  type TypeTextInput,
+  REASON_CODES,
 } from "@mobile-e2e-mcp/contracts";
+import { spawn } from "node:child_process";
+import { existsSync } from "node:fs";
+import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
+import net from "node:net";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { parse } from "yaml";
 
 interface ArtifactDirectory {
@@ -177,6 +182,31 @@ export interface SessionDefaults {
 }
 
 const DEFAULT_HARNESS_CONFIG_PATH = "configs/harness/sample-harness.yaml";
+const DEFAULT_IDB_CLI_PATH = "/Users/linan/Library/Python/3.9/bin/idb";
+const DEFAULT_IDB_COMPANION_PATH = "/Users/linan/.local/share/idb-companion.universal/bin/idb_companion";
+
+function resolveIdbCliPath(): string | undefined {
+  const envPath = process.env.IDB_CLI_PATH;
+  if (envPath && existsSync(envPath)) {
+    return envPath;
+  }
+  return existsSync(DEFAULT_IDB_CLI_PATH) ? DEFAULT_IDB_CLI_PATH : undefined;
+}
+
+function resolveIdbCompanionPath(): string | undefined {
+  const envPath = process.env.IDB_COMPANION_PATH;
+  if (envPath && existsSync(envPath)) {
+    return envPath;
+  }
+  return existsSync(DEFAULT_IDB_COMPANION_PATH) ? DEFAULT_IDB_COMPANION_PATH : undefined;
+}
+
+function buildIdbCommand(baseArgs: string[]): string[] {
+  const idbCliPath = resolveIdbCliPath() ?? "idb";
+  const companionPath = resolveIdbCompanionPath();
+  return companionPath ? [idbCliPath, "--companion-path", companionPath, ...baseArgs] : [idbCliPath, ...baseArgs];
+}
+
 const DEFAULT_RUNNER_PROFILE: RunnerProfile = "phase1";
 const DEFAULT_FLOWS: Record<Platform, string> = {
   android: "flows/samples/react-native/android-login-smoke.yaml",
@@ -220,7 +250,26 @@ function decodeXmlText(value: string | undefined): string | undefined {
     .replaceAll("&#39;", "'");
 }
 
-function parseInspectUiSummary(xml: string): InspectUiSummary {
+function normalizeQueryUiSelector(query: QueryUiSelector): QueryUiSelector {
+  return {
+    resourceId: query.resourceId && query.resourceId.length > 0 ? query.resourceId : undefined,
+    contentDesc: query.contentDesc && query.contentDesc.length > 0 ? query.contentDesc : undefined,
+    text: query.text && query.text.length > 0 ? query.text : undefined,
+    className: query.className && query.className.length > 0 ? query.className : undefined,
+    clickable: query.clickable,
+    limit: typeof query.limit === "number" && Number.isFinite(query.limit) && query.limit > 0 ? Math.floor(query.limit) : undefined,
+  };
+}
+
+function hasQueryUiSelector(query: QueryUiSelector): boolean {
+  return query.resourceId !== undefined
+    || query.contentDesc !== undefined
+    || query.text !== undefined
+    || query.className !== undefined
+    || query.clickable !== undefined;
+}
+
+function parseAndroidUiHierarchyNodes(xml: string): InspectUiNode[] {
   const nodes: InspectUiNode[] = [];
   const nodeRegex = /<node([^>]*)\/?>(?:<\/node>)?/g;
 
@@ -245,6 +294,10 @@ function parseInspectUiSummary(xml: string): InspectUiSummary {
     nodes.push(node);
   }
 
+  return nodes;
+}
+
+function buildInspectUiSummary(nodes: InspectUiNode[]): InspectUiSummary {
   const sampleNodes = nodes.filter((node) => node.clickable || node.text || node.contentDesc || node.resourceId).slice(0, 25);
   return {
     totalNodes: nodes.length,
@@ -254,6 +307,122 @@ function parseInspectUiSummary(xml: string): InspectUiSummary {
     nodesWithContentDesc: nodes.filter((node) => Boolean(node.contentDesc)).length,
     sampleNodes,
   };
+}
+
+function parseInspectUiSummary(xml: string): InspectUiSummary {
+  return buildInspectUiSummary(parseAndroidUiHierarchyNodes(xml));
+}
+
+function toIosInspectNode(node: Record<string, unknown>): InspectUiNode {
+  const frame = isRecord(node.frame) ? node.frame : undefined;
+  const frameX = typeof frame?.x === "number" ? frame.x : 0;
+  const frameY = typeof frame?.y === "number" ? frame.y : 0;
+  const frameWidth = typeof frame?.width === "number" ? frame.width : 0;
+  const frameHeight = typeof frame?.height === "number" ? frame.height : 0;
+  const bounds = frame
+    ? `[${String(frameX)},${String(frameY)}][${String(frameX + frameWidth)},${String(frameY + frameHeight)}]`
+    : undefined;
+  const type = readNonEmptyString(node, "type") ?? undefined;
+  return {
+    text: readNonEmptyString(node, "title") ?? undefined,
+    resourceId: readNonEmptyString(node, "AXUniqueId") ?? undefined,
+    className: type,
+    packageName: readNonEmptyString(node, "role") ?? undefined,
+    contentDesc: readNonEmptyString(node, "AXLabel") ?? undefined,
+    clickable: ["Button", "Link", "Cell"].includes(type ?? "") || (Array.isArray(node.custom_actions) && node.custom_actions.length > 0),
+    enabled: node.enabled !== false,
+    scrollable: (type ?? "").toLowerCase().includes("scroll"),
+    bounds,
+  };
+}
+
+function flattenIosInspectNodes(input: unknown, output: InspectUiNode[]): void {
+  if (!Array.isArray(input)) {
+    return;
+  }
+  for (const item of input) {
+    if (!isRecord(item)) {
+      continue;
+    }
+    output.push(toIosInspectNode(item));
+    flattenIosInspectNodes(item.children, output);
+  }
+}
+
+function parseIosInspectSummary(jsonText: string): InspectUiSummary {
+  const parsed: unknown = JSON.parse(jsonText);
+  const nodes: InspectUiNode[] = [];
+  flattenIosInspectNodes(parsed, nodes);
+  return buildInspectUiSummary(nodes);
+}
+
+function matchesQueryString(nodeValue: string | undefined, queryValue: string | undefined): boolean {
+  if (queryValue === undefined) {
+    return true;
+  }
+  if (!nodeValue) {
+    return false;
+  }
+  return nodeValue.toLocaleLowerCase().includes(queryValue.toLocaleLowerCase());
+}
+
+function queryAndroidUiNodes(nodes: InspectUiNode[], query: QueryUiSelector): { totalMatches: number; matches: QueryUiMatch[] } {
+  const allMatches = nodes.flatMap((node) => {
+    const matchedBy: QueryUiMatchField[] = [];
+
+    if (query.resourceId !== undefined) {
+      if (!matchesQueryString(node.resourceId, query.resourceId)) {
+        return [];
+      }
+      matchedBy.push("resourceId");
+    }
+
+    if (query.contentDesc !== undefined) {
+      if (!matchesQueryString(node.contentDesc, query.contentDesc)) {
+        return [];
+      }
+      matchedBy.push("contentDesc");
+    }
+
+    if (query.text !== undefined) {
+      if (!matchesQueryString(node.text, query.text)) {
+        return [];
+      }
+      matchedBy.push("text");
+    }
+
+    if (query.className !== undefined) {
+      if (!matchesQueryString(node.className, query.className)) {
+        return [];
+      }
+      matchedBy.push("className");
+    }
+
+    if (query.clickable !== undefined) {
+      if (node.clickable !== query.clickable) {
+        return [];
+      }
+      matchedBy.push("clickable");
+    }
+
+    return [{ node, matchedBy, score: matchedBy.length }];
+  });
+
+  return {
+    totalMatches: allMatches.length,
+    matches: query.limit === undefined ? allMatches : allMatches.slice(0, query.limit),
+  };
+}
+
+function buildAndroidUiDumpCommands(deviceId: string): { dumpCommand: string[]; readCommand: string[] } {
+  return {
+    dumpCommand: ["adb", "-s", deviceId, "shell", "uiautomator", "dump", "/sdcard/view.xml"],
+    readCommand: ["adb", "-s", deviceId, "shell", "cat", "/sdcard/view.xml"],
+  };
+}
+
+function buildIosUiDescribeCommand(deviceId: string): string[] {
+  return buildIdbCommand(["ui", "describe-all", "--udid", deviceId, "--json", "--nested"]);
 }
 
 function toRelativePath(repoRoot: string, targetPath: string): string {
@@ -1262,7 +1431,7 @@ export async function inspectUiWithMaestro(input: InspectUiInput): Promise<ToolR
   if (input.platform === "ios") {
     const iosRelativeOutputPath = input.outputPath ?? path.posix.join("artifacts", "ui-dumps", input.sessionId, `${input.platform}-${runnerProfile}.json`);
     const iosAbsoluteOutputPath = path.resolve(repoRoot, iosRelativeOutputPath);
-    const idbCommand = ["idb", "--udid", deviceId, "ui", "describe-all", "--json", "--nested"];
+    const idbCommand = buildIosUiDescribeCommand(deviceId);
 
     if (input.dryRun) {
       return {
@@ -1277,7 +1446,7 @@ export async function inspectUiWithMaestro(input: InspectUiInput): Promise<ToolR
       };
     }
 
-    const idbProbe = await executeRunner(["idb", "--help"], repoRoot, process.env).catch(() => undefined);
+    const idbProbe = await executeRunner(buildIdbCommand(["--help"]), repoRoot, process.env).catch(() => undefined);
     if (!idbProbe || idbProbe.exitCode !== 0) {
       return {
         status: "partial",
@@ -1311,13 +1480,13 @@ export async function inspectUiWithMaestro(input: InspectUiInput): Promise<ToolR
         command: idbCommand,
         exitCode: idbExecution.exitCode,
         content: idbExecution.exitCode === 0 ? idbExecution.stdout : undefined,
+        summary: idbExecution.exitCode === 0 ? parseIosInspectSummary(idbExecution.stdout) : undefined,
       },
       nextSuggestions: idbExecution.exitCode === 0 ? [] : ["Ensure idb companion is available for the selected simulator and retry inspect_ui."],
     };
   }
 
-  const dumpCommand = ["adb", "-s", deviceId, "shell", "uiautomator", "dump", "/sdcard/view.xml"];
-  const readCommand = ["adb", "-s", deviceId, "shell", "cat", "/sdcard/view.xml"];
+  const { dumpCommand, readCommand } = buildAndroidUiDumpCommands(deviceId);
 
   await mkdir(path.dirname(absoluteOutputPath), { recursive: true });
 
@@ -1370,6 +1539,214 @@ export async function inspectUiWithMaestro(input: InspectUiInput): Promise<ToolR
       summary: readExecution.exitCode === 0 ? parseInspectUiSummary(readExecution.stdout) : undefined,
     },
     nextSuggestions: readExecution.exitCode === 0 ? [] : ["Check Android device state before retrying inspect_ui."],
+  };
+}
+
+export async function queryUiWithMaestro(input: QueryUiInput): Promise<ToolResult<QueryUiData>> {
+  const startTime = Date.now();
+  const repoRoot = resolveRepoPath();
+  const runnerProfile = input.runnerProfile ?? DEFAULT_RUNNER_PROFILE;
+  const selection = await loadHarnessSelection(repoRoot, input.platform, runnerProfile, input.harnessConfigPath ?? DEFAULT_HARNESS_CONFIG_PATH);
+  const deviceId = input.deviceId ?? selection.deviceId ?? (input.platform === "android" ? "emulator-5554" : "ADA078B9-3C6B-4875-8B85-A7789F368816");
+  const query = normalizeQueryUiSelector({
+    resourceId: input.resourceId,
+    contentDesc: input.contentDesc,
+    text: input.text,
+    className: input.className,
+    clickable: input.clickable,
+    limit: input.limit,
+  });
+
+  if (!hasQueryUiSelector(query)) {
+    return {
+      status: "failed",
+      reasonCode: REASON_CODES.configurationError,
+      sessionId: input.sessionId,
+      durationMs: Date.now() - startTime,
+      attempts: 1,
+      artifacts: [],
+      data: {
+        dryRun: Boolean(input.dryRun),
+        runnerProfile,
+        outputPath: input.outputPath ?? path.posix.join("artifacts", "ui-dumps", input.sessionId, `${input.platform}-${runnerProfile}.${input.platform === "android" ? "xml" : "json"}`),
+        query,
+        command: [],
+        exitCode: null,
+        result: { query, totalMatches: 0, matches: [] },
+        supportLevel: input.platform === "android" ? "full" : "partial",
+      },
+      nextSuggestions: ["Provide at least one query selector: resourceId, contentDesc, text, className, or clickable."],
+    };
+  }
+
+  if (input.platform === "ios") {
+    const iosRelativeOutputPath = input.outputPath ?? path.posix.join("artifacts", "ui-dumps", input.sessionId, `${input.platform}-${runnerProfile}.json`);
+    const iosAbsoluteOutputPath = path.resolve(repoRoot, iosRelativeOutputPath);
+    const idbCommand = buildIosUiDescribeCommand(deviceId);
+
+    if (input.dryRun) {
+      return {
+        status: "partial",
+        reasonCode: REASON_CODES.unsupportedOperation,
+        sessionId: input.sessionId,
+        durationMs: Date.now() - startTime,
+        attempts: 1,
+        artifacts: [],
+        data: {
+          dryRun: true,
+          runnerProfile,
+          outputPath: iosRelativeOutputPath,
+          query,
+          command: idbCommand,
+          exitCode: 0,
+          result: { query, totalMatches: 0, matches: [] },
+          supportLevel: "partial",
+        },
+        nextSuggestions: ["Run query_ui without dryRun to capture an iOS hierarchy artifact. Structured iOS querying is still partial in this repo."],
+      };
+    }
+
+    const idbProbe = await executeRunner(buildIdbCommand(["--help"]), repoRoot, process.env).catch(() => undefined);
+    if (!idbProbe || idbProbe.exitCode !== 0) {
+      return {
+        status: "partial",
+        reasonCode: REASON_CODES.configurationError,
+        sessionId: input.sessionId,
+        durationMs: Date.now() - startTime,
+        attempts: 1,
+        artifacts: [],
+        data: {
+          dryRun: false,
+          runnerProfile,
+          outputPath: iosRelativeOutputPath,
+          query,
+          command: idbCommand,
+          exitCode: idbProbe?.exitCode ?? null,
+          result: { query, totalMatches: 0, matches: [] },
+          supportLevel: "partial",
+        },
+        nextSuggestions: ["iOS query_ui requires idb for hierarchy capture. Install idb-companion and fb-idb, or use inspect_ui as the fallback."],
+      };
+    }
+
+    await mkdir(path.dirname(iosAbsoluteOutputPath), { recursive: true });
+    const idbExecution = await executeRunner(idbCommand, repoRoot, process.env);
+    if (idbExecution.exitCode === 0) {
+      await writeFile(iosAbsoluteOutputPath, idbExecution.stdout, "utf8");
+    }
+
+    return {
+      status: "partial",
+      reasonCode: idbExecution.exitCode === 0 ? REASON_CODES.unsupportedOperation : REASON_CODES.configurationError,
+      sessionId: input.sessionId,
+      durationMs: Date.now() - startTime,
+      attempts: 1,
+      artifacts: idbExecution.exitCode === 0 ? [toRelativePath(repoRoot, iosAbsoluteOutputPath)] : [],
+      data: {
+        dryRun: false,
+        runnerProfile,
+        outputPath: iosRelativeOutputPath,
+        query,
+        command: idbCommand,
+        exitCode: idbExecution.exitCode,
+        result: { query, totalMatches: 0, matches: [] },
+        supportLevel: "partial",
+        content: idbExecution.exitCode === 0 ? idbExecution.stdout : undefined,
+        summary: idbExecution.exitCode === 0 ? parseIosInspectSummary(idbExecution.stdout) : undefined,
+      },
+      nextSuggestions: idbExecution.exitCode === 0
+        ? ["This repo can capture iOS hierarchy output, but query_ui does not yet provide equivalent structured iOS matching. Use inspect_ui content/artifacts for manual inspection."]
+        : ["Ensure idb companion is available for the selected simulator and retry query_ui."],
+    };
+  }
+
+  const relativeOutputPath = input.outputPath ?? path.posix.join("artifacts", "ui-dumps", input.sessionId, `${input.platform}-${runnerProfile}.xml`);
+  const absoluteOutputPath = path.resolve(repoRoot, relativeOutputPath);
+  const { dumpCommand, readCommand } = buildAndroidUiDumpCommands(deviceId);
+  const command = [...dumpCommand, ...readCommand];
+
+  await mkdir(path.dirname(absoluteOutputPath), { recursive: true });
+
+  if (input.dryRun) {
+    return {
+      status: "success",
+      reasonCode: REASON_CODES.ok,
+      sessionId: input.sessionId,
+      durationMs: Date.now() - startTime,
+      attempts: 1,
+      artifacts: [],
+      data: {
+        dryRun: true,
+        runnerProfile,
+        outputPath: relativeOutputPath,
+        query,
+        command,
+        exitCode: 0,
+        result: { query, totalMatches: 0, matches: [] },
+        supportLevel: "full",
+      },
+      nextSuggestions: ["Run query_ui without dryRun to capture an Android hierarchy dump and return matched nodes."],
+    };
+  }
+
+  const dumpExecution = await executeRunner(dumpCommand, repoRoot, process.env);
+  if (dumpExecution.exitCode !== 0) {
+    return {
+      status: "failed",
+      reasonCode: buildFailureReason(dumpExecution.stderr, dumpExecution.exitCode),
+      sessionId: input.sessionId,
+      durationMs: Date.now() - startTime,
+      attempts: 1,
+      artifacts: [],
+      data: {
+        dryRun: false,
+        runnerProfile,
+        outputPath: relativeOutputPath,
+        query,
+        command,
+        exitCode: dumpExecution.exitCode,
+        result: { query, totalMatches: 0, matches: [] },
+        supportLevel: "full",
+      },
+      nextSuggestions: ["Check Android device state and ensure uiautomator dump is permitted before retrying query_ui."],
+    };
+  }
+
+  const readExecution = await executeRunner(readCommand, repoRoot, process.env);
+  if (readExecution.exitCode === 0) {
+    await writeFile(absoluteOutputPath, readExecution.stdout, "utf8");
+  }
+
+  const nodes = readExecution.exitCode === 0 ? parseAndroidUiHierarchyNodes(readExecution.stdout) : [];
+  const summary = readExecution.exitCode === 0 ? buildInspectUiSummary(nodes) : undefined;
+  const queryResult = readExecution.exitCode === 0 ? queryAndroidUiNodes(nodes, query) : { totalMatches: 0, matches: [] as QueryUiMatch[] };
+
+  return {
+    status: readExecution.exitCode === 0 ? "success" : "failed",
+    reasonCode: readExecution.exitCode === 0 ? REASON_CODES.ok : buildFailureReason(readExecution.stderr, readExecution.exitCode),
+    sessionId: input.sessionId,
+    durationMs: Date.now() - startTime,
+    attempts: 1,
+    artifacts: readExecution.exitCode === 0 ? [toRelativePath(repoRoot, absoluteOutputPath)] : [],
+    data: {
+      dryRun: false,
+      runnerProfile,
+      outputPath: relativeOutputPath,
+      query,
+      command,
+      exitCode: readExecution.exitCode,
+      result: { query, ...queryResult },
+      supportLevel: "full",
+      content: readExecution.exitCode === 0 ? readExecution.stdout : undefined,
+      summary,
+    },
+    nextSuggestions: readExecution.exitCode !== 0
+      ? ["Check Android device state before retrying query_ui."]
+      : queryResult.totalMatches === 0
+        ? ["No Android nodes matched the provided selectors. Broaden the query or run inspect_ui to review nearby nodes."]
+        : query.limit !== undefined && queryResult.totalMatches > queryResult.matches.length
+          ? ["More Android nodes matched than were returned. Increase query limit or narrow the selector."]
+        : [],
   };
 }
 
@@ -1636,7 +2013,22 @@ export async function runDoctor(
   checks.push(await checkCommandVersion(repoRoot, "adb", ["version"], "adb"));
   checks.push(await checkCommandVersion(repoRoot, "xcrun", ["simctl", "help"], "xcrun simctl"));
   checks.push(await checkCommandVersion(repoRoot, "maestro", ["--version"], "maestro"));
-  checks.push(await checkCommandVersion(repoRoot, "idb", ["--help"], "idb"));
+  const idbCliPath = resolveIdbCliPath();
+  checks.push(idbCliPath ? await checkCommandVersion(repoRoot, idbCliPath, ["--help"], "idb") : summarizeInfoCheck("idb", "fail", "No idb CLI binary is configured."));
+  checks.push(summarizeInfoCheck("idb companion", resolveIdbCompanionPath() ? "pass" : "fail", resolveIdbCompanionPath() ? `${resolveIdbCompanionPath()} is available.` : "No idb_companion binary is configured."));
+  try {
+    const idbTargetResult = await executeRunner(buildIdbCommand(["list-targets"]), repoRoot, process.env);
+    const targetUdid = process.env.SIM_UDID ?? "ADA078B9-3C6B-4875-8B85-A7789F368816";
+    checks.push(summarizeInfoCheck(
+      "idb target visibility",
+      idbTargetResult.exitCode === 0 && idbTargetResult.stdout.includes(targetUdid) ? "pass" : "warn",
+      idbTargetResult.exitCode === 0 && idbTargetResult.stdout.includes(targetUdid)
+        ? `idb can see target ${targetUdid}.`
+        : `idb could not confirm target ${targetUdid}.`,
+    ));
+  } catch {
+    checks.push(summarizeInfoCheck("idb target visibility", "warn", "idb target visibility could not be verified."));
+  }
 
   checks.push(...(await collectHarnessChecks(repoRoot)));
   checks.push(...collectArtifactChecks(repoRoot));
