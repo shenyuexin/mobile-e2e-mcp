@@ -19,7 +19,7 @@ import {
   resolveFirstTapTarget,
   shouldAbortWaitForUiAfterReadFailure,
 } from "../src/ui-model.ts";
-import { buildCapabilityProfile, buildLogSummary, describeCapabilitiesWithMaestro, resolveUiTargetWithMaestro, scrollAndResolveUiTargetWithMaestro, scrollAndTapElementWithMaestro, tapElementWithMaestro, typeIntoElementWithMaestro, waitForUiWithMaestro } from "../src/index.ts";
+import { buildCapabilityProfile, buildLogSummary, collectDebugEvidenceWithMaestro, collectDiagnosticsWithMaestro, describeCapabilitiesWithMaestro, getCrashSignalsWithMaestro, getLogsWithMaestro, inspectUiWithMaestro, resolveUiTargetWithMaestro, scrollAndResolveUiTargetWithMaestro, scrollAndTapElementWithMaestro, takeScreenshotWithMaestro, tapElementWithMaestro, typeIntoElementWithMaestro, waitForUiWithMaestro } from "../src/index.ts";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 
@@ -460,4 +460,34 @@ test("scrollAndTapElementWithMaestro keeps Android dry-run as preview-only parti
   assert.equal(result.reasonCode, "UNSUPPORTED_OPERATION");
   assert.equal(result.data.supportLevel, "full");
   assert.equal(result.data.resolveResult.resolution.status, "not_executed");
+});
+
+test("artifact-heavy dry-run tools emit structured evidence", async () => {
+  const screenshotResult = await takeScreenshotWithMaestro({ sessionId: "evidence-screenshot", platform: "android", dryRun: true });
+  const inspectResult = await inspectUiWithMaestro({ sessionId: "evidence-inspect", platform: "android", dryRun: true });
+  const logsResult = await getLogsWithMaestro({ sessionId: "evidence-logs", platform: "android", dryRun: true, query: "error" });
+  const crashResult = await getCrashSignalsWithMaestro({ sessionId: "evidence-crash", platform: "android", dryRun: true });
+  const diagnosticsResult = await collectDiagnosticsWithMaestro({ sessionId: "evidence-diagnostics", platform: "android", dryRun: true });
+
+  assert.equal(screenshotResult.data.evidence?.[0]?.kind, "screenshot");
+  assert.equal(inspectResult.data.evidence?.[0]?.kind, "ui_dump");
+  assert.equal(logsResult.data.evidence?.[0]?.kind, "log");
+  assert.equal(logsResult.data.evidence?.[0]?.path, logsResult.data.outputPath);
+  assert.equal(crashResult.data.evidence?.[0]?.kind, "crash_signal");
+  assert.equal(diagnosticsResult.data.evidence?.[0]?.kind, "diagnostics_bundle");
+});
+
+test("collectDebugEvidenceWithMaestro aggregates structured evidence in dry-run mode", async () => {
+  const result = await collectDebugEvidenceWithMaestro({
+    sessionId: "evidence-debug-summary",
+    platform: "android",
+    query: "error",
+    includeDiagnostics: true,
+    dryRun: true,
+  });
+
+  assert.equal(result.status, "success");
+  assert.equal(result.data.evidence?.some((item) => item.kind === "log"), true);
+  assert.equal(result.data.evidence?.some((item) => item.kind === "crash_signal"), true);
+  assert.equal(result.data.evidence?.some((item) => item.kind === "diagnostics_bundle"), true);
 });
