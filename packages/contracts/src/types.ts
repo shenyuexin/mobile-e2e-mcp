@@ -3,11 +3,33 @@ import type { ReasonCode } from "./reason-codes.js";
 export type Platform = "android" | "ios";
 export type ToolStatus = "success" | "failed" | "partial";
 export type RunnerProfile = "phase1" | "native_android" | "native_ios" | "flutter_android";
+export type CapabilitySupportLevel = "full" | "partial" | "unsupported";
+
+export interface ToolCapability {
+  toolName: string;
+  supportLevel: CapabilitySupportLevel;
+  note: string;
+  requiresSession?: boolean;
+}
+
+export interface CapabilityGroup {
+  groupName: string;
+  supportLevel: CapabilitySupportLevel;
+  toolNames: string[];
+  note?: string;
+}
+
+export interface CapabilityProfile {
+  platform: Platform;
+  runnerProfile: RunnerProfile | null;
+  toolCapabilities: ToolCapability[];
+  groups: CapabilityGroup[];
+}
 
 export interface SessionTimelineEvent { timestamp: string; type: string; detail?: string; }
-export interface Session { sessionId: string; platform: Platform; deviceId: string; appId: string; policyProfile: string; startedAt: string; artifactsRoot: string; timeline: SessionTimelineEvent[]; profile?: RunnerProfile | null; phase?: string | null; sampleName?: string | null; }
+export interface Session { sessionId: string; platform: Platform; deviceId: string; appId: string; policyProfile: string; startedAt: string; artifactsRoot: string; timeline: SessionTimelineEvent[]; profile?: RunnerProfile | null; phase?: string | null; sampleName?: string | null; capabilities?: CapabilityProfile; }
 export interface ToolResult<TData = unknown> { status: ToolStatus; reasonCode: ReasonCode; sessionId: string; durationMs: number; attempts: number; artifacts: string[]; data: TData; nextSuggestions: string[]; }
-export interface DeviceInfo { id: string; name?: string; platform: Platform; state: string; available: boolean; }
+export interface DeviceInfo { id: string; name?: string; platform: Platform; state: string; available: boolean; capabilities?: CapabilityProfile; }
 export interface DoctorCheck { name: string; status: "pass" | "warn" | "fail"; detail: string; }
 export interface DoctorInput { includeUnavailable?: boolean; }
 export interface InspectUiNode {
@@ -96,7 +118,20 @@ export interface GetLogsInput {
   outputPath?: string;
   lines?: number;
   sinceSeconds?: number;
+  query?: string;
   dryRun?: boolean;
+}
+export interface DebugSignalSummary {
+  category: "crash" | "anr" | "exception" | "error" | "warning" | "timeout" | "other";
+  count: number;
+  sample: string;
+}
+export interface LogSummary {
+  totalLines: number;
+  matchedLines: number;
+  query?: string;
+  topSignals: DebugSignalSummary[];
+  sampleLines: string[];
 }
 export interface GetLogsData {
   dryRun: boolean;
@@ -108,7 +143,9 @@ export interface GetLogsData {
   lineCount: number;
   linesRequested?: number;
   sinceSeconds: number;
+  query?: string;
   content?: string;
+  summary?: LogSummary;
 }
 export interface GetCrashSignalsInput {
   sessionId: string;
@@ -131,6 +168,61 @@ export interface GetCrashSignalsData {
   linesRequested?: number;
   entries: string[];
   content?: string;
+  summary?: LogSummary;
+}
+export interface CollectDiagnosticsInput {
+  sessionId: string;
+  platform: Platform;
+  runnerProfile?: RunnerProfile;
+  harnessConfigPath?: string;
+  deviceId?: string;
+  outputPath?: string;
+  dryRun?: boolean;
+}
+export interface CollectDiagnosticsData {
+  dryRun: boolean;
+  runnerProfile: RunnerProfile;
+  outputPath: string;
+  commands: string[][];
+  exitCode: number | null;
+  supportLevel: "full" | "partial";
+  artifactCount: number;
+  artifacts: string[];
+}
+export interface CollectDebugEvidenceInput {
+  sessionId: string;
+  platform: Platform;
+  runnerProfile?: RunnerProfile;
+  harnessConfigPath?: string;
+  deviceId?: string;
+  outputPath?: string;
+  logLines?: number;
+  sinceSeconds?: number;
+  query?: string;
+  includeDiagnostics?: boolean;
+  dryRun?: boolean;
+}
+export interface CollectDebugEvidenceData {
+  dryRun: boolean;
+  runnerProfile: RunnerProfile;
+  outputPath: string;
+  supportLevel: "full" | "partial";
+  logSummary?: LogSummary;
+  crashSummary?: LogSummary;
+  interestingSignals: DebugSignalSummary[];
+  evidencePaths: string[];
+  evidenceCount: number;
+  narrative: string[];
+}
+export interface DescribeCapabilitiesInput {
+  sessionId?: string;
+  platform: Platform;
+  runnerProfile?: RunnerProfile | null;
+}
+export interface DescribeCapabilitiesData {
+  platform: Platform;
+  runnerProfile: RunnerProfile | null;
+  capabilities: CapabilityProfile;
 }
 export interface InspectUiInput { sessionId: string; platform: Platform; runnerProfile?: RunnerProfile; harnessConfigPath?: string; deviceId?: string; outputPath?: string; dryRun?: boolean; }
 export interface InspectUiQueryInput extends InspectUiInput, InspectUiQuery {}
