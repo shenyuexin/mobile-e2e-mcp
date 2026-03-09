@@ -583,3 +583,16 @@ test("collectDebugEvidenceWithMaestro aggregates structured evidence in dry-run 
   assert.equal(result.data.evidence?.some((item) => item.kind === "crash_signal"), true);
   assert.equal(result.data.evidence?.some((item) => item.kind === "diagnostics_bundle"), true);
 });
+
+test("collectDebugEvidenceWithMaestro carries custom metro base url into auto discovery metadata", async () => {
+  const result = await collectDebugEvidenceWithMaestro({
+    sessionId: "evidence-custom-metro",
+    platform: "android",
+    metroBaseUrl: "http://127.0.0.1:9090",
+    dryRun: true,
+  });
+
+  assert.equal(result.status, "success");
+  assert.equal(result.data.jsDebugMetroBaseUrl, "http://127.0.0.1:9090");
+  assert.equal(result.data.jsDebugTargetEndpoint, "http://127.0.0.1:9090/json/list");
+});

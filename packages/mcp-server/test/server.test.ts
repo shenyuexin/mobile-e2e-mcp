@@ -188,6 +188,8 @@ test("server invoke supports collect_debug_evidence Android dry-run", async () =
   assert.equal(result.reasonCode, "OK");
   assert.equal(result.data.supportLevel, "full");
   assert.equal(result.data.evidenceCount, 0);
+  assert.equal(result.data.jsDebugMetroBaseUrl, "http://127.0.0.1:8081");
+  assert.equal(result.data.jsDebugTargetEndpoint, "http://127.0.0.1:8081/json/list");
   assert.equal(result.data.logSummary?.query, "error");
   assert.equal(Array.isArray(result.data.suspectAreas), true);
   assert.equal(result.data.jsDebugTargetId, undefined);

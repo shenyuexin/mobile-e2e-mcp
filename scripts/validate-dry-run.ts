@@ -79,6 +79,24 @@ const validationCases: ValidationCase[] = [
     },
   },
   {
+    name: "collect_debug_evidence custom metro dry-run",
+    cliArgs: ["--collect-debug-evidence", "--platform", "android", "--metro-base-url", "http://127.0.0.1:9090", "--dry-run"],
+    validate: (result) => {
+      const typed = result as {
+        collectDebugEvidenceResult: {
+          status: string;
+          reasonCode: string;
+          data: { supportLevel: string; jsDebugMetroBaseUrl?: string; jsDebugTargetEndpoint?: string };
+        };
+      };
+      assert.equal(typed.collectDebugEvidenceResult.status, "success");
+      assert.equal(typed.collectDebugEvidenceResult.reasonCode, "OK");
+      assert.equal(typed.collectDebugEvidenceResult.data.supportLevel, "full");
+      assert.equal(typed.collectDebugEvidenceResult.data.jsDebugMetroBaseUrl, "http://127.0.0.1:9090");
+      assert.equal(typed.collectDebugEvidenceResult.data.jsDebugTargetEndpoint, "http://127.0.0.1:9090/json/list");
+    },
+  },
+  {
     name: "list_js_debug_targets dry-run",
     cliArgs: ["--list-js-debug-targets", "--dry-run"],
     validate: (result) => {

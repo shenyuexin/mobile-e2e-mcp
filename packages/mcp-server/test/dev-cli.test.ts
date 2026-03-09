@@ -336,14 +336,17 @@ test("main dispatches collect_debug_evidence Android dry-run through the CLI", a
     collectDebugEvidenceResult: {
       status: string;
       reasonCode: string;
-      data: { supportLevel: string; logSummary?: { query?: string }; jsDebugTargetId?: string; jsConsoleLogCount?: number; jsNetworkEventCount?: number; evidence?: Array<{ kind: string }> };
+      data: { supportLevel: string; jsDebugMetroBaseUrl?: string; jsDebugTargetEndpoint?: string; logSummary?: { query?: string }; suspectAreas: string[]; jsDebugTargetId?: string; jsConsoleLogCount?: number; jsNetworkEventCount?: number; evidence?: Array<{ kind: string }> };
     };
   };
 
   assert.equal(output.collectDebugEvidenceResult.status, "success");
   assert.equal(output.collectDebugEvidenceResult.reasonCode, "OK");
   assert.equal(output.collectDebugEvidenceResult.data.supportLevel, "full");
+  assert.equal(output.collectDebugEvidenceResult.data.jsDebugMetroBaseUrl, "http://127.0.0.1:8081");
+  assert.equal(output.collectDebugEvidenceResult.data.jsDebugTargetEndpoint, "http://127.0.0.1:8081/json/list");
   assert.equal(output.collectDebugEvidenceResult.data.logSummary?.query, "error");
+  assert.equal(Array.isArray(output.collectDebugEvidenceResult.data.suspectAreas), true);
   assert.equal(output.collectDebugEvidenceResult.data.jsDebugTargetId, undefined);
   assert.equal(output.collectDebugEvidenceResult.data.jsConsoleLogCount, 0);
   assert.equal(output.collectDebugEvidenceResult.data.jsNetworkEventCount, 0);
