@@ -1,4 +1,6 @@
 import {
+  type GetCrashSignalsData,
+  type GetCrashSignalsInput,
   type GetLogsData,
   type GetLogsInput,
   type ResolveUiTargetData,
@@ -103,15 +105,24 @@ interface GetLogsCapture {
   linesRequested?: number;
   sinceSeconds: number;
 }
+
+interface GetCrashSignalsCapture {
+  relativeOutputPath: string;
+  absoluteOutputPath: string;
+  commands: string[][];
+  supportLevel: "full" | "partial";
+  linesRequested: number;
+}
 const DEFAULT_WAIT_TIMEOUT_MS = 5000;
 const DEFAULT_WAIT_INTERVAL_MS = 500;
 const DEFAULT_GET_LOGS_LINES = 200;
 const DEFAULT_GET_LOGS_SINCE_SECONDS = 60;
+const DEFAULT_GET_CRASH_LINES = 120;
 const DEFAULT_SCROLL_MAX_SWIPES = 3;
 const DEFAULT_SCROLL_DURATION_MS = 250;
 const DEFAULT_WAIT_UNTIL: WaitForUiMode = "visible";
 const DEFAULT_SCROLL_DIRECTION: UiScrollDirection = "up";
-const DEFAULT_WAIT_MAX_CONSECUTIVE_READ_FAILURES = 2;
+const DEFAULT_WAIT_MAX_CONSECUTIVE_CAPTURE_FAILURES = 2;
 
 interface AndroidUiSnapshot {
   command: string[];
@@ -440,6 +451,62 @@ function buildGetLogsCapture(
     linesRequested,
     sinceSeconds,
   };
+}
+
+function buildGetCrashSignalsCapture(
+  repoRoot: string,
+  input: GetCrashSignalsInput,
+  runnerProfile: RunnerProfile,
+  deviceId: string,
+): GetCrashSignalsCapture {
+  const linesRequested = normalizePositiveInteger(input.lines, DEFAULT_GET_CRASH_LINES);
+  const extension = input.platform === "android" ? "crash.txt" : "crash-manifest.txt";
+  const relativeOutputPath = input.outputPath ?? path.posix.join("artifacts", "crash-signals", input.sessionId, `${input.platform}-${runnerProfile}.${extension}`);
+  const absoluteOutputPath = path.resolve(repoRoot, relativeOutputPath);
+
+  if (input.platform === "android") {
+    return {
+      relativeOutputPath,
+      absoluteOutputPath,
+      commands: [
+        ["adb", "-s", deviceId, "logcat", "-d", "-b", "crash", "-t", String(linesRequested)],
+        ["adb", "-s", deviceId, "shell", "ls", "-1", "/data/anr"],
+      ],
+      supportLevel: "full",
+      linesRequested,
+    };
+  }
+
+  return {
+    relativeOutputPath,
+    absoluteOutputPath,
+    commands: [["xcrun", "simctl", "getenv", deviceId, "HOME"]],
+    supportLevel: "full",
+    linesRequested,
+  };
+}
+
+async function listRelativeFiles(rootPath: string): Promise<string[]> {
+  try {
+    const entries = await readdir(rootPath, { withFileTypes: true });
+    const output: string[] = [];
+
+    for (const entry of entries) {
+      const entryPath = path.join(rootPath, entry.name);
+      if (entry.isDirectory()) {
+        const nested = await listRelativeFiles(entryPath);
+        for (const item of nested) {
+          output.push(path.posix.join(entry.name, item));
+        }
+      } else {
+        output.push(entry.name);
+      }
+    }
+
+    return output.sort();
+  } catch {
+    return [];
+  }
 }
 
 function toRelativePath(repoRoot: string, targetPath: string): string {
@@ -1704,28 +1771,6 @@ export async function typeIntoElementWithMaestro(input: TypeIntoElementInput): P
   const query = resolveResult.data.query;
   const resolution = resolveResult.data.resolution;
 
-  if (input.dryRun && (resolution.status === "unsupported" || resolution.status === "not_executed")) {
-    return {
-      status: "partial",
-      reasonCode: REASON_CODES.unsupportedOperation,
-      sessionId: input.sessionId,
-      durationMs: Date.now() - startTime,
-      attempts: 1,
-      artifacts: resolveResult.artifacts,
-      data: {
-        dryRun: true,
-        runnerProfile,
-        query,
-        value: input.value,
-        resolution,
-        commands: resolveResult.data.command.length > 0 ? [resolveResult.data.command] : [],
-        exitCode: resolveResult.data.exitCode,
-        supportLevel: resolveResult.data.supportLevel,
-      },
-      nextSuggestions: ["type_into_element dry-run does not resolve live UI selectors. Run resolve_ui_target or type_into_element without --dry-run to resolve against the current hierarchy."],
-    };
-  }
-
   if (resolveResult.status === "failed") {
     return {
       status: "failed",
@@ -1745,6 +1790,28 @@ export async function typeIntoElementWithMaestro(input: TypeIntoElementInput): P
         supportLevel: resolveResult.data.supportLevel,
       },
       nextSuggestions: resolveResult.nextSuggestions,
+    };
+  }
+
+  if (input.dryRun && (resolution.status === "unsupported" || resolution.status === "not_executed")) {
+    return {
+      status: "partial",
+      reasonCode: REASON_CODES.unsupportedOperation,
+      sessionId: input.sessionId,
+      durationMs: Date.now() - startTime,
+      attempts: 1,
+      artifacts: resolveResult.artifacts,
+      data: {
+        dryRun: true,
+        runnerProfile,
+        query,
+        value: input.value,
+        resolution,
+        commands: resolveResult.data.command.length > 0 ? [resolveResult.data.command] : [],
+        exitCode: resolveResult.data.exitCode,
+        supportLevel: resolveResult.data.supportLevel,
+      },
+      nextSuggestions: ["type_into_element dry-run does not resolve live UI selectors. Run resolve_ui_target or type_into_element without --dry-run to resolve against the current hierarchy."],
     };
   }
 
@@ -1968,14 +2035,41 @@ export async function waitForUiWithMaestro(input: WaitForUiInput): Promise<ToolR
 
   let polls = 0;
   let lastSnapshot: AndroidUiSnapshot | AndroidUiSnapshotFailure | undefined;
-  let consecutiveReadFailures = 0;
+  let consecutiveCaptureFailures = 0;
   const deadline = Date.now() + timeoutMs;
   while (Date.now() <= deadline) {
     polls += 1;
     lastSnapshot = await captureAndroidUiSnapshot(repoRoot, deviceId, input.sessionId, runnerProfile, input.outputPath, { sessionId: input.sessionId, platform: input.platform, runnerProfile, harnessConfigPath: input.harnessConfigPath, deviceId, outputPath: input.outputPath, dryRun: false, ...query });
-    if (!isAndroidUiSnapshotFailure(lastSnapshot) && lastSnapshot.readExecution.exitCode !== 0) {
-      consecutiveReadFailures += 1;
-      if (shouldAbortWaitForUiAfterReadFailure({ consecutiveReadFailures, maxConsecutiveReadFailures: DEFAULT_WAIT_MAX_CONSECUTIVE_READ_FAILURES })) {
+    if (isAndroidUiSnapshotFailure(lastSnapshot)) {
+      consecutiveCaptureFailures += 1;
+      if (shouldAbortWaitForUiAfterReadFailure({ consecutiveFailures: consecutiveCaptureFailures, maxConsecutiveFailures: DEFAULT_WAIT_MAX_CONSECUTIVE_CAPTURE_FAILURES })) {
+        return {
+          status: "failed",
+          reasonCode: lastSnapshot.reasonCode,
+          sessionId: input.sessionId,
+          durationMs: Date.now() - startTime,
+          attempts: polls,
+          artifacts: [],
+          data: {
+            dryRun: false,
+            runnerProfile,
+            outputPath: lastSnapshot.outputPath,
+            query,
+            timeoutMs,
+            intervalMs,
+            waitUntil,
+            polls,
+            command: lastSnapshot.command,
+            exitCode: lastSnapshot.exitCode,
+            result: { query, totalMatches: 0, matches: [] },
+            supportLevel: "full",
+          },
+          nextSuggestions: [`Android UI hierarchy capture failed ${String(consecutiveCaptureFailures)} times in a row during wait_for_ui. Check device state and retry instead of waiting for timeout.`],
+        };
+      }
+    } else if (lastSnapshot.readExecution.exitCode !== 0) {
+      consecutiveCaptureFailures += 1;
+      if (shouldAbortWaitForUiAfterReadFailure({ consecutiveFailures: consecutiveCaptureFailures, maxConsecutiveFailures: DEFAULT_WAIT_MAX_CONSECUTIVE_CAPTURE_FAILURES })) {
         return {
           status: "failed",
           reasonCode: buildFailureReason(lastSnapshot.readExecution.stderr, lastSnapshot.readExecution.exitCode),
@@ -1997,11 +2091,11 @@ export async function waitForUiWithMaestro(input: WaitForUiInput): Promise<ToolR
             result: { query, totalMatches: 0, matches: [] },
             supportLevel: "full",
           },
-          nextSuggestions: [`Android UI hierarchy reads failed ${String(consecutiveReadFailures)} times in a row during wait_for_ui. Check device state and retry instead of waiting for timeout.`],
+          nextSuggestions: [`Android UI hierarchy reads failed ${String(consecutiveCaptureFailures)} times in a row during wait_for_ui. Check device state and retry instead of waiting for timeout.`],
         };
       }
-    } else if (!isAndroidUiSnapshotFailure(lastSnapshot)) {
-      consecutiveReadFailures = 0;
+    } else {
+      consecutiveCaptureFailures = 0;
     }
     if (!isAndroidUiSnapshotFailure(lastSnapshot) && lastSnapshot.readExecution.exitCode === 0 && isWaitConditionMet({ query, ...lastSnapshot.queryResult }, waitUntil)) {
       return {
@@ -2915,6 +3009,142 @@ export async function getLogsWithMaestro(input: GetLogsInput): Promise<ToolResul
       : [input.platform === "android"
         ? "Check adb connectivity and the selected Android device before retrying get_logs."
         : "Check simulator boot state and log access permissions before retrying get_logs."],
+  };
+}
+
+export async function getCrashSignalsWithMaestro(input: GetCrashSignalsInput): Promise<ToolResult<GetCrashSignalsData>> {
+  const startTime = Date.now();
+  const repoRoot = resolveRepoPath();
+  const runnerProfile = input.runnerProfile ?? DEFAULT_RUNNER_PROFILE;
+  const selection = await loadHarnessSelection(repoRoot, input.platform, runnerProfile, input.harnessConfigPath ?? DEFAULT_HARNESS_CONFIG_PATH);
+  const deviceId = input.deviceId ?? selection.deviceId ?? (input.platform === "android" ? "emulator-5554" : "ADA078B9-3C6B-4875-8B85-A7789F368816");
+  const capture = buildGetCrashSignalsCapture(repoRoot, input, runnerProfile, deviceId);
+
+  await mkdir(path.dirname(capture.absoluteOutputPath), { recursive: true });
+
+  if (input.dryRun) {
+    return {
+      status: "success",
+      reasonCode: REASON_CODES.ok,
+      sessionId: input.sessionId,
+      durationMs: Date.now() - startTime,
+      attempts: 1,
+      artifacts: [],
+      data: {
+        dryRun: true,
+        runnerProfile,
+        outputPath: capture.relativeOutputPath,
+        commands: capture.commands,
+        exitCode: 0,
+        supportLevel: capture.supportLevel,
+        signalCount: 0,
+        linesRequested: capture.linesRequested,
+        entries: [],
+      },
+      nextSuggestions: ["Run get_crash_signals without dryRun to capture live crash and ANR evidence."],
+    };
+  }
+
+  if (input.platform === "android") {
+    const [crashCommand, anrCommand] = capture.commands;
+    const crashExecution = await executeRunner(crashCommand, repoRoot, process.env);
+    const anrExecution = await executeRunner(anrCommand, repoRoot, process.env);
+    const entries = anrExecution.exitCode === 0
+      ? anrExecution.stdout.replaceAll(String.fromCharCode(13), "").split(String.fromCharCode(10)).map((line) => line.trim()).filter(Boolean)
+      : [];
+    const contentSections = [
+      "# Android crash log buffer",
+      crashExecution.stdout.trim(),
+      "",
+      "# Android ANR entries",
+      entries.join(String.fromCharCode(10)),
+    ];
+    const content = contentSections.join(String.fromCharCode(10)).trim() + String.fromCharCode(10);
+    const exitCode = crashExecution.exitCode !== 0 ? crashExecution.exitCode : anrExecution.exitCode;
+
+    if (exitCode === 0) {
+      await writeFile(capture.absoluteOutputPath, content, "utf8");
+    }
+
+    return {
+      status: exitCode === 0 ? "success" : "failed",
+      reasonCode: exitCode === 0 ? REASON_CODES.ok : buildFailureReason(crashExecution.stderr || anrExecution.stderr, exitCode),
+      sessionId: input.sessionId,
+      durationMs: Date.now() - startTime,
+      attempts: 1,
+      artifacts: exitCode === 0 ? [toRelativePath(repoRoot, capture.absoluteOutputPath)] : [],
+      data: {
+        dryRun: false,
+        runnerProfile,
+        outputPath: capture.relativeOutputPath,
+        commands: capture.commands,
+        exitCode,
+        supportLevel: capture.supportLevel,
+        signalCount: entries.length + countNonEmptyLines(crashExecution.stdout),
+        linesRequested: capture.linesRequested,
+        entries,
+        content: exitCode === 0 ? content : undefined,
+      },
+      nextSuggestions: exitCode === 0 ? [] : ["Check adb connectivity and the selected Android device before retrying get_crash_signals."],
+    };
+  }
+
+  const homeExecution = await executeRunner(capture.commands[0], repoRoot, process.env);
+  if (homeExecution.exitCode !== 0) {
+    return {
+      status: "failed",
+      reasonCode: buildFailureReason(homeExecution.stderr, homeExecution.exitCode),
+      sessionId: input.sessionId,
+      durationMs: Date.now() - startTime,
+      attempts: 1,
+      artifacts: [],
+      data: {
+        dryRun: false,
+        runnerProfile,
+        outputPath: capture.relativeOutputPath,
+        commands: capture.commands,
+        exitCode: homeExecution.exitCode,
+        supportLevel: capture.supportLevel,
+        signalCount: 0,
+        linesRequested: capture.linesRequested,
+        entries: [],
+      },
+      nextSuggestions: ["Check simulator boot state before retrying get_crash_signals."],
+    };
+  }
+
+  const simulatorHome = homeExecution.stdout.trim();
+  const crashRoot = path.join(simulatorHome, "Library", "Logs", "CrashReporter");
+  const entries = await listRelativeFiles(crashRoot);
+  const content = [
+    "# iOS simulator crash reporter root",
+    crashRoot,
+    "",
+    "# Crash reporter entries",
+    entries.length > 0 ? entries.join(String.fromCharCode(10)) : "<no crash entries found>",
+  ].join(String.fromCharCode(10)) + String.fromCharCode(10);
+  await writeFile(capture.absoluteOutputPath, content, "utf8");
+
+  return {
+    status: "success",
+    reasonCode: REASON_CODES.ok,
+    sessionId: input.sessionId,
+    durationMs: Date.now() - startTime,
+    attempts: 1,
+    artifacts: [toRelativePath(repoRoot, capture.absoluteOutputPath)],
+    data: {
+      dryRun: false,
+      runnerProfile,
+      outputPath: capture.relativeOutputPath,
+      commands: capture.commands,
+      exitCode: homeExecution.exitCode,
+      supportLevel: capture.supportLevel,
+      signalCount: entries.length,
+      linesRequested: capture.linesRequested,
+      entries,
+      content,
+    },
+    nextSuggestions: entries.length === 0 ? ["No simulator crash reporter files were found. Re-run after reproducing a crash or ANR-like issue."] : [],
   };
 }
 

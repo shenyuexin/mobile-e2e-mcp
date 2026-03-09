@@ -29,8 +29,8 @@ export interface UiSwipeCoordinates {
 }
 
 export interface WaitForUiReadFailureState {
-  consecutiveReadFailures: number;
-  maxConsecutiveReadFailures: number;
+  consecutiveFailures: number;
+  maxConsecutiveFailures: number;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -370,7 +370,7 @@ export function isWaitConditionMet(result: InspectUiQueryResult, waitUntil: Wait
 }
 
 export function shouldAbortWaitForUiAfterReadFailure(state: WaitForUiReadFailureState): boolean {
-  return state.consecutiveReadFailures >= state.maxConsecutiveReadFailures;
+  return state.consecutiveFailures >= state.maxConsecutiveFailures;
 }
 
 export function buildScrollSwipeCoordinates(nodes: InspectUiNode[], direction: UiScrollDirection, durationMs: number): UiSwipeCoordinates {
