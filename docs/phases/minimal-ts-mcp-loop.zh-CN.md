@@ -27,6 +27,7 @@
 14. 新增最小 tap 工具
 15. 新增最小 type_text 工具
 16. 新增最小 get_logs 工具
+17. 新增最小 get_crash_signals 工具
 
 ## 当前最小验证入口
 
@@ -55,7 +56,7 @@ pnpm mcp:dev -- --platform android --run-count 1
 - 新增 `packages/adapter-maestro/test/ui-model.test.ts`，覆盖 summary、query、`query-limit`、bounds 解析、iOS fixture summary 等回归场景
 - 根脚本新增 `pnpm test:unit`，当前走 `node:test + tsx`，避免引入额外大型测试框架
 - `tap_element` 现在会返回 `matchCount`、`resolution` 与结构化 `resolvedBounds`，作为后续元素级 `tap` / `type_text` 的桥接层
-- 新增 `resolve_ui_target`，会显式返回 `resolved` / `no_match` / `ambiguous` / `missing_bounds` / `unsupported` 状态，避免元素动作默默吞掉多候选
+- 新增 `resolve_ui_target`，会显式返回 `resolved` / `no_match` / `ambiguous` / `missing_bounds` / `unsupported` 状态；对于 Android dry-run 这类“平台支持但本次未真正执行解析”的场景，会额外用 `not_executed` 区分，避免元素动作默默吞掉多候选，也避免把 preview 误标成 unsupported
 - 新增 `type_into_element`，在 Android 上复用 target resolution，先聚焦再输入 `--value`
 - 新增 `wait_for_ui`，在 Android 上按 selector 做最小轮询等待，支持 `--wait-until visible|gone|unique`、`--timeout-ms` 和 `--interval-ms`
 - 新增 `scroll_and_resolve_ui_target`，在 Android 上执行“抓 tree -> resolve -> swipe -> retry”的最小滚动解析闭环，支持 `--max-swipes`、`--swipe-direction`、`--swipe-duration-ms`
@@ -85,6 +86,8 @@ pnpm --filter @mobile-e2e-mcp/mcp-server exec tsx src/dev-cli.ts --tap --platfor
 pnpm --filter @mobile-e2e-mcp/mcp-server exec tsx src/dev-cli.ts --type-text --platform android --runner-profile phase1 --text hello --dry-run
 pnpm --filter @mobile-e2e-mcp/mcp-server exec tsx src/dev-cli.ts --get-logs --platform android --runner-profile phase1 --lines 50 --dry-run
 pnpm --filter @mobile-e2e-mcp/mcp-server exec tsx src/dev-cli.ts --get-logs --platform ios --runner-profile phase1 --since-seconds 60 --dry-run
+pnpm --filter @mobile-e2e-mcp/mcp-server exec tsx src/dev-cli.ts --get-crash-signals --platform android --runner-profile phase1 --lines 50 --dry-run
+pnpm --filter @mobile-e2e-mcp/mcp-server exec tsx src/dev-cli.ts --get-crash-signals --platform ios --runner-profile phase1 --dry-run
 ```
 
 ## 已验证结果
@@ -111,10 +114,11 @@ pnpm --filter @mobile-e2e-mcp/mcp-server exec tsx src/dev-cli.ts --get-logs --pl
 - `tap` 实机验证：Android 坐标点击 dry-run 与真实执行均成功
 - `type_text` 实机验证：Android 文本输入 dry-run 与真实执行均成功
 - `get_logs` 实机验证：Android 已通过 `adb logcat -d -t <N>` 捕获最近日志；iOS simulator 已通过 `xcrun simctl spawn <UDID> log show --style compact --last <Ns>` 捕获最近日志
+- `get_crash_signals` 实机验证：Android 已通过 crash log buffer + `/data/anr` 目录抓取最近 crash / ANR 信号；iOS simulator 已通过 `simctl getenv <UDID> HOME` 定位 `Library/Logs/CrashReporter` 并输出 crash manifest
 - `resolve_ui_target` 会把多候选显式标成 `ambiguous`，不再让元素动作悄悄点第一个命中
 - `tap_element` 现已改为依赖 resolution 结果，只在 `resolved` 状态下执行点击；若是 `ambiguous` / `no_match` / `missing_bounds` 会返回 partial
 - `type_into_element` 会先聚焦已解析的 Android 节点，再执行 `adb shell input text`
-- `wait_for_ui` 会在 Android 上轮询 hierarchy，支持等待“出现 / 消失 / 唯一命中”三种模式；若 hierarchy 连续读取失败，则会尽快返回真实 adapter/device failure，而不是误报成 `TIMEOUT`
+- `wait_for_ui` 会在 Android 上轮询 hierarchy，支持等待“出现 / 消失 / 唯一命中”三种模式；若 hierarchy 连续两次抓取或读取失败，则会尽快返回真实 adapter/device failure，而不是误报成 `TIMEOUT`
 - `scroll_and_resolve_ui_target` 会在 Android 上循环执行 capture + swipe，直到解析出目标、出现歧义、或达到 `maxSwipes`
 - `pnpm test:unit`：已覆盖 fixture 驱动的 UI 解析、查询、bounds/action bridge 与 iOS summary 回归
 - `doctor` 现已额外检查 `idb` CLI、`idb_companion` 与 iOS target visibility
@@ -128,6 +132,7 @@ pnpm --filter @mobile-e2e-mcp/mcp-server exec tsx src/dev-cli.ts --get-logs --pl
 - 当前 `scroll_and_resolve_ui_target` 也只在 Android 上提供真实能力；iOS 仍保持 partial/unsupported
 - 当前 action resolver 仍不做滚动后重试、优先级排序或业务级歧义消解；若 selector 同时命中多个候选，会直接返回 `ambiguous`
 - `get_logs` 当前优先覆盖 Android `logcat` 与 iOS simulator 最近窗口日志；尚未区分更细粒度的 crash-only / app-scoped filter
+- `get_crash_signals` 当前优先做“近期 crash/ANR 证据采集”：Android 读取 crash buffer 与 `/data/anr` 文件名，iOS simulator 输出 `CrashReporter` 树 manifest；尚未做 app 级过滤或 `.ips` 结构化解析
 
 ## 下一轮建议
 

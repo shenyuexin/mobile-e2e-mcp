@@ -275,6 +275,13 @@ pnpm mcp:stdio
 - 返回会包含 `outputPath`、底层 `command`、`lineCount`、`sinceSeconds` 与原始 `content`
 - 这条链路当前定位为“诊断/取证”，不是更高层的 crash 归因或 app 级过滤系统
 
+当前仓库还新增了一个最小 crash/ANR 证据工具 `get_crash_signals`：
+
+- Android 会同时读取 `adb logcat -d -b crash -t <N>` 与 `/data/anr` 目录，用于抓取近期 crash buffer 与 ANR 文件名
+- iOS simulator 会通过 `xcrun simctl getenv <UDID> HOME` 定位 simulator data root，并输出 `Library/Logs/CrashReporter` 树下的 manifest
+- 返回会包含 `outputPath`、底层 `commands`、`signalCount`、`entries` 与原始 `content`
+- 这条链路当前定位仍是“证据采集”，不是完整的 crash 归因、`.ips` 解析器或 app 级过滤系统
+
 当前仓库也已经补了一个最小动作桥接层 `tap_element`：
 
 - 输入仍复用 `resourceId` / `contentDesc` / `text` / `className` / `clickable`
@@ -284,9 +291,9 @@ pnpm mcp:stdio
 
 当前还新增了两条最小动作链路：
 
-- `resolve_ui_target`：显式返回 `resolved` / `no_match` / `ambiguous` / `missing_bounds` / `unsupported`
+- `resolve_ui_target`：显式返回 `resolved` / `no_match` / `ambiguous` / `missing_bounds` / `unsupported`；若是 Android dry-run / preview 这类“本次未实际解析 live hierarchy”的路径，会额外返回 `not_executed`
 - `type_into_element`：Android 上先聚焦解析后的节点，再输入 `--value`
-- `wait_for_ui`：Android 上按 selector 轮询 hierarchy，支持 `visible` / `gone` / `unique`；若 hierarchy 连续读取失败，会直接返回真实失败而不是继续等到超时
+- `wait_for_ui`：Android 上按 selector 轮询 hierarchy，支持 `visible` / `gone` / `unique`；若 hierarchy 连续两次抓取或读取失败，会直接返回真实失败而不是继续等到超时
 - `scroll_and_resolve_ui_target`：Android 上在滚动容器内执行“抓 tree -> resolve -> swipe -> retry”
 
 
