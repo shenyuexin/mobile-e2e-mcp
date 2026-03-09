@@ -79,6 +79,40 @@ const validationCases: ValidationCase[] = [
     },
   },
   {
+    name: "list_js_debug_targets dry-run",
+    cliArgs: ["--list-js-debug-targets", "--dry-run"],
+    validate: (result) => {
+      const typed = result as { listJsDebugTargetsResult: { status: string; reasonCode: string; data: { targetCount: number; endpoint: string } } };
+      assert.equal(typed.listJsDebugTargetsResult.status, "success");
+      assert.equal(typed.listJsDebugTargetsResult.reasonCode, "OK");
+      assert.equal(typed.listJsDebugTargetsResult.data.targetCount, 0);
+      assert.equal(typed.listJsDebugTargetsResult.data.endpoint, "http://127.0.0.1:8081/json/list");
+    },
+  },
+  {
+    name: "capture_js_console_logs dry-run",
+    cliArgs: ["--capture-js-console-logs", "--target-id", "demo-target", "--dry-run"],
+    validate: (result) => {
+      const typed = result as { captureJsConsoleLogsResult: { status: string; reasonCode: string; data: { collectedCount: number; webSocketDebuggerUrl: string } } };
+      assert.equal(typed.captureJsConsoleLogsResult.status, "success");
+      assert.equal(typed.captureJsConsoleLogsResult.reasonCode, "OK");
+      assert.equal(typed.captureJsConsoleLogsResult.data.collectedCount, 0);
+      assert.equal(typed.captureJsConsoleLogsResult.data.webSocketDebuggerUrl, "ws://127.0.0.1:8081/inspector/debug?target=demo-target");
+    },
+  },
+  {
+    name: "capture_js_network_events dry-run",
+    cliArgs: ["--capture-js-network-events", "--target-id", "demo-target", "--dry-run"],
+    validate: (result) => {
+      const typed = result as { captureJsNetworkEventsResult: { status: string; reasonCode: string; data: { collectedCount: number; failuresOnly: boolean; webSocketDebuggerUrl: string } } };
+      assert.equal(typed.captureJsNetworkEventsResult.status, "success");
+      assert.equal(typed.captureJsNetworkEventsResult.reasonCode, "OK");
+      assert.equal(typed.captureJsNetworkEventsResult.data.collectedCount, 0);
+      assert.equal(typed.captureJsNetworkEventsResult.data.failuresOnly, true);
+      assert.equal(typed.captureJsNetworkEventsResult.data.webSocketDebuggerUrl, "ws://127.0.0.1:8081/inspector/debug?target=demo-target");
+    },
+  },
+  {
     name: "query_ui Android dry-run",
     cliArgs: ["--query-ui", "--platform", "android", "--content-desc", "View products", "--dry-run"],
     validate: (result) => {
