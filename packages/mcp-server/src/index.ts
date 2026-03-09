@@ -14,6 +14,7 @@ import { queryUi } from "./tools/query-ui.js";
 import { resolveUiTarget } from "./tools/resolve-ui-target.js";
 import { runFlow } from "./tools/run-flow.js";
 import { scrollAndResolveUiTarget } from "./tools/scroll-and-resolve-ui-target.js";
+import { scrollAndTapElement } from "./tools/scroll-and-tap-element.js";
 import { startSession } from "./tools/start-session.js";
 import { takeScreenshot } from "./tools/take-screenshot.js";
 import { tapElement } from "./tools/tap-element.js";
@@ -35,6 +36,7 @@ export function createServer(): MobileE2EMcpServer {
     query_ui: queryUi,
     resolve_ui_target: resolveUiTarget,
     scroll_and_resolve_ui_target: scrollAndResolveUiTarget,
+    scroll_and_tap_element: scrollAndTapElement,
     install_app: installApp,
     launch_app: launchApp,
     list_devices: listDevices,

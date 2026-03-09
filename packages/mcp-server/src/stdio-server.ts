@@ -46,6 +46,7 @@ export function buildToolList() {
     { name: "query_ui", description: "Query Android hierarchy dumps by selector fields and return partial support for iOS." },
     { name: "resolve_ui_target", description: "Resolve a UI selector to a single actionable Android target or report ambiguity." },
     { name: "scroll_and_resolve_ui_target", description: "Scroll Android UI containers while trying to resolve a selector to a single actionable target." },
+    { name: "scroll_and_tap_element", description: "Scroll Android UI containers until a target resolves, then tap the resolved element." },
     { name: "install_app", description: "Install a native or flutter artifact onto a target device/simulator." },
     { name: "launch_app", description: "Launch the selected app or Expo URL on a target device/simulator." },
     { name: "list_devices", description: "List Android devices and iOS simulators." },

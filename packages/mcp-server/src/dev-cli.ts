@@ -1,4 +1,4 @@
-import type { CollectDebugEvidenceInput, CollectDiagnosticsInput, DescribeCapabilitiesInput, DoctorInput, GetCrashSignalsInput, GetLogsInput, InspectUiInput, InstallAppInput, LaunchAppInput, ListDevicesInput, Platform, QueryUiInput, ResolveUiTargetInput, RunFlowInput, RunnerProfile, ScreenshotInput, ScrollAndResolveUiTargetInput, StartSessionInput, TapElementInput, TapInput, TerminateAppInput, TypeTextInput, TypeIntoElementInput, UiScrollDirection, WaitForUiInput, WaitForUiMode } from "@mobile-e2e-mcp/contracts";
+import type { CollectDebugEvidenceInput, CollectDiagnosticsInput, DescribeCapabilitiesInput, DoctorInput, GetCrashSignalsInput, GetLogsInput, InspectUiInput, InstallAppInput, LaunchAppInput, ListDevicesInput, Platform, QueryUiInput, ResolveUiTargetInput, RunFlowInput, RunnerProfile, ScreenshotInput, ScrollAndResolveUiTargetInput, ScrollAndTapElementInput, StartSessionInput, TapElementInput, TapInput, TerminateAppInput, TypeTextInput, TypeIntoElementInput, UiScrollDirection, WaitForUiInput, WaitForUiMode } from "@mobile-e2e-mcp/contracts";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 import { createServer } from "./index.js";
@@ -20,6 +20,7 @@ interface CliOptions {
   queryUi: boolean;
   resolveUiTarget: boolean;
   scrollAndResolveUiTarget: boolean;
+  scrollAndTapElement: boolean;
   takeScreenshot: boolean;
   tap: boolean;
   tapElement: boolean;
@@ -87,6 +88,7 @@ export function parseCliArgs(argv: string[]): CliOptions {
   let queryUi = false;
   let resolveUiTarget = false;
   let scrollAndResolveUiTarget = false;
+  let scrollAndTapElement = false;
   let takeScreenshot = false;
   let tap = false;
   let tapElement = false;
@@ -143,6 +145,7 @@ export function parseCliArgs(argv: string[]): CliOptions {
     else if (arg === "--query-ui") { queryUi = true; }
     else if (arg === "--resolve-ui-target") { resolveUiTarget = true; }
     else if (arg === "--scroll-and-resolve-ui-target") { scrollAndResolveUiTarget = true; }
+    else if (arg === "--scroll-and-tap-element") { scrollAndTapElement = true; }
     else if (arg === "--take-screenshot") { takeScreenshot = true; }
     else if (arg === "--tap") { tap = true; }
     else if (arg === "--tap-element") { tapElement = true; }
@@ -198,6 +201,7 @@ export function parseCliArgs(argv: string[]): CliOptions {
     queryUi,
     resolveUiTarget,
     scrollAndResolveUiTarget,
+    scrollAndTapElement,
     takeScreenshot,
     tap,
     tapElement,
@@ -248,6 +252,7 @@ export async function main(): Promise<void> {
       runnerProfile: cliOptions.runnerProfile,
       harnessConfigPath: cliOptions.harnessConfigPath,
       deviceId: cliOptions.deviceId,
+      appId: cliOptions.appId,
       outputPath: cliOptions.outputPath,
       logLines: cliOptions.lines,
       sinceSeconds: cliOptions.sinceSeconds,
@@ -305,6 +310,7 @@ export async function main(): Promise<void> {
       runnerProfile: cliOptions.runnerProfile,
       harnessConfigPath: cliOptions.harnessConfigPath,
       deviceId: cliOptions.deviceId,
+      appId: cliOptions.appId,
       outputPath: cliOptions.outputPath,
       lines: cliOptions.lines,
       dryRun: cliOptions.dryRun,
@@ -321,6 +327,7 @@ export async function main(): Promise<void> {
       runnerProfile: cliOptions.runnerProfile,
       harnessConfigPath: cliOptions.harnessConfigPath,
       deviceId: cliOptions.deviceId,
+      appId: cliOptions.appId,
       outputPath: cliOptions.outputPath,
       lines: cliOptions.lines,
       sinceSeconds: cliOptions.sinceSeconds,
@@ -402,6 +409,30 @@ export async function main(): Promise<void> {
     };
     const result = await server.invoke("scroll_and_resolve_ui_target", scrollResolveInput);
     console.log(JSON.stringify({ tools: server.listTools(), scrollAndResolveUiTargetResult: result }, null, 2));
+    if (result.status === "failed") process.exitCode = 1;
+    return;
+  }
+  if (cliOptions.scrollAndTapElement) {
+    const scrollTapInput: ScrollAndTapElementInput = {
+      sessionId: cliOptions.sessionId ?? `scroll-tap-${Date.now()}`,
+      platform: cliOptions.platform,
+      runnerProfile: cliOptions.runnerProfile,
+      harnessConfigPath: cliOptions.harnessConfigPath,
+      deviceId: cliOptions.deviceId,
+      outputPath: cliOptions.outputPath,
+      resourceId: cliOptions.queryResourceId,
+      contentDesc: cliOptions.queryContentDesc,
+      text: cliOptions.queryText ?? cliOptions.text,
+      className: cliOptions.queryClassName,
+      clickable: cliOptions.queryClickable,
+      limit: cliOptions.queryLimit,
+      maxSwipes: cliOptions.maxSwipes,
+      swipeDirection: cliOptions.swipeDirection,
+      swipeDurationMs: cliOptions.swipeDurationMs,
+      dryRun: cliOptions.dryRun,
+    };
+    const result = await server.invoke("scroll_and_tap_element", scrollTapInput);
+    console.log(JSON.stringify({ tools: server.listTools(), scrollAndTapElementResult: result }, null, 2));
     if (result.status === "failed") process.exitCode = 1;
     return;
   }
