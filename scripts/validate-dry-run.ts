@@ -82,10 +82,12 @@ const validationCases: ValidationCase[] = [
     name: "query_ui Android dry-run",
     cliArgs: ["--query-ui", "--platform", "android", "--content-desc", "View products", "--dry-run"],
     validate: (result) => {
-      const typed = result as { queryUiResult: { status: string; reasonCode: string; data: { supportLevel: string } } };
+      const typed = result as { queryUiResult: { status: string; reasonCode: string; data: { supportLevel: string; evidence?: Array<{ kind: string; path: string; supportLevel: string }> } } };
       assert.equal(typed.queryUiResult.status, "success");
       assert.equal(typed.queryUiResult.reasonCode, "OK");
       assert.equal(typed.queryUiResult.data.supportLevel, "full");
+      assert.equal(typed.queryUiResult.data.evidence?.[0]?.kind, "ui_dump");
+      assert.equal(typed.queryUiResult.data.evidence?.[0]?.supportLevel, "full");
     },
   },
   {
