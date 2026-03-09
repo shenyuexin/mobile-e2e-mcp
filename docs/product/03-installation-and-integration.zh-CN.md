@@ -282,6 +282,13 @@ pnpm mcp:stdio
 - 返回会包含 `outputPath`、底层 `commands`、`signalCount`、`entries` 与原始 `content`
 - 这条链路当前定位仍是“证据采集”，不是完整的 crash 归因、`.ips` 解析器或 app 级过滤系统
 
+当前仓库还新增了一个最小一键诊断包工具 `collect_diagnostics`：
+
+- Android 走 `adb bugreport`，输出完整 `bugreport.zip`
+- iOS simulator 走非交互 `simctl diagnose --no-archive`，输出 simulator 诊断目录
+- 返回会包含 `outputPath`、底层 `commands` 与收集到的 `artifacts`
+- 这条链路适合一次性取证，不适合作为高频步骤；当前也不做额外压缩、脱敏或内容裁剪
+
 当前仓库也已经补了一个最小动作桥接层 `tap_element`：
 
 - 输入仍复用 `resourceId` / `contentDesc` / `text` / `className` / `clickable`
@@ -351,3 +358,12 @@ pnpm mcp:stdio
 - `wait_for_ui` 的 `visible` / `gone` / `unique` 判断语义
 - 滚动手势坐标推导
 - iOS hierarchy JSON 到 summary 的最小归一化
+
+此外，当前 `pnpm test:unit` 还会覆盖两层无设备 smoke test：
+
+- `packages/adapter-maestro`：验证 `resolve_ui_target` / `tap_element` / `type_into_element` / `wait_for_ui` / `scroll_and_resolve_ui_target` 的配置错误、Android dry-run、iOS partial envelope 语义
+- `packages/mcp-server`：验证 `createServer`、stdio `handleRequest`、dev CLI `parseCliArgs` / `main()` 对新 UI 工具入口的关键 dispatch 和 transport 语义
+
+顶层 `pnpm run validate:dry-run` 现已不再只是串联命令退出码，而是通过 `scripts/validate-dry-run.ts` 真实调用 dev CLI dry-run，并断言返回 JSON 的关键语义字段（如 `status`、`reasonCode`、`supportLevel` 与部分 tool-specific data）。
+
+当前还新增了一个 capability discovery 入口：`describe_capabilities`。它会返回当前 `platform` / `runnerProfile` 下的 tool capability matrix；同时 `start_session` 和 `list_devices` 的返回结果也会附带 capability profile，方便调用方在动作前先判断 Android full support 与 iOS partial/unsupported 的边界。
