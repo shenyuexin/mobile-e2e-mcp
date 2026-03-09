@@ -378,13 +378,15 @@ test("main dispatches capture_js_console_logs dry-run through the CLI", async ()
     captureJsConsoleLogsResult: {
       status: string;
       reasonCode: string;
-      data: { collectedCount: number; webSocketDebuggerUrl: string };
+      data: { collectedCount: number; webSocketDebuggerUrl: string; summary: { totalLogs: number; exceptionCount: number } };
     };
   };
 
   assert.equal(output.captureJsConsoleLogsResult.status, "success");
   assert.equal(output.captureJsConsoleLogsResult.reasonCode, "OK");
   assert.equal(output.captureJsConsoleLogsResult.data.collectedCount, 0);
+  assert.equal(output.captureJsConsoleLogsResult.data.summary.totalLogs, 0);
+  assert.equal(output.captureJsConsoleLogsResult.data.summary.exceptionCount, 0);
   assert.equal(output.captureJsConsoleLogsResult.data.webSocketDebuggerUrl, "ws://127.0.0.1:8081/inspector/debug?target=demo-target");
 });
 
@@ -397,7 +399,7 @@ test("main dispatches capture_js_network_events dry-run through the CLI", async 
     captureJsNetworkEventsResult: {
       status: string;
       reasonCode: string;
-      data: { collectedCount: number; failuresOnly: boolean; webSocketDebuggerUrl: string };
+      data: { collectedCount: number; failuresOnly: boolean; webSocketDebuggerUrl: string; summary: { totalTrackedRequests: number; failedRequestCount: number } };
     };
   };
 
@@ -405,5 +407,7 @@ test("main dispatches capture_js_network_events dry-run through the CLI", async 
   assert.equal(output.captureJsNetworkEventsResult.reasonCode, "OK");
   assert.equal(output.captureJsNetworkEventsResult.data.collectedCount, 0);
   assert.equal(output.captureJsNetworkEventsResult.data.failuresOnly, true);
+  assert.equal(output.captureJsNetworkEventsResult.data.summary.totalTrackedRequests, 0);
+  assert.equal(output.captureJsNetworkEventsResult.data.summary.failedRequestCount, 0);
   assert.equal(output.captureJsNetworkEventsResult.data.webSocketDebuggerUrl, "ws://127.0.0.1:8081/inspector/debug?target=demo-target");
 });

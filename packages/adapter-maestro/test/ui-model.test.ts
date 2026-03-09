@@ -19,7 +19,7 @@ import {
   resolveFirstTapTarget,
   shouldAbortWaitForUiAfterReadFailure,
 } from "../src/ui-model.ts";
-import { buildCapabilityProfile, buildInspectorExceptionLogEntry, buildLogSummary, collectDebugEvidenceWithMaestro, collectDiagnosticsWithMaestro, describeCapabilitiesWithMaestro, getCrashSignalsWithMaestro, getLogsWithMaestro, inspectUiWithMaestro, resolveUiTargetWithMaestro, scrollAndResolveUiTargetWithMaestro, scrollAndTapElementWithMaestro, takeScreenshotWithMaestro, tapElementWithMaestro, typeIntoElementWithMaestro, waitForUiWithMaestro } from "../src/index.ts";
+import { buildCapabilityProfile, buildInspectorExceptionLogEntry, buildJsConsoleLogSummary, buildJsNetworkFailureSummary, buildLogSummary, collectDebugEvidenceWithMaestro, collectDiagnosticsWithMaestro, describeCapabilitiesWithMaestro, getCrashSignalsWithMaestro, getLogsWithMaestro, inspectUiWithMaestro, resolveUiTargetWithMaestro, scrollAndResolveUiTargetWithMaestro, scrollAndTapElementWithMaestro, takeScreenshotWithMaestro, tapElementWithMaestro, typeIntoElementWithMaestro, waitForUiWithMaestro } from "../src/index.ts";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 
@@ -307,9 +307,51 @@ test("buildInspectorExceptionLogEntry extracts source and stack frames", () => {
   assert.equal(entry.sourceUrl, "index.bundle");
   assert.equal(entry.lineNumber, 42);
   assert.equal(entry.columnNumber, 7);
+  assert.equal(entry.exceptionId, undefined);
+  assert.equal(entry.executionContextId, undefined);
   assert.equal(entry.exceptionType, "TypeError");
+  assert.equal(entry.exceptionDescription, "TypeError: undefined is not an object (evaluating 'foo.bar')");
+  assert.equal(entry.stackTraceText, "TypeError: undefined is not an object (evaluating 'foo.bar')");
+  assert.equal(entry.stackFrameCount, 2);
   assert.equal(entry.stackFrames?.length, 2);
   assert.equal(entry.stackFrames?.[0]?.functionName, "renderScreen");
+  assert.equal(entry.stackFrames?.[0]?.scriptId, undefined);
+});
+
+test("buildJsConsoleLogSummary counts exceptions by level", () => {
+  const summary = buildJsConsoleLogSummary([
+    { level: "log", text: "hello" },
+    { level: "exception", text: "boom", exceptionType: "TypeError" },
+    { level: "error", text: "bad" },
+    { level: "exception", text: "crash", exceptionType: "RangeError" },
+  ]);
+
+  assert.equal(summary.totalLogs, 4);
+  assert.equal(summary.exceptionCount, 2);
+  assert.equal(summary.levelCounts.log, 1);
+  assert.equal(summary.levelCounts.error, 1);
+  assert.equal(summary.levelCounts.exception, 2);
+});
+
+test("buildJsNetworkFailureSummary groups failures by status error and host", () => {
+  const summary = buildJsNetworkFailureSummary([
+    { requestId: "1", url: "https://api.example.com/users", status: 500, errorText: "Server down" },
+    { requestId: "2", url: "https://api.example.com/orders", status: 500 },
+    { requestId: "3", url: "https://cdn.example.com/app.js", status: 404 },
+    { requestId: "4", url: "https://api.example.com/timeout", errorText: "Timed out" },
+    { requestId: "5", url: "https://ok.example.com/ok", status: 200 },
+  ]);
+
+  assert.equal(summary.totalTrackedRequests, 5);
+  assert.equal(summary.failedRequestCount, 4);
+  assert.equal(summary.clientErrors, 1);
+  assert.equal(summary.serverErrors, 2);
+  assert.equal(summary.networkErrors, 2);
+  assert.equal(summary.statusGroups[0]?.key, "500");
+  assert.equal(summary.statusGroups[0]?.count, 2);
+  assert.equal(summary.errorGroups[0]?.key, "Server down");
+  assert.equal(summary.hostGroups[0]?.key, "api.example.com");
+  assert.equal(summary.hostGroups[0]?.count, 3);
 });
 
 test("tapElementWithMaestro reports configuration errors without a selector", async () => {

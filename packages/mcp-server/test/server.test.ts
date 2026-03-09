@@ -218,6 +218,8 @@ test("server invoke supports capture_js_console_logs dry-run", async () => {
   assert.equal(result.status, "success");
   assert.equal(result.reasonCode, "OK");
   assert.equal(result.data.collectedCount, 0);
+  assert.equal(result.data.summary.totalLogs, 0);
+  assert.equal(result.data.summary.exceptionCount, 0);
   assert.equal(result.data.webSocketDebuggerUrl, "ws://127.0.0.1:8081/inspector/debug?target=demo-target");
 });
 
@@ -232,5 +234,7 @@ test("server invoke supports capture_js_network_events dry-run", async () => {
   assert.equal(result.reasonCode, "OK");
   assert.equal(result.data.collectedCount, 0);
   assert.equal(result.data.failuresOnly, true);
+  assert.equal(result.data.summary.totalTrackedRequests, 0);
+  assert.equal(result.data.summary.failedRequestCount, 0);
   assert.equal(result.data.webSocketDebuggerUrl, "ws://127.0.0.1:8081/inspector/debug?target=demo-target");
 });
