@@ -213,6 +213,7 @@ export interface CollectDebugEvidenceInput {
   harnessConfigPath?: string;
   deviceId?: string;
   appId?: string;
+  metroBaseUrl?: string;
   outputPath?: string;
   logLines?: number;
   targetId?: string;
@@ -229,6 +230,8 @@ export interface CollectDebugEvidenceData {
   outputPath: string;
   supportLevel: "full" | "partial";
   appId?: string;
+  jsDebugMetroBaseUrl?: string;
+  jsDebugTargetEndpoint?: string;
   jsDebugTargetId?: string;
   jsDebugTargetTitle?: string;
   logSummary?: LogSummary;
