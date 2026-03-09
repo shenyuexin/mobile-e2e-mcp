@@ -19,7 +19,7 @@ import {
   resolveFirstTapTarget,
   shouldAbortWaitForUiAfterReadFailure,
 } from "../src/ui-model.ts";
-import { buildCapabilityProfile, buildInspectorExceptionLogEntry, buildJsConsoleLogSummary, buildJsNetworkFailureSummary, buildLogSummary, collectDebugEvidenceWithMaestro, collectDiagnosticsWithMaestro, describeCapabilitiesWithMaestro, getCrashSignalsWithMaestro, getLogsWithMaestro, inspectUiWithMaestro, resolveUiTargetWithMaestro, scrollAndResolveUiTargetWithMaestro, scrollAndTapElementWithMaestro, takeScreenshotWithMaestro, tapElementWithMaestro, typeIntoElementWithMaestro, waitForUiWithMaestro } from "../src/index.ts";
+import { buildCapabilityProfile, buildInspectorExceptionLogEntry, buildJsConsoleLogSummary, buildJsNetworkFailureSummary, buildLogSummary, collectDebugEvidenceWithMaestro, collectDiagnosticsWithMaestro, describeCapabilitiesWithMaestro, getCrashSignalsWithMaestro, getLogsWithMaestro, inspectUiWithMaestro, resolveUiTargetWithMaestro, scrollAndResolveUiTargetWithMaestro, scrollAndTapElementWithMaestro, selectPreferredJsDebugTarget, takeScreenshotWithMaestro, tapElementWithMaestro, typeIntoElementWithMaestro, waitForUiWithMaestro } from "../src/index.ts";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 
@@ -352,6 +352,24 @@ test("buildJsNetworkFailureSummary groups failures by status error and host", ()
   assert.equal(summary.errorGroups[0]?.key, "Server down");
   assert.equal(summary.hostGroups[0]?.key, "api.example.com");
   assert.equal(summary.hostGroups[0]?.count, 3);
+});
+
+test("selectPreferredJsDebugTarget prefers targets with a debugger websocket", () => {
+  const selected = selectPreferredJsDebugTarget([
+    { id: "first", title: "No socket" },
+    { id: "second", title: "Debuggable", webSocketDebuggerUrl: "ws://127.0.0.1:8081/inspector/debug?target=second" },
+  ]);
+
+  assert.equal(selected?.id, "second");
+});
+
+test("selectPreferredJsDebugTarget falls back to the first target when needed", () => {
+  const selected = selectPreferredJsDebugTarget([
+    { id: "first", title: "Fallback" },
+    { id: "second", title: "Later" },
+  ]);
+
+  assert.equal(selected?.id, "first");
 });
 
 test("tapElementWithMaestro reports configuration errors without a selector", async () => {
