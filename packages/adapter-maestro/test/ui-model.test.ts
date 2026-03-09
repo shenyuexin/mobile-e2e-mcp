@@ -19,6 +19,7 @@ import {
   resolveFirstTapTarget,
   shouldAbortWaitForUiAfterReadFailure,
 } from "../src/ui-model.ts";
+import { resolveUiTargetWithMaestro, scrollAndResolveUiTargetWithMaestro, tapElementWithMaestro, typeIntoElementWithMaestro, waitForUiWithMaestro } from "../src/index.ts";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 
@@ -147,8 +148,8 @@ test("isWaitConditionMet supports visible gone and unique modes", async () => {
 });
 
 test("shouldAbortWaitForUiAfterReadFailure only aborts after repeated failures", () => {
-  assert.equal(shouldAbortWaitForUiAfterReadFailure({ consecutiveReadFailures: 1, maxConsecutiveReadFailures: 2 }), false);
-  assert.equal(shouldAbortWaitForUiAfterReadFailure({ consecutiveReadFailures: 2, maxConsecutiveReadFailures: 2 }), true);
+  assert.equal(shouldAbortWaitForUiAfterReadFailure({ consecutiveFailures: 1, maxConsecutiveFailures: 2 }), false);
+  assert.equal(shouldAbortWaitForUiAfterReadFailure({ consecutiveFailures: 2, maxConsecutiveFailures: 2 }), true);
 });
 
 test("buildScrollSwipeCoordinates uses viewport bounds and direction", async () => {
@@ -171,4 +172,225 @@ test("query selector normalization drops empty strings but keeps boolean filters
   const query = normalizeQueryUiSelector({ text: "", contentDesc: "View", clickable: false, limit: 2 });
   assert.equal(hasQueryUiSelector(query), true);
   assert.deepEqual(query, { contentDesc: "View", clickable: false, limit: 2 });
+});
+
+test("resolveUiTargetWithMaestro reports configuration errors without a selector", async () => {
+  const result = await resolveUiTargetWithMaestro({
+    sessionId: "test-session-config",
+    platform: "android",
+    dryRun: true,
+  });
+
+  assert.equal(result.status, "failed");
+  assert.equal(result.reasonCode, "CONFIGURATION_ERROR");
+  assert.equal(result.data.supportLevel, "full");
+  const configResolution = result.data.resolution;
+  assert.ok(configResolution);
+  assert.equal(configResolution.status, "not_executed");
+});
+
+test("resolveUiTargetWithMaestro keeps iOS partial and unsupported", async () => {
+  const result = await resolveUiTargetWithMaestro({
+    sessionId: "test-session-ios",
+    platform: "ios",
+    contentDesc: "View products",
+    dryRun: true,
+  });
+
+  assert.equal(result.status, "partial");
+  assert.equal(result.reasonCode, "UNSUPPORTED_OPERATION");
+  assert.equal(result.data.supportLevel, "partial");
+  const iosResolution = result.data.resolution;
+  assert.ok(iosResolution);
+  assert.equal(iosResolution.status, "unsupported");
+});
+
+test("resolveUiTargetWithMaestro keeps Android dry-run as not_executed preview", async () => {
+  const result = await resolveUiTargetWithMaestro({
+    sessionId: "test-session-dry-run",
+    platform: "android",
+    contentDesc: "View products",
+    dryRun: true,
+  });
+
+  assert.equal(result.status, "partial");
+  assert.equal(result.reasonCode, "UNSUPPORTED_OPERATION");
+  assert.equal(result.data.supportLevel, "full");
+  const dryRunResolution = result.data.resolution;
+  assert.ok(dryRunResolution);
+  assert.equal(dryRunResolution.status, "not_executed");
+});
+
+test("waitForUiWithMaestro reports configuration errors without a selector", async () => {
+  const result = await waitForUiWithMaestro({
+    sessionId: "test-wait-config",
+    platform: "android",
+    dryRun: true,
+  });
+
+  assert.equal(result.status, "failed");
+  assert.equal(result.reasonCode, "CONFIGURATION_ERROR");
+  assert.equal(result.data.supportLevel, "full");
+  assert.equal(result.data.polls, 0);
+});
+
+test("waitForUiWithMaestro keeps iOS partial and unsupported", async () => {
+  const result = await waitForUiWithMaestro({
+    sessionId: "test-wait-ios",
+    platform: "ios",
+    contentDesc: "View products",
+    dryRun: true,
+  });
+
+  assert.equal(result.status, "partial");
+  assert.equal(result.reasonCode, "UNSUPPORTED_OPERATION");
+  assert.equal(result.data.supportLevel, "partial");
+  assert.equal(result.data.polls, 0);
+});
+
+test("waitForUiWithMaestro keeps Android dry-run as preview-only partial result", async () => {
+  const result = await waitForUiWithMaestro({
+    sessionId: "test-wait-dry-run",
+    platform: "android",
+    contentDesc: "View products",
+    dryRun: true,
+  });
+
+  assert.equal(result.status, "partial");
+  assert.equal(result.reasonCode, "UNSUPPORTED_OPERATION");
+  assert.equal(result.data.supportLevel, "full");
+  assert.equal(result.data.polls, 0);
+  assert.equal(result.data.result.totalMatches, 0);
+});
+
+test("tapElementWithMaestro reports configuration errors without a selector", async () => {
+  const result = await tapElementWithMaestro({
+    sessionId: "test-tap-config",
+    platform: "android",
+    dryRun: true,
+  });
+
+  assert.equal(result.status, "failed");
+  assert.equal(result.reasonCode, "CONFIGURATION_ERROR");
+  assert.equal(result.data.supportLevel, "full");
+  const configResolution = result.data.resolution;
+  assert.ok(configResolution);
+  assert.equal(configResolution.status, "not_executed");
+});
+
+test("tapElementWithMaestro keeps iOS partial and unsupported", async () => {
+  const result = await tapElementWithMaestro({
+    sessionId: "test-tap-ios",
+    platform: "ios",
+    contentDesc: "View products",
+    dryRun: true,
+  });
+
+  assert.equal(result.status, "partial");
+  assert.equal(result.reasonCode, "UNSUPPORTED_OPERATION");
+  assert.equal(result.data.supportLevel, "partial");
+  const iosResolution = result.data.resolution;
+  assert.ok(iosResolution);
+  assert.equal(iosResolution.status, "unsupported");
+});
+
+test("tapElementWithMaestro keeps Android dry-run as not_executed preview", async () => {
+  const result = await tapElementWithMaestro({
+    sessionId: "test-tap-dry-run",
+    platform: "android",
+    contentDesc: "View products",
+    dryRun: true,
+  });
+
+  assert.equal(result.status, "partial");
+  assert.equal(result.reasonCode, "UNSUPPORTED_OPERATION");
+  assert.equal(result.data.supportLevel, "full");
+  const dryRunResolution = result.data.resolution;
+  assert.ok(dryRunResolution);
+  assert.equal(dryRunResolution.status, "not_executed");
+});
+
+test("typeIntoElementWithMaestro reports configuration errors without a selector", async () => {
+  const result = await typeIntoElementWithMaestro({
+    sessionId: "test-type-config",
+    platform: "android",
+    value: "hello",
+    dryRun: true,
+  });
+
+  assert.equal(result.status, "failed");
+  assert.equal(result.reasonCode, "CONFIGURATION_ERROR");
+  assert.equal(result.data.supportLevel, "full");
+  assert.equal(result.data.resolution.status, "not_executed");
+});
+
+test("typeIntoElementWithMaestro keeps iOS partial and unsupported", async () => {
+  const result = await typeIntoElementWithMaestro({
+    sessionId: "test-type-ios",
+    platform: "ios",
+    contentDesc: "View products",
+    value: "hello",
+    dryRun: true,
+  });
+
+  assert.equal(result.status, "partial");
+  assert.equal(result.reasonCode, "UNSUPPORTED_OPERATION");
+  assert.equal(result.data.supportLevel, "partial");
+  assert.equal(result.data.resolution.status, "unsupported");
+});
+
+test("typeIntoElementWithMaestro keeps Android dry-run as not_executed preview", async () => {
+  const result = await typeIntoElementWithMaestro({
+    sessionId: "test-type-dry-run",
+    platform: "android",
+    contentDesc: "View products",
+    value: "hello",
+    dryRun: true,
+  });
+
+  assert.equal(result.status, "partial");
+  assert.equal(result.reasonCode, "UNSUPPORTED_OPERATION");
+  assert.equal(result.data.supportLevel, "full");
+  assert.equal(result.data.resolution.status, "not_executed");
+});
+
+test("scrollAndResolveUiTargetWithMaestro reports configuration errors without a selector", async () => {
+  const result = await scrollAndResolveUiTargetWithMaestro({
+    sessionId: "test-scroll-config",
+    platform: "android",
+    dryRun: true,
+  });
+
+  assert.equal(result.status, "failed");
+  assert.equal(result.reasonCode, "CONFIGURATION_ERROR");
+  assert.equal(result.data.supportLevel, "full");
+  assert.equal(result.data.resolution.status, "not_executed");
+});
+
+test("scrollAndResolveUiTargetWithMaestro keeps iOS partial and unsupported", async () => {
+  const result = await scrollAndResolveUiTargetWithMaestro({
+    sessionId: "test-scroll-ios",
+    platform: "ios",
+    contentDesc: "View products",
+    dryRun: true,
+  });
+
+  assert.equal(result.status, "partial");
+  assert.equal(result.reasonCode, "UNSUPPORTED_OPERATION");
+  assert.equal(result.data.supportLevel, "partial");
+  assert.equal(result.data.resolution.status, "unsupported");
+});
+
+test("scrollAndResolveUiTargetWithMaestro keeps Android dry-run as not_executed preview", async () => {
+  const result = await scrollAndResolveUiTargetWithMaestro({
+    sessionId: "test-scroll-dry-run",
+    platform: "android",
+    contentDesc: "View products",
+    dryRun: true,
+  });
+
+  assert.equal(result.status, "partial");
+  assert.equal(result.reasonCode, "UNSUPPORTED_OPERATION");
+  assert.equal(result.data.supportLevel, "full");
+  assert.equal(result.data.resolution.status, "not_executed");
 });
