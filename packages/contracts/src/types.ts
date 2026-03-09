@@ -265,17 +265,30 @@ export interface JsConsoleLogEntry {
   level: string;
   text: string;
   timestamp?: number;
+  exceptionId?: number;
+  executionContextId?: number;
   sourceUrl?: string;
   lineNumber?: number;
   columnNumber?: number;
   exceptionType?: string;
+  exceptionDescription?: string;
+  stackTraceText?: string;
+  remote?: boolean;
+  stackFrameCount?: number;
   stackFrames?: JsStackFrame[];
+}
+export interface JsConsoleLogSummary {
+  totalLogs: number;
+  exceptionCount: number;
+  levelCounts: Record<string, number>;
 }
 export interface JsStackFrame {
   functionName?: string;
+  scriptId?: string;
   url?: string;
   lineNumber?: number;
   columnNumber?: number;
+  native?: boolean;
 }
 export interface CaptureJsConsoleLogsInput {
   sessionId?: string;
@@ -293,6 +306,7 @@ export interface CaptureJsConsoleLogsData {
   webSocketDebuggerUrl: string;
   collectedCount: number;
   logs: JsConsoleLogEntry[];
+  summary: JsConsoleLogSummary;
 }
 export interface JsNetworkEvent {
   requestId: string;
@@ -302,6 +316,21 @@ export interface JsNetworkEvent {
   statusText?: string;
   errorText?: string;
   mimeType?: string;
+}
+export interface JsFailureGroup {
+  key: string;
+  count: number;
+  sampleUrl?: string;
+}
+export interface JsNetworkFailureSummary {
+  totalTrackedRequests: number;
+  failedRequestCount: number;
+  clientErrors: number;
+  serverErrors: number;
+  networkErrors: number;
+  statusGroups: JsFailureGroup[];
+  errorGroups: JsFailureGroup[];
+  hostGroups: JsFailureGroup[];
 }
 export interface CaptureJsNetworkEventsInput {
   sessionId?: string;
@@ -321,6 +350,7 @@ export interface CaptureJsNetworkEventsData {
   collectedCount: number;
   failuresOnly: boolean;
   events: JsNetworkEvent[];
+  summary: JsNetworkFailureSummary;
 }
 export interface DescribeCapabilitiesInput {
   sessionId?: string;
