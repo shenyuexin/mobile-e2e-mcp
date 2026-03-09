@@ -643,7 +643,31 @@ function normalizeJsDebugTarget(raw: unknown): JsDebugTarget | undefined {
 }
 
 export function selectPreferredJsDebugTarget(targets: JsDebugTarget[]): JsDebugTarget | undefined {
-  return targets.find((target) => target.webSocketDebuggerUrl) ?? targets[0];
+  const scoreTarget = (target: JsDebugTarget): number => {
+    let score = 0;
+    if (target.webSocketDebuggerUrl) {
+      score += 100;
+    }
+
+    const searchable = [target.title, target.description, target.deviceName].filter(Boolean).join(" ").toLowerCase();
+    if (searchable.includes("react native") || searchable.includes("react-native")) {
+      score += 40;
+    }
+    if (searchable.includes("expo")) {
+      score += 25;
+    }
+    if (searchable.includes("hermes")) {
+      score += 10;
+    }
+    if (searchable.includes("chrome")) {
+      score -= 5;
+    }
+    return score;
+  };
+
+  return [...targets]
+    .map((target, index) => ({ target, index, score: scoreTarget(target) }))
+    .sort((left, right) => right.score - left.score || left.index - right.index)[0]?.target;
 }
 
 function buildInspectorWebSocketUrl(metroBaseUrl: string, targetId: string): string {
