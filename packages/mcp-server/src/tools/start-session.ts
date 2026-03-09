@@ -1,4 +1,4 @@
-import { resolveSessionDefaults } from "@mobile-e2e-mcp/adapter-maestro";
+import { buildCapabilityProfile, resolveSessionDefaults } from "@mobile-e2e-mcp/adapter-maestro";
 import { REASON_CODES, type Session, type StartSessionInput, type ToolResult } from "@mobile-e2e-mcp/contracts";
 
 function buildDefaultDeviceId(platform: StartSessionInput["platform"]): string {
@@ -31,6 +31,7 @@ export async function startSession(input: StartSessionInput): Promise<ToolResult
     profile,
     phase: input.phase ?? "phase2",
     sampleName: input.sampleName ?? sessionDefaults.sampleName,
+    capabilities: buildCapabilityProfile(input.platform, profile),
     timeline: [
       {
         timestamp: new Date().toISOString(),
