@@ -4,6 +4,14 @@ export type Platform = "android" | "ios";
 export type ToolStatus = "success" | "failed" | "partial";
 export type RunnerProfile = "phase1" | "native_android" | "native_ios" | "flutter_android";
 export type CapabilitySupportLevel = "full" | "partial" | "unsupported";
+export type ExecutionEvidenceKind = "ui_dump" | "screenshot" | "log" | "crash_signal" | "diagnostics_bundle" | "debug_summary";
+
+export interface ExecutionEvidence {
+  kind: ExecutionEvidenceKind;
+  path: string;
+  supportLevel: "full" | "partial";
+  description: string;
+}
 
 export interface ToolCapability {
   toolName: string;
@@ -106,6 +114,7 @@ export interface QueryUiData {
   exitCode: number | null;
   result: InspectUiQueryResult;
   supportLevel: "full" | "partial";
+  evidence?: ExecutionEvidence[];
   content?: string;
   summary?: InspectUiSummary;
 }
@@ -146,6 +155,7 @@ export interface GetLogsData {
   sinceSeconds: number;
   appId?: string;
   appFilterApplied: boolean;
+  evidence?: ExecutionEvidence[];
   query?: string;
   content?: string;
   summary?: LogSummary;
@@ -172,6 +182,7 @@ export interface GetCrashSignalsData {
   linesRequested?: number;
   appId?: string;
   entries: string[];
+  evidence?: ExecutionEvidence[];
   content?: string;
   summary?: LogSummary;
 }
@@ -193,6 +204,7 @@ export interface CollectDiagnosticsData {
   supportLevel: "full" | "partial";
   artifactCount: number;
   artifacts: string[];
+  evidence?: ExecutionEvidence[];
 }
 export interface CollectDebugEvidenceInput {
   sessionId: string;
@@ -219,7 +231,50 @@ export interface CollectDebugEvidenceData {
   interestingSignals: DebugSignalSummary[];
   evidencePaths: string[];
   evidenceCount: number;
+  evidence?: ExecutionEvidence[];
   narrative: string[];
+}
+export interface JsDebugTarget {
+  id: string;
+  title?: string;
+  description?: string;
+  deviceName?: string;
+  webSocketDebuggerUrl?: string;
+}
+export interface ListJsDebugTargetsInput {
+  sessionId?: string;
+  metroBaseUrl?: string;
+  timeoutMs?: number;
+  dryRun?: boolean;
+}
+export interface ListJsDebugTargetsData {
+  dryRun: boolean;
+  metroBaseUrl: string;
+  endpoint: string;
+  targetCount: number;
+  targets: JsDebugTarget[];
+}
+export interface JsConsoleLogEntry {
+  level: string;
+  text: string;
+  timestamp?: number;
+}
+export interface CaptureJsConsoleLogsInput {
+  sessionId?: string;
+  metroBaseUrl?: string;
+  targetId?: string;
+  webSocketDebuggerUrl?: string;
+  maxLogs?: number;
+  timeoutMs?: number;
+  dryRun?: boolean;
+}
+export interface CaptureJsConsoleLogsData {
+  dryRun: boolean;
+  metroBaseUrl: string;
+  targetId?: string;
+  webSocketDebuggerUrl: string;
+  collectedCount: number;
+  logs: JsConsoleLogEntry[];
 }
 export interface DescribeCapabilitiesInput {
   sessionId?: string;
@@ -310,6 +365,18 @@ export interface ScrollAndTapElementData {
   resolveResult: ScrollAndResolveUiTargetData;
   tapResult?: TapElementData;
   supportLevel: "full" | "partial";
+}
+export interface InspectUiData {
+  dryRun: boolean;
+  runnerProfile: RunnerProfile;
+  outputPath: string;
+  command: string[];
+  exitCode: number | null;
+  supportLevel: "full" | "partial";
+  evidence?: ExecutionEvidence[];
+  platformSupportNote?: string;
+  content?: string;
+  summary?: InspectUiSummary;
 }
 export type WaitForUiMode = "visible" | "gone" | "unique";
 export interface WaitForUiInput extends InspectUiQueryInput {
