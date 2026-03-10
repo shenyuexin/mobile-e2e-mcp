@@ -257,7 +257,7 @@ export function buildAndroidPerformancePlan(input: MeasureAndroidPerformanceInpu
     steps: [
       {
         label: "check_perfetto",
-        command: ["adb", "-s", deviceId, "shell", "sh", "-lc", "command -v perfetto || which perfetto || echo missing"],
+        command: ["adb", "-s", deviceId, "shell", "perfetto", "--version"],
       },
       {
         label: "push_config",

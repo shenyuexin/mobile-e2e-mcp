@@ -993,12 +993,16 @@ async function collectPerformanceEnvironmentChecks(repoRoot: string, androidDevi
 
   const perfettoAvailability = await runCommandSafely(["adb", "-s", selectedAndroidDeviceId, "shell", "sh", "-lc", "command -v perfetto || which perfetto || echo missing"], repoRoot);
   const perfettoPath = perfettoAvailability.stdout.trim();
+  const perfettoVersion = await runCommandSafely(["adb", "-s", selectedAndroidDeviceId, "shell", "perfetto", "--version"], repoRoot);
+  const perfettoAvailable = isPerfettoShellProbeAvailable(perfettoAvailability) || isPerfettoVersionProbeAvailable(perfettoVersion);
   checks.push(summarizeInfoCheck(
     "android perfetto",
-    isPerfettoShellProbeAvailable(perfettoAvailability) ? "pass" : "warn",
+    perfettoAvailable ? "pass" : "warn",
     isPerfettoShellProbeAvailable(perfettoAvailability)
       ? `Android device ${selectedAndroidDeviceId} exposes perfetto at ${perfettoPath}.`
-      : `Android device ${selectedAndroidDeviceId} did not expose perfetto via shell probing.`,
+      : isPerfettoVersionProbeAvailable(perfettoVersion)
+        ? `Android device ${selectedAndroidDeviceId} runs perfetto successfully, but shell path probing did not return a stable executable path.`
+        : `Android device ${selectedAndroidDeviceId} did not expose perfetto through path probing or version execution.`,
   ));
 
   const sdkLevel = await resolveAndroidSdkLevel(repoRoot, selectedAndroidDeviceId);
@@ -3709,6 +3713,11 @@ async function resolveAndroidSdkLevel(repoRoot: string, deviceId: string): Promi
 export function isPerfettoShellProbeAvailable(execution: CommandExecution): boolean {
   const output = execution.stdout.trim();
   return execution.exitCode === 0 && output.length > 0 && output !== "missing";
+}
+
+function isPerfettoVersionProbeAvailable(execution: CommandExecution): boolean {
+  const combinedOutput = `${execution.stdout}\n${execution.stderr}`.trim();
+  return execution.exitCode === 0 && combinedOutput.toLowerCase().includes("perfetto");
 }
 
 export function isDoctorCriticalFailure(check: DoctorCheck): boolean {
