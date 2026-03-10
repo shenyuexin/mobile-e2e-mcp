@@ -19,7 +19,7 @@ import {
   resolveFirstTapTarget,
   shouldAbortWaitForUiAfterReadFailure,
 } from "../src/ui-model.ts";
-import { buildCapabilityProfile, buildInspectorExceptionLogEntry, buildJsConsoleLogSummary, buildJsNetworkFailureSummary, buildJsNetworkSuspectSentences, buildLogSummary, collectDebugEvidenceWithMaestro, collectDiagnosticsWithMaestro, describeCapabilitiesWithMaestro, getCrashSignalsWithMaestro, getLogsWithMaestro, inspectUiWithMaestro, rankJsDebugTarget, resolveUiTargetWithMaestro, scrollAndResolveUiTargetWithMaestro, scrollAndTapElementWithMaestro, selectPreferredJsDebugTarget, selectPreferredJsDebugTargetWithReason, takeScreenshotWithMaestro, tapElementWithMaestro, typeIntoElementWithMaestro, waitForUiWithMaestro } from "../src/index.ts";
+import { buildCapabilityProfile, buildInspectorExceptionLogEntry, buildJsConsoleLogSummary, buildJsDebugTargetSelectionNarrativeLine, buildJsNetworkFailureSummary, buildJsNetworkSuspectSentences, buildLogSummary, collectDebugEvidenceWithMaestro, collectDiagnosticsWithMaestro, describeCapabilitiesWithMaestro, getCrashSignalsWithMaestro, getLogsWithMaestro, inspectUiWithMaestro, rankJsDebugTarget, resolveUiTargetWithMaestro, scrollAndResolveUiTargetWithMaestro, scrollAndTapElementWithMaestro, selectPreferredJsDebugTarget, selectPreferredJsDebugTargetWithReason, takeScreenshotWithMaestro, tapElementWithMaestro, typeIntoElementWithMaestro, waitForUiWithMaestro } from "../src/index.ts";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 
@@ -414,6 +414,22 @@ test("selectPreferredJsDebugTargetWithReason returns target and reason together"
 
   assert.equal(selection.target?.id, "second");
   assert.equal(selection.reason?.includes("mentions Expo"), true);
+});
+
+test("buildJsDebugTargetSelectionNarrativeLine includes reason when available", () => {
+  const line = buildJsDebugTargetSelectionNarrativeLine(
+    { id: "expo", title: "Expo React Native Hermes" },
+    "has websocket debugger URL, mentions Expo",
+  );
+
+  assert.equal(line.includes("selected expo"), true);
+  assert.equal(line.includes("Reason: has websocket debugger URL, mentions Expo."), true);
+});
+
+test("buildJsDebugTargetSelectionNarrativeLine handles missing target", () => {
+  const line = buildJsDebugTargetSelectionNarrativeLine(undefined, undefined);
+
+  assert.equal(line, "Metro target auto-discovery did not find a debuggable JS target.");
 });
 
 test("tapElementWithMaestro reports configuration errors without a selector", async () => {

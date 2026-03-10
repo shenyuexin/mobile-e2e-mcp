@@ -695,6 +695,15 @@ export function selectPreferredJsDebugTarget(targets: JsDebugTarget[]): JsDebugT
   return selectPreferredJsDebugTargetWithReason(targets).target;
 }
 
+export function buildJsDebugTargetSelectionNarrativeLine(target: JsDebugTarget | undefined, reason: string | undefined): string {
+  if (!target) {
+    return "Metro target auto-discovery did not find a debuggable JS target.";
+  }
+
+  const base = `Metro target auto-discovery selected ${target.id}${target.title ? ` (${target.title})` : ""}.`;
+  return reason ? `${base} Reason: ${reason}.` : base;
+}
+
 function buildInspectorWebSocketUrl(metroBaseUrl: string, targetId: string): string {
   const base = new URL(metroBaseUrl);
   base.protocol = base.protocol === "https:" ? "wss:" : "ws:";
@@ -4030,9 +4039,7 @@ export async function collectDebugEvidenceWithMaestro(input: CollectDebugEvidenc
       : "JS network snapshot was unavailable; check Metro inspector availability.");
   }
   if (includeJsInspector && discoveredTargetsResult) {
-    narrative.push(discoveredTarget
-      ? `Metro target auto-discovery selected ${discoveredTarget.id}${discoveredTarget.title ? ` (${discoveredTarget.title})` : ""}.`
-      : "Metro target auto-discovery did not find a debuggable JS target.");
+    narrative.push(buildJsDebugTargetSelectionNarrativeLine(discoveredTarget, discoveredSelection?.reason));
   }
 
   await mkdir(path.dirname(absoluteOutputPath), { recursive: true });
