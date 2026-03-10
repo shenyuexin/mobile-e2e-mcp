@@ -19,7 +19,7 @@ import {
   resolveFirstTapTarget,
   shouldAbortWaitForUiAfterReadFailure,
 } from "../src/ui-model.ts";
-import { buildCapabilityProfile, buildInspectorExceptionLogEntry, buildJsConsoleLogSummary, buildJsNetworkFailureSummary, buildLogSummary, collectDebugEvidenceWithMaestro, collectDiagnosticsWithMaestro, describeCapabilitiesWithMaestro, getCrashSignalsWithMaestro, getLogsWithMaestro, inspectUiWithMaestro, resolveUiTargetWithMaestro, scrollAndResolveUiTargetWithMaestro, scrollAndTapElementWithMaestro, selectPreferredJsDebugTarget, takeScreenshotWithMaestro, tapElementWithMaestro, typeIntoElementWithMaestro, waitForUiWithMaestro } from "../src/index.ts";
+import { buildCapabilityProfile, buildInspectorExceptionLogEntry, buildJsConsoleLogSummary, buildJsNetworkFailureSummary, buildLogSummary, collectDebugEvidenceWithMaestro, collectDiagnosticsWithMaestro, describeCapabilitiesWithMaestro, getCrashSignalsWithMaestro, getLogsWithMaestro, inspectUiWithMaestro, rankJsDebugTarget, resolveUiTargetWithMaestro, scrollAndResolveUiTargetWithMaestro, scrollAndTapElementWithMaestro, selectPreferredJsDebugTarget, selectPreferredJsDebugTargetWithReason, takeScreenshotWithMaestro, tapElementWithMaestro, typeIntoElementWithMaestro, waitForUiWithMaestro } from "../src/index.ts";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 
@@ -381,6 +381,29 @@ test("selectPreferredJsDebugTarget prefers React Native and Expo metadata when m
   assert.equal(selected?.id, "expo");
 });
 
+test("rankJsDebugTarget explains why a target wins", () => {
+  const ranked = rankJsDebugTarget({
+    id: "expo",
+    title: "Expo React Native Hermes",
+    webSocketDebuggerUrl: "ws://127.0.0.1:8081/inspector/debug?target=expo",
+  });
+
+  assert.equal(ranked.score > 0, true);
+  assert.equal(ranked.reason.includes("has websocket debugger URL"), true);
+  assert.equal(ranked.reason.includes("mentions React Native"), true);
+  assert.equal(ranked.reason.includes("mentions Expo"), true);
+});
+
+test("selectPreferredJsDebugTargetWithReason returns target and reason together", () => {
+  const selection = selectPreferredJsDebugTargetWithReason([
+    { id: "first", title: "Chrome debugger", webSocketDebuggerUrl: "ws://127.0.0.1:8081/inspector/debug?target=first" },
+    { id: "second", title: "Expo React Native Hermes", webSocketDebuggerUrl: "ws://127.0.0.1:8081/inspector/debug?target=second" },
+  ]);
+
+  assert.equal(selection.target?.id, "second");
+  assert.equal(selection.reason?.includes("mentions Expo"), true);
+});
+
 test("tapElementWithMaestro reports configuration errors without a selector", async () => {
   const result = await tapElementWithMaestro({
     sessionId: "test-tap-config",
@@ -604,4 +627,6 @@ test("collectDebugEvidenceWithMaestro carries custom metro base url into auto di
   assert.equal(result.status, "success");
   assert.equal(result.data.jsDebugMetroBaseUrl, "http://127.0.0.1:9090");
   assert.equal(result.data.jsDebugTargetEndpoint, "http://127.0.0.1:9090/json/list");
+  assert.equal(result.data.jsDebugTargetCandidateCount, 0);
+  assert.equal(result.data.jsDebugTargetSelectionReason, undefined);
 });
