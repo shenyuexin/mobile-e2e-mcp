@@ -70,9 +70,21 @@ import { mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises";
 import net from "node:net";
 import path from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
-import { fileURLToPath } from "node:url";
-import { parse } from "yaml";
 import { buildCapabilityProfile } from "./capability-model.js";
+import {
+  type ArtifactDirectory,
+  buildArtifactsDir,
+  DEFAULT_FLOWS,
+  DEFAULT_HARNESS_CONFIG_PATH,
+  DEFAULT_RUNNER_PROFILE,
+  isRecord,
+  loadHarnessSelection,
+  parseHarnessConfig,
+  readNonEmptyString,
+  readStringArray,
+  resolveRepoPath,
+  resolveSessionDefaults,
+} from "./harness-config.js";
 import {
   buildNonExecutedUiTargetResolution,
   buildScrollSwipeCoordinates,
@@ -89,30 +101,48 @@ import {
   reasonCodeForResolutionStatus,
   shouldAbortWaitForUiAfterReadFailure,
 } from "./ui-model.js";
+import {
+  buildInspectorExceptionLogEntry,
+  buildJsConsoleLogSummary,
+  buildJsDebugTargetSelectionNarrativeLine,
+  buildJsNetworkFailureSummary,
+  buildJsNetworkSuspectSentences,
+  captureJsConsoleLogsWithMaestro,
+  captureJsNetworkEventsWithMaestro,
+  classifyDebugSignal,
+  formatJsConsoleEntry,
+  listJsDebugTargetsWithMaestro,
+  normalizeMetroBaseUrl,
+  rankJsDebugTarget,
+  selectPreferredJsDebugTarget,
+  selectPreferredJsDebugTargetWithReason,
+} from "./js-debug.js";
 
 export { buildCapabilityProfile } from "./capability-model.js";
-
-interface ArtifactDirectory {
-  absolutePath: string;
-  relativePath: string;
-}
-
-interface HarnessSelection {
-  runnerProfile: RunnerProfile;
-  runnerScript: string;
-  deviceId?: string;
-  appId: string;
-  sampleName: string;
-  launchUrl?: string;
-  artifactRoot?: string;
-  runCountDefault: number;
-  configuredFlows: string[];
-}
+export { buildArtifactsDir, resolveRepoPath, resolveSessionDefaults } from "./harness-config.js";
+export {
+  buildInspectorExceptionLogEntry,
+  buildJsConsoleLogSummary,
+  buildJsDebugTargetSelectionNarrativeLine,
+  buildJsNetworkFailureSummary,
+  buildJsNetworkSuspectSentences,
+  captureJsConsoleLogsWithMaestro,
+  captureJsNetworkEventsWithMaestro,
+  listJsDebugTargetsWithMaestro,
+  normalizeMetroBaseUrl,
+  rankJsDebugTarget,
+  selectPreferredJsDebugTarget,
+  selectPreferredJsDebugTargetWithReason,
+};
 
 interface CommandExecution {
   exitCode: number | null;
   stdout: string;
   stderr: string;
+}
+
+interface CommandExecutionOptions {
+  timeoutMs?: number;
 }
 
 interface GetLogsCapture {
@@ -146,11 +176,8 @@ const DEFAULT_WAIT_INTERVAL_MS = 500;
 const DEFAULT_GET_LOGS_LINES = 200;
 const DEFAULT_GET_LOGS_SINCE_SECONDS = 60;
 const DEFAULT_GET_CRASH_LINES = 120;
-const DEFAULT_METRO_BASE_URL = "http://127.0.0.1:8081";
-const DEFAULT_METRO_TIMEOUT_MS = 3000;
-const DEFAULT_JS_LOG_MAX_LOGS = 50;
-const DEFAULT_JS_NETWORK_MAX_EVENTS = 30;
 const DEFAULT_DEBUG_PACKET_JS_TIMEOUT_MS = 1000;
+const DEFAULT_DEVICE_COMMAND_TIMEOUT_MS = 5000;
 const DEFAULT_SCROLL_MAX_SWIPES = 3;
 
 function unrefTimer(timer: ReturnType<typeof setTimeout>): void {
@@ -310,14 +337,6 @@ function resolveInstallArtifactPath(repoRoot: string, runnerProfile: RunnerProfi
   return fromEnv ? fromEnv : path.resolve(repoRoot, spec.relativePath);
 }
 
-export interface SessionDefaults {
-  appId: string;
-  sampleName: string;
-  artifactsRoot: string;
-}
-
-const DEFAULT_HARNESS_CONFIG_PATH = "configs/harness/sample-harness.yaml";
-
 function resolveExecutableFromPath(executableName: string): string | undefined {
   const pathValue = process.env.PATH;
   if (!pathValue) {
@@ -375,35 +394,6 @@ async function probeIdbAvailability(repoRoot: string): Promise<CommandExecution 
 
 function buildExecutionEvidence(kind: ExecutionEvidence["kind"], pathValue: string, supportLevel: "full" | "partial", description: string): ExecutionEvidence {
   return { kind, path: pathValue, supportLevel, description };
-}
-
-const DEFAULT_RUNNER_PROFILE: RunnerProfile = "phase1";
-const DEFAULT_FLOWS: Record<Platform, string> = {
-  android: "flows/samples/react-native/android-login-smoke.yaml",
-  ios: "flows/samples/react-native/ios-login-smoke.yaml",
-};
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
-}
-
-function readNonEmptyString(record: Record<string, unknown>, key: string): string | undefined {
-  const value = record[key];
-  return typeof value === "string" && value.length > 0 ? value : undefined;
-}
-
-function readPositiveNumber(record: Record<string, unknown>, key: string): number | undefined {
-  const value = record[key];
-  return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : undefined;
-}
-
-function readStringArray(record: Record<string, unknown>, key: string): string[] {
-  const value = record[key];
-  if (!Array.isArray(value)) {
-    return [];
-  }
-
-  return value.filter((item): item is string => typeof item === "string" && item.length > 0);
 }
 
 function buildAndroidUiDumpCommands(deviceId: string): { dumpCommand: string[]; readCommand: string[] } {
@@ -501,6 +491,21 @@ function buildIosUiDescribeCommand(deviceId: string): string[] {
   return buildIdbCommand(["ui", "describe-all", "--udid", deviceId, "--json", "--nested"]);
 }
 
+function buildIosSwipeCommand(deviceId: string, swipe: { start: { x: number; y: number }; end: { x: number; y: number }; durationMs: number }): string[] {
+  return buildIdbCommand([
+    "ui",
+    "swipe",
+    String(swipe.start.x),
+    String(swipe.start.y),
+    String(swipe.end.x),
+    String(swipe.end.y),
+    "--duration",
+    String(swipe.durationMs / 1000),
+    "--udid",
+    deviceId,
+  ]);
+}
+
 async function captureIosUiSnapshot(
   repoRoot: string,
   deviceId: string,
@@ -557,17 +562,6 @@ function countNonEmptyLines(content: string): number {
     .split(String.fromCharCode(10))
     .filter((line) => line.length > 0)
     .length;
-}
-
-function classifyDebugSignal(line: string): DebugSignalSummary["category"] {
-  const normalized = line.toLowerCase();
-  if (normalized.includes("anr")) return "anr";
-  if (normalized.includes("fatal") || normalized.includes("crash") || normalized.includes("androidruntime")) return "crash";
-  if (normalized.includes("exception") || normalized.includes("traceback")) return "exception";
-  if (normalized.includes("timeout")) return "timeout";
-  if (normalized.includes("warn") || normalized.includes("warning")) return "warning";
-  if (normalized.includes("error") || normalized.includes("err ")) return "error";
-  return "other";
 }
 
 function isInterestingDebugLine(line: string): boolean {
@@ -688,8 +682,13 @@ function buildSuspectAreas(params: {
   jsConsoleSummary?: JsConsoleLogSummary;
   jsNetworkSummary?: JsNetworkFailureSummary;
   jsConsoleLogs?: JsConsoleLogEntry[];
+  environmentIssue?: string;
 }): string[] {
   const suspects: string[] = [];
+
+  if (params.environmentIssue) {
+    suspects.push(`Environment suspect: ${params.environmentIssue}`);
+  }
 
   const topCrash = params.crashSummary?.topSignals[0];
   if (topCrash) {
@@ -716,12 +715,72 @@ function buildSuspectAreas(params: {
   return suspects.slice(0, 5);
 }
 
-function formatJsConsoleEntry(entry: JsConsoleLogEntry): string {
-  const location = entry.sourceUrl ? ` @ ${entry.sourceUrl}${typeof entry.lineNumber === "number" ? `:${String(entry.lineNumber)}` : ""}${typeof entry.columnNumber === "number" ? `:${String(entry.columnNumber)}` : ""}` : "";
-  const stackLead = entry.stackFrames?.[0]
-    ? ` | top frame: ${entry.stackFrames[0].functionName ?? "<anonymous>"}${entry.stackFrames[0].url ? ` @ ${entry.stackFrames[0].url}` : ""}`
-    : "";
-  return `- [${entry.level}] ${entry.text}${location}${stackLead}`;
+export function buildDiagnosisBriefing(params: {
+  status: ToolResult["status"];
+  reasonCode: ReasonCode;
+  appId?: string;
+  suspectAreas: string[];
+  jsDebugTargetId?: string;
+  jsConsoleLogCount?: number;
+  jsNetworkEventCount?: number;
+}): string[] {
+  const briefing: string[] = [];
+
+  if (params.appId) {
+    briefing.push(`Target app: ${params.appId}.`);
+  }
+
+  if (params.suspectAreas.length > 0) {
+    briefing.push(...params.suspectAreas.slice(0, 3));
+  }
+
+  if (params.jsDebugTargetId) {
+    briefing.push(`JS inspector target: ${params.jsDebugTargetId}.`);
+  }
+
+  if ((params.jsConsoleLogCount ?? 0) > 0 || (params.jsNetworkEventCount ?? 0) > 0) {
+    briefing.push(`JS evidence captured: ${String(params.jsConsoleLogCount ?? 0)} console event(s), ${String(params.jsNetworkEventCount ?? 0)} network event(s).`);
+  }
+
+  if (params.status !== "success") {
+    briefing.push(`Current packet status is ${params.status} (${params.reasonCode}).`);
+  }
+
+  return briefing.slice(0, 5);
+}
+
+function buildDebugNextSuggestions(params: {
+  reasonCode: ReasonCode;
+  suspectAreas: string[];
+  includeDiagnostics: boolean;
+  jsDebugTargetId?: string;
+  jsConsoleLogCount?: number;
+  jsNetworkEventCount?: number;
+}): string[] {
+  const suggestions: string[] = [];
+
+  if (params.reasonCode === REASON_CODES.deviceUnavailable) {
+    suggestions.push("Restore device or simulator connectivity first, then re-run collect_debug_evidence.");
+  }
+  if (params.reasonCode === REASON_CODES.configurationError && !params.jsDebugTargetId) {
+    suggestions.push("Start Metro or Expo dev server, then re-run collect_debug_evidence to include JS inspector evidence.");
+  }
+  if (params.suspectAreas.some((item) => item.toLowerCase().includes("network suspect"))) {
+    suggestions.push("Inspect the failing API host and response path first; network evidence is the strongest current clue.");
+  }
+  if (params.suspectAreas.some((item) => item.toLowerCase().includes("js exception suspect"))) {
+    suggestions.push("Inspect the reported JS exception source and top stack frame before reading the full raw logs.");
+  }
+  if (params.suspectAreas.some((item) => item.toLowerCase().includes("crash suspect"))) {
+    suggestions.push("Inspect the top crash suspect in the crash artifact before escalating to heavier diagnostics.");
+  }
+  if (params.includeDiagnostics) {
+    suggestions.push("Diagnostics capture is already enabled; use the bundle only after exhausting the summarized clues.");
+  } else if ((params.jsConsoleLogCount ?? 0) === 0 && (params.jsNetworkEventCount ?? 0) === 0) {
+    suggestions.push("Use the debug evidence summary first; escalate to collect_diagnostics only when the summarized native clues are still inconclusive.");
+  }
+
+  return [...new Set(suggestions)].slice(0, 5);
 }
 
 function buildIosLogPredicateForApp(appId: string): string {
@@ -729,249 +788,8 @@ function buildIosLogPredicateForApp(appId: string): string {
   return `eventMessage CONTAINS[c] '${escaped}' OR processImagePath CONTAINS[c] '${escaped}' OR senderImagePath CONTAINS[c] '${escaped}'`;
 }
 
-function normalizeMetroBaseUrl(value: string | undefined): string {
-  const trimmed = value?.trim();
-  return trimmed && trimmed.length > 0 ? trimmed.replace(/\/+$/, "") : DEFAULT_METRO_BASE_URL;
-}
-
-function normalizeJsDebugTarget(raw: unknown): JsDebugTarget | undefined {
-  if (!isRecord(raw)) {
-    return undefined;
-  }
-
-  const id = readNonEmptyString(raw, "id") ?? readNonEmptyString(raw, "deviceId");
-  if (!id) {
-    return undefined;
-  }
-
-  return {
-    id,
-    title: readNonEmptyString(raw, "title") ?? undefined,
-    description: readNonEmptyString(raw, "description") ?? undefined,
-    deviceName: readNonEmptyString(raw, "deviceName") ?? undefined,
-    webSocketDebuggerUrl: readNonEmptyString(raw, "webSocketDebuggerUrl") ?? undefined,
-  };
-}
-
-export function rankJsDebugTarget(target: JsDebugTarget): { score: number; reason: string } {
-  let score = 0;
-  const reasons: string[] = [];
-
-  if (target.webSocketDebuggerUrl) {
-    score += 100;
-    reasons.push("has websocket debugger URL");
-  }
-
-  const searchable = [target.title, target.description, target.deviceName].filter(Boolean).join(" ").toLowerCase();
-  if (searchable.includes("react native") || searchable.includes("react-native")) {
-    score += 40;
-    reasons.push("mentions React Native");
-  }
-  if (searchable.includes("expo")) {
-    score += 25;
-    reasons.push("mentions Expo");
-  }
-  if (searchable.includes("hermes")) {
-    score += 10;
-    reasons.push("mentions Hermes");
-  }
-  if (searchable.includes("chrome")) {
-    score -= 5;
-    reasons.push("looks like Chrome debugger");
-  }
-
-  return {
-    score,
-    reason: reasons.length > 0 ? reasons.join(", ") : "fallback to original target order",
-  };
-}
-
-export function selectPreferredJsDebugTargetWithReason(targets: JsDebugTarget[]): { target?: JsDebugTarget; reason?: string } {
-  const ranked = [...targets]
-    .map((target, index) => ({ target, index, ...rankJsDebugTarget(target) }))
-    .sort((left, right) => right.score - left.score || left.index - right.index);
-
-  const winner = ranked[0];
-  return winner ? { target: winner.target, reason: winner.reason } : {};
-}
-
-export function selectPreferredJsDebugTarget(targets: JsDebugTarget[]): JsDebugTarget | undefined {
-  return selectPreferredJsDebugTargetWithReason(targets).target;
-}
-
-export function buildJsDebugTargetSelectionNarrativeLine(target: JsDebugTarget | undefined, reason: string | undefined): string {
-  if (!target) {
-    return "Metro target auto-discovery did not find a debuggable JS target.";
-  }
-
-  const base = `Metro target auto-discovery selected ${target.id}${target.title ? ` (${target.title})` : ""}.`;
-  return reason ? `${base} Reason: ${reason}.` : base;
-}
-
-function buildInspectorWebSocketUrl(metroBaseUrl: string, targetId: string): string {
-  const base = new URL(metroBaseUrl);
-  base.protocol = base.protocol === "https:" ? "wss:" : "ws:";
-  base.pathname = "/inspector/debug";
-  base.search = `target=${encodeURIComponent(targetId)}`;
-  return base.toString();
-}
-
-function normalizeConsoleArguments(rawArgs: unknown): string {
-  if (!Array.isArray(rawArgs)) {
-    return "";
-  }
-
-  return rawArgs
-    .map((item) => {
-      if (!isRecord(item)) {
-        return "";
-      }
-      const value = readNonEmptyString(item, "value");
-      if (value) {
-        return value;
-      }
-      const description = readNonEmptyString(item, "description");
-      return description ?? "";
-    })
-    .filter((item) => item.length > 0)
-    .join(" ");
-}
-
-function normalizeStackFrames(rawStackTrace: unknown): JsStackFrame[] | undefined {
-  if (!isRecord(rawStackTrace) || !Array.isArray(rawStackTrace.callFrames)) {
-    return undefined;
-  }
-
-  const frames = rawStackTrace.callFrames
-    .map((frame): JsStackFrame | undefined => {
-      if (!isRecord(frame)) {
-        return undefined;
-      }
-
-      return {
-        functionName: readNonEmptyString(frame, "functionName") ?? undefined,
-        scriptId: readNonEmptyString(frame, "scriptId") ?? undefined,
-        url: readNonEmptyString(frame, "url") ?? undefined,
-        lineNumber: typeof frame.lineNumber === "number" ? frame.lineNumber : undefined,
-        columnNumber: typeof frame.columnNumber === "number" ? frame.columnNumber : undefined,
-        native: typeof frame.native === "boolean" ? frame.native : undefined,
-      };
-    })
-    .filter((frame): frame is JsStackFrame => frame !== undefined);
-
-  return frames.length > 0 ? frames : undefined;
-}
-
-export function buildInspectorExceptionLogEntry(params: unknown): JsConsoleLogEntry {
-  const safeParams = isRecord(params) ? params : {};
-  const details = isRecord(safeParams.exceptionDetails) ? safeParams.exceptionDetails : {};
-  const exception = isRecord(details.exception) ? details.exception : {};
-  const stackFrames = normalizeStackFrames(details.stackTrace);
-
-  return {
-    level: "exception",
-    text: readNonEmptyString(details, "text") ?? readNonEmptyString(exception, "description") ?? readNonEmptyString(details, "exceptionId") ?? "Runtime.exceptionThrown",
-    timestamp: typeof safeParams.timestamp === "number" ? safeParams.timestamp : undefined,
-    exceptionId: typeof details.exceptionId === "number" ? details.exceptionId : undefined,
-    executionContextId: typeof details.executionContextId === "number" ? details.executionContextId : undefined,
-    sourceUrl: readNonEmptyString(details, "url") ?? undefined,
-    lineNumber: typeof details.lineNumber === "number" ? details.lineNumber : undefined,
-    columnNumber: typeof details.columnNumber === "number" ? details.columnNumber : undefined,
-    exceptionType: readNonEmptyString(exception, "className") ?? undefined,
-    exceptionDescription: readNonEmptyString(exception, "description") ?? undefined,
-    stackTraceText: readNonEmptyString(exception, "description") ?? undefined,
-    remote: typeof exception.subtype === "string" ? exception.subtype === "error" : undefined,
-    stackFrameCount: stackFrames?.length,
-    stackFrames,
-  };
-}
-
-export function buildJsConsoleLogSummary(logs: JsConsoleLogEntry[]): JsConsoleLogSummary {
-  const levelCounts = logs.reduce<Record<string, number>>((acc, entry) => {
-    acc[entry.level] = (acc[entry.level] ?? 0) + 1;
-    return acc;
-  }, {});
-
-  return {
-    totalLogs: logs.length,
-    exceptionCount: logs.filter((entry) => entry.level === "exception").length,
-    levelCounts,
-  };
-}
-
-function buildFailureGroups(values: Array<{ key?: string; sampleUrl?: string }>): JsFailureGroup[] {
-  const groups = new Map<string, JsFailureGroup>();
-  for (const value of values) {
-    if (!value.key) {
-      continue;
-    }
-    const current = groups.get(value.key) ?? { key: value.key, count: 0, sampleUrl: value.sampleUrl };
-    current.count += 1;
-    current.sampleUrl ??= value.sampleUrl;
-    groups.set(value.key, current);
-  }
-
-  return [...groups.values()].sort((left, right) => right.count - left.count || left.key.localeCompare(right.key));
-}
-
-export function buildJsNetworkFailureSummary(events: JsNetworkEvent[]): JsNetworkFailureSummary {
-  const failedEvents = events.filter((event) => Boolean(event.errorText) || (typeof event.status === "number" && event.status >= 400));
-
-  return {
-    totalTrackedRequests: events.length,
-    failedRequestCount: failedEvents.length,
-    clientErrors: failedEvents.filter((event) => typeof event.status === "number" && event.status >= 400 && event.status < 500).length,
-    serverErrors: failedEvents.filter((event) => typeof event.status === "number" && event.status >= 500).length,
-    networkErrors: failedEvents.filter((event) => Boolean(event.errorText)).length,
-    statusGroups: buildFailureGroups(failedEvents.map((event) => ({ key: typeof event.status === "number" ? String(event.status) : undefined, sampleUrl: event.url }))),
-    errorGroups: buildFailureGroups(failedEvents.map((event) => ({ key: event.errorText, sampleUrl: event.url }))),
-    hostGroups: buildFailureGroups(failedEvents.map((event) => {
-      if (!event.url) {
-        return { key: undefined, sampleUrl: undefined };
-      }
-      try {
-        const parsed = new URL(event.url);
-        return { key: parsed.host, sampleUrl: event.url };
-      } catch {
-        return { key: undefined, sampleUrl: event.url };
-      }
-    })),
-  };
-}
-
-export function buildJsNetworkSuspectSentences(summary: JsNetworkFailureSummary): string[] {
-  const suspects: string[] = [];
-  const topHost = summary.hostGroups[0];
-  const topStatus = summary.statusGroups[0];
-  const topError = summary.errorGroups[0];
-
-  if (topHost && topStatus) {
-    suspects.push(`Network suspect: host ${topHost.key} is associated with repeated ${topStatus.key} responses (${String(topStatus.count)} occurrence(s))${topStatus.sampleUrl ? ` via ${topStatus.sampleUrl}` : ""}.`);
-  } else if (topStatus) {
-    suspects.push(`Network suspect: repeated HTTP ${topStatus.key} responses (${String(topStatus.count)} occurrence(s))${topStatus.sampleUrl ? ` via ${topStatus.sampleUrl}` : ""}.`);
-  }
-
-  if (topError) {
-    suspects.push(`Network transport suspect: ${topError.key} (${String(topError.count)} occurrence(s))${topError.sampleUrl ? ` via ${topError.sampleUrl}` : ""}.`);
-  }
-
-  if (summary.failedRequestCount > 0 && suspects.length === 0) {
-    suspects.push(`Network suspect: ${String(summary.failedRequestCount)} failed request(s) were captured.`);
-  }
-
-  return suspects.slice(0, 3);
-}
-
-function shouldKeepNetworkEvent(event: JsNetworkEvent, failuresOnly: boolean): boolean {
-  if (!failuresOnly) {
-    return true;
-  }
-
-  return Boolean(event.errorText) || (typeof event.status === "number" && event.status >= 400);
-}
-
 async function resolveAndroidAppPid(repoRoot: string, deviceId: string, appId: string): Promise<string | undefined> {
-  const execution = await executeRunner(["adb", "-s", deviceId, "shell", "pidof", appId], repoRoot, process.env);
+  const execution = await executeRunner(["adb", "-s", deviceId, "shell", "pidof", appId], repoRoot, process.env, { timeoutMs: DEFAULT_DEVICE_COMMAND_TIMEOUT_MS });
   if (execution.exitCode !== 0) {
     return undefined;
   }
@@ -1136,16 +954,6 @@ function toRelativePath(repoRoot: string, targetPath: string): string {
   return path.relative(repoRoot, targetPath).split(path.sep).join("/");
 }
 
-function ensureRunnerProfilePlatform(platform: Platform, runnerProfile: RunnerProfile): void {
-  if (runnerProfile === "native_ios" && platform !== "ios") {
-    throw new Error(`Runner profile ${runnerProfile} requires platform ios.`);
-  }
-
-  if ((runnerProfile === "native_android" || runnerProfile === "flutter_android") && platform !== "android") {
-    throw new Error(`Runner profile ${runnerProfile} requires platform android.`);
-  }
-}
-
 async function listArtifacts(rootPath: string, repoRoot: string): Promise<string[]> {
   try {
     const entries = await readdir(rootPath, { withFileTypes: true });
@@ -1164,163 +972,6 @@ async function listArtifacts(rootPath: string, repoRoot: string): Promise<string
   } catch {
     return [];
   }
-}
-
-async function parseHarnessConfig(repoRoot: string, harnessConfigPath: string): Promise<Record<string, unknown>> {
-  const absoluteConfigPath = path.resolve(repoRoot, harnessConfigPath);
-  const rawConfig = await readFile(absoluteConfigPath, "utf8");
-  const parsedConfig: unknown = parse(rawConfig);
-
-  if (!isRecord(parsedConfig)) {
-    throw new Error(`Invalid harness config structure: ${harnessConfigPath}`);
-  }
-
-  return parsedConfig;
-}
-
-function loadPlatformDefaults(parsedConfig: Record<string, unknown>, platform: Platform, harnessConfigPath: string): Record<string, unknown> {
-  const platforms = parsedConfig.platforms;
-  if (!isRecord(platforms)) {
-    throw new Error(`Missing platforms section in harness config: ${harnessConfigPath}`);
-  }
-
-  const platformConfig = platforms[platform];
-  if (!isRecord(platformConfig)) {
-    throw new Error(`Missing platform config for ${platform} in ${harnessConfigPath}`);
-  }
-
-  return platformConfig;
-}
-
-async function loadHarnessSelection(
-  repoRoot: string,
-  platform: Platform,
-  runnerProfile: RunnerProfile,
-  harnessConfigPath: string,
-): Promise<HarnessSelection> {
-  ensureRunnerProfilePlatform(platform, runnerProfile);
-  const parsedConfig = await parseHarnessConfig(repoRoot, harnessConfigPath);
-  const platformDefaults = loadPlatformDefaults(parsedConfig, platform, harnessConfigPath);
-
-  if (runnerProfile === "phase1") {
-    const runnerScript = readNonEmptyString(platformDefaults, "runner_script");
-    const deviceId = readNonEmptyString(platformDefaults, "device_udid");
-    const appId = readNonEmptyString(platformDefaults, "app_id");
-    const launchUrl = readNonEmptyString(platformDefaults, "launch_url");
-    const runCountDefault = readPositiveNumber(platformDefaults, "run_count_default") ?? 1;
-    const sample = parsedConfig.sample;
-    const sampleName = isRecord(sample) ? readNonEmptyString(sample, "name") ?? "rn-login-demo" : "rn-login-demo";
-
-    if (!runnerScript || !deviceId || !appId) {
-      throw new Error(`Incomplete phase1 config for ${platform} in ${harnessConfigPath}`);
-    }
-
-    return {
-      runnerProfile,
-      runnerScript,
-      deviceId,
-      appId,
-      sampleName,
-      launchUrl,
-      runCountDefault,
-      configuredFlows: [DEFAULT_FLOWS[platform]],
-    };
-  }
-
-  const phase3Validations = parsedConfig.phase3_validations;
-  if (!isRecord(phase3Validations)) {
-    throw new Error(`Missing phase3_validations section in harness config: ${harnessConfigPath}`);
-  }
-
-  const profileConfig = phase3Validations[runnerProfile];
-  if (!isRecord(profileConfig)) {
-    throw new Error(`Missing runner profile ${runnerProfile} in ${harnessConfigPath}`);
-  }
-
-  const runnerScript = readNonEmptyString(profileConfig, "runner_script");
-  const appId = readNonEmptyString(profileConfig, "app_id");
-  const sampleName = readNonEmptyString(profileConfig, "sample_name") ?? runnerProfile;
-  const artifactRoot = readNonEmptyString(profileConfig, "artifact_root");
-  const runCountDefault = readPositiveNumber(profileConfig, "run_count_default") ?? 1;
-  const configuredFlows = readStringArray(profileConfig, "flows");
-  const deviceId = readNonEmptyString(platformDefaults, "device_udid");
-
-  if (!runnerScript || !appId || configuredFlows.length === 0) {
-    throw new Error(`Incomplete runner profile ${runnerProfile} in ${harnessConfigPath}`);
-  }
-
-  return {
-    runnerProfile,
-    runnerScript,
-    deviceId,
-    appId,
-    sampleName,
-    artifactRoot,
-    runCountDefault,
-    configuredFlows,
-  };
-}
-
-export function resolveRepoPath(startPath?: string): string {
-  let currentPath = startPath ?? path.dirname(fileURLToPath(import.meta.url));
-
-  while (true) {
-    const hasRepoMarkers = [
-      path.join(currentPath, "scripts", "dev"),
-      path.join(currentPath, "flows"),
-      path.join(currentPath, "configs"),
-    ].every((candidate) => existsSync(candidate));
-
-    if (hasRepoMarkers) {
-      return currentPath;
-    }
-
-    const parentPath = path.dirname(currentPath);
-    if (parentPath === currentPath) {
-      throw new Error("Unable to resolve repository root from adapter-maestro.");
-    }
-    currentPath = parentPath;
-  }
-}
-
-export function buildArtifactsDir(
-  repoRoot: string,
-  sessionId: string,
-  platform: Platform,
-  runnerProfile: RunnerProfile,
-  artifactRoot?: string,
-): ArtifactDirectory {
-  if (artifactRoot && path.isAbsolute(artifactRoot)) {
-    throw new Error("artifactRoot must be relative to the repository root.");
-  }
-
-  const relativePath = artifactRoot
-    ? path.posix.join(artifactRoot, sessionId)
-    : path.posix.join("artifacts", "mcp-server", sessionId, platform, runnerProfile);
-  return {
-    absolutePath: path.resolve(repoRoot, relativePath),
-    relativePath,
-  };
-}
-
-export async function resolveSessionDefaults(input: {
-  sessionId: string;
-  platform: Platform;
-  runnerProfile?: RunnerProfile | null;
-  harnessConfigPath?: string;
-  artifactRoot?: string;
-}): Promise<SessionDefaults> {
-  const repoRoot = resolveRepoPath();
-  const runnerProfile = input.runnerProfile ?? DEFAULT_RUNNER_PROFILE;
-  const harnessConfigPath = input.harnessConfigPath ?? DEFAULT_HARNESS_CONFIG_PATH;
-  const selection = await loadHarnessSelection(repoRoot, input.platform, runnerProfile, harnessConfigPath);
-  const artifactsDir = buildArtifactsDir(repoRoot, input.sessionId, input.platform, runnerProfile, input.artifactRoot ?? selection.artifactRoot);
-
-  return {
-    appId: selection.appId,
-    sampleName: selection.sampleName,
-    artifactsRoot: artifactsDir.relativePath,
-  };
 }
 
 export async function describeCapabilitiesWithMaestro(
@@ -1376,7 +1027,7 @@ function readSummaryLine(stdout?: string): string | undefined {
   return lines.at(-1);
 }
 
-async function executeRunner(command: string[], repoRoot: string, env: NodeJS.ProcessEnv): Promise<CommandExecution> {
+async function executeRunner(command: string[], repoRoot: string, env: NodeJS.ProcessEnv, options: CommandExecutionOptions = {}): Promise<CommandExecution> {
   return new Promise((resolve, reject) => {
     const child = spawn(command[0], command.slice(1), {
       cwd: repoRoot,
@@ -1386,6 +1037,30 @@ async function executeRunner(command: string[], repoRoot: string, env: NodeJS.Pr
 
     let stdout = "";
     let stderr = "";
+    let settled = false;
+    const timeoutMs = options.timeoutMs;
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+
+    const cleanup = () => {
+      child.stdout?.removeAllListeners();
+      child.stderr?.removeAllListeners();
+      child.removeAllListeners();
+      child.stdout?.destroy();
+      child.stderr?.destroy();
+      child.disconnect?.();
+      if (timeout) {
+        clearTimeout(timeout);
+      }
+    };
+
+    const finish = (callback: () => void) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      cleanup();
+      callback();
+    };
 
     child.stdout.on("data", (chunk: Buffer | string) => {
       stdout += chunk.toString();
@@ -1395,8 +1070,20 @@ async function executeRunner(command: string[], repoRoot: string, env: NodeJS.Pr
       stderr += chunk.toString();
     });
 
-    child.on("error", (error) => reject(error));
-    child.on("close", (exitCode) => resolve({ exitCode, stdout, stderr }));
+    if (typeof timeoutMs === "number") {
+      timeout = setTimeout(() => {
+        stderr += `${stderr.endsWith("\n") || stderr.length === 0 ? "" : "\n"}Command timed out after ${String(timeoutMs)}ms`;
+        try {
+          child.kill("SIGKILL");
+        } catch {
+        }
+        finish(() => resolve({ exitCode: null, stdout, stderr }));
+      }, timeoutMs);
+      unrefTimer(timeout);
+    }
+
+    child.on("error", (error) => finish(() => reject(error)));
+    child.on("close", (exitCode) => finish(() => resolve({ exitCode, stdout, stderr })));
   });
 }
 
@@ -2164,8 +1851,8 @@ export async function resolveUiTargetWithMaestro(input: ResolveUiTargetInput): P
           command: idbCommand,
           exitCode: 0,
           result: { query, totalMatches: 0, matches: [] },
-          resolution: buildNonExecutedUiTargetResolution(query, "partial"),
-          supportLevel: "partial",
+          resolution: buildNonExecutedUiTargetResolution(query, "full"),
+          supportLevel: "full",
         },
         nextSuggestions: ["resolve_ui_target dry-run only previews the iOS hierarchy capture command. Run it without --dry-run to resolve against the current simulator hierarchy."],
       };
@@ -2188,8 +1875,8 @@ export async function resolveUiTargetWithMaestro(input: ResolveUiTargetInput): P
           command: snapshot.command,
           exitCode: snapshot.exitCode,
           result: { query, totalMatches: 0, matches: [] },
-          resolution: buildNonExecutedUiTargetResolution(query, "partial"),
-          supportLevel: "partial",
+          resolution: buildNonExecutedUiTargetResolution(query, "full"),
+          supportLevel: "full",
         },
         nextSuggestions: [snapshot.message],
       };
@@ -2213,7 +1900,7 @@ export async function resolveUiTargetWithMaestro(input: ResolveUiTargetInput): P
         exitCode: snapshot.execution.exitCode,
         result,
         resolution,
-        supportLevel: "partial",
+        supportLevel: "full",
         content: snapshot.execution.stdout,
         summary: snapshot.summary,
       },
@@ -2745,7 +2432,7 @@ export async function waitForUiWithMaestro(input: WaitForUiInput): Promise<ToolR
           command: idbCommand,
           exitCode: 0,
           result: { query, totalMatches: 0, matches: [] },
-          supportLevel: "partial",
+          supportLevel: "full",
         },
         nextSuggestions: ["wait_for_ui dry-run only previews the iOS hierarchy capture command. Run it without --dry-run to poll the current simulator hierarchy."],
       };
@@ -2777,7 +2464,7 @@ export async function waitForUiWithMaestro(input: WaitForUiInput): Promise<ToolR
             command: lastSnapshot.command,
             exitCode: lastSnapshot.execution.exitCode,
             result: { query, ...lastSnapshot.queryResult },
-            supportLevel: "partial",
+            supportLevel: "full",
             content: lastSnapshot.execution.stdout,
             summary: lastSnapshot.summary,
           },
@@ -2809,7 +2496,7 @@ export async function waitForUiWithMaestro(input: WaitForUiInput): Promise<ToolR
           command: lastSnapshot.command,
           exitCode: lastSnapshot.exitCode,
           result: { query, totalMatches: 0, matches: [] },
-          supportLevel: "partial",
+          supportLevel: "full",
         },
         nextSuggestions: [lastSnapshot.message],
       };
@@ -2836,7 +2523,7 @@ export async function waitForUiWithMaestro(input: WaitForUiInput): Promise<ToolR
         command: timeoutSnapshot?.command ?? idbCommand,
         exitCode: timeoutSnapshot?.execution.exitCode ?? null,
         result,
-        supportLevel: "partial",
+        supportLevel: "full",
         content: timeoutSnapshot?.execution.stdout,
         summary: timeoutSnapshot?.summary,
       },
@@ -3073,30 +2760,166 @@ export async function scrollAndResolveUiTargetWithMaestro(input: ScrollAndResolv
   }
 
   if (input.platform === "ios") {
-    return {
-      status: "partial",
-      reasonCode: REASON_CODES.unsupportedOperation,
-      sessionId: input.sessionId,
-      durationMs: Date.now() - startTime,
-      attempts: 1,
-      artifacts: [],
-      data: {
-        dryRun: Boolean(input.dryRun),
-        runnerProfile,
-        outputPath: defaultOutputPath,
-        query,
-        maxSwipes,
-        swipeDirection,
-        swipeDurationMs,
-        swipesPerformed: 0,
-        commandHistory: [],
-        exitCode: input.dryRun ? 0 : null,
-        result: { query, totalMatches: 0, matches: [] },
-        resolution: buildNonExecutedUiTargetResolution(query, "partial"),
-        supportLevel: "partial",
-      },
-      nextSuggestions: ["scroll_and_resolve_ui_target currently provides actionable scrolling for Android only. Use inspect_ui artifacts for iOS manual inspection."],
-    };
+    const deviceId = input.deviceId ?? "ADA078B9-3C6B-4875-8B85-A7789F368816";
+    const previewSwipe = buildScrollSwipeCoordinates([], swipeDirection, swipeDurationMs);
+    const previewSwipeCommand = buildIosSwipeCommand(deviceId, previewSwipe);
+
+    if (input.dryRun) {
+      return {
+        status: "partial",
+        reasonCode: REASON_CODES.unsupportedOperation,
+        sessionId: input.sessionId,
+        durationMs: Date.now() - startTime,
+        attempts: 1,
+        artifacts: [],
+        data: {
+          dryRun: true,
+          runnerProfile,
+          outputPath: defaultOutputPath,
+          query,
+          maxSwipes,
+          swipeDirection,
+          swipeDurationMs,
+          swipesPerformed: 0,
+          commandHistory: [buildIosUiDescribeCommand(deviceId), previewSwipeCommand],
+          exitCode: 0,
+          result: { query, totalMatches: 0, matches: [] },
+          resolution: buildNonExecutedUiTargetResolution(query, "full"),
+          supportLevel: "full",
+        },
+        nextSuggestions: ["scroll_and_resolve_ui_target dry-run only previews iOS hierarchy capture and swipe commands. Run it without --dry-run to resolve against the current simulator hierarchy."],
+      };
+    }
+
+    let swipesPerformed = 0;
+    const commandHistory: string[][] = [];
+    let lastSnapshot: IosUiSnapshot | IosUiSnapshotFailure | undefined;
+
+    while (swipesPerformed <= maxSwipes) {
+      lastSnapshot = await captureIosUiSnapshot(repoRoot, deviceId, input.sessionId, runnerProfile, input.outputPath, { sessionId: input.sessionId, platform: input.platform, runnerProfile, harnessConfigPath: input.harnessConfigPath, deviceId, outputPath: input.outputPath, dryRun: false, ...query });
+      if (isIosUiSnapshotFailure(lastSnapshot)) {
+        return {
+          status: "failed",
+          reasonCode: lastSnapshot.reasonCode,
+          sessionId: input.sessionId,
+          durationMs: Date.now() - startTime,
+          attempts: swipesPerformed + 1,
+          artifacts: [],
+          data: {
+            dryRun: false,
+            runnerProfile,
+            outputPath: lastSnapshot.outputPath,
+            query,
+            maxSwipes,
+            swipeDirection,
+            swipeDurationMs,
+            swipesPerformed,
+            commandHistory: [...commandHistory, lastSnapshot.command],
+            exitCode: lastSnapshot.exitCode,
+            result: { query, totalMatches: 0, matches: [] },
+            resolution: buildNonExecutedUiTargetResolution(query, "full"),
+            supportLevel: "full",
+          },
+          nextSuggestions: [lastSnapshot.message],
+        };
+      }
+
+      commandHistory.push(lastSnapshot.command);
+      const result = { query, ...lastSnapshot.queryResult };
+      const resolution = buildUiTargetResolution(query, result, "full");
+      if (resolution.status !== "no_match") {
+        return {
+          status: resolution.status === "resolved" ? "success" : "partial",
+          reasonCode: reasonCodeForResolutionStatus(resolution.status),
+          sessionId: input.sessionId,
+          durationMs: Date.now() - startTime,
+          attempts: swipesPerformed + 1,
+          artifacts: [toRelativePath(repoRoot, lastSnapshot.absoluteOutputPath)],
+          data: {
+            dryRun: false,
+            runnerProfile,
+            outputPath: lastSnapshot.relativeOutputPath,
+            query,
+            maxSwipes,
+            swipeDirection,
+            swipeDurationMs,
+            swipesPerformed,
+            commandHistory,
+            exitCode: lastSnapshot.execution.exitCode,
+            result,
+            resolution,
+            supportLevel: "full",
+            content: lastSnapshot.execution.stdout,
+            summary: lastSnapshot.summary,
+          },
+          nextSuggestions: resolution.status === "resolved" ? [] : buildResolutionNextSuggestions(resolution.status, "scroll_and_resolve_ui_target"),
+        };
+      }
+
+      if (swipesPerformed === maxSwipes) {
+        return {
+          status: "partial",
+          reasonCode: REASON_CODES.noMatch,
+          sessionId: input.sessionId,
+          durationMs: Date.now() - startTime,
+          attempts: swipesPerformed + 1,
+          artifacts: [toRelativePath(repoRoot, lastSnapshot.absoluteOutputPath)],
+          data: {
+            dryRun: false,
+            runnerProfile,
+            outputPath: lastSnapshot.relativeOutputPath,
+            query,
+            maxSwipes,
+            swipeDirection,
+            swipeDurationMs,
+            swipesPerformed,
+            commandHistory,
+            exitCode: lastSnapshot.execution.exitCode,
+            result,
+            resolution,
+            supportLevel: "full",
+            content: lastSnapshot.execution.stdout,
+            summary: lastSnapshot.summary,
+          },
+          nextSuggestions: ["Reached maxSwipes without finding a matching iOS target. Narrow the selector or increase maxSwipes."],
+        };
+      }
+
+      const swipe = buildScrollSwipeCoordinates(lastSnapshot.nodes, swipeDirection, swipeDurationMs);
+      const swipeCommand = buildIosSwipeCommand(deviceId, swipe);
+      commandHistory.push(swipeCommand);
+      const swipeExecution = await executeRunner(swipeCommand, repoRoot, process.env);
+      if (swipeExecution.exitCode !== 0) {
+        return {
+          status: "failed",
+          reasonCode: REASON_CODES.actionScrollFailed,
+          sessionId: input.sessionId,
+          durationMs: Date.now() - startTime,
+          attempts: swipesPerformed + 1,
+          artifacts: [toRelativePath(repoRoot, lastSnapshot.absoluteOutputPath)],
+          data: {
+            dryRun: false,
+            runnerProfile,
+            outputPath: lastSnapshot.relativeOutputPath,
+            query,
+            maxSwipes,
+            swipeDirection,
+            swipeDurationMs,
+            swipesPerformed,
+            commandHistory,
+            exitCode: swipeExecution.exitCode,
+            result,
+            resolution,
+            supportLevel: "full",
+            content: lastSnapshot.execution.stdout,
+            summary: lastSnapshot.summary,
+          },
+          nextSuggestions: ["iOS swipe failed while searching for the target. Check simulator state and idb availability before retrying scroll_and_resolve_ui_target."],
+        };
+      }
+
+      swipesPerformed += 1;
+    }
   }
 
   const selection = await loadHarnessSelection(repoRoot, input.platform, runnerProfile, input.harnessConfigPath ?? DEFAULT_HARNESS_CONFIG_PATH);
@@ -3552,7 +3375,7 @@ export async function queryUiWithMaestro(input: QueryUiInput): Promise<ToolResul
           command: idbCommand,
           exitCode: 0,
           result: { query, totalMatches: 0, matches: [] },
-          supportLevel: "partial",
+          supportLevel: "full",
         },
         nextSuggestions: ["Run query_ui without dryRun to capture an iOS hierarchy artifact and evaluate structured selector matches."],
       };
@@ -3575,7 +3398,7 @@ export async function queryUiWithMaestro(input: QueryUiInput): Promise<ToolResul
           command: snapshot.command,
           exitCode: snapshot.exitCode,
           result: { query, totalMatches: 0, matches: [] },
-          supportLevel: "partial",
+          supportLevel: "full",
         },
         nextSuggestions: [snapshot.message],
       };
@@ -3597,8 +3420,8 @@ export async function queryUiWithMaestro(input: QueryUiInput): Promise<ToolResul
         command: snapshot.command,
         exitCode: snapshot.execution.exitCode,
         result,
-        supportLevel: "partial",
-        evidence: [buildExecutionEvidence("ui_dump", snapshot.relativeOutputPath, "partial", "Captured iOS hierarchy artifact for selector matching.")],
+        supportLevel: "full",
+        evidence: [buildExecutionEvidence("ui_dump", snapshot.relativeOutputPath, "full", "Captured iOS hierarchy artifact for selector matching.")],
         content: snapshot.execution.stdout,
         summary: snapshot.summary,
       },
@@ -3856,7 +3679,7 @@ export async function getLogsWithMaestro(input: GetLogsInput): Promise<ToolResul
     };
   }
 
-  const execution = await executeRunner(capture.command, repoRoot, process.env);
+  const execution = await executeRunner(capture.command, repoRoot, process.env, { timeoutMs: DEFAULT_DEVICE_COMMAND_TIMEOUT_MS });
   if (execution.exitCode === 0) {
     await writeFile(capture.absoluteOutputPath, execution.stdout, "utf8");
   }
@@ -3936,8 +3759,8 @@ export async function getCrashSignalsWithMaestro(input: GetCrashSignalsInput): P
     const crashCommand = pid
       ? ["adb", "-s", deviceId, "logcat", "--pid", pid, "-d", "-b", "crash", "-t", String(capture.linesRequested)]
       : baseCrashCommand;
-    const crashExecution = await executeRunner(crashCommand, repoRoot, process.env);
-    const anrExecution = await executeRunner(anrCommand, repoRoot, process.env);
+    const crashExecution = await executeRunner(crashCommand, repoRoot, process.env, { timeoutMs: DEFAULT_DEVICE_COMMAND_TIMEOUT_MS });
+    const anrExecution = await executeRunner(anrCommand, repoRoot, process.env, { timeoutMs: DEFAULT_DEVICE_COMMAND_TIMEOUT_MS });
     const entries = anrExecution.exitCode === 0
       ? anrExecution.stdout.replaceAll(String.fromCharCode(13), "").split(String.fromCharCode(10)).map((line) => line.trim()).filter(Boolean)
       : [];
@@ -4244,6 +4067,11 @@ export async function collectDebugEvidenceWithMaestro(input: CollectDebugEvidenc
     ...crashResult.artifacts,
     ...(diagnosticsResult?.artifacts ?? []),
   ];
+  const environmentIssue = logsResult.reasonCode === REASON_CODES.deviceUnavailable || crashResult.reasonCode === REASON_CODES.deviceUnavailable
+    ? "device or simulator connectivity prevented native evidence capture"
+    : jsConsoleResult?.reasonCode === REASON_CODES.configurationError || jsNetworkResult?.reasonCode === REASON_CODES.configurationError
+      ? "Metro inspector was unavailable for JS evidence capture"
+      : undefined;
   const interestingSignals = mergeSignalSummaries(logsResult.data.summary, crashResult.data.summary);
   const suspectAreas = buildSuspectAreas({
     crashSummary: crashResult.data.summary,
@@ -4251,6 +4079,7 @@ export async function collectDebugEvidenceWithMaestro(input: CollectDebugEvidenc
     jsConsoleSummary: jsConsoleResult?.data.summary,
     jsNetworkSummary: jsNetworkResult?.data.summary,
     jsConsoleLogs: jsConsoleResult?.data.logs,
+    environmentIssue,
   });
   const narrative = buildDebugNarrative({
     appId: effectiveAppId,
@@ -4275,6 +4104,42 @@ export async function collectDebugEvidenceWithMaestro(input: CollectDebugEvidenc
     narrative.push(buildJsDebugTargetSelectionNarrativeLine(discoveredTarget, discoveredSelection?.reason));
   }
 
+  const jsConsoleOk = !jsConsoleResult || jsConsoleResult.status === "success";
+  const jsNetworkOk = !jsNetworkResult || jsNetworkResult.status === "success";
+  const allSucceeded = logsResult.status === "success" && crashResult.status === "success" && (!diagnosticsResult || diagnosticsResult.status === "success") && jsConsoleOk && jsNetworkOk;
+  const anySucceeded = logsResult.status === "success" || crashResult.status === "success" || diagnosticsResult?.status === "success" || jsConsoleResult?.status === "success" || jsNetworkResult?.status === "success";
+  const status = allSucceeded ? "success" : anySucceeded ? "partial" : "failed";
+  const reasonCode = allSucceeded
+    ? REASON_CODES.ok
+    : logsResult.reasonCode !== REASON_CODES.ok
+        ? logsResult.reasonCode
+        : crashResult.reasonCode !== REASON_CODES.ok
+          ? crashResult.reasonCode
+          : diagnosticsResult?.reasonCode ?? jsConsoleResult?.reasonCode ?? jsNetworkResult?.reasonCode ?? REASON_CODES.adapterError;
+  if (suspectAreas.length === 0) {
+    if (reasonCode === REASON_CODES.deviceUnavailable) {
+      suspectAreas.push("Environment suspect: device or simulator connectivity prevented evidence capture.");
+    } else if (reasonCode === REASON_CODES.configurationError) {
+      suspectAreas.push("Environment suspect: Metro inspector or local debug configuration prevented JS evidence capture.");
+    }
+  }
+  const diagnosisBriefing = buildDiagnosisBriefing({
+    status,
+    reasonCode,
+    appId: effectiveAppId,
+    suspectAreas,
+    jsDebugTargetId: effectiveTargetId,
+    jsConsoleLogCount: jsConsoleResult?.data.collectedCount,
+    jsNetworkEventCount: jsNetworkResult?.data.collectedCount,
+  });
+  const nextSuggestions = buildDebugNextSuggestions({
+    reasonCode,
+    suspectAreas,
+    includeDiagnostics: Boolean(input.includeDiagnostics),
+    jsDebugTargetId: effectiveTargetId,
+    jsConsoleLogCount: jsConsoleResult?.data.collectedCount,
+    jsNetworkEventCount: jsNetworkResult?.data.collectedCount,
+  });
   await mkdir(path.dirname(absoluteOutputPath), { recursive: true });
 
   if (!input.dryRun) {
@@ -4286,6 +4151,9 @@ export async function collectDebugEvidenceWithMaestro(input: CollectDebugEvidenc
       `- Query: ${input.query ?? "<none>"}`,
       `- JS inspector enabled: ${includeJsInspector ? "yes" : "no"}`,
       `- JS target: ${effectiveTargetId ?? "<none>"}`,
+      "",
+      "## Diagnosis Briefing",
+      ...(diagnosisBriefing.length > 0 ? diagnosisBriefing.map((line) => `- ${line}`) : ["- <no briefing available>"]),
       "",
       "## Narrative",
       ...narrative.map((line) => `- ${line}`),
@@ -4308,18 +4176,6 @@ export async function collectDebugEvidenceWithMaestro(input: CollectDebugEvidenc
     await writeFile(absoluteOutputPath, report, "utf8");
   }
 
-  const jsConsoleOk = !jsConsoleResult || jsConsoleResult.status === "success";
-  const jsNetworkOk = !jsNetworkResult || jsNetworkResult.status === "success";
-  const allSucceeded = logsResult.status === "success" && crashResult.status === "success" && (!diagnosticsResult || diagnosticsResult.status === "success") && jsConsoleOk && jsNetworkOk;
-  const anySucceeded = logsResult.status === "success" || crashResult.status === "success" || diagnosticsResult?.status === "success" || jsConsoleResult?.status === "success" || jsNetworkResult?.status === "success";
-  const status = allSucceeded ? "success" : anySucceeded ? "partial" : "failed";
-  const reasonCode = allSucceeded
-    ? REASON_CODES.ok
-    : logsResult.reasonCode !== REASON_CODES.ok
-        ? logsResult.reasonCode
-        : crashResult.reasonCode !== REASON_CODES.ok
-          ? crashResult.reasonCode
-          : diagnosticsResult?.reasonCode ?? jsConsoleResult?.reasonCode ?? jsNetworkResult?.reasonCode ?? REASON_CODES.adapterError;
   const summaryArtifactPath = input.dryRun ? [] : [relativeOutputPath];
 
   return {
@@ -4347,6 +4203,7 @@ export async function collectDebugEvidenceWithMaestro(input: CollectDebugEvidenc
       jsNetworkEventCount: jsNetworkResult?.data.collectedCount,
       jsConsoleSummary: jsConsoleResult?.data.summary,
       jsNetworkSummary: jsNetworkResult?.data.summary,
+      diagnosisBriefing,
       suspectAreas,
       interestingSignals,
       evidencePaths: [...summaryArtifactPath, ...evidencePaths],
@@ -4361,437 +4218,8 @@ export async function collectDebugEvidenceWithMaestro(input: CollectDebugEvidenc
       ],
       narrative,
     },
-    nextSuggestions: status === "success"
-      ? []
-      : ["Use the debug evidence summary first; escalate to collect_diagnostics only when the summarized log and crash signals are still inconclusive."],
+    nextSuggestions: status === "success" ? [] : nextSuggestions,
   };
-}
-
-export async function listJsDebugTargetsWithMaestro(input: ListJsDebugTargetsInput): Promise<ToolResult<ListJsDebugTargetsData>> {
-  const startTime = Date.now();
-  const sessionId = input.sessionId ?? `js-debug-targets-${Date.now()}`;
-  const metroBaseUrl = normalizeMetroBaseUrl(input.metroBaseUrl);
-  const endpoint = `${metroBaseUrl}/json/list`;
-
-  if (input.dryRun) {
-    return {
-      status: "success",
-      reasonCode: REASON_CODES.ok,
-      sessionId,
-      durationMs: Date.now() - startTime,
-      attempts: 1,
-      artifacts: [],
-      data: {
-        dryRun: true,
-        metroBaseUrl,
-        endpoint,
-        targetCount: 0,
-        targets: [],
-      },
-      nextSuggestions: ["Run list_js_debug_targets without dryRun while Metro is running to discover debuggable RN targets."],
-    };
-  }
-
-  const controller = new AbortController();
-  const timeoutMs = normalizePositiveInteger(input.timeoutMs, DEFAULT_METRO_TIMEOUT_MS);
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  unrefTimer(timer);
-
-  try {
-    const response = await fetch(endpoint, { signal: controller.signal });
-    if (!response.ok) {
-      return {
-        status: "failed",
-        reasonCode: REASON_CODES.configurationError,
-        sessionId,
-        durationMs: Date.now() - startTime,
-        attempts: 1,
-        artifacts: [],
-        data: {
-          dryRun: false,
-          metroBaseUrl,
-          endpoint,
-          targetCount: 0,
-          targets: [],
-        },
-        nextSuggestions: ["Ensure Metro is running and exposing /json/list before retrying list_js_debug_targets."],
-      };
-    }
-
-    const parsed: unknown = await response.json();
-    const targets = Array.isArray(parsed) ? parsed.map(normalizeJsDebugTarget).filter((value): value is JsDebugTarget => value !== undefined) : [];
-    return {
-      status: "success",
-      reasonCode: REASON_CODES.ok,
-      sessionId,
-      durationMs: Date.now() - startTime,
-      attempts: 1,
-      artifacts: [],
-      data: {
-        dryRun: false,
-        metroBaseUrl,
-        endpoint,
-        targetCount: targets.length,
-        targets,
-      },
-      nextSuggestions: targets.length === 0 ? ["Metro responded, but no JS debug targets are currently attached."] : [],
-    };
-  } catch {
-    return {
-      status: "failed",
-      reasonCode: REASON_CODES.configurationError,
-      sessionId,
-      durationMs: Date.now() - startTime,
-      attempts: 1,
-      artifacts: [],
-      data: {
-        dryRun: false,
-        metroBaseUrl,
-        endpoint,
-        targetCount: 0,
-        targets: [],
-      },
-      nextSuggestions: ["Start Metro or Expo dev server and verify that /json/list is reachable before retrying list_js_debug_targets."],
-    };
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
-export async function captureJsConsoleLogsWithMaestro(input: CaptureJsConsoleLogsInput): Promise<ToolResult<CaptureJsConsoleLogsData>> {
-  const startTime = Date.now();
-  const sessionId = input.sessionId ?? `js-console-logs-${Date.now()}`;
-  const metroBaseUrl = normalizeMetroBaseUrl(input.metroBaseUrl);
-  const timeoutMs = normalizePositiveInteger(input.timeoutMs, DEFAULT_METRO_TIMEOUT_MS);
-  const maxLogs = normalizePositiveInteger(input.maxLogs, DEFAULT_JS_LOG_MAX_LOGS);
-  const webSocketDebuggerUrl = input.webSocketDebuggerUrl ?? (input.targetId ? buildInspectorWebSocketUrl(metroBaseUrl, input.targetId) : "");
-
-  if (input.dryRun) {
-    return {
-      status: "success",
-      reasonCode: REASON_CODES.ok,
-      sessionId,
-      durationMs: Date.now() - startTime,
-      attempts: 1,
-      artifacts: [],
-      data: {
-        dryRun: true,
-        metroBaseUrl,
-        targetId: input.targetId,
-        webSocketDebuggerUrl,
-        collectedCount: 0,
-        logs: [],
-        summary: buildJsConsoleLogSummary([]),
-      },
-      nextSuggestions: ["Run capture_js_console_logs without dryRun while Metro inspector is available and provide targetId or webSocketDebuggerUrl."],
-    };
-  }
-
-  if (!webSocketDebuggerUrl) {
-    return {
-      status: "failed",
-      reasonCode: REASON_CODES.configurationError,
-      sessionId,
-      durationMs: Date.now() - startTime,
-      attempts: 1,
-      artifacts: [],
-        data: {
-          dryRun: false,
-          metroBaseUrl,
-          targetId: input.targetId,
-          webSocketDebuggerUrl,
-          collectedCount: 0,
-          logs: [],
-          summary: buildJsConsoleLogSummary([]),
-        },
-      nextSuggestions: ["Call list_js_debug_targets first, then pass targetId or webSocketDebuggerUrl into capture_js_console_logs."],
-    };
-  }
-
-  const logs: JsConsoleLogEntry[] = [];
-  const ws = new WebSocket(webSocketDebuggerUrl);
-
-  return await new Promise<ToolResult<CaptureJsConsoleLogsData>>((resolve) => {
-    let settled = false;
-    let messageId = 1;
-    const finish = (result: ToolResult<CaptureJsConsoleLogsData>) => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timer);
-      try {
-        ws.close();
-      } catch {
-        return resolve(result);
-      }
-      resolve(result);
-    };
-
-    const timer = setTimeout(() => {
-      finish({
-        status: "success",
-        reasonCode: REASON_CODES.ok,
-        sessionId,
-        durationMs: Date.now() - startTime,
-        attempts: 1,
-        artifacts: [],
-        data: {
-          dryRun: false,
-          metroBaseUrl,
-          targetId: input.targetId,
-          webSocketDebuggerUrl,
-          collectedCount: logs.length,
-          logs,
-          summary: buildJsConsoleLogSummary(logs),
-        },
-        nextSuggestions: logs.length === 0 ? ["No JS console events arrived before timeout. Confirm the target is active and emitting logs."] : [],
-      });
-    }, timeoutMs);
-    unrefTimer(timer);
-
-    ws.addEventListener("open", () => {
-      ws.send(JSON.stringify({ id: messageId++, method: "Runtime.enable" }));
-    });
-
-    ws.addEventListener("message", (event) => {
-      try {
-        const message = JSON.parse(String(event.data));
-        if (message?.method === "Runtime.consoleAPICalled") {
-          const params = isRecord(message.params) ? message.params : {};
-          logs.push({
-            level: readNonEmptyString(params, "type") ?? "log",
-            text: normalizeConsoleArguments(params.args),
-            timestamp: typeof params.timestamp === "number" ? params.timestamp : undefined,
-          });
-        }
-        if (message?.method === "Runtime.exceptionThrown") {
-          const params = isRecord(message.params) ? message.params : {};
-          logs.push(buildInspectorExceptionLogEntry(params));
-        }
-        if (logs.length >= maxLogs) {
-          finish({
-            status: "success",
-            reasonCode: REASON_CODES.ok,
-            sessionId,
-            durationMs: Date.now() - startTime,
-            attempts: 1,
-            artifacts: [],
-            data: {
-              dryRun: false,
-              metroBaseUrl,
-              targetId: input.targetId,
-              webSocketDebuggerUrl,
-              collectedCount: logs.length,
-              logs,
-              summary: buildJsConsoleLogSummary(logs),
-            },
-            nextSuggestions: [],
-          });
-        }
-      } catch {
-        return;
-      }
-    });
-
-    ws.addEventListener("error", () => {
-      finish({
-        status: "failed",
-        reasonCode: REASON_CODES.configurationError,
-        sessionId,
-        durationMs: Date.now() - startTime,
-        attempts: 1,
-        artifacts: [],
-        data: {
-          dryRun: false,
-          metroBaseUrl,
-          targetId: input.targetId,
-          webSocketDebuggerUrl,
-          collectedCount: logs.length,
-          logs,
-          summary: buildJsConsoleLogSummary(logs),
-        },
-        nextSuggestions: ["Ensure the Metro inspector WebSocket is reachable and that the selected JS target is still attached."],
-      });
-    });
-  });
-}
-
-export async function captureJsNetworkEventsWithMaestro(input: CaptureJsNetworkEventsInput): Promise<ToolResult<CaptureJsNetworkEventsData>> {
-  const startTime = Date.now();
-  const sessionId = input.sessionId ?? `js-network-events-${Date.now()}`;
-  const metroBaseUrl = normalizeMetroBaseUrl(input.metroBaseUrl);
-  const timeoutMs = normalizePositiveInteger(input.timeoutMs, DEFAULT_METRO_TIMEOUT_MS);
-  const maxEvents = normalizePositiveInteger(input.maxEvents, DEFAULT_JS_NETWORK_MAX_EVENTS);
-  const failuresOnly = input.failuresOnly ?? true;
-  const webSocketDebuggerUrl = input.webSocketDebuggerUrl ?? (input.targetId ? buildInspectorWebSocketUrl(metroBaseUrl, input.targetId) : "");
-
-  if (input.dryRun) {
-    return {
-      status: "success",
-      reasonCode: REASON_CODES.ok,
-      sessionId,
-      durationMs: Date.now() - startTime,
-      attempts: 1,
-      artifacts: [],
-      data: {
-        dryRun: true,
-        metroBaseUrl,
-        targetId: input.targetId,
-        webSocketDebuggerUrl,
-        collectedCount: 0,
-        failuresOnly,
-        events: [],
-        summary: buildJsNetworkFailureSummary([]),
-      },
-      nextSuggestions: ["Run capture_js_network_events without dryRun while Metro inspector is available and provide targetId or webSocketDebuggerUrl."],
-    };
-  }
-
-  if (!webSocketDebuggerUrl) {
-    return {
-      status: "failed",
-      reasonCode: REASON_CODES.configurationError,
-      sessionId,
-      durationMs: Date.now() - startTime,
-      attempts: 1,
-      artifacts: [],
-        data: {
-          dryRun: false,
-          metroBaseUrl,
-          targetId: input.targetId,
-          webSocketDebuggerUrl,
-          collectedCount: 0,
-          failuresOnly,
-          events: [],
-          summary: buildJsNetworkFailureSummary([]),
-        },
-      nextSuggestions: ["Call list_js_debug_targets first, then pass targetId or webSocketDebuggerUrl into capture_js_network_events."],
-    };
-  }
-
-  const events = new Map<string, JsNetworkEvent>();
-  const ws = new WebSocket(webSocketDebuggerUrl);
-
-  return await new Promise<ToolResult<CaptureJsNetworkEventsData>>((resolve) => {
-    let settled = false;
-    let messageId = 1;
-    const finish = (result: ToolResult<CaptureJsNetworkEventsData>) => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timer);
-      try {
-        ws.close();
-      } catch {
-        return resolve(result);
-      }
-      resolve(result);
-    };
-
-    const snapshot = () => [...events.values()].filter((event) => shouldKeepNetworkEvent(event, failuresOnly)).slice(0, maxEvents);
-    const timer = setTimeout(() => {
-      const collected = snapshot();
-      finish({
-        status: "success",
-        reasonCode: REASON_CODES.ok,
-        sessionId,
-        durationMs: Date.now() - startTime,
-        attempts: 1,
-        artifacts: [],
-        data: {
-          dryRun: false,
-          metroBaseUrl,
-          targetId: input.targetId,
-          webSocketDebuggerUrl,
-          collectedCount: collected.length,
-          failuresOnly,
-          events: collected,
-          summary: buildJsNetworkFailureSummary(collected),
-        },
-        nextSuggestions: collected.length === 0 ? ["No matching JS network events arrived before timeout. Confirm the target is active and issuing requests."] : [],
-      });
-    }, timeoutMs);
-    unrefTimer(timer);
-
-    ws.addEventListener("open", () => {
-      ws.send(JSON.stringify({ id: messageId++, method: "Network.enable" }));
-    });
-
-    ws.addEventListener("message", (event) => {
-      try {
-        const message = JSON.parse(String(event.data));
-        const params = isRecord(message?.params) ? message.params : {};
-        const requestId = readNonEmptyString(params, "requestId");
-        if (!requestId) {
-          return;
-        }
-
-        const current = events.get(requestId) ?? { requestId };
-        if (message?.method === "Network.requestWillBeSent") {
-          const request = isRecord(params.request) ? params.request : {};
-          current.url = readNonEmptyString(request, "url") ?? current.url;
-          current.method = readNonEmptyString(request, "method") ?? current.method;
-        }
-        if (message?.method === "Network.responseReceived") {
-          const response = isRecord(params.response) ? params.response : {};
-          current.url = readNonEmptyString(response, "url") ?? current.url;
-          current.status = typeof response.status === "number" ? response.status : current.status;
-          current.statusText = readNonEmptyString(response, "statusText") ?? current.statusText;
-          current.mimeType = readNonEmptyString(response, "mimeType") ?? current.mimeType;
-        }
-        if (message?.method === "Network.loadingFailed") {
-          current.errorText = readNonEmptyString(params, "errorText") ?? current.errorText;
-        }
-
-        events.set(requestId, current);
-
-        if (snapshot().length >= maxEvents) {
-          const collected = snapshot();
-          finish({
-            status: "success",
-            reasonCode: REASON_CODES.ok,
-            sessionId,
-            durationMs: Date.now() - startTime,
-            attempts: 1,
-            artifacts: [],
-            data: {
-              dryRun: false,
-              metroBaseUrl,
-              targetId: input.targetId,
-              webSocketDebuggerUrl,
-              collectedCount: collected.length,
-              failuresOnly,
-              events: collected,
-              summary: buildJsNetworkFailureSummary(collected),
-            },
-            nextSuggestions: [],
-          });
-        }
-      } catch {
-        return;
-      }
-    });
-
-    ws.addEventListener("error", () => {
-      finish({
-        status: "failed",
-        reasonCode: REASON_CODES.configurationError,
-        sessionId,
-        durationMs: Date.now() - startTime,
-        attempts: 1,
-        artifacts: [],
-        data: {
-          dryRun: false,
-          metroBaseUrl,
-          targetId: input.targetId,
-          webSocketDebuggerUrl,
-          collectedCount: snapshot().length,
-          failuresOnly,
-          events: snapshot(),
-          summary: buildJsNetworkFailureSummary(snapshot()),
-        },
-        nextSuggestions: ["Ensure the Metro inspector WebSocket is reachable and that the selected JS target is still attached."],
-      });
-    });
-  });
 }
 
 export async function launchAppWithMaestro(input: LaunchAppInput): Promise<ToolResult<LaunchAppData>> {
