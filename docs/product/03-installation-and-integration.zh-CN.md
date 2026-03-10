@@ -292,6 +292,9 @@ pnpm mcp:stdio
 - 因此不应把 `/data/misc/...` 视为所有设备的唯一真理；对开源用户，更重要的是让工具在可探测到 Android SDK 时推导策略，在探测失败时退回现代默认策略，并让 `doctor` 清楚展示“当前推导/假设的路径”
 - `trace_processor` 也不存在统一安装目录；当前实现会优先读取 `TRACE_PROCESSOR_PATH`，否则先查 `PATH`，再尝试常见 fallback（如 `~/.local/bin/trace_processor`、`/opt/homebrew/bin/trace_processor`、`/usr/local/bin/trace_processor`）
 - `doctor` 现在会明确展示：host 侧最终使用的 `trace_processor` 路径、Android 设备是否暴露 `perfetto`、以及按当前 Android SDK 推导出的 Perfetto config/trace 传输策略；若 SDK 无法探测，则会显示这是“默认现代策略假设”，不是已验证结论
+- Android 侧摘要已比首版更积极：除了 `sched` / `actual_frame_timeline_slice` / `process_counter_track`，现在也会尝试 `thread_state`、通用 `slice` 命名特征、以及更宽松的 `counter_track` 内存轨道来提高 CPU / jank / memory 分类命中率；如果这些 fallback 仍不足，结果依然会诚实返回 `unknown`
+- iOS `Time Profiler` 解析已从纯 token 计数提升为轻量结构化提取：会尝试从 export XML 中聚合 top processes 与 top hotspots；但它仍然是 all-process 视角下的 MVP 摘要，不承诺等价于完整 Instruments 人工分析
+- `doctor` 现在不仅会显示 Android performance strategy，还会尝试验证当前策略下的 config 可写性 / trace 传输 readiness；这些检查能提高可用性判断，但依然不是对所有 OEM 权限模型的绝对保证
 
 当前仓库还新增了一个最小 crash/ANR 证据工具 `get_crash_signals`：
 

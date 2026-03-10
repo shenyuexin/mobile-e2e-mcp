@@ -132,7 +132,9 @@ pnpm --filter @mobile-e2e-mcp/mcp-server exec tsx src/dev-cli.ts --measure-ios-p
 - `collect_debug_evidence` 实机验证：Android 已返回 AI 友好的 log/crash 摘要与 evidence packet；iOS simulator 在无 crash 时会返回空摘要而不是把 manifest 头部误判成 crash
 - `measure_android_performance` 已完成 dry-run 与真实失败路径验证：当宿主机缺少 `trace_processor` 时，会返回结构化 `CONFIGURATION_ERROR`，并保留已生成的 Perfetto config artifact，而不是抛出未结构化异常
 - `measure_android_performance` 现已补到 Android 版本分流：Android 12+ 默认走 `/data/misc/perfetto-configs` 与 `/data/misc/perfetto-traces`；较老版本按官方 caveat 改走 stdin config 与兼容 trace 拉取路径，而不是硬编码单一路径；若 SDK 无法探测，则会退回现代默认策略并在诊断里明确标记为假设
+- `measure_android_performance` 现已补更多 fallback analysis：在缺少 `sched` / `actual_frame_timeline_slice` / `process_counter_track` 时，会继续尝试 `thread_state`、frame-like `slice` 命名、以及更宽松的 `counter_track` 内存轨道，从而减少短窗口 trace 一律 `unknown` 的情况
 - `measure_ios_performance` 已完成 dry-run 验证：当前输出会明确标记 `supportLevel: partial`，说明 xctrace export parser 仍是轻量摘要，不伪装为完整 Instruments 深分析
+- `measure_ios_performance` 现已补轻量结构化 Time Profiler 聚合：会提取 top processes 与 top hotspots，而不再只靠关键词 token 计数；但 support level 仍保持 `partial`
 - `list_js_debug_targets` / `capture_js_console_logs` 已完成 dry-run 与无 Metro 环境下的真实失败语义验证；当 Metro inspector 可达时可直接接入 RN/Expo JS 调试面
 - `capture_js_network_events` 已完成 dry-run 与无 Metro 环境下的真实失败语义验证；`collect_debug_evidence` 现在会尝试一并收集 JS console + JS network snapshot，并在 Metro 不可达时诚实降级为 partial
 - `capture_js_console_logs` 当前已补到结构化 exception 字段，AI 可直接读取 source/line/stack，而不是只看扁平错误文本
@@ -150,6 +152,7 @@ pnpm --filter @mobile-e2e-mcp/mcp-server exec tsx src/dev-cli.ts --measure-ios-p
 - 在 execution evidence 层，`inspect_ui` / `query_ui` / `take_screenshot` / `get_logs` / `get_crash_signals` / `collect_diagnostics` / `collect_debug_evidence` 的 data payload 现在开始附带统一的 `evidence[]` 结构化条目；旧的顶层 `artifacts[]` 仍保留，方便兼容现有调用方
 - `doctor` 现已额外检查 `idb` CLI、`idb_companion` 与 iOS target visibility
 - `doctor` 现已额外展示 Android performance 环境：`trace_processor` 实际解析到的 host 路径、设备侧 `perfetto` 可见性，以及按 Android SDK 推导出的 Perfetto capture strategy；这里展示的是“推导策略/默认假设”，不是对 OEM 权限或目录可写性的最终证明
+- `doctor` 现已额外尝试验证 Android performance readiness：对于当前推导出的 strategy，会进一步检查 config directory / trace transfer 这类真实可执行条件，而不是只停留在工具是否安装
 
 ## 已知限制
 
