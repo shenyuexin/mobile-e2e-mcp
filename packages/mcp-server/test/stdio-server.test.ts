@@ -17,7 +17,13 @@ test("buildToolList includes the new UI tools", () => {
   assert.ok(toolNames.includes("scroll_and_resolve_ui_target"));
   assert.ok(toolNames.includes("scroll_and_tap_element"));
   assert.ok(toolNames.includes("tap_element"));
+  assert.ok(toolNames.includes("tap"));
+  assert.ok(toolNames.includes("type_text"));
   assert.ok(toolNames.includes("type_into_element"));
+  assert.ok(toolNames.includes("run_flow"));
+  assert.ok(toolNames.includes("install_app"));
+  assert.ok(toolNames.includes("launch_app"));
+  assert.ok(toolNames.includes("terminate_app"));
 });
 
 test("handleRequest returns stdio initialize payload", async () => {
@@ -110,6 +116,229 @@ test("handleRequest supports tools/call alias for wait_for_ui", async () => {
   assert.equal(typedResult.reasonCode, "UNSUPPORTED_OPERATION");
   assert.equal(typedResult.data.supportLevel, "partial");
   assert.equal(typedResult.data.polls, 0);
+});
+
+test("handleRequest supports tools/call alias for run_flow dry-run", async () => {
+  const result = await handleRequest({
+    id: 8,
+    method: "tools/call",
+    params: {
+      name: "run_flow",
+      arguments: {
+        sessionId: "stdio-run-flow-dry-run",
+        platform: "android",
+        dryRun: true,
+        runCount: 1,
+      },
+    },
+  });
+  const typedResult = result as {
+    status: string;
+    reasonCode: string;
+    data: { dryRun: boolean; runnerProfile: string };
+  };
+
+  assert.equal(typedResult.status, "success");
+  assert.equal(typedResult.reasonCode, "OK");
+  assert.equal(typedResult.data.dryRun, true);
+  assert.equal(typedResult.data.runnerProfile, "phase1");
+});
+
+test("handleRequest supports tools/call alias for install_app dry-run", async () => {
+  const result = await handleRequest({
+    id: 9,
+    method: "tools/call",
+    params: {
+      name: "install_app",
+      arguments: {
+        sessionId: "stdio-install-app-dry-run",
+        platform: "android",
+        runnerProfile: "native_android",
+        artifactPath: "package.json",
+        dryRun: true,
+      },
+    },
+  });
+  const typedResult = result as {
+    status: string;
+    reasonCode: string;
+    data: { dryRun: boolean; installCommand: string[] };
+  };
+
+  assert.equal(typedResult.status, "success");
+  assert.equal(typedResult.reasonCode, "OK");
+  assert.equal(typedResult.data.dryRun, true);
+  assert.equal(typedResult.data.installCommand.some((item) => item.endsWith("package.json")), true);
+});
+
+test("handleRequest supports tools/call alias for launch_app dry-run", async () => {
+  const result = await handleRequest({
+    id: 10,
+    method: "tools/call",
+    params: {
+      name: "launch_app",
+      arguments: {
+        sessionId: "stdio-launch-app-dry-run",
+        platform: "android",
+        runnerProfile: "native_android",
+        appId: "com.example.demo",
+        dryRun: true,
+      },
+    },
+  });
+  const typedResult = result as {
+    status: string;
+    reasonCode: string;
+    data: { dryRun: boolean; launchCommand: string[] };
+  };
+
+  assert.equal(typedResult.status, "success");
+  assert.equal(typedResult.reasonCode, "OK");
+  assert.equal(typedResult.data.dryRun, true);
+  assert.equal(typedResult.data.launchCommand.includes("monkey"), true);
+});
+
+test("handleRequest supports tools/call alias for terminate_app dry-run", async () => {
+  const result = await handleRequest({
+    id: 11,
+    method: "tools/call",
+    params: {
+      name: "terminate_app",
+      arguments: {
+        sessionId: "stdio-terminate-app-dry-run",
+        platform: "ios",
+        appId: "host.exp.Exponent",
+        dryRun: true,
+      },
+    },
+  });
+  const typedResult = result as {
+    status: string;
+    reasonCode: string;
+    data: { dryRun: boolean; command: string[] };
+  };
+
+  assert.equal(typedResult.status, "success");
+  assert.equal(typedResult.reasonCode, "OK");
+  assert.equal(typedResult.data.dryRun, true);
+  assert.equal(typedResult.data.command[0], "xcrun");
+});
+
+test("handleRequest supports tools/call alias for iOS tap dry-run", async () => {
+  const result = await handleRequest({
+    id: 12,
+    method: "tools/call",
+    params: {
+      name: "tap",
+      arguments: {
+        sessionId: "stdio-ios-tap-dry-run",
+        platform: "ios",
+        x: 12,
+        y: 34,
+        dryRun: true,
+      },
+    },
+  });
+  const typedResult = result as {
+    status: string;
+    reasonCode: string;
+    data: { command: string[] };
+  };
+
+  assert.equal(typedResult.status, "success");
+  assert.equal(typedResult.reasonCode, "OK");
+  assert.deepEqual(typedResult.data.command.slice(1), ["ui", "tap", "12", "34", "--udid", "ADA078B9-3C6B-4875-8B85-A7789F368816"]);
+});
+
+test("handleRequest supports tools/call alias for iOS type_text dry-run", async () => {
+  const result = await handleRequest({
+    id: 13,
+    method: "tools/call",
+    params: {
+      name: "type_text",
+      arguments: {
+        sessionId: "stdio-ios-type-text-dry-run",
+        platform: "ios",
+        text: "hello",
+        dryRun: true,
+      },
+    },
+  });
+  const typedResult = result as {
+    status: string;
+    reasonCode: string;
+    data: { command: string[] };
+  };
+
+  assert.equal(typedResult.status, "success");
+  assert.equal(typedResult.reasonCode, "OK");
+  assert.deepEqual(typedResult.data.command.slice(1), ["ui", "text", "hello", "--udid", "ADA078B9-3C6B-4875-8B85-A7789F368816"]);
+});
+
+
+test("handleRequest supports tools/call alias for start_session", async () => {
+  const result = await handleRequest({
+    id: 14,
+    method: "tools/call",
+    params: {
+      name: "start_session",
+      arguments: {
+        sessionId: "stdio-start-session",
+        platform: "android",
+        profile: "phase1",
+      },
+    },
+  });
+  const typedResult = result as {
+    status: string;
+    reasonCode: string;
+    artifacts: string[];
+    data: { sessionId: string };
+  };
+
+  assert.equal(typedResult.status, "success");
+  assert.equal(typedResult.reasonCode, "OK");
+  assert.equal(typedResult.data.sessionId, "stdio-start-session");
+  assert.equal(typedResult.artifacts.some((item) => item.endsWith("stdio-start-session.json")), true);
+});
+
+test("handleRequest supports tools/call alias for end_session", async () => {
+  await handleRequest({
+    id: 15,
+    method: "tools/call",
+    params: {
+      name: "start_session",
+      arguments: {
+        sessionId: "stdio-end-session",
+        platform: "android",
+        profile: "phase1",
+      },
+    },
+  });
+
+  const result = await handleRequest({
+    id: 16,
+    method: "tools/call",
+    params: {
+      name: "end_session",
+      arguments: {
+        sessionId: "stdio-end-session",
+        artifacts: ["artifacts/demo/output.txt"],
+      },
+    },
+  });
+  const typedResult = result as {
+    status: string;
+    reasonCode: string;
+    artifacts: string[];
+    data: { closed: boolean; endedAt: string };
+  };
+
+  assert.equal(typedResult.status, "success");
+  assert.equal(typedResult.reasonCode, "OK");
+  assert.equal(typedResult.data.closed, true);
+  assert.equal(typeof typedResult.data.endedAt, "string");
+  assert.equal(typedResult.artifacts.some((item) => item.endsWith("stdio-end-session.json")), true);
 });
 
 test("handleRequest supports tools/list alias", async () => {
