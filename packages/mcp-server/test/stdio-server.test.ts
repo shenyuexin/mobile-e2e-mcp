@@ -1,6 +1,16 @@
 import assert from "node:assert/strict";
+import { rm } from "node:fs/promises";
+import path from "node:path";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
+import { buildSessionRecordRelativePath } from "@mobile-e2e-mcp/core";
 import { buildToolList, handleRequest } from "../src/stdio-server.ts";
+
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
+
+async function cleanupSessionArtifact(sessionId: string): Promise<void> {
+  await rm(path.resolve(repoRoot, buildSessionRecordRelativePath(sessionId)), { force: true });
+}
 
 test("buildToolList includes the new UI tools", () => {
   const tools = buildToolList();
@@ -114,7 +124,7 @@ test("handleRequest supports tools/call alias for wait_for_ui", async () => {
 
   assert.equal(typedResult.status, "partial");
   assert.equal(typedResult.reasonCode, "UNSUPPORTED_OPERATION");
-  assert.equal(typedResult.data.supportLevel, "partial");
+  assert.equal(typedResult.data.supportLevel, "full");
   assert.equal(typedResult.data.polls, 0);
 });
 
@@ -276,6 +286,34 @@ test("handleRequest supports tools/call alias for iOS type_text dry-run", async 
 });
 
 
+test("handleRequest supports tools/call alias for iOS scroll_and_resolve_ui_target dry-run", async () => {
+  const result = await handleRequest({
+    id: 17,
+    method: "tools/call",
+    params: {
+      name: "scroll_and_resolve_ui_target",
+      arguments: {
+        sessionId: "stdio-ios-scroll-dry-run",
+        platform: "ios",
+        contentDesc: "View products",
+        maxSwipes: 2,
+        dryRun: true,
+      },
+    },
+  });
+  const typedResult = result as {
+    status: string;
+    reasonCode: string;
+    data: { supportLevel: string; resolution: { status: string }; commandHistory: string[][] };
+  };
+
+  assert.equal(typedResult.status, "partial");
+  assert.equal(typedResult.reasonCode, "UNSUPPORTED_OPERATION");
+  assert.equal(typedResult.data.supportLevel, "full");
+  assert.equal(typedResult.data.resolution.status, "not_executed");
+  assert.equal(typedResult.data.commandHistory[1]?.includes("swipe"), true);
+});
+
 test("handleRequest supports tools/call alias for start_session", async () => {
   const result = await handleRequest({
     id: 14,
@@ -339,6 +377,48 @@ test("handleRequest supports tools/call alias for end_session", async () => {
   assert.equal(typedResult.data.closed, true);
   assert.equal(typeof typedResult.data.endedAt, "string");
   assert.equal(typedResult.artifacts.some((item) => item.endsWith("stdio-end-session.json")), true);
+});
+
+test("handleRequest denies tap under a read-only session policy", async () => {
+  const sessionId = `stdio-read-only-${Date.now()}`;
+  await cleanupSessionArtifact(sessionId);
+
+  try {
+    await handleRequest({
+      id: 18,
+      method: "tools/call",
+      params: {
+        name: "start_session",
+        arguments: {
+          sessionId,
+          platform: "android",
+          profile: "phase1",
+          policyProfile: "read-only",
+        },
+      },
+    });
+
+    const result = await handleRequest({
+      id: 19,
+      method: "tools/call",
+      params: {
+        name: "tap",
+        arguments: {
+          sessionId,
+          platform: "android",
+          x: 10,
+          y: 20,
+          dryRun: true,
+        },
+      },
+    });
+    const typedResult = result as { status: string; reasonCode: string };
+
+    assert.equal(typedResult.status, "failed");
+    assert.equal(typedResult.reasonCode, "POLICY_DENIED");
+  } finally {
+    await cleanupSessionArtifact(sessionId);
+  }
 });
 
 test("handleRequest supports tools/list alias", async () => {

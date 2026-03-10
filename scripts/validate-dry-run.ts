@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 interface ValidationCase {
   name: string;
   cliArgs: string[];
+  allowFailureExit?: boolean;
   validate: (result: unknown) => void;
 }
 
@@ -14,7 +15,7 @@ function repoRootFromScript(): string {
   return path.resolve(path.dirname(scriptPath), "..");
 }
 
-async function runCli(cliArgs: string[]): Promise<unknown> {
+async function runCli(cliArgs: string[], allowFailureExit = false): Promise<unknown> {
   const repoRoot = repoRootFromScript();
   const commandArgs = [
     "--filter",
@@ -42,16 +43,20 @@ async function runCli(cliArgs: string[]): Promise<unknown> {
       stderr += chunk.toString();
     });
     child.on("error", reject);
-    child.on("close", (code) => {
-      if (code === 0) {
-        resolve(stdout);
-        return;
-      }
+      child.on("close", (code) => {
+        if (code === 0 || (allowFailureExit && stdout.trim().startsWith("{"))) {
+          resolve(stdout);
+          return;
+        }
       reject(new Error(`CLI command failed (${String(code)}): ${stderr || stdout}`));
     });
   });
 
-  return JSON.parse(output);
+  const trimmed = output.trim();
+  const firstBrace = trimmed.indexOf("{");
+  const lastBrace = trimmed.lastIndexOf("}");
+  const jsonPayload = firstBrace >= 0 && lastBrace >= firstBrace ? trimmed.slice(firstBrace, lastBrace + 1) : trimmed;
+  return JSON.parse(jsonPayload);
 }
 
 const validationCases: ValidationCase[] = [
@@ -75,7 +80,7 @@ const validationCases: ValidationCase[] = [
       assert.equal(typed.describeCapabilitiesResult.status, "success");
       assert.equal(typed.describeCapabilitiesResult.reasonCode, "OK");
       assert.equal(typed.describeCapabilitiesResult.data.capabilities.platform, "ios");
-      assert.equal(typed.describeCapabilitiesResult.data.capabilities.toolCapabilities.find((tool) => tool.toolName === "wait_for_ui")?.supportLevel, "partial");
+      assert.equal(typed.describeCapabilitiesResult.data.capabilities.toolCapabilities.find((tool) => tool.toolName === "wait_for_ui")?.supportLevel, "full");
     },
   },
   {
@@ -170,7 +175,7 @@ const validationCases: ValidationCase[] = [
       const typed = result as { waitForUiResult: { status: string; reasonCode: string; data: { supportLevel: string; polls: number } } };
       assert.equal(typed.waitForUiResult.status, "partial");
       assert.equal(typed.waitForUiResult.reasonCode, "UNSUPPORTED_OPERATION");
-      assert.equal(typed.waitForUiResult.data.supportLevel, "partial");
+      assert.equal(typed.waitForUiResult.data.supportLevel, "full");
       assert.equal(typed.waitForUiResult.data.polls, 0);
     },
   },
@@ -204,9 +209,33 @@ const validationCases: ValidationCase[] = [
       const typed = result as { typeIntoElementResult: { status: string; reasonCode: string; data: { supportLevel: string; resolution: { status: string }; value: string } } };
       assert.equal(typed.typeIntoElementResult.status, "partial");
       assert.equal(typed.typeIntoElementResult.reasonCode, "UNSUPPORTED_OPERATION");
-      assert.equal(typed.typeIntoElementResult.data.supportLevel, "partial");
-      assert.equal(typed.typeIntoElementResult.data.resolution.status, "unsupported");
+      assert.equal(typed.typeIntoElementResult.data.supportLevel, "full");
+      assert.equal(typed.typeIntoElementResult.data.resolution.status, "not_executed");
       assert.equal(typed.typeIntoElementResult.data.value, "hello");
+    },
+  },
+  {
+    name: "scroll_and_resolve_ui_target iOS dry-run",
+    cliArgs: ["--scroll-and-resolve-ui-target", "--platform", "ios", "--content-desc", "View products", "--max-swipes", "2", "--dry-run"],
+    validate: (result) => {
+      const typed = result as { scrollAndResolveUiTargetResult: { status: string; reasonCode: string; data: { supportLevel: string; resolution: { status: string }; commandHistory: string[][] } } };
+      assert.equal(typed.scrollAndResolveUiTargetResult.status, "partial");
+      assert.equal(typed.scrollAndResolveUiTargetResult.reasonCode, "UNSUPPORTED_OPERATION");
+      assert.equal(typed.scrollAndResolveUiTargetResult.data.supportLevel, "full");
+      assert.equal(typed.scrollAndResolveUiTargetResult.data.resolution.status, "not_executed");
+      assert.equal(typed.scrollAndResolveUiTargetResult.data.commandHistory[1]?.includes("swipe"), true);
+    },
+  },
+  {
+    name: "default run_flow read-only policy denied",
+    cliArgs: ["--platform", "android", "--dry-run", "--run-count", "1", "--session-id", "validate-policy-denied", "--policy-profile", "read-only"],
+    allowFailureExit: true,
+    validate: (result) => {
+      const typed = result as { startResult: { status: string }; runResult: { status: string; reasonCode: string }; endResult: { status: string } };
+      assert.equal(typed.startResult.status, "success");
+      assert.equal(typed.runResult.status, "failed");
+      assert.equal(typed.runResult.reasonCode, "POLICY_DENIED");
+      assert.equal(typed.endResult.status, "success");
     },
   },
   {
@@ -269,15 +298,15 @@ const validationCases: ValidationCase[] = [
       const typed = result as { tapElementResult: { status: string; reasonCode: string; data: { supportLevel: string; resolution?: { status: string } } } };
       assert.equal(typed.tapElementResult.status, "partial");
       assert.equal(typed.tapElementResult.reasonCode, "UNSUPPORTED_OPERATION");
-      assert.equal(typed.tapElementResult.data.supportLevel, "partial");
-      assert.equal(typed.tapElementResult.data.resolution?.status, "unsupported");
+      assert.equal(typed.tapElementResult.data.supportLevel, "full");
+      assert.equal(typed.tapElementResult.data.resolution?.status, "not_executed");
     },
   },
 ];
 
 async function main(): Promise<void> {
   for (const validationCase of validationCases) {
-    const result = await runCli(validationCase.cliArgs);
+    const result = await runCli(validationCase.cliArgs, validationCase.allowFailureExit ?? false);
     validationCase.validate(result);
   }
 }

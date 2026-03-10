@@ -1,6 +1,16 @@
 import assert from "node:assert/strict";
+import { rm } from "node:fs/promises";
+import path from "node:path";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
+import { buildSessionRecordRelativePath } from "@mobile-e2e-mcp/core";
 import { main, parseCliArgs } from "../src/dev-cli.ts";
+
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
+
+async function cleanupSessionArtifact(sessionId: string): Promise<void> {
+  await rm(path.resolve(repoRoot, buildSessionRecordRelativePath(sessionId)), { force: true });
+}
 
 async function runCli(argv: string[]): Promise<unknown> {
   const originalArgv = process.argv;
@@ -140,8 +150,9 @@ test("parseCliArgs captures scroll_and_resolve_ui_target flags", () => {
   assert.equal(options.dryRun, true);
 });
 
-test("parseCliArgs captures scroll_and_tap_element flags", () => {
+test("parseCliArgs captures policy-profile and scroll_and_tap_element flags", () => {
   const options = parseCliArgs([
+    "--policy-profile", "read-only",
     "--scroll-and-tap-element",
     "--platform", "android",
     "--content-desc", "View products",
@@ -149,6 +160,7 @@ test("parseCliArgs captures scroll_and_tap_element flags", () => {
     "--dry-run",
   ]);
 
+  assert.equal(options.policyProfile, "read-only");
   assert.equal(options.scrollAndTapElement, true);
   assert.equal(options.queryContentDesc, "View products");
   assert.equal(options.maxSwipes, 2);
@@ -195,7 +207,7 @@ test("main dispatches wait_for_ui iOS dry-run through the CLI", async () => {
 
   assert.equal(output.waitForUiResult.status, "partial");
   assert.equal(output.waitForUiResult.reasonCode, "UNSUPPORTED_OPERATION");
-  assert.equal(output.waitForUiResult.data.supportLevel, "partial");
+  assert.equal(output.waitForUiResult.data.supportLevel, "full");
   assert.equal(output.waitForUiResult.data.polls, 0);
 });
 
@@ -223,8 +235,31 @@ test("main dispatches scroll_and_resolve_ui_target Android dry-run through the C
   assert.equal(output.scrollAndResolveUiTargetResult.data.swipeDirection, "up");
 });
 
+test("main dispatches scroll_and_resolve_ui_target iOS dry-run through the CLI", async () => {
+  const output = await runCli([
+    "--scroll-and-resolve-ui-target",
+    "--platform", "ios",
+    "--content-desc", "View products",
+    "--max-swipes", "2",
+    "--dry-run",
+  ]) as {
+    scrollAndResolveUiTargetResult: {
+      status: string;
+      reasonCode: string;
+      data: { supportLevel: string; resolution: { status: string }; commandHistory: string[][] };
+    };
+  };
+
+  assert.equal(output.scrollAndResolveUiTargetResult.status, "partial");
+  assert.equal(output.scrollAndResolveUiTargetResult.reasonCode, "UNSUPPORTED_OPERATION");
+  assert.equal(output.scrollAndResolveUiTargetResult.data.supportLevel, "full");
+  assert.equal(output.scrollAndResolveUiTargetResult.data.resolution.status, "not_executed");
+  assert.equal(output.scrollAndResolveUiTargetResult.data.commandHistory[1]?.includes("swipe"), true);
+});
+
 test("main dispatches scroll_and_tap_element Android dry-run through the CLI", async () => {
   const output = await runCli([
+    "--policy-profile", "read-only",
     "--scroll-and-tap-element",
     "--platform", "android",
     "--content-desc", "View products",
@@ -261,8 +296,8 @@ test("main dispatches type_into_element iOS dry-run through the CLI", async () =
 
   assert.equal(output.typeIntoElementResult.status, "partial");
   assert.equal(output.typeIntoElementResult.reasonCode, "UNSUPPORTED_OPERATION");
-  assert.equal(output.typeIntoElementResult.data.supportLevel, "partial");
-  assert.equal(output.typeIntoElementResult.data.resolution.status, "unsupported");
+  assert.equal(output.typeIntoElementResult.data.supportLevel, "full");
+  assert.equal(output.typeIntoElementResult.data.resolution.status, "not_executed");
   assert.equal(output.typeIntoElementResult.data.value, "hello");
 });
 
@@ -302,8 +337,8 @@ test("main dispatches tap_element iOS dry-run through the CLI", async () => {
 
   assert.equal(output.tapElementResult.status, "partial");
   assert.equal(output.tapElementResult.reasonCode, "UNSUPPORTED_OPERATION");
-  assert.equal(output.tapElementResult.data.supportLevel, "partial");
-  assert.equal(output.tapElementResult.data.resolution?.status, "unsupported");
+  assert.equal(output.tapElementResult.data.supportLevel, "full");
+  assert.equal(output.tapElementResult.data.resolution?.status, "not_executed");
 });
 
 test("main dispatches run_flow Android dry-run through the CLI default path", async () => {
@@ -322,6 +357,33 @@ test("main dispatches run_flow Android dry-run through the CLI default path", as
   assert.equal(output.runResult.data.dryRun, true);
   assert.equal(output.runResult.data.runnerProfile, "phase1");
   assert.equal(output.endResult.status, "success");
+});
+
+test("main dispatches read-only policy denial through the default CLI flow", async () => {
+  const sessionId = `cli-read-only-${Date.now()}`;
+  await cleanupSessionArtifact(sessionId);
+
+  try {
+    const output = await runCli([
+      "--platform", "android",
+      "--dry-run",
+      "--run-count", "1",
+      "--session-id", sessionId,
+      "--policy-profile", "read-only",
+    ]) as {
+      startResult: { status: string };
+      runResult: { status: string; reasonCode: string; nextSuggestions: string[] };
+      endResult: { status: string };
+    };
+
+    assert.equal(output.startResult.status, "success");
+    assert.equal(output.runResult.status, "failed");
+    assert.equal(output.runResult.reasonCode, "POLICY_DENIED");
+    assert.equal(output.runResult.nextSuggestions[0]?.includes("read-only"), true);
+    assert.equal(output.endResult.status, "success");
+  } finally {
+    await cleanupSessionArtifact(sessionId);
+  }
 });
 
 test("main dispatches install_app Android dry-run through the CLI", async () => {
@@ -441,7 +503,7 @@ test("main dispatches describe_capabilities through the CLI", async () => {
   assert.equal(output.describeCapabilitiesResult.status, "success");
   assert.equal(output.describeCapabilitiesResult.reasonCode, "OK");
   assert.equal(output.describeCapabilitiesResult.data.capabilities.platform, "ios");
-  assert.equal(output.describeCapabilitiesResult.data.capabilities.toolCapabilities.find((tool) => tool.toolName === "wait_for_ui")?.supportLevel, "partial");
+  assert.equal(output.describeCapabilitiesResult.data.capabilities.toolCapabilities.find((tool) => tool.toolName === "wait_for_ui")?.supportLevel, "full");
 });
 
 test("main dispatches collect_debug_evidence Android dry-run through the CLI", async () => {

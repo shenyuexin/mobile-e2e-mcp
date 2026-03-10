@@ -1,6 +1,16 @@
 import assert from "node:assert/strict";
+import { rm } from "node:fs/promises";
+import path from "node:path";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
+import { buildSessionRecordRelativePath } from "@mobile-e2e-mcp/core";
 import { createServer } from "../src/index.ts";
+
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
+
+async function cleanupSessionArtifact(sessionId: string): Promise<void> {
+  await rm(path.resolve(repoRoot, buildSessionRecordRelativePath(sessionId)), { force: true });
+}
 
 test("createServer lists newly added UI tools", () => {
   const server = createServer();
@@ -33,7 +43,7 @@ test("server invoke returns capability discovery profiles", async () => {
   assert.equal(result.status, "success");
   assert.equal(result.reasonCode, "OK");
   assert.equal(result.data.capabilities.platform, "ios");
-  assert.equal(result.data.capabilities.toolCapabilities.find((tool) => tool.toolName === "wait_for_ui")?.supportLevel, "partial");
+  assert.equal(result.data.capabilities.toolCapabilities.find((tool) => tool.toolName === "wait_for_ui")?.supportLevel, "full");
 });
 
 test("server invoke keeps resolve_ui_target Android dry-run semantics", async () => {
@@ -79,7 +89,7 @@ test("server invoke keeps wait_for_ui iOS partial semantics", async () => {
 
   assert.equal(result.status, "partial");
   assert.equal(result.reasonCode, "UNSUPPORTED_OPERATION");
-  assert.equal(result.data.supportLevel, "partial");
+  assert.equal(result.data.supportLevel, "full");
   assert.equal(result.data.polls, 0);
 });
 
@@ -98,6 +108,23 @@ test("server invoke keeps scroll_and_resolve_ui_target Android dry-run semantics
   assert.equal(result.data.supportLevel, "full");
   assert.equal(result.data.resolution.status, "not_executed");
   assert.equal(result.data.maxSwipes, 2);
+});
+
+test("server invoke previews iOS scroll_and_resolve_ui_target dry-run semantics", async () => {
+  const server = createServer();
+  const result = await server.invoke("scroll_and_resolve_ui_target", {
+    sessionId: "server-scroll-ios-dry-run",
+    platform: "ios",
+    contentDesc: "View products",
+    maxSwipes: 2,
+    dryRun: true,
+  }) as { status: string; reasonCode: string; data: { supportLevel: string; resolution: { status: string }; commandHistory: string[][] } };
+
+  assert.equal(result.status, "partial");
+  assert.equal(result.reasonCode, "UNSUPPORTED_OPERATION");
+  assert.equal(result.data.supportLevel, "full");
+  assert.equal(result.data.resolution.status, "not_executed");
+  assert.equal(result.data.commandHistory[1]?.includes("swipe"), true);
 });
 
 test("server invoke keeps scroll_and_tap_element Android dry-run semantics", async () => {
@@ -128,8 +155,8 @@ test("server invoke keeps type_into_element iOS partial semantics", async () => 
 
   assert.equal(result.status, "partial");
   assert.equal(result.reasonCode, "UNSUPPORTED_OPERATION");
-  assert.equal(result.data.supportLevel, "partial");
-  assert.equal(result.data.resolution.status, "unsupported");
+  assert.equal(result.data.supportLevel, "full");
+  assert.equal(result.data.resolution.status, "not_executed");
 });
 
 test("server invoke keeps tap_element iOS partial semantics", async () => {
@@ -143,8 +170,8 @@ test("server invoke keeps tap_element iOS partial semantics", async () => {
 
   assert.equal(result.status, "partial");
   assert.equal(result.reasonCode, "UNSUPPORTED_OPERATION");
-  assert.equal(result.data.supportLevel, "partial");
-  assert.equal(result.data.resolution?.status, "unsupported");
+  assert.equal(result.data.supportLevel, "full");
+  assert.equal(result.data.resolution?.status, "not_executed");
 });
 
 test("server invoke supports run_flow Android dry-run", async () => {
@@ -236,6 +263,35 @@ test("server invoke supports iOS type_text dry-run through idb", async () => {
   assert.equal(result.status, "success");
   assert.equal(result.reasonCode, "OK");
   assert.deepEqual(result.data.command.slice(1), ["ui", "text", "hello", "--udid", "ADA078B9-3C6B-4875-8B85-A7789F368816"]);
+});
+
+test("server invoke denies tap under a read-only session policy", async () => {
+  const server = createServer();
+  const sessionId = `server-read-only-${Date.now()}`;
+  await cleanupSessionArtifact(sessionId);
+
+  try {
+    const startResult = await server.invoke("start_session", {
+      sessionId,
+      platform: "android",
+      profile: "phase1",
+      policyProfile: "read-only",
+    });
+    assert.equal(startResult.status, "success");
+
+    const result = await server.invoke("tap", {
+      sessionId,
+      platform: "android",
+      x: 10,
+      y: 20,
+      dryRun: true,
+    });
+
+    assert.equal(result.status, "failed");
+    assert.equal(result.reasonCode, "POLICY_DENIED");
+  } finally {
+    await cleanupSessionArtifact(sessionId);
+  }
 });
 
 test("server invoke supports get_crash_signals Android dry-run", async () => {
