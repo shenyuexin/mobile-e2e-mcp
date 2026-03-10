@@ -210,6 +210,59 @@ const validationCases: ValidationCase[] = [
     },
   },
   {
+    name: "install_app Android dry-run",
+    cliArgs: ["--install-app", "--platform", "android", "--runner-profile", "native_android", "--artifact-path", "package.json", "--dry-run"],
+    validate: (result) => {
+      const typed = result as { installAppResult: { status: string; reasonCode: string; data: { dryRun: boolean; installCommand: string[] } } };
+      assert.equal(typed.installAppResult.status, "success");
+      assert.equal(typed.installAppResult.reasonCode, "OK");
+      assert.equal(typed.installAppResult.data.dryRun, true);
+      assert.equal(typed.installAppResult.data.installCommand.some((item) => item.endsWith("package.json")), true);
+    },
+  },
+  {
+    name: "launch_app Android dry-run",
+    cliArgs: ["--launch-app", "--platform", "android", "--runner-profile", "native_android", "--app-id", "com.example.demo", "--dry-run"],
+    validate: (result) => {
+      const typed = result as { launchAppResult: { status: string; reasonCode: string; data: { dryRun: boolean; launchCommand: string[] } } };
+      assert.equal(typed.launchAppResult.status, "success");
+      assert.equal(typed.launchAppResult.reasonCode, "OK");
+      assert.equal(typed.launchAppResult.data.dryRun, true);
+      assert.equal(typed.launchAppResult.data.launchCommand.includes("monkey"), true);
+    },
+  },
+  {
+    name: "terminate_app iOS dry-run",
+    cliArgs: ["--terminate-app", "--platform", "ios", "--app-id", "host.exp.Exponent", "--dry-run"],
+    validate: (result) => {
+      const typed = result as { terminateAppResult: { status: string; reasonCode: string; data: { dryRun: boolean; command: string[] } } };
+      assert.equal(typed.terminateAppResult.status, "success");
+      assert.equal(typed.terminateAppResult.reasonCode, "OK");
+      assert.equal(typed.terminateAppResult.data.dryRun, true);
+      assert.equal(typed.terminateAppResult.data.command[0], "xcrun");
+    },
+  },
+  {
+    name: "tap iOS dry-run",
+    cliArgs: ["--tap", "--platform", "ios", "--x", "12", "--y", "34", "--dry-run"],
+    validate: (result) => {
+      const typed = result as { tapResult: { status: string; reasonCode: string; data: { command: string[] } } };
+      assert.equal(typed.tapResult.status, "success");
+      assert.equal(typed.tapResult.reasonCode, "OK");
+      assert.deepEqual(typed.tapResult.data.command.slice(1), ["ui", "tap", "12", "34", "--udid", "ADA078B9-3C6B-4875-8B85-A7789F368816"]);
+    },
+  },
+  {
+    name: "type_text iOS dry-run",
+    cliArgs: ["--type-text", "--platform", "ios", "--text", "hello", "--dry-run"],
+    validate: (result) => {
+      const typed = result as { typeTextResult: { status: string; reasonCode: string; data: { command: string[] } } };
+      assert.equal(typed.typeTextResult.status, "success");
+      assert.equal(typed.typeTextResult.reasonCode, "OK");
+      assert.deepEqual(typed.typeTextResult.data.command.slice(1), ["ui", "text", "hello", "--udid", "ADA078B9-3C6B-4875-8B85-A7789F368816"]);
+    },
+  },
+  {
     name: "tap_element iOS dry-run",
     cliArgs: ["--tap-element", "--platform", "ios", "--content-desc", "View products", "--dry-run"],
     validate: (result) => {

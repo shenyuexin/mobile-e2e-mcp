@@ -19,7 +19,7 @@ import {
   resolveFirstTapTarget,
   shouldAbortWaitForUiAfterReadFailure,
 } from "../src/ui-model.ts";
-import { buildCapabilityProfile, buildInspectorExceptionLogEntry, buildJsConsoleLogSummary, buildJsDebugTargetSelectionNarrativeLine, buildJsNetworkFailureSummary, buildJsNetworkSuspectSentences, buildLogSummary, collectDebugEvidenceWithMaestro, collectDiagnosticsWithMaestro, describeCapabilitiesWithMaestro, getCrashSignalsWithMaestro, getLogsWithMaestro, inspectUiWithMaestro, rankJsDebugTarget, resolveUiTargetWithMaestro, scrollAndResolveUiTargetWithMaestro, scrollAndTapElementWithMaestro, selectPreferredJsDebugTarget, selectPreferredJsDebugTargetWithReason, takeScreenshotWithMaestro, tapElementWithMaestro, typeIntoElementWithMaestro, waitForUiWithMaestro } from "../src/index.ts";
+import { buildCapabilityProfile, buildInspectorExceptionLogEntry, buildJsConsoleLogSummary, buildJsDebugTargetSelectionNarrativeLine, buildJsNetworkFailureSummary, buildJsNetworkSuspectSentences, buildLogSummary, collectDebugEvidenceWithMaestro, collectDiagnosticsWithMaestro, describeCapabilitiesWithMaestro, getCrashSignalsWithMaestro, getLogsWithMaestro, inspectUiWithMaestro, rankJsDebugTarget, resolveUiTargetWithMaestro, scrollAndResolveUiTargetWithMaestro, scrollAndTapElementWithMaestro, selectPreferredJsDebugTarget, selectPreferredJsDebugTargetWithReason, takeScreenshotWithMaestro, tapElementWithMaestro, tapWithMaestro, typeIntoElementWithMaestro, typeTextWithMaestro, waitForUiWithMaestro } from "../src/index.ts";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 
@@ -569,8 +569,39 @@ test("buildCapabilityProfile stays honest across Android and iOS UI action suppo
   const iosProfile = buildCapabilityProfile("ios", "phase1");
 
   assert.equal(androidProfile.toolCapabilities.find((tool) => tool.toolName === "tap_element")?.supportLevel, "full");
+  assert.equal(iosProfile.toolCapabilities.find((tool) => tool.toolName === "tap")?.supportLevel, "full");
+  assert.equal(iosProfile.toolCapabilities.find((tool) => tool.toolName === "type_text")?.supportLevel, "full");
   assert.equal(iosProfile.toolCapabilities.find((tool) => tool.toolName === "tap_element")?.supportLevel, "partial");
   assert.equal(iosProfile.groups.find((group) => group.groupName === "ui_actions")?.supportLevel, "partial");
+});
+
+test("typeTextWithMaestro previews iOS idb text entry in dry-run mode", async () => {
+  const result = await typeTextWithMaestro({
+    sessionId: "test-type-text-ios",
+    platform: "ios",
+    text: "hello world",
+    dryRun: true,
+  });
+
+  assert.equal(result.status, "success");
+  assert.equal(result.reasonCode, "OK");
+  assert.deepEqual(result.data.command.slice(1), ["ui", "text", "hello world", "--udid", "ADA078B9-3C6B-4875-8B85-A7789F368816"]);
+  assert.equal(result.data.exitCode, 0);
+});
+
+test("tapWithMaestro previews iOS idb coordinate tap in dry-run mode", async () => {
+  const result = await tapWithMaestro({
+    sessionId: "test-tap-ios-direct",
+    platform: "ios",
+    x: 10,
+    y: 20,
+    dryRun: true,
+  });
+
+  assert.equal(result.status, "success");
+  assert.equal(result.reasonCode, "OK");
+  assert.deepEqual(result.data.command.slice(1), ["ui", "tap", "10", "20", "--udid", "ADA078B9-3C6B-4875-8B85-A7789F368816"]);
+  assert.equal(result.data.exitCode, 0);
 });
 
 test("describeCapabilitiesWithMaestro returns a capability profile", async () => {

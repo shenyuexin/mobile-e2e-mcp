@@ -147,6 +147,97 @@ test("server invoke keeps tap_element iOS partial semantics", async () => {
   assert.equal(result.data.resolution?.status, "unsupported");
 });
 
+test("server invoke supports run_flow Android dry-run", async () => {
+  const server = createServer();
+  const result = await server.invoke("run_flow", {
+    sessionId: "server-run-flow-dry-run",
+    platform: "android",
+    dryRun: true,
+    runCount: 1,
+  }) as { status: string; reasonCode: string; data: { dryRun: boolean; runnerProfile: string } };
+
+  assert.equal(result.status, "success");
+  assert.equal(result.reasonCode, "OK");
+  assert.equal(result.data.dryRun, true);
+  assert.equal(result.data.runnerProfile, "phase1");
+});
+
+test("server invoke supports install_app Android dry-run when artifact path exists", async () => {
+  const server = createServer();
+  const result = await server.invoke("install_app", {
+    sessionId: "server-install-app-dry-run",
+    platform: "android",
+    runnerProfile: "native_android",
+    artifactPath: "package.json",
+    dryRun: true,
+  }) as { status: string; reasonCode: string; data: { dryRun: boolean; installCommand: string[] } };
+
+  assert.equal(result.status, "success");
+  assert.equal(result.reasonCode, "OK");
+  assert.equal(result.data.dryRun, true);
+  assert.equal(result.data.installCommand.some((item) => item.endsWith("package.json")), true);
+});
+
+test("server invoke supports launch_app Android dry-run", async () => {
+  const server = createServer();
+  const result = await server.invoke("launch_app", {
+    sessionId: "server-launch-app-dry-run",
+    platform: "android",
+    runnerProfile: "native_android",
+    appId: "com.example.demo",
+    dryRun: true,
+  }) as { status: string; reasonCode: string; data: { dryRun: boolean; launchCommand: string[] } };
+
+  assert.equal(result.status, "success");
+  assert.equal(result.reasonCode, "OK");
+  assert.equal(result.data.dryRun, true);
+  assert.equal(result.data.launchCommand.includes("monkey"), true);
+});
+
+test("server invoke supports terminate_app iOS dry-run", async () => {
+  const server = createServer();
+  const result = await server.invoke("terminate_app", {
+    sessionId: "server-terminate-app-dry-run",
+    platform: "ios",
+    appId: "host.exp.Exponent",
+    dryRun: true,
+  }) as { status: string; reasonCode: string; data: { dryRun: boolean; command: string[] } };
+
+  assert.equal(result.status, "success");
+  assert.equal(result.reasonCode, "OK");
+  assert.equal(result.data.dryRun, true);
+  assert.equal(result.data.command[0], "xcrun");
+});
+
+test("server invoke supports iOS tap dry-run through idb", async () => {
+  const server = createServer();
+  const result = await server.invoke("tap", {
+    sessionId: "server-ios-tap-dry-run",
+    platform: "ios",
+    x: 12,
+    y: 34,
+    dryRun: true,
+  }) as { status: string; reasonCode: string; data: { command: string[] } };
+
+  assert.equal(result.status, "success");
+  assert.equal(result.reasonCode, "OK");
+  assert.deepEqual(result.data.command.slice(1), ["ui", "tap", "12", "34", "--udid", "ADA078B9-3C6B-4875-8B85-A7789F368816"]);
+});
+
+test("server invoke supports iOS type_text dry-run through idb", async () => {
+  const server = createServer();
+  const result = await server.invoke("type_text", {
+    sessionId: "server-ios-type-text-dry-run",
+    platform: "ios",
+    text: "hello",
+    dryRun: true,
+  }) as { status: string; reasonCode: string; data: { command: string[] } };
+
+  assert.equal(result.status, "success");
+  assert.equal(result.reasonCode, "OK");
+  assert.deepEqual(result.data.command.slice(1), ["ui", "text", "hello", "--udid", "ADA078B9-3C6B-4875-8B85-A7789F368816"]);
+});
+
 test("server invoke supports get_crash_signals Android dry-run", async () => {
   const server = createServer();
   const result = await server.invoke("get_crash_signals", {

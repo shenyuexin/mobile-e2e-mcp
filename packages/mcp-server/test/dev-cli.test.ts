@@ -306,6 +306,125 @@ test("main dispatches tap_element iOS dry-run through the CLI", async () => {
   assert.equal(output.tapElementResult.data.resolution?.status, "unsupported");
 });
 
+test("main dispatches run_flow Android dry-run through the CLI default path", async () => {
+  const output = await runCli([
+    "--platform", "android",
+    "--dry-run",
+    "--run-count", "1",
+  ]) as {
+    startResult: { status: string };
+    runResult: { status: string; data: { dryRun: boolean; runnerProfile: string } };
+    endResult: { status: string };
+  };
+
+  assert.equal(output.startResult.status, "success");
+  assert.equal(output.runResult.status, "success");
+  assert.equal(output.runResult.data.dryRun, true);
+  assert.equal(output.runResult.data.runnerProfile, "phase1");
+  assert.equal(output.endResult.status, "success");
+});
+
+test("main dispatches install_app Android dry-run through the CLI", async () => {
+  const output = await runCli([
+    "--install-app",
+    "--platform", "android",
+    "--runner-profile", "native_android",
+    "--artifact-path", "package.json",
+    "--dry-run",
+  ]) as {
+    installAppResult: {
+      status: string;
+      reasonCode: string;
+      data: { dryRun: boolean; installCommand: string[] };
+    };
+  };
+
+  assert.equal(output.installAppResult.status, "success");
+  assert.equal(output.installAppResult.reasonCode, "OK");
+  assert.equal(output.installAppResult.data.dryRun, true);
+  assert.equal(output.installAppResult.data.installCommand.some((item) => item.endsWith("package.json")), true);
+});
+
+test("main dispatches launch_app Android dry-run through the CLI", async () => {
+  const output = await runCli([
+    "--launch-app",
+    "--platform", "android",
+    "--runner-profile", "native_android",
+    "--app-id", "com.example.demo",
+    "--dry-run",
+  ]) as {
+    launchAppResult: {
+      status: string;
+      reasonCode: string;
+      data: { dryRun: boolean; launchCommand: string[] };
+    };
+  };
+
+  assert.equal(output.launchAppResult.status, "success");
+  assert.equal(output.launchAppResult.reasonCode, "OK");
+  assert.equal(output.launchAppResult.data.dryRun, true);
+  assert.equal(output.launchAppResult.data.launchCommand.includes("monkey"), true);
+});
+
+test("main dispatches terminate_app iOS dry-run through the CLI", async () => {
+  const output = await runCli([
+    "--terminate-app",
+    "--platform", "ios",
+    "--app-id", "host.exp.Exponent",
+    "--dry-run",
+  ]) as {
+    terminateAppResult: {
+      status: string;
+      reasonCode: string;
+      data: { dryRun: boolean; command: string[] };
+    };
+  };
+
+  assert.equal(output.terminateAppResult.status, "success");
+  assert.equal(output.terminateAppResult.reasonCode, "OK");
+  assert.equal(output.terminateAppResult.data.dryRun, true);
+  assert.equal(output.terminateAppResult.data.command[0], "xcrun");
+});
+
+test("main dispatches iOS tap dry-run through the CLI", async () => {
+  const output = await runCli([
+    "--tap",
+    "--platform", "ios",
+    "--x", "12",
+    "--y", "34",
+    "--dry-run",
+  ]) as {
+    tapResult: {
+      status: string;
+      reasonCode: string;
+      data: { command: string[] };
+    };
+  };
+
+  assert.equal(output.tapResult.status, "success");
+  assert.equal(output.tapResult.reasonCode, "OK");
+  assert.deepEqual(output.tapResult.data.command.slice(1), ["ui", "tap", "12", "34", "--udid", "ADA078B9-3C6B-4875-8B85-A7789F368816"]);
+});
+
+test("main dispatches iOS type_text dry-run through the CLI", async () => {
+  const output = await runCli([
+    "--type-text",
+    "--platform", "ios",
+    "--text", "hello",
+    "--dry-run",
+  ]) as {
+    typeTextResult: {
+      status: string;
+      reasonCode: string;
+      data: { command: string[] };
+    };
+  };
+
+  assert.equal(output.typeTextResult.status, "success");
+  assert.equal(output.typeTextResult.reasonCode, "OK");
+  assert.deepEqual(output.typeTextResult.data.command.slice(1), ["ui", "text", "hello", "--udid", "ADA078B9-3C6B-4875-8B85-A7789F368816"]);
+});
+
 test("main dispatches describe_capabilities through the CLI", async () => {
   const output = await runCli([
     "--describe-capabilities",
