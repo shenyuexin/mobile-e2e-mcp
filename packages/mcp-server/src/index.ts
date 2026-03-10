@@ -1,4 +1,5 @@
 import { MobileE2EMcpServer } from "./server.js";
+import { enforcePolicyForTool } from "./policy-guard.js";
 import { captureJsConsoleLogs } from "./tools/capture-js-console-logs.js";
 import { captureJsNetworkEvents } from "./tools/capture-js-network-events.js";
 import { collectDebugEvidence } from "./tools/collect-debug-evidence.js";
@@ -28,33 +29,43 @@ import { typeIntoElement } from "./tools/type-into-element.js";
 import { waitForUi } from "./tools/wait-for-ui.js";
 
 export function createServer(): MobileE2EMcpServer {
+  const withPolicy = <TInput, TOutput>(toolName: string, handler: (input: TInput) => Promise<TOutput>) => {
+    return async (input: TInput): Promise<TOutput> => {
+      const denied = await enforcePolicyForTool(toolName, input);
+      if (denied) {
+        return denied as TOutput;
+      }
+      return handler(input);
+    };
+  };
+
   return new MobileE2EMcpServer({
-    capture_js_console_logs: captureJsConsoleLogs,
-    capture_js_network_events: captureJsNetworkEvents,
-    collect_debug_evidence: collectDebugEvidence,
-    collect_diagnostics: collectDiagnostics,
-    describe_capabilities: describeCapabilities,
-    doctor,
-    get_crash_signals: getCrashSignals,
-    get_logs: getLogs,
-    inspect_ui: inspectUi,
-    query_ui: queryUi,
-    resolve_ui_target: resolveUiTarget,
-    scroll_and_resolve_ui_target: scrollAndResolveUiTarget,
-    scroll_and_tap_element: scrollAndTapElement,
-    install_app: installApp,
-    list_js_debug_targets: listJsDebugTargets,
-    launch_app: launchApp,
-    list_devices: listDevices,
-    start_session: startSession,
-    run_flow: runFlow,
-    take_screenshot: takeScreenshot,
-    tap,
-    tap_element: tapElement,
-    terminate_app: terminateApp,
-    type_text: typeText,
-    type_into_element: typeIntoElement,
-    wait_for_ui: waitForUi,
+    capture_js_console_logs: withPolicy("capture_js_console_logs", captureJsConsoleLogs),
+    capture_js_network_events: withPolicy("capture_js_network_events", captureJsNetworkEvents),
+    collect_debug_evidence: withPolicy("collect_debug_evidence", collectDebugEvidence),
+    collect_diagnostics: withPolicy("collect_diagnostics", collectDiagnostics),
+    describe_capabilities: withPolicy("describe_capabilities", describeCapabilities),
+    doctor: withPolicy("doctor", doctor),
+    get_crash_signals: withPolicy("get_crash_signals", getCrashSignals),
+    get_logs: withPolicy("get_logs", getLogs),
+    inspect_ui: withPolicy("inspect_ui", inspectUi),
+    query_ui: withPolicy("query_ui", queryUi),
+    resolve_ui_target: withPolicy("resolve_ui_target", resolveUiTarget),
+    scroll_and_resolve_ui_target: withPolicy("scroll_and_resolve_ui_target", scrollAndResolveUiTarget),
+    scroll_and_tap_element: withPolicy("scroll_and_tap_element", scrollAndTapElement),
+    install_app: withPolicy("install_app", installApp),
+    list_js_debug_targets: withPolicy("list_js_debug_targets", listJsDebugTargets),
+    launch_app: withPolicy("launch_app", launchApp),
+    list_devices: withPolicy("list_devices", listDevices),
+    start_session: async (input) => startSession(input),
+    run_flow: withPolicy("run_flow", runFlow),
+    take_screenshot: withPolicy("take_screenshot", takeScreenshot),
+    tap: withPolicy("tap", tap),
+    tap_element: withPolicy("tap_element", tapElement),
+    terminate_app: withPolicy("terminate_app", terminateApp),
+    type_text: withPolicy("type_text", typeText),
+    type_into_element: withPolicy("type_into_element", typeIntoElement),
+    wait_for_ui: withPolicy("wait_for_ui", waitForUi),
     end_session: endSession,
   });
 }

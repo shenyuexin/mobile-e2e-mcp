@@ -1,4 +1,16 @@
 profiles:
+  sample-harness-default:
+    allow:
+      - inspect
+      - screenshot
+      - logs
+      - tap
+      - type
+      - swipe
+      - install
+      - uninstall
+      - clear-data
+    deny: []
   read-only:
     allow:
       - inspect

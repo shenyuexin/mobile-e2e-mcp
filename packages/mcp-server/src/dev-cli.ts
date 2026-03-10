@@ -52,6 +52,7 @@ interface CliOptions {
   text?: string;
   value?: string;
   runnerProfile?: RunnerProfile;
+  policyProfile?: string;
   flowPath?: string;
   harnessConfigPath?: string;
   sessionId?: string;
@@ -130,6 +131,7 @@ export function parseCliArgs(argv: string[]): CliOptions {
   let textValue: string | undefined;
   let value: string | undefined;
   let runnerProfile: RunnerProfile | undefined;
+  let policyProfile: string | undefined;
   let flowPath: string | undefined;
   let harnessConfigPath: string | undefined;
   let sessionId: string | undefined;
@@ -197,6 +199,7 @@ export function parseCliArgs(argv: string[]): CliOptions {
     else if (arg === "--text" && nextValue) { textValue = nextValue; index += 1; }
     else if (arg === "--value" && nextValue) { value = nextValue; index += 1; }
     else if (arg === "--runner-profile" && isRunnerProfile(nextValue)) { runnerProfile = nextValue; index += 1; }
+    else if (arg === "--policy-profile" && nextValue) { policyProfile = nextValue; index += 1; }
     else if (arg === "--flow-path" && nextValue) { flowPath = nextValue; index += 1; }
     else if (arg === "--harness-config-path" && nextValue) { harnessConfigPath = nextValue; index += 1; }
     else if (arg === "--session-id" && nextValue) { sessionId = nextValue; index += 1; }
@@ -263,6 +266,7 @@ export function parseCliArgs(argv: string[]): CliOptions {
     text: textValue,
     value,
     runnerProfile,
+    policyProfile,
     flowPath,
     harnessConfigPath,
     sessionId,
@@ -633,7 +637,7 @@ export async function main(): Promise<void> {
     return;
   }
 
-  const startInput: StartSessionInput = { platform: cliOptions.platform, profile: cliOptions.runnerProfile ?? null, harnessConfigPath: cliOptions.harnessConfigPath, sessionId: cliOptions.sessionId };
+  const startInput: StartSessionInput = { platform: cliOptions.platform, profile: cliOptions.runnerProfile ?? null, policyProfile: cliOptions.policyProfile, harnessConfigPath: cliOptions.harnessConfigPath, sessionId: cliOptions.sessionId };
   const startResult = await server.invoke("start_session", startInput);
   const runInput: RunFlowInput = { sessionId: startResult.data.sessionId, platform: cliOptions.platform, runnerProfile: cliOptions.runnerProfile, runCount: cliOptions.runCount, dryRun: cliOptions.dryRun, flowPath: cliOptions.flowPath, harnessConfigPath: cliOptions.harnessConfigPath };
   const runResult = await server.invoke("run_flow", runInput);
