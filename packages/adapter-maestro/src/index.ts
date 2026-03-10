@@ -291,29 +291,60 @@ export interface SessionDefaults {
 }
 
 const DEFAULT_HARNESS_CONFIG_PATH = "configs/harness/sample-harness.yaml";
-const DEFAULT_IDB_CLI_PATH = "/Users/linan/Library/Python/3.9/bin/idb";
-const DEFAULT_IDB_COMPANION_PATH = "/Users/linan/.local/share/idb-companion.universal/bin/idb_companion";
+
+function resolveExecutableFromPath(executableName: string): string | undefined {
+  const pathValue = process.env.PATH;
+  if (!pathValue) {
+    return undefined;
+  }
+
+  for (const entry of pathValue.split(path.delimiter)) {
+    if (!entry) {
+      continue;
+    }
+    const candidate = path.join(entry, executableName);
+    if (existsSync(candidate)) {
+      return candidate;
+    }
+  }
+
+  return undefined;
+}
+
+function resolveConfiguredExecutable(configuredValue: string | undefined, fallbackExecutableName: string): string | undefined {
+  if (configuredValue) {
+    if (configuredValue.includes(path.sep)) {
+      if (!existsSync(configuredValue)) {
+        throw new Error(`Configured executable path does not exist: ${configuredValue}`);
+      }
+      return configuredValue;
+    }
+    const resolvedConfiguredValue = resolveExecutableFromPath(configuredValue);
+    if (!resolvedConfiguredValue) {
+      throw new Error(`Configured executable was not found on PATH: ${configuredValue}`);
+    }
+    return resolvedConfiguredValue;
+  }
+
+  return resolveExecutableFromPath(fallbackExecutableName);
+}
 
 function resolveIdbCliPath(): string | undefined {
-  const envPath = process.env.IDB_CLI_PATH;
-  if (envPath && existsSync(envPath)) {
-    return envPath;
-  }
-  return existsSync(DEFAULT_IDB_CLI_PATH) ? DEFAULT_IDB_CLI_PATH : undefined;
+  return resolveConfiguredExecutable(process.env.IDB_CLI_PATH, "idb");
 }
 
 function resolveIdbCompanionPath(): string | undefined {
-  const envPath = process.env.IDB_COMPANION_PATH;
-  if (envPath && existsSync(envPath)) {
-    return envPath;
-  }
-  return existsSync(DEFAULT_IDB_COMPANION_PATH) ? DEFAULT_IDB_COMPANION_PATH : undefined;
+  return resolveConfiguredExecutable(process.env.IDB_COMPANION_PATH, "idb_companion");
 }
 
 function buildIdbCommand(baseArgs: string[]): string[] {
   const idbCliPath = resolveIdbCliPath() ?? "idb";
   const companionPath = resolveIdbCompanionPath();
   return companionPath ? [idbCliPath, "--companion-path", companionPath, ...baseArgs] : [idbCliPath, ...baseArgs];
+}
+
+async function probeIdbAvailability(repoRoot: string): Promise<CommandExecution | undefined> {
+  return executeRunner(buildIdbCommand(["--help"]), repoRoot, process.env).catch(() => undefined);
 }
 
 function buildExecutionEvidence(kind: ExecutionEvidence["kind"], pathValue: string, supportLevel: "full" | "partial", description: string): ExecutionEvidence {
@@ -549,6 +580,7 @@ function buildDebugNarrative(params: {
   appFilterApplied: boolean;
   logSummary?: LogSummary;
   crashSummary?: LogSummary;
+  jsNetworkSummary?: JsNetworkFailureSummary;
   includeDiagnostics: boolean;
   diagnosticsArtifacts: number;
 }): string[] {
@@ -569,6 +601,10 @@ function buildDebugNarrative(params: {
 
   if (params.logSummary) {
     narrative.push(`Log capture scanned ${String(params.logSummary.totalLines)} lines and flagged ${String(params.logSummary.sampleLines.length)} interesting lines for AI review.`);
+  }
+
+  if (params.jsNetworkSummary && params.jsNetworkSummary.failedRequestCount > 0) {
+    narrative.push(...buildJsNetworkSuspectSentences(params.jsNetworkSummary));
   }
 
   if (params.includeDiagnostics) {
@@ -1958,32 +1994,36 @@ export async function typeTextWithMaestro(input: TypeTextInput): Promise<ToolRes
   const selection = await loadHarnessSelection(repoRoot, input.platform, runnerProfile, input.harnessConfigPath ?? DEFAULT_HARNESS_CONFIG_PATH);
   const deviceId = input.deviceId ?? selection.deviceId ?? (input.platform === "android" ? "emulator-5554" : "ADA078B9-3C6B-4875-8B85-A7789F368816");
 
-  if (input.platform === "ios") {
-    return {
-      status: "partial",
-      reasonCode: REASON_CODES.unsupportedOperation,
-      sessionId: input.sessionId,
-      durationMs: Date.now() - startTime,
-      attempts: 1,
-      artifacts: [],
-      data: { dryRun: Boolean(input.dryRun), runnerProfile, text: input.text, command: [], exitCode: null },
-      nextSuggestions: ["type_text currently executes Android input text only. iOS text entry is not yet wired through this repo."],
-    };
-  }
-
-  const escaped = input.text.replaceAll(" ", "%s");
-  const command = ["adb", "-s", deviceId, "shell", "input", "text", escaped];
+  const command = input.platform === "ios"
+    ? buildIdbCommand(["ui", "text", input.text, "--udid", deviceId])
+    : ["adb", "-s", deviceId, "shell", "input", "text", input.text.replaceAll(" ", "%s")];
   if (input.dryRun) {
     return {
-      status: "partial",
-      reasonCode: REASON_CODES.unsupportedOperation,
+      status: input.platform === "ios" ? "success" : "partial",
+      reasonCode: input.platform === "ios" ? REASON_CODES.ok : REASON_CODES.unsupportedOperation,
       sessionId: input.sessionId,
       durationMs: Date.now() - startTime,
       attempts: 1,
       artifacts: [],
       data: { dryRun: true, runnerProfile, text: input.text, command, exitCode: 0 },
-      nextSuggestions: ["Run type_text without dryRun to perform Android text entry."],
+      nextSuggestions: [input.platform === "ios" ? "Run type_text without dryRun to perform iOS simulator text entry through idb." : "Run type_text without dryRun to perform Android text entry."],
     };
+  }
+
+  if (input.platform === "ios") {
+    const idbProbe = await probeIdbAvailability(repoRoot);
+    if (!idbProbe || idbProbe.exitCode !== 0) {
+      return {
+        status: "partial",
+        reasonCode: REASON_CODES.configurationError,
+        sessionId: input.sessionId,
+        durationMs: Date.now() - startTime,
+        attempts: 1,
+        artifacts: [],
+        data: { dryRun: false, runnerProfile, text: input.text, command, exitCode: idbProbe?.exitCode ?? null },
+        nextSuggestions: ["iOS type_text requires idb. Install fb-idb and idb_companion, or set IDB_CLI_PATH/IDB_COMPANION_PATH before retrying."],
+      };
+    }
   }
 
   const execution = await executeRunner(command, repoRoot, process.env);
@@ -1995,7 +2035,7 @@ export async function typeTextWithMaestro(input: TypeTextInput): Promise<ToolRes
     attempts: 1,
     artifacts: [],
     data: { dryRun: false, runnerProfile, text: input.text, command, exitCode: execution.exitCode },
-    nextSuggestions: execution.exitCode === 0 ? [] : ["Check Android device state and focused input field before retrying type_text."],
+    nextSuggestions: execution.exitCode === 0 ? [] : [input.platform === "ios" ? "Check the selected simulator, focused element, and idb companion availability before retrying type_text." : "Check Android device state and focused input field before retrying type_text."],
   };
 }
 
@@ -3092,20 +3132,9 @@ export async function tapWithMaestro(input: TapInput): Promise<ToolResult<TapDat
   const selection = await loadHarnessSelection(repoRoot, input.platform, runnerProfile, input.harnessConfigPath ?? DEFAULT_HARNESS_CONFIG_PATH);
   const deviceId = input.deviceId ?? selection.deviceId ?? (input.platform === "android" ? "emulator-5554" : "ADA078B9-3C6B-4875-8B85-A7789F368816");
 
-  if (input.platform === "ios") {
-    return {
-      status: "partial",
-      reasonCode: REASON_CODES.unsupportedOperation,
-      sessionId: input.sessionId,
-      durationMs: Date.now() - startTime,
-      attempts: 1,
-      artifacts: [],
-      data: { dryRun: Boolean(input.dryRun), runnerProfile, x: input.x, y: input.y, command: [], exitCode: null },
-      nextSuggestions: ["tap currently executes Android coordinate taps only. iOS coordinate tap is not yet wired through this repo."],
-    };
-  }
-
-  const command = ["adb", "-s", deviceId, "shell", "input", "tap", String(input.x), String(input.y)];
+  const command = input.platform === "ios"
+    ? buildIdbCommand(["ui", "tap", String(input.x), String(input.y), "--udid", deviceId])
+    : ["adb", "-s", deviceId, "shell", "input", "tap", String(input.x), String(input.y)];
   if (input.dryRun) {
     return {
       status: "success",
@@ -3115,8 +3144,24 @@ export async function tapWithMaestro(input: TapInput): Promise<ToolResult<TapDat
       attempts: 1,
       artifacts: [],
       data: { dryRun: true, runnerProfile, x: input.x, y: input.y, command, exitCode: 0 },
-      nextSuggestions: ["Run tap without dryRun to perform the actual Android coordinate tap."],
+      nextSuggestions: [input.platform === "ios" ? "Run tap without dryRun to perform the actual iOS simulator coordinate tap through idb." : "Run tap without dryRun to perform the actual Android coordinate tap."],
     };
+  }
+
+  if (input.platform === "ios") {
+    const idbProbe = await probeIdbAvailability(repoRoot);
+    if (!idbProbe || idbProbe.exitCode !== 0) {
+      return {
+        status: "partial",
+        reasonCode: REASON_CODES.configurationError,
+        sessionId: input.sessionId,
+        durationMs: Date.now() - startTime,
+        attempts: 1,
+        artifacts: [],
+        data: { dryRun: false, runnerProfile, x: input.x, y: input.y, command, exitCode: idbProbe?.exitCode ?? null },
+        nextSuggestions: ["iOS tap requires idb. Install fb-idb and idb_companion, or set IDB_CLI_PATH/IDB_COMPANION_PATH before retrying."],
+      };
+    }
   }
 
   const execution = await executeRunner(command, repoRoot, process.env);
@@ -3128,7 +3173,7 @@ export async function tapWithMaestro(input: TapInput): Promise<ToolResult<TapDat
     attempts: 1,
     artifacts: [],
     data: { dryRun: false, runnerProfile, x: input.x, y: input.y, command, exitCode: execution.exitCode },
-    nextSuggestions: execution.exitCode === 0 ? [] : ["Check Android device state and coordinates before retrying tap."],
+    nextSuggestions: execution.exitCode === 0 ? [] : [input.platform === "ios" ? "Check the selected simulator coordinates and idb companion availability before retrying tap." : "Check Android device state and coordinates before retrying tap."],
   };
 }
 
@@ -3159,7 +3204,7 @@ export async function inspectUiWithMaestro(input: InspectUiInput): Promise<ToolR
       };
     }
 
-    const idbProbe = await executeRunner(buildIdbCommand(["--help"]), repoRoot, process.env).catch(() => undefined);
+    const idbProbe = await probeIdbAvailability(repoRoot);
     if (!idbProbe || idbProbe.exitCode !== 0) {
       return {
         status: "partial",
@@ -3324,7 +3369,7 @@ export async function queryUiWithMaestro(input: QueryUiInput): Promise<ToolResul
       };
     }
 
-    const idbProbe = await executeRunner(buildIdbCommand(["--help"]), repoRoot, process.env).catch(() => undefined);
+    const idbProbe = await probeIdbAvailability(repoRoot);
     if (!idbProbe || idbProbe.exitCode !== 0) {
       return {
         status: "partial",
@@ -4025,6 +4070,7 @@ export async function collectDebugEvidenceWithMaestro(input: CollectDebugEvidenc
     appFilterApplied: logsResult.data.appFilterApplied,
     logSummary: logsResult.data.summary,
     crashSummary: crashResult.data.summary,
+    jsNetworkSummary: jsNetworkResult?.data.summary,
     includeDiagnostics: Boolean(input.includeDiagnostics),
     diagnosticsArtifacts: diagnosticsResult?.data.artifactCount ?? 0,
   });
@@ -4728,9 +4774,18 @@ export async function runDoctor(
   checks.push(await checkCommandVersion(repoRoot, "adb", ["version"], "adb"));
   checks.push(await checkCommandVersion(repoRoot, "xcrun", ["simctl", "help"], "xcrun simctl"));
   checks.push(await checkCommandVersion(repoRoot, "maestro", ["--version"], "maestro"));
-  const idbCliPath = resolveIdbCliPath();
-  checks.push(idbCliPath ? await checkCommandVersion(repoRoot, idbCliPath, ["--help"], "idb") : summarizeInfoCheck("idb", "fail", "No idb CLI binary is configured."));
-  checks.push(summarizeInfoCheck("idb companion", resolveIdbCompanionPath() ? "pass" : "fail", resolveIdbCompanionPath() ? `${resolveIdbCompanionPath()} is available.` : "No idb_companion binary is configured."));
+  let idbCliPath: string | undefined;
+  let idbCompanionPath: string | undefined;
+  try {
+    idbCliPath = resolveIdbCliPath();
+    idbCompanionPath = resolveIdbCompanionPath();
+    checks.push(idbCliPath ? await checkCommandVersion(repoRoot, idbCliPath, ["--help"], "idb") : summarizeInfoCheck("idb", "fail", "No idb CLI binary is configured."));
+    checks.push(summarizeInfoCheck("idb companion", idbCompanionPath ? "pass" : "fail", idbCompanionPath ? `${idbCompanionPath} is available.` : "No idb_companion binary is configured."));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    checks.push(summarizeInfoCheck("idb", "fail", message));
+    checks.push(summarizeInfoCheck("idb companion", "warn", message));
+  }
   try {
     const idbTargetResult = await executeRunner(buildIdbCommand(["list-targets"]), repoRoot, process.env);
     const targetUdid = process.env.SIM_UDID ?? "ADA078B9-3C6B-4875-8B85-A7789F368816";
