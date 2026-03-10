@@ -65,6 +65,9 @@ export function requiredPolicyScopesForTool(toolName: string): string[] {
   if (["get_logs", "get_crash_signals", "collect_diagnostics", "collect_debug_evidence", "capture_js_console_logs", "capture_js_network_events", "list_js_debug_targets"].includes(toolName)) {
     return ["logs"];
   }
+  if (["measure_android_performance", "measure_ios_performance"].includes(toolName)) {
+    return ["performance"];
+  }
   if (["tap", "tap_element", "launch_app", "terminate_app"].includes(toolName)) {
     return ["tap"];
   }

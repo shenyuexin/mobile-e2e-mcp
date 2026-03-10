@@ -2,6 +2,7 @@ import type { CapabilityGroup, CapabilityProfile, CapabilitySupportLevel, Platfo
 
 const FULL: CapabilitySupportLevel = "full";
 const PARTIAL: CapabilitySupportLevel = "partial";
+const UNSUPPORTED: CapabilitySupportLevel = "unsupported";
 
 function buildToolCapability(toolName: string, supportLevel: CapabilitySupportLevel, note: string, requiresSession = true): ToolCapability {
   return { toolName, supportLevel, note, requiresSession };
@@ -17,6 +18,8 @@ function buildAndroidToolCapabilities(): ToolCapability[] {
     buildToolCapability("doctor", FULL, "Environment and device readiness checks are fully supported.", false),
     buildToolCapability("get_crash_signals", FULL, "Android crash and ANR signal capture is supported."),
     buildToolCapability("get_logs", FULL, "Android logcat capture is supported."),
+    buildToolCapability("measure_android_performance", FULL, "Android time-window performance capture is supported through Perfetto plus trace_processor summary generation."),
+    buildToolCapability("measure_ios_performance", UNSUPPORTED, "iOS performance capture is not available on Android targets."),
     buildToolCapability("inspect_ui", FULL, "Android UI hierarchy capture is fully supported."),
     buildToolCapability("query_ui", FULL, "Android UI query filtering is fully supported."),
     buildToolCapability("resolve_ui_target", FULL, "Android target resolution is fully supported."),
@@ -47,6 +50,8 @@ function buildIosToolCapabilities(): ToolCapability[] {
     buildToolCapability("doctor", FULL, "Environment and simulator readiness checks are fully supported.", false),
     buildToolCapability("get_crash_signals", FULL, "iOS simulator crash manifest capture is supported."),
     buildToolCapability("get_logs", FULL, "iOS simulator log capture is supported."),
+    buildToolCapability("measure_android_performance", UNSUPPORTED, "Android Perfetto performance capture is not available on iOS targets."),
+    buildToolCapability("measure_ios_performance", PARTIAL, "iOS time-window performance capture is supported through xctrace with a lightweight export parser."),
     buildToolCapability("inspect_ui", PARTIAL, "iOS can capture hierarchy artifacts through idb, but downstream query and action parity remains partial."),
     buildToolCapability("query_ui", FULL, "iOS query_ui can filter captured hierarchy nodes through idb-backed structured matching."),
     buildToolCapability("resolve_ui_target", FULL, "iOS target resolution can resolve structured hierarchy matches through idb-backed capture."),
@@ -83,7 +88,7 @@ export function buildCapabilityProfile(platform: Platform, runnerProfile: Runner
     groups: [
       summarizeGroup(toolCapabilities, "session_management", ["describe_capabilities", "start_session", "run_flow", "end_session"], "Session lifecycle and capability discovery layer."),
       summarizeGroup(toolCapabilities, "app_lifecycle", ["install_app", "launch_app", "terminate_app"], "Install, launch, and terminate application workflows."),
-      summarizeGroup(toolCapabilities, "artifacts_and_diagnostics", ["take_screenshot", "get_logs", "get_crash_signals", "collect_debug_evidence", "collect_diagnostics"], "Evidence capture and diagnostics collection tools."),
+      summarizeGroup(toolCapabilities, "artifacts_and_diagnostics", ["take_screenshot", "get_logs", "get_crash_signals", "collect_debug_evidence", "collect_diagnostics", "measure_android_performance", "measure_ios_performance"], "Evidence capture, diagnostics collection, and lightweight performance analysis tools."),
       summarizeGroup(toolCapabilities, "ui_inspection", ["inspect_ui", "query_ui", "resolve_ui_target", "wait_for_ui", "scroll_and_resolve_ui_target"], "Hierarchy capture, querying, target resolution, and wait logic."),
       summarizeGroup(toolCapabilities, "ui_actions", ["tap", "tap_element", "type_text", "type_into_element"], "Coordinate and element-level UI action tooling."),
     ],

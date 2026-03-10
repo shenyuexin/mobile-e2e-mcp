@@ -4,6 +4,7 @@ profiles:
       - inspect
       - screenshot
       - logs
+      - performance
       - tap
       - type
       - swipe
@@ -16,6 +17,7 @@ profiles:
       - inspect
       - screenshot
       - logs
+      - performance
     deny:
       - tap
       - type
@@ -26,6 +28,7 @@ profiles:
       - inspect
       - screenshot
       - logs
+      - performance
       - tap
       - type
       - swipe
@@ -36,6 +39,7 @@ profiles:
       - inspect
       - screenshot
       - logs
+      - performance
       - tap
       - type
       - swipe
