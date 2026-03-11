@@ -19,6 +19,7 @@
     "validate:dry-run": "pnpm build && tsx scripts/validate-dry-run.ts",
     "validate:phase3-samples": "pnpm build && tsx scripts/validate-phase3-samples.ts",
     "validate:phase3-real-run": "bash scripts/dev/run-sample-phase-matrix.sh \"${PHASE1_IOS_RUNS:-1}\" \"${PHASE1_ANDROID_RUNS:-1}\" \"${PHASE3_FLUTTER_RUNS:-1}\" \"${PHASE3_NATIVE_ANDROID_RUNS:-1}\" \"${PHASE3_NATIVE_IOS_RUNS:-1}\"",
+    "validate:bounded-auto-remediation-real-run": "pnpm build && tsx scripts/validate-bounded-auto-remediation-real-run.ts",
     "mcp:dev": "pnpm build && pnpm --filter @mobile-e2e-mcp/mcp-server dev",
     "mcp:stdio": "pnpm build && pnpm --filter @mobile-e2e-mcp/mcp-server stdio"
   },
