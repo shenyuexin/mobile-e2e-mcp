@@ -1,6 +1,8 @@
-import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
+import { mkdir, readdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { ActionOutcomeSummary, EvidenceDeltaSummary, ExecutionEvidence, FailureSignature, ReasonCode, Session, SessionTimelineEvent, StateSummary, ToolStatus } from "@mobile-e2e-mcp/contracts";
+import { buildSessionAuditRecord, loadArtifactGovernanceConfig, loadSessionAuditSchemaConfig, type SessionAuditRecord } from "./governance.js";
 
 export interface PersistedSessionRecord {
   session: Session;
@@ -12,6 +14,7 @@ export interface PersistedSessionRecord {
 
 export interface PersistEndedSessionResult {
   relativePath?: string;
+  auditPath?: string;
   closed: boolean;
   endedAt?: string;
   finalized: boolean;
@@ -19,6 +22,7 @@ export interface PersistEndedSessionResult {
 
 export interface PersistSessionStateResult {
   relativePath?: string;
+  auditPath?: string;
   updated: boolean;
 }
 
@@ -36,6 +40,11 @@ export interface PersistedActionRecord {
 export interface PersistActionRecordResult {
   relativePath?: string;
   updated: boolean;
+}
+
+export interface PersistStartedSessionResult {
+  relativePath: string;
+  auditPath?: string;
 }
 
 export interface TimelineQueryResult {
@@ -57,6 +66,11 @@ export interface PersistedBaselineIndexEntry {
   actionType: ActionOutcomeSummary["actionType"];
   screenId?: string;
   updatedAt: string;
+}
+
+export function buildSessionAuditRelativePath(sessionId: string): string {
+  assertSafeSessionId(sessionId);
+  return path.posix.join("artifacts", "audit", `${sessionId}.json`);
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -99,6 +113,10 @@ function buildActionRecordAbsolutePath(repoRoot: string, actionId: string): stri
   return path.resolve(repoRoot, buildActionRecordRelativePath(actionId));
 }
 
+function buildSessionAuditAbsolutePath(repoRoot: string, sessionId: string): string {
+  return path.resolve(repoRoot, buildSessionAuditRelativePath(sessionId));
+}
+
 function buildActionsRootAbsolutePath(repoRoot: string): string {
   return path.resolve(repoRoot, "artifacts", "actions");
 }
@@ -110,17 +128,34 @@ function buildAiFirstIndexAbsolutePath(repoRoot: string, fileName: string): stri
 async function writeSessionRecord(repoRoot: string, sessionId: string, record: PersistedSessionRecord): Promise<string> {
   const relativePath = buildSessionRecordRelativePath(sessionId);
   const absolutePath = buildSessionRecordAbsolutePath(repoRoot, sessionId);
-  await mkdir(path.dirname(absolutePath), { recursive: true });
-  await writeFile(absolutePath, JSON.stringify(record, null, 2) + "\n", "utf8");
+  await writeJsonFile(absolutePath, record);
   return relativePath;
 }
 
 async function writeActionRecord(repoRoot: string, actionId: string, record: PersistedActionRecord): Promise<string> {
   const relativePath = buildActionRecordRelativePath(actionId);
   const absolutePath = buildActionRecordAbsolutePath(repoRoot, actionId);
-  await mkdir(path.dirname(absolutePath), { recursive: true });
-  await writeFile(absolutePath, JSON.stringify(record, null, 2) + "\n", "utf8");
+  await writeJsonFile(absolutePath, record);
   return relativePath;
+}
+
+async function writeSessionAuditRecord(repoRoot: string, sessionId: string, record: SessionAuditRecord): Promise<string> {
+  const relativePath = buildSessionAuditRelativePath(sessionId);
+  const absolutePath = buildSessionAuditAbsolutePath(repoRoot, sessionId);
+  await writeJsonFile(absolutePath, record);
+  return relativePath;
+}
+
+async function syncSessionAuditRecord(repoRoot: string, record: PersistedSessionRecord): Promise<string | undefined> {
+  try {
+    const [governanceConfig, schemaConfig] = await Promise.all([
+      loadArtifactGovernanceConfig(repoRoot),
+      loadSessionAuditSchemaConfig(repoRoot),
+    ]);
+    return await writeSessionAuditRecord(repoRoot, record.session.sessionId, buildSessionAuditRecord(record, governanceConfig, schemaConfig));
+  } catch {
+    return undefined;
+  }
 }
 
 export async function loadSessionRecord(repoRoot: string, sessionId: string): Promise<PersistedSessionRecord | undefined> {
@@ -136,6 +171,9 @@ export async function loadSessionRecord(repoRoot: string, sessionId: string): Pr
     if ((error as NodeJS.ErrnoException).code === "ENOENT") {
       return undefined;
     }
+    if (error instanceof SyntaxError) {
+      return undefined;
+    }
     throw error;
   }
 }
@@ -147,6 +185,9 @@ export async function loadActionRecord(repoRoot: string, actionId: string): Prom
     return JSON.parse(content) as PersistedActionRecord;
   } catch (error: unknown) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      return undefined;
+    }
+    if (error instanceof SyntaxError) {
       return undefined;
     }
     throw error;
@@ -232,7 +273,14 @@ async function readJsonFile<T>(absolutePath: string, fallback: T): Promise<T> {
 
 async function writeJsonFile(absolutePath: string, value: unknown): Promise<void> {
   await mkdir(path.dirname(absolutePath), { recursive: true });
-  await writeFile(absolutePath, JSON.stringify(value, null, 2) + "\n", "utf8");
+  const tempPath = path.join(path.dirname(absolutePath), `.${path.basename(absolutePath)}.${randomUUID()}.tmp`);
+  try {
+    await writeFile(tempPath, JSON.stringify(value, null, 2) + "\n", "utf8");
+    await rename(tempPath, absolutePath);
+  } catch (error: unknown) {
+    await unlink(tempPath).catch(() => undefined);
+    throw error;
+  }
 }
 
 export async function recordFailureSignature(repoRoot: string, entry: PersistedFailureIndexEntry): Promise<void> {
@@ -257,13 +305,20 @@ export async function loadBaselineIndex(repoRoot: string): Promise<PersistedBase
   return readJsonFile<PersistedBaselineIndexEntry[]>(buildAiFirstIndexAbsolutePath(repoRoot, "baseline-index.json"), []);
 }
 
-export async function persistStartedSession(repoRoot: string, session: Session): Promise<string> {
-  return writeSessionRecord(repoRoot, session.sessionId, {
+export async function loadSessionAuditRecord(repoRoot: string, sessionId: string): Promise<SessionAuditRecord | undefined> {
+  return readJsonFile<SessionAuditRecord | undefined>(buildSessionAuditAbsolutePath(repoRoot, sessionId), undefined);
+}
+
+export async function persistStartedSession(repoRoot: string, session: Session): Promise<PersistStartedSessionResult> {
+  const record: PersistedSessionRecord = {
     session,
     closed: false,
     artifacts: [],
     updatedAt: new Date().toISOString(),
-  });
+  };
+  const relativePath = await writeSessionRecord(repoRoot, session.sessionId, record);
+  const auditPath = await syncSessionAuditRecord(repoRoot, record);
+  return { relativePath, auditPath };
 }
 
 export async function persistEndedSession(repoRoot: string, sessionId: string, artifacts: string[]): Promise<PersistEndedSessionResult> {
@@ -273,8 +328,10 @@ export async function persistEndedSession(repoRoot: string, sessionId: string, a
   }
 
   if (existing.closed) {
+    const auditPath = await syncSessionAuditRecord(repoRoot, existing);
     return {
       relativePath: buildSessionRecordRelativePath(sessionId),
+      auditPath,
       closed: true,
       endedAt: existing.endedAt,
       finalized: true,
@@ -294,14 +351,16 @@ export async function persistEndedSession(repoRoot: string, sessionId: string, a
     ],
   };
 
-  const relativePath = await writeSessionRecord(repoRoot, sessionId, {
+  const nextRecord: PersistedSessionRecord = {
     session: nextSession,
     closed: true,
     endedAt,
     artifacts,
     updatedAt: endedAt,
-  });
-  return { relativePath, closed: true, endedAt, finalized: true };
+  };
+  const relativePath = await writeSessionRecord(repoRoot, sessionId, nextRecord);
+  const auditPath = await syncSessionAuditRecord(repoRoot, nextRecord);
+  return { relativePath, auditPath, closed: true, endedAt, finalized: true };
 }
 
 export async function persistSessionState(
@@ -318,7 +377,7 @@ export async function persistSessionState(
 
   const nextArtifacts = Array.from(new Set([...existing.artifacts, ...artifacts]));
   const updatedAt = new Date().toISOString();
-  const relativePath = await writeSessionRecord(repoRoot, sessionId, {
+  const nextRecord: PersistedSessionRecord = {
     ...existing,
     session: {
       ...existing.session,
@@ -327,10 +386,13 @@ export async function persistSessionState(
     },
     artifacts: nextArtifacts,
     updatedAt,
-  });
+  };
+  const relativePath = await writeSessionRecord(repoRoot, sessionId, nextRecord);
+  const auditPath = await syncSessionAuditRecord(repoRoot, nextRecord);
 
   return {
     relativePath,
+    auditPath,
     updated: true,
   };
 }
@@ -343,6 +405,17 @@ export async function persistActionRecord(
     ...record,
     updatedAt: new Date().toISOString(),
   });
+
+  const sessionRecord = await loadSessionRecord(repoRoot, record.sessionId);
+  if (sessionRecord) {
+    const nextRecord: PersistedSessionRecord = {
+      ...sessionRecord,
+      artifacts: Array.from(new Set([...sessionRecord.artifacts, relativePath])),
+      updatedAt: new Date().toISOString(),
+    };
+    await writeSessionRecord(repoRoot, record.sessionId, nextRecord);
+    await syncSessionAuditRecord(repoRoot, nextRecord);
+  }
 
   return {
     relativePath,
