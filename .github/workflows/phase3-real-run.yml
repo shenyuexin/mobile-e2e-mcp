@@ -1,4 +1,5 @@
 name: Phase 3 Real Run
+run-name: Phase 3 real run by @${{ github.actor }}
 
 on:
   workflow_dispatch:
@@ -61,10 +62,12 @@ jobs:
 
   real-run-matrix:
     needs: dry-run-baseline
-    runs-on: self-hosted
+    runs-on: [self-hosted, macOS]
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
+        with:
+          clean: true
       - uses: pnpm/action-setup@v4
         with:
           version: 10.30.3
@@ -72,6 +75,24 @@ jobs:
         with:
           node-version: 20
           cache: pnpm
+      - name: Preflight runner cleanup
+        run: |
+          xcrun simctl shutdown all || true
+          xcrun simctl erase all || true
+          adb kill-server || true
+      - name: Generate run metadata
+        run: |
+          mkdir -p reports
+          cat > reports/self-hosted-run-metadata.json <<'EOF'
+          {
+            "run_id": "${{ github.run_id }}",
+            "run_attempt": "${{ github.run_attempt }}",
+            "actor": "${{ github.actor }}",
+            "sha": "${{ github.sha }}",
+            "event": "${{ github.event_name }}",
+            "timestamp": "$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+          }
+          EOF
       - run: pnpm install --frozen-lockfile
       - name: Run Phase 3 real-run matrix
         env:
@@ -88,10 +109,14 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: phase3-real-run-report
+          name: phase3-real-run-report-${{ github.run_id }}
+          retention-days: 7
           path: |
+            reports/self-hosted-run-metadata.json
             reports/phase-sample-report.json
             reports/phase-sample-report.md
+            reports/acceptance-evidence.json
+            reports/acceptance-evidence.md
             artifacts/audit/*.json
             artifacts/phase1-ios/**
             artifacts/phase1-android/**
