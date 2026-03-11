@@ -44,3 +44,4 @@
 1. Validate the next sample against Phase 3 profile contracts and compatibility targets.
 2. Start wiring governance baselines into runtime enforcement checkpoints.
 3. Keep agentic baselines as configuration contracts until runtime integration exists.
+4. Use `docs/delivery/ai-first-implementation-plan.md` as the execution baseline for the next AI-first capability workstream.
