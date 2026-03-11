@@ -601,6 +601,9 @@ export function summarizeIosPerformance(params: {
   const hasCpuSignal = topProcesses.length > 0 || topHotspots.length > 0;
   const tocTargetProcess = extractIosTocTargetProcess(params.tocXml);
   const captureScope = extractIosTocCaptureScope(params.tocXml);
+  const timeProfilerScopeNote = captureScope === "attached_process" && tocTargetProcess
+    ? `This Time Profiler window was attached to ${tocTargetProcess}.`
+    : "This Time Profiler window was not app-scoped; treat the CPU ranking as all-process simulator context rather than direct app attribution.";
 
   const cpu: PerformanceCpuSummary = {
     status: params.template === "time-profiler" && hasCpuSignal
@@ -608,8 +611,8 @@ export function summarizeIosPerformance(params: {
       : "unknown",
     note: params.template === "time-profiler"
       ? topCpu?.cpuPercent !== undefined
-        ? `Time Profiler export suggests ${topCpu.name} consumed about ${String(topCpu.cpuPercent)}% of sampled CPU weight.`
-        : `xctrace export exposed ${String(schemaNames.length)} table schema(s); CPU interpretation remains shallow in this MVP.`
+        ? `Time Profiler export suggests ${topCpu.name} consumed about ${String(topCpu.cpuPercent)}% of sampled CPU weight. ${timeProfilerScopeNote}`
+        : `xctrace export exposed ${String(schemaNames.length)} table schema(s); CPU interpretation remains shallow in this MVP. ${timeProfilerScopeNote}`
       : "CPU-focused parsing was not requested by the selected template.",
     topProcess: topCpu?.name,
     topProcessCpuPercent: topCpu?.cpuPercent,

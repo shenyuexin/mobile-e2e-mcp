@@ -213,6 +213,7 @@ test("summarizeIosPerformance extracts top processes and hotspots from time prof
   assert.equal(summary.cpu.topProcesses[0]?.name, "MyApp");
   assert.equal(summary.cpu.topHotspots[0]?.name, "MyAppMain");
   assert.equal(summary.cpu.status !== "unknown", true);
+  assert.match(summary.cpu.note, /not app-scoped/);
 });
 
 test("summarizeIosPerformance stays unknown when schema exists but rows do not parse", () => {

@@ -2271,6 +2271,12 @@ async function collectIosPerformanceEnvironmentChecks(repoRoot: string, iosDevic
     "Time Profiler is real-validated on simulator. Allocations can be real-validated when the target app is attached by pid. Animation Hitches remains platform-limited on the current simulator/runtime and should be treated as device-preferred.",
   ));
 
+  checks.push(summarizeInfoCheck(
+    "ios performance recommendation",
+    "pass",
+    "Prefer Time Profiler by default on simulator. Prefer Allocations only when you can attach to a running app by pid. Avoid Animation Hitches on simulator unless you are only checking functional wiring; use a physical device for trustworthy hitch analysis.",
+  ));
+
   const appId = process.env.IOS_APP_ID;
   if (!appId) {
     checks.push(summarizeInfoCheck(
@@ -5360,7 +5366,10 @@ export async function measureAndroidPerformanceWithMaestro(input: MeasureAndroid
       {
         key: "hotspots",
         statements: [
-          ["SELECT name, ROUND(SUM(CAST(dur AS FLOAT)) / 1000000.0, 2), COUNT(*) FROM slice WHERE dur > 0 AND name IS NOT NULL GROUP BY name ORDER BY SUM(dur) DESC LIMIT 5;"],
+          [
+            `SELECT COALESCE(process.name, '<unknown>'), slice.name, ROUND(SUM(CAST(slice.dur AS FLOAT)) / 1000000.0, 2), COUNT(*) FROM slice LEFT JOIN thread_track ON slice.track_id = thread_track.id LEFT JOIN thread USING (utid) LEFT JOIN process USING (upid) WHERE slice.dur > 0 AND slice.name IS NOT NULL GROUP BY COALESCE(process.name, '<unknown>'), slice.name ORDER BY CASE WHEN ${appId ? `(process.name = ${JSON.stringify(appId)} OR process.name LIKE ${JSON.stringify(`${appId}:%`)})` : "0"} THEN 0 ELSE 1 END, SUM(slice.dur) DESC LIMIT 8;`,
+          ],
+          ["SELECT '<unknown>', name, ROUND(SUM(CAST(dur AS FLOAT)) / 1000000.0, 2), COUNT(*) FROM slice WHERE dur > 0 AND name IS NOT NULL GROUP BY name ORDER BY SUM(dur) DESC LIMIT 8;"],
         ],
       },
       {
