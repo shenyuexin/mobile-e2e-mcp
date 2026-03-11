@@ -206,6 +206,30 @@ test("handleRequest supports tools/call alias for measure_ios_performance dry-ru
   assert.equal(typedResult.data.template, "time-profiler");
 });
 
+test("handleRequest supports tools/call alias for measure_ios_performance memory dry-run", async () => {
+  const result = await handleRequest({
+    id: 22,
+    method: "tools/call",
+    params: {
+      name: "measure_ios_performance",
+      arguments: {
+        sessionId: "stdio-ios-performance-memory-dry-run",
+        runnerProfile: "phase1",
+        durationMs: 4000,
+        template: "memory",
+        dryRun: true,
+      },
+    },
+  });
+  const typedResult = result as { status: string; reasonCode: string; data: { supportLevel: string; captureMode: string; template: string } };
+
+  assert.equal(typedResult.status, "success");
+  assert.equal(typedResult.reasonCode, "OK");
+  assert.equal(typedResult.data.supportLevel, "partial");
+  assert.equal(typedResult.data.captureMode, "time_window");
+  assert.equal(typedResult.data.template, "memory");
+});
+
 test("handleRequest supports tools/call alias for install_app dry-run", async () => {
   const result = await handleRequest({
     id: 9,

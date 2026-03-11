@@ -388,6 +388,22 @@ test("server invoke supports measure_ios_performance dry-run", async () => {
   assert.equal(result.data.template, "time-profiler");
 });
 
+test("server invoke supports measure_ios_performance animation-hitches dry-run", async () => {
+  const server = createServer();
+  const result = await server.invoke("measure_ios_performance", {
+    sessionId: "server-ios-performance-hitches-dry-run",
+    runnerProfile: "phase1",
+    durationMs: 4000,
+    template: "animation-hitches",
+    dryRun: true,
+  });
+
+  assert.equal(result.status, "success");
+  assert.equal(result.reasonCode, "OK");
+  assert.equal(result.data.supportLevel, "partial");
+  assert.equal(result.data.template, "animation-hitches");
+});
+
 test("server invoke supports list_js_debug_targets dry-run", async () => {
   const server = createServer();
   const result = await server.invoke("list_js_debug_targets", {

@@ -601,6 +601,29 @@ test("main dispatches measure_ios_performance dry-run through the CLI", async ()
   assert.equal(output.measureIosPerformanceResult.data.template, "time-profiler");
 });
 
+test("main dispatches measure_ios_performance memory dry-run through the CLI", async () => {
+  const output = await runCli([
+    "--measure-ios-performance",
+    "--platform", "ios",
+    "--runner-profile", "phase1",
+    "--duration-ms", "4000",
+    "--template", "memory",
+    "--dry-run",
+  ]) as {
+    measureIosPerformanceResult: {
+      status: string;
+      reasonCode: string;
+      data: { supportLevel: string; captureMode: string; template: string };
+    };
+  };
+
+  assert.equal(output.measureIosPerformanceResult.status, "success");
+  assert.equal(output.measureIosPerformanceResult.reasonCode, "OK");
+  assert.equal(output.measureIosPerformanceResult.data.supportLevel, "partial");
+  assert.equal(output.measureIosPerformanceResult.data.captureMode, "time_window");
+  assert.equal(output.measureIosPerformanceResult.data.template, "memory");
+});
+
 test("main dispatches list_js_debug_targets dry-run through the CLI", async () => {
   const output = await runCli([
     "--list-js-debug-targets",

@@ -170,6 +170,18 @@ const validationCases: ValidationCase[] = [
     },
   },
   {
+    name: "measure_ios_performance animation-hitches dry-run",
+    cliArgs: ["--measure-ios-performance", "--platform", "ios", "--runner-profile", "phase1", "--duration-ms", "4000", "--template", "animation-hitches", "--dry-run"],
+    validate: (result) => {
+      const typed = result as { measureIosPerformanceResult: { status: string; reasonCode: string; data: { supportLevel: string; captureMode: string; template: string } } };
+      assert.equal(typed.measureIosPerformanceResult.status, "success");
+      assert.equal(typed.measureIosPerformanceResult.reasonCode, "OK");
+      assert.equal(typed.measureIosPerformanceResult.data.supportLevel, "partial");
+      assert.equal(typed.measureIosPerformanceResult.data.captureMode, "time_window");
+      assert.equal(typed.measureIosPerformanceResult.data.template, "animation-hitches");
+    },
+  },
+  {
     name: "query_ui Android dry-run",
     cliArgs: ["--query-ui", "--platform", "android", "--content-desc", "View products", "--dry-run"],
     validate: (result) => {
