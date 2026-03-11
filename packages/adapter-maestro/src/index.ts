@@ -101,7 +101,7 @@ import {
   type WaitForUiMode,
   REASON_CODES,
 } from "@mobile-e2e-mcp/contracts";
-import { listActionRecordsForSession, loadActionRecord, loadBaselineIndex, loadFailureIndex, loadLatestActionRecordForSession, loadSessionRecord, recordBaselineEntry, recordFailureSignature, persistActionRecord, persistSessionState, queryTimelineAroundAction } from "@mobile-e2e-mcp/core";
+import { listActionRecordsForSession, loadActionRecord, loadBaselineIndex, loadFailureIndex, loadLatestActionRecordForSession, loadSessionRecord, recordBaselineEntry, recordFailureSignature, persistActionRecord, persistSessionState, queryTimelineAroundAction, type PersistedActionRecord } from "@mobile-e2e-mcp/core";
 import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
@@ -1199,12 +1199,13 @@ export async function performActionWithEvidenceWithMaestro(
     },
   };
 
-  if (sessionRecord) {
-    await persistSessionState(repoRoot, input.sessionId, postStateSummary, actionEvent, artifacts);
-  }
+  const persistedSessionState = sessionRecord
+    ? await persistSessionState(repoRoot, input.sessionId, postStateSummary, actionEvent, artifacts)
+    : undefined;
   const persistedAction = await persistActionRecord(repoRoot, {
     actionId,
     sessionId: input.sessionId,
+    intent: input.action,
     outcome,
     evidenceDelta,
     evidence,
@@ -1239,6 +1240,7 @@ export async function performActionWithEvidenceWithMaestro(
       lowLevelStatus: lowLevelResult.status,
       lowLevelReasonCode: lowLevelResult.reasonCode,
       evidence,
+      sessionAuditPath: persistedSessionState?.auditPath,
     },
     nextSuggestions: lowLevelResult.status === "success"
       ? stateChanged
@@ -1478,6 +1480,32 @@ function buildRecoveryTimelineEvent(summary: RecoverySummary, artifacts: string[
   };
 }
 
+const HIGH_RISK_REPLAY_KEYWORDS = ["pay", "payment", "purchase", "buy", "checkout", "order", "delete", "remove", "send", "submit", "confirm"];
+
+function isHighRiskReplayIntent(intent?: ActionIntent): boolean {
+  if (!intent) {
+    return false;
+  }
+
+  const haystacks = [intent.resourceId, intent.contentDesc, intent.text, intent.value, intent.appId]
+    .filter((value): value is string => typeof value === "string")
+    .map((value) => value.toLowerCase());
+
+  return haystacks.some((value) => HIGH_RISK_REPLAY_KEYWORDS.some((keyword) => value.includes(keyword)));
+}
+
+function canReplayPersistedAction(record: PersistedActionRecord): boolean {
+  if (isHighRiskReplayIntent(record.intent)) {
+    return false;
+  }
+
+  if (record.intent) {
+    return true;
+  }
+
+  return ["wait_for_ui", "launch_app", "terminate_app"].includes(record.outcome.actionType);
+}
+
 function topRuntimeSignal(delta?: EvidenceDeltaSummary): string | undefined {
   return delta?.runtimeDeltaSummary ?? delta?.logDeltaSummary;
 }
@@ -1631,6 +1659,26 @@ export async function replayLastStablePathWithMaestro(
     };
   }
 
+  if (!canReplayPersistedAction(stableRecord)) {
+    return {
+      status: "failed",
+      reasonCode: REASON_CODES.unsupportedOperation,
+      sessionId: input.sessionId,
+      durationMs: Date.now() - startTime,
+      attempts: 1,
+      artifacts: [],
+      data: {
+        summary: {
+          strategy: "replay_last_successful_action",
+          recovered: false,
+          note: "The last successful action is considered too risky for bounded auto replay.",
+          replayedActionId: stableRecord.actionId,
+        },
+      },
+      nextSuggestions: ["Only low-side-effect actions can be replayed automatically; inspect the prior action manually instead."],
+    };
+  }
+
   const replayed = await performActionWithEvidenceWithMaestro({
     sessionId: input.sessionId,
     platform,
@@ -1639,8 +1687,19 @@ export async function replayLastStablePathWithMaestro(
     deviceId: input.deviceId ?? sessionRecord?.session.deviceId,
     appId: input.appId ?? sessionRecord?.session.appId,
     action: {
-      actionType: stableRecord.outcome.actionType,
-      resourceId: stableRecord.outcome.postState?.screenId,
+      actionType: stableRecord.intent?.actionType ?? stableRecord.outcome.actionType,
+      resourceId: stableRecord.intent?.resourceId ?? stableRecord.outcome.postState?.screenId,
+      contentDesc: stableRecord.intent?.contentDesc,
+      text: stableRecord.intent?.text,
+      className: stableRecord.intent?.className,
+      clickable: stableRecord.intent?.clickable,
+      limit: stableRecord.intent?.limit,
+      value: stableRecord.intent?.value,
+      appId: stableRecord.intent?.appId,
+      launchUrl: stableRecord.intent?.launchUrl,
+      timeoutMs: stableRecord.intent?.timeoutMs,
+      intervalMs: stableRecord.intent?.intervalMs,
+      waitUntil: stableRecord.intent?.waitUntil,
     },
     dryRun: input.dryRun,
   });
