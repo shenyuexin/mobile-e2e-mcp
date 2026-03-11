@@ -164,7 +164,12 @@ export async function loadLatestActionRecordForSession(repoRoot: string, session
         continue;
       }
       const actionId = entry.name.replace(/\.json$/, "");
-      const record = await loadActionRecord(repoRoot, actionId);
+      let record: PersistedActionRecord | undefined;
+      try {
+        record = await loadActionRecord(repoRoot, actionId);
+      } catch {
+        continue;
+      }
       if (record?.sessionId === sessionId) {
         records.push(record);
       }
@@ -190,7 +195,12 @@ export async function listActionRecordsForSession(repoRoot: string, sessionId: s
         continue;
       }
       const actionId = entry.name.replace(/\.json$/, "");
-      const record = await loadActionRecord(repoRoot, actionId);
+      let record: PersistedActionRecord | undefined;
+      try {
+        record = await loadActionRecord(repoRoot, actionId);
+      } catch {
+        continue;
+      }
       if (record?.sessionId === sessionId) {
         records.push(record);
       }
@@ -211,6 +221,9 @@ async function readJsonFile<T>(absolutePath: string, fallback: T): Promise<T> {
     return JSON.parse(content) as T;
   } catch (error: unknown) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      return fallback;
+    }
+    if (error instanceof SyntaxError) {
       return fallback;
     }
     throw error;
