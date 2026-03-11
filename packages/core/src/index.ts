@@ -18,8 +18,12 @@ export {
   queryTimelineAroundAction,
 } from "./session-store.js";
 export {
+  buildAuditedArtifactEntries,
+  buildSessionAuditRecord,
+  collectInterruptionEvents,
   loadArtifactGovernanceConfig,
   loadSessionAuditSchemaConfig,
+  redactSensitiveText,
 } from "./governance.js";
 export {
   isToolAllowedByProfile,

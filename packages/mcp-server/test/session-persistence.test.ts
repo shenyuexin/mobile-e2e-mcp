@@ -9,6 +9,7 @@ import {
   loadFailureIndex,
   loadSessionAuditRecord,
   loadSessionRecord,
+  persistSessionState,
   recordFailureSignature,
 } from "@mobile-e2e-mcp/core";
 import { createServer } from "../src/index.ts";
@@ -134,6 +135,50 @@ test("end_session returns the persisted endedAt timestamp and stays idempotent",
     assert.ok(stored);
     assert.equal(stored.session.timeline.filter((event) => event.type === "session_ended").length, 1);
     assert.equal(stored.endedAt, firstResult.data.endedAt);
+  } finally {
+    await cleanupSessionArtifact(sessionId);
+  }
+});
+
+test("session audit redacts sensitive artifact paths and interruption details", async () => {
+  const server = createServer();
+  const sessionId = `persist-session-redaction-${Date.now()}`;
+
+  try {
+    await server.invoke("start_session", {
+      sessionId,
+      platform: "android",
+      profile: "phase1",
+    });
+    await persistSessionState(
+      repoRoot,
+      sessionId,
+      {
+        appPhase: "unknown",
+        readiness: "interrupted",
+        blockingSignals: ["permission_prompt"],
+        topVisibleTexts: ["reset password"],
+      },
+      {
+        timestamp: new Date().toISOString(),
+        type: "dialog_interrupt",
+        detail: "password=hunter2 token=abc123 phone +86 138 0013 8000",
+      },
+      [],
+    );
+    const ended = await server.invoke("end_session", {
+      sessionId,
+      artifacts: ["artifacts/debug/token-secret-password-reset-+86 138 0013 8000.txt"],
+    });
+
+    assert.equal(ended.status, "success");
+
+    const audit = await loadSessionAuditRecord(repoRoot, sessionId);
+    assert.ok(audit);
+    assert.equal(audit.artifact_paths[0]?.path.includes("token-secret"), false);
+    assert.equal(audit.artifact_paths[0]?.path.includes("password-reset"), false);
+    assert.equal(audit.artifact_paths[0]?.path.includes("138 0013 8000"), false);
+    assert.equal(audit.interruption_events.length >= 1, true);
   } finally {
     await cleanupSessionArtifact(sessionId);
   }
