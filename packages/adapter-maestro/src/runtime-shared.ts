@@ -45,6 +45,9 @@ export function toRelativePath(repoRoot: string, targetPath: string): string {
 
 export function buildFailureReason(stderr: string, exitCode: number | null): ReasonCode {
   const combined = stderr.toLowerCase();
+  if ((combined.includes("xcrun") || combined.includes("trace_processor")) && (combined.includes("enoent") || combined.includes("not found"))) {
+    return REASON_CODES.configurationError;
+  }
   if (combined.includes("install_failed_version_downgrade") || combined.includes("failed to install")) {
     return REASON_CODES.configurationError;
   }

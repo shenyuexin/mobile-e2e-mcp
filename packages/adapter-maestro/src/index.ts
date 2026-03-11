@@ -3701,6 +3701,13 @@ async function checkCommandAvailable(repoRoot: string, command: string[], timeou
   return runCommandSafely(command, repoRoot, timeoutMs);
 }
 
+function reasonCodeForExecution(execution: CommandExecution): ReasonCode {
+  if (execution.exitCode === null && execution.stderr.includes("Command timed out after")) {
+    return REASON_CODES.timeout;
+  }
+  return buildFailureReason(`${execution.stderr}\n${execution.stdout}`, execution.exitCode);
+}
+
 async function resolveAndroidSdkLevel(repoRoot: string, deviceId: string): Promise<number | undefined> {
   const execution = await runCommandSafely(["adb", "-s", deviceId, "shell", "getprop", "ro.build.version.sdk"], repoRoot, DEFAULT_DEVICE_COMMAND_TIMEOUT_MS);
   if (execution.exitCode !== 0) {
@@ -4005,7 +4012,7 @@ export async function measureAndroidPerformanceWithMaestro(input: MeasureAndroid
     });
     return {
       status: recordExecution.exitCode === null ? "failed" : "failed",
-      reasonCode: recordExecution.exitCode === null ? REASON_CODES.timeout : buildFailureReason(recordExecution.stderr, recordExecution.exitCode),
+      reasonCode: reasonCodeForExecution(recordExecution),
       sessionId: input.sessionId,
       durationMs: Date.now() - startTime,
       attempts: 1,
@@ -4282,7 +4289,7 @@ export async function measureIosPerformanceWithMaestro(input: MeasureIosPerforma
     });
     return {
       status: recordExecution.exitCode === null ? "failed" : "failed",
-      reasonCode: recordExecution.exitCode === null ? REASON_CODES.timeout : buildFailureReason(recordExecution.stderr, recordExecution.exitCode),
+      reasonCode: reasonCodeForExecution(recordExecution),
       sessionId: input.sessionId,
       durationMs: Date.now() - startTime,
       attempts: 1,
@@ -4302,7 +4309,7 @@ export async function measureIosPerformanceWithMaestro(input: MeasureIosPerforma
     artifactPaths.push(plan.artifacts.tocPath);
   } else {
     status = "partial";
-    reasonCode = tocExecution.exitCode === null ? REASON_CODES.timeout : buildFailureReason(tocExecution.stderr, tocExecution.exitCode);
+    reasonCode = reasonCodeForExecution(tocExecution);
   }
 
   const exportExecution = await runCommandSafely(plan.steps[2].command, repoRoot, DEFAULT_DEVICE_COMMAND_TIMEOUT_MS + plan.durationMs);
@@ -4312,7 +4319,7 @@ export async function measureIosPerformanceWithMaestro(input: MeasureIosPerforma
     artifactPaths.push(plan.artifacts.exportPath);
   } else {
     status = "partial";
-    reasonCode = exportExecution.exitCode === null ? REASON_CODES.timeout : buildFailureReason(exportExecution.stderr, exportExecution.exitCode);
+    reasonCode = reasonCodeForExecution(exportExecution);
   }
 
   const summary = summarizeIosPerformance({ durationMs: plan.durationMs, template: plan.template, tocXml, exportXml });

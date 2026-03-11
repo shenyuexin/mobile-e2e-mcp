@@ -138,6 +138,29 @@ test("measureIosPerformanceWithMaestro previews iOS dry-run output", async () =>
   assert.equal(result.data.evidence?.some((item) => item.kind === "performance_trace"), true);
 });
 
+test("measureIosPerformanceWithMaestro returns configuration failure when xcrun is missing", async () => {
+  const originalPath = process.env.PATH;
+  process.env.PATH = "";
+
+  try {
+    const result = await measureIosPerformanceWithMaestro({
+      sessionId: "adapter-ios-performance-missing-xcrun",
+      runnerProfile: "phase1",
+      durationMs: 1000,
+      template: "time-profiler",
+      deviceId: "missing-device",
+    });
+
+    assert.equal(result.status, "failed");
+    assert.equal(result.reasonCode, "CONFIGURATION_ERROR");
+    assert.equal(result.data.supportLevel, "partial");
+    assert.equal(result.artifacts.length, 0);
+    assert.match(result.nextSuggestions[0] ?? "", /xctrace recording failed/i);
+  } finally {
+    process.env.PATH = originalPath;
+  }
+});
+
 test("summarizeIosPerformance extracts top processes and hotspots from time profiler export", () => {
   const tocXml = `<?xml version="1.0"?><trace-toc><run number="1"><summary><duration>3.0</duration></summary></run></trace-toc>`;
   const exportXml = `<?xml version="1.0"?><trace-query-result><node xpath='//trace-toc[1]/run[1]/data[1]/table[1]'><schema name="time-profile"></schema><row><process fmt="MyApp (123)"/><weight fmt="2.00 ms">2000000</weight><backtrace><frame name="MyAppMain"/></backtrace></row><row><process fmt="MyApp (123)"/><weight fmt="1.50 ms">1500000</weight><backtrace><frame name="MyHotLoop"/></backtrace></row><row><process fmt="WindowServer (511)"/><weight fmt="0.50 ms">500000</weight><backtrace><frame name="FrameInfoNotifyFuncIOShq"/></backtrace></row></node></trace-query-result>`;
