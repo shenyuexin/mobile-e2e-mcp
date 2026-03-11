@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<trace-query-result>
+  <node xpath='//trace-toc[1]/run[1]/data[1]/table[7]'>
+    <row>
+      <sample-time fmt="00:02.144.447">2144447583</sample-time>
+      <thread fmt="Expo Go 0x20b7c2 (Expo Go, pid: 43127)">
+        <process fmt="Expo Go (43127)">
+          <pid fmt="43127">43127</pid>
+        </process>
+      </thread>
+      <event-concept fmt="Low">Low</event-concept>
+      <string fmt="Source Missing QoS">Source Missing QoS</string>
+    </row>
+  </node>
+</trace-query-result>

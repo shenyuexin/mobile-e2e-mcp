@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<trace-toc>
+  <run number="1">
+    <info>
+      <target>
+        <device uuid="ADA078B9-3C6B-4875-8B85-A7789F368816" model="Simulated iPhone 16 Plus" name="iPhone 16 Plus" os-version="18.5 (22F77)" platform="iOS Simulator"/>
+        <process type="attached" return-exit-status="0" name="Expo Go" pid="43127" termination-reason="exit(0)"/>
+      </target>
+      <summary>
+        <template-name>Allocations</template-name>
+      </summary>
+    </info>
+    <data>
+      <table schema="global-roi-layout" target-pid="SINGLE"/>
+      <table schema="gcd-perf-event" target-pid="SINGLE"/>
+      <table schema="kdebug" target="SINGLE"/>
+      <table schema="process-info"/>
+      <table schema="thread-info"/>
+    </data>
+    <tracks>
+      <track name="Allocations"/>
+      <track name="VM Tracker"/>
+    </tracks>
+  </run>
+</trace-toc>

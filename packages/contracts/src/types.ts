@@ -403,6 +403,11 @@ export interface PerformanceJankSummary extends PerformanceSignalSummary {
 export interface PerformanceMemorySummary extends PerformanceSignalSummary {
   rssDeltaKb?: number;
   peakRssKb?: number;
+  dominantProcess?: string;
+  allocationRowCount?: number;
+  largestAllocationKb?: number;
+  topAllocationCategories?: string[];
+  captureScope?: "attached_process" | "all_processes" | "unknown";
 }
 export interface PerformanceStructuredSummary {
   captureMode: PerformanceCaptureMode;

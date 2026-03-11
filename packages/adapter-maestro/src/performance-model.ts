@@ -11,6 +11,13 @@ import type {
   PerformanceStructuredSummary,
 } from "@mobile-e2e-mcp/contracts";
 
+function matchesAndroidAppProcess(processName: string, appId: string | undefined): boolean {
+  if (!appId) {
+    return false;
+  }
+  return processName === appId || processName.startsWith(`${appId}:`) || processName.endsWith(appId) || processName.includes(appId);
+}
+
 function clampSeverity(value: number | undefined, medium: number, high: number): "none" | "low" | "moderate" | "high" | "unknown" {
   if (value === undefined || Number.isNaN(value)) {
     return "unknown";
@@ -168,10 +175,12 @@ function buildIosAllocationMetrics(exportXml: string): {
   allocationRowCount: number;
   largestAllocationKb?: number;
   dominantProcess?: string;
+  topAllocationCategories: string[];
 } {
   const rowSignals = buildIosTemplateRowSignals(exportXml);
   const sizeValuesKb: number[] = [];
   const processCounts = new Map<string, number>();
+  const categoryCounts = new Map<string, number>();
   let allocationRowCount = 0;
   for (const signal of rowSignals) {
     if (!(signal.rowText.includes("alloc") || signal.rowText.includes("malloc") || signal.rowText.includes("vm:"))) {
@@ -180,6 +189,12 @@ function buildIosAllocationMetrics(exportXml: string): {
     allocationRowCount += 1;
     processCounts.set(signal.processName, (processCounts.get(signal.processName) ?? 0) + 1);
     for (const entry of signal.fmtEntries) {
+      if (entry.tagName.toLowerCase().includes("category") || entry.tagName.toLowerCase().includes("type") || entry.tagName.toLowerCase().includes("string")) {
+        const label = decodeXmlEntities(entry.value).trim();
+        if (label.length > 0 && (label.toLowerCase().includes("alloc") || label.toLowerCase().includes("malloc") || label.toLowerCase().includes("vm:"))) {
+          categoryCounts.set(label, (categoryCounts.get(label) ?? 0) + 1);
+        }
+      }
       const sizeKb = toMaybeSizeKb(entry.value);
       if (sizeKb !== undefined) {
         sizeValuesKb.push(sizeKb);
@@ -190,7 +205,43 @@ function buildIosAllocationMetrics(exportXml: string): {
     allocationRowCount,
     largestAllocationKb: sizeValuesKb.length > 0 ? Number(Math.max(...sizeValuesKb).toFixed(2)) : undefined,
     dominantProcess: [...processCounts.entries()].sort((left, right) => right[1] - left[1])[0]?.[0],
+    topAllocationCategories: [...categoryCounts.entries()].sort((left, right) => right[1] - left[1]).map(([name]) => name).slice(0, 5),
   };
+}
+
+function buildEmptyIosAllocationMetrics(): {
+  allocationRowCount: number;
+  largestAllocationKb?: number;
+  dominantProcess?: string;
+  topAllocationCategories: string[];
+} {
+  return {
+    allocationRowCount: 0,
+    largestAllocationKb: undefined,
+    dominantProcess: undefined,
+    topAllocationCategories: [],
+  };
+}
+
+function extractIosTocTargetProcess(tocXml: string | undefined): string | undefined {
+  if (!tocXml) {
+    return undefined;
+  }
+  return extractXmlAttributeValue(tocXml, "process", "name");
+}
+
+function extractIosTocCaptureScope(tocXml: string | undefined): "attached_process" | "all_processes" | "unknown" {
+  if (!tocXml) {
+    return "unknown";
+  }
+  const processType = extractXmlAttributeValue(tocXml, "process", "type")?.toLowerCase();
+  if (processType === "attached" || processType === "launched") {
+    return "attached_process";
+  }
+  if (processType === "all-processes") {
+    return "all_processes";
+  }
+  return "unknown";
 }
 
 function stripProcessDisplaySuffix(value: string): string {
@@ -202,6 +253,13 @@ function normalizeIosProcessName(value: string | undefined): string {
     return "<unknown>";
   }
   return stripProcessDisplaySuffix(decodeXmlEntities(value));
+}
+
+function selectPreferredProcessName(primary: string | undefined, fallback: string | undefined): string | undefined {
+  if (primary && primary !== "<unknown>") {
+    return primary;
+  }
+  return fallback;
 }
 
 function buildIosHotspotsFromRows(exportXml: string): PerformanceHotspot[] {
@@ -320,7 +378,7 @@ export function summarizeAndroidPerformance(params: {
   memorySource?: "process_counter_track" | "counter_track_heuristic";
 }): PerformanceStructuredSummary {
   const summary = buildBasePerformanceSummary(params.durationMs, "full");
-  const topProcesses: PerformanceProcessSignal[] = (params.cpuRows ?? []).map((rawRow) => {
+  const parsedTopProcesses: PerformanceProcessSignal[] = (params.cpuRows ?? []).map((rawRow) => {
     const row = normalizeRightAnchoredRow(rawRow, 1);
     const scheduledMs = toMaybeNumber(row[1]);
     const cpuPercent = scheduledMs !== undefined ? Number(((scheduledMs / params.durationMs) * 100).toFixed(1)) : undefined;
@@ -329,6 +387,14 @@ export function summarizeAndroidPerformance(params: {
       scheduledMs,
       cpuPercent,
     };
+  });
+  const topProcesses = [...parsedTopProcesses].sort((left, right) => {
+    const leftMatches = matchesAndroidAppProcess(left.name, params.appId) ? 1 : 0;
+    const rightMatches = matchesAndroidAppProcess(right.name, params.appId) ? 1 : 0;
+    if (leftMatches !== rightMatches) {
+      return rightMatches - leftMatches;
+    }
+    return (right.scheduledMs ?? 0) - (left.scheduledMs ?? 0);
   });
   const topHotspots: PerformanceHotspot[] = (params.hotspotRows ?? []).map((rawRow) => {
     const row = normalizeRightAnchoredRow(rawRow, 2);
@@ -339,9 +405,15 @@ export function summarizeAndroidPerformance(params: {
     };
   });
   const topCpu = topProcesses[0];
+  const targetAppCpu = params.appId ? parsedTopProcesses.find((item) => matchesAndroidAppProcess(item.name, params.appId)) : undefined;
+  const highestOverallCpu = parsedTopProcesses[0];
   const cpuSeverity = clampSeverity(topCpu?.cpuPercent, 35, 70);
-  const cpuNote = topCpu?.cpuPercent !== undefined
-    ? `Top scheduled process is ${topCpu.name} at roughly ${String(topCpu.cpuPercent)}% of the sampled window.`
+  const cpuNote = targetAppCpu?.cpuPercent !== undefined
+    ? highestOverallCpu && highestOverallCpu.name !== targetAppCpu.name
+      ? `Target app ${targetAppCpu.name} used about ${String(targetAppCpu.cpuPercent)}% of the sampled CPU window; highest overall process was ${highestOverallCpu.name} at ${String(highestOverallCpu.cpuPercent ?? "unknown")}%.`
+      : `Target app ${targetAppCpu.name} used about ${String(targetAppCpu.cpuPercent)}% of the sampled CPU window.`
+    : topCpu?.cpuPercent !== undefined
+      ? `Top scheduled process is ${topCpu.name} at roughly ${String(topCpu.cpuPercent)}% of the sampled window.`
     : params.cpuSource === "thread_state"
       ? "CPU pressure was inferred from running thread-state durations rather than sched slices."
     : params.tableNames.includes("sched")
@@ -350,8 +422,8 @@ export function summarizeAndroidPerformance(params: {
   const cpu: PerformanceCpuSummary = {
     status: cpuSeverity,
     note: cpuNote,
-    topProcess: topCpu?.name,
-    topProcessCpuPercent: topCpu?.cpuPercent,
+    topProcess: (targetAppCpu ?? topCpu)?.name,
+    topProcessCpuPercent: (targetAppCpu ?? topCpu)?.cpuPercent,
     topProcesses,
     topHotspots,
   };
@@ -396,6 +468,7 @@ export function summarizeAndroidPerformance(params: {
         : "Memory counter tables were not present in the sampled trace.",
     rssDeltaKb,
     peakRssKb,
+    dominantProcess: params.appId,
   };
 
   summary.cpu = cpu;
@@ -438,11 +511,13 @@ export function summarizeIosPerformance(params: {
   const hasJankSignal = hitchMentions > 0 || frameMentions > 0;
   const hasMemorySignal = allocationMentions > 0;
   const animationMetrics = params.template === "animation-hitches" && params.exportXml ? buildIosAnimationMetrics(params.exportXml) : {};
-  const allocationMetrics = params.template === "memory" && params.exportXml ? buildIosAllocationMetrics(params.exportXml) : { allocationRowCount: 0 };
+  const allocationMetrics = params.template === "memory" && params.exportXml ? buildIosAllocationMetrics(params.exportXml) : buildEmptyIosAllocationMetrics();
   const topProcesses = params.template === "time-profiler" && params.exportXml ? buildIosTopProcessesFromRows(params.exportXml, params.durationMs) : [];
   const topHotspots = params.template === "time-profiler" && params.exportXml ? buildIosHotspotsFromRows(params.exportXml) : [];
   const topCpu = topProcesses[0];
   const hasCpuSignal = topProcesses.length > 0 || topHotspots.length > 0;
+  const tocTargetProcess = extractIosTocTargetProcess(params.tocXml);
+  const captureScope = extractIosTocCaptureScope(params.tocXml);
 
   const cpu: PerformanceCpuSummary = {
     status: params.template === "time-profiler" && hasCpuSignal
@@ -478,9 +553,16 @@ export function summarizeIosPerformance(params: {
       : "unknown",
     note: params.template === "memory"
       ? allocationMetrics.largestAllocationKb !== undefined
-        ? `Allocations export highlights about ${String(allocationMetrics.allocationRowCount)} allocation-heavy row(s); the largest parsed allocation is roughly ${String(allocationMetrics.largestAllocationKb)} KB${allocationMetrics.dominantProcess ? ` in ${allocationMetrics.dominantProcess}` : ""}.`
-        : `Allocations export contains ${String(allocationMentions)} allocation-related token(s); this is a lightweight signal, not a full heap analysis.`
+        ? `Allocations export highlights about ${String(allocationMetrics.allocationRowCount)} allocation-heavy row(s); the largest parsed allocation is roughly ${String(allocationMetrics.largestAllocationKb)} KB${allocationMetrics.dominantProcess ? ` in ${allocationMetrics.dominantProcess}` : tocTargetProcess ? ` in ${tocTargetProcess}` : ""}.`
+        : tocTargetProcess
+          ? `Allocations trace attached to ${tocTargetProcess} (${captureScope === "attached_process" ? "attached process" : "unknown scope"}), but the export did not contain allocation-sized rows this parser could summarize.`
+          : `Allocations export contains ${String(allocationMentions)} allocation-related token(s); this is a lightweight signal, not a full heap analysis.`
       : "Memory parsing was not requested by the selected template.",
+    dominantProcess: selectPreferredProcessName(allocationMetrics.dominantProcess, tocTargetProcess),
+    allocationRowCount: allocationMetrics.allocationRowCount,
+    largestAllocationKb: allocationMetrics.largestAllocationKb,
+    topAllocationCategories: allocationMetrics.topAllocationCategories,
+    captureScope,
   };
 
   summary.cpu = cpu;

@@ -1,0 +1,1 @@
+xctrace: Failed recording with template 'Animation Hitches': Hitches is not supported on this platform.

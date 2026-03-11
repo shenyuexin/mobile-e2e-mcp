@@ -1,10 +1,15 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { classifyDoctorOutcome, isPerfettoShellProbeAvailable, measureAndroidPerformanceWithMaestro, measureIosPerformanceWithMaestro } from "../src/index.ts";
 import type { DoctorCheck } from "@mobile-e2e-mcp/contracts";
+import { buildCapabilityProfile } from "../src/capability-model.ts";
 import { buildAndroidPerformancePlan, buildIosPerformancePlan, resolveAndroidPerformancePlanStrategy, resolveTraceProcessorPath } from "../src/performance-runtime.ts";
 import { parseTraceProcessorTsv, summarizeAndroidPerformance, summarizeIosPerformance } from "../src/performance-model.ts";
 import { buildFailureReason } from "../src/runtime-shared.ts";
+
+const fixtureRoot = path.resolve(import.meta.dirname, "fixtures", "performance");
 
 test("isPerfettoShellProbeAvailable rejects missing sentinel output", () => {
   assert.equal(isPerfettoShellProbeAvailable({ exitCode: 0, stdout: "missing\n", stderr: "" }), false);
@@ -40,6 +45,16 @@ test("classifyDoctorOutcome still fails for core runtime prerequisites", () => {
   ];
 
   assert.deepEqual(classifyDoctorOutcome(checks), { status: "failed", reasonCode: "CONFIGURATION_ERROR" });
+});
+
+test("buildCapabilityProfile explains the current iOS performance template matrix", () => {
+  const profile = buildCapabilityProfile("ios", "phase1");
+  const performanceTool = profile.toolCapabilities.find((tool) => tool.toolName === "measure_ios_performance");
+
+  assert.equal(performanceTool?.supportLevel, "partial");
+  assert.match(performanceTool?.note ?? "", /Time Profiler is real-validated/);
+  assert.match(performanceTool?.note ?? "", /Allocations can be real-validated via attach-to-app/);
+  assert.match(performanceTool?.note ?? "", /Animation Hitches remains platform-limited/);
 });
 
 test("resolveAndroidPerformancePlanStrategy stays version-aware", () => {
@@ -183,6 +198,11 @@ test("buildFailureReason maps unsupported platform template errors to device una
   assert.equal(buildFailureReason("Hitches is not supported on this platform.", 2), "DEVICE_UNAVAILABLE");
 });
 
+test("buildFailureReason maps real animation-hitches simulator fixture to device unavailable", () => {
+  const fixture = readFileSync(path.join(fixtureRoot, "ios-animation-hitches-unsupported.txt"), "utf8");
+  assert.equal(buildFailureReason(fixture, 2), "DEVICE_UNAVAILABLE");
+});
+
 test("summarizeIosPerformance extracts top processes and hotspots from time profiler export", () => {
   const tocXml = `<?xml version="1.0"?><trace-toc><run number="1"><summary><duration>3.0</duration></summary></run></trace-toc>`;
   const exportXml = `<?xml version="1.0"?><trace-query-result><node xpath='//trace-toc[1]/run[1]/data[1]/table[1]'><schema name="time-profile"></schema><row><process fmt="MyApp (123)"/><weight fmt="2.00 ms">2000000</weight><backtrace><frame name="MyAppMain"/></backtrace></row><row><process fmt="MyApp (123)"/><weight fmt="1.50 ms">1500000</weight><backtrace><frame name="MyHotLoop"/></backtrace></row><row><process fmt="WindowServer (511)"/><weight fmt="0.50 ms">500000</weight><backtrace><frame name="FrameInfoNotifyFuncIOShq"/></backtrace></row></node></trace-query-result>`;
@@ -230,6 +250,18 @@ test("summarizeIosPerformance extracts allocation-heavy memory hints", () => {
   assert.match(summary.memory.note, /largest parsed allocation is roughly 4096 KB/);
 });
 
+test("summarizeIosPerformance uses real memory fixture to expose process and capture scope", () => {
+  const tocXml = readFileSync(path.join(fixtureRoot, "ios-memory-real.toc.xml"), "utf8");
+  const exportXml = readFileSync(path.join(fixtureRoot, "ios-memory-real.export.xml"), "utf8");
+
+  const summary = summarizeIosPerformance({ durationMs: 3600, template: "memory", tocXml, exportXml });
+
+  assert.equal(summary.memory.dominantProcess, "Expo Go");
+  assert.equal(summary.memory.captureScope, "attached_process");
+  assert.equal(summary.memory.allocationRowCount, 0);
+  assert.match(summary.memory.note, /Allocations trace attached to Expo Go/);
+});
+
 test("summarizeAndroidPerformance labels slice and counter fallbacks as heuristic", () => {
   const summary = summarizeAndroidPerformance({
     durationMs: 1000,
@@ -254,4 +286,18 @@ test("summarizeAndroidPerformance keeps hotspot names intact when numeric column
   assert.equal(summary.cpu.topHotspots[0]?.name, "Drawing 0.00 371.00");
   assert.equal(summary.cpu.topHotspots[0]?.totalDurMs, 186.84);
   assert.equal(summary.cpu.topHotspots[0]?.occurrences, 57);
+});
+
+test("summarizeAndroidPerformance prioritizes the target app over noisier system processes", () => {
+  const summary = summarizeAndroidPerformance({
+    durationMs: 1000,
+    appId: "com.example.app",
+    tableNames: ["sched"],
+    cpuRows: [["system_server", "800"], ["com.example.app", "350"], ["surfaceflinger", "500"]],
+  });
+
+  assert.equal(summary.cpu.topProcess, "com.example.app");
+  assert.equal(summary.cpu.topProcesses[0]?.name, "com.example.app");
+  assert.match(summary.cpu.note, /Target app com.example.app used about 35%/);
+  assert.match(summary.cpu.note, /highest overall process was system_server/);
 });
