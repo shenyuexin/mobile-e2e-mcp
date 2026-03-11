@@ -42,6 +42,7 @@ import { typeText } from "./tools/type-text.js";
 import { typeIntoElement } from "./tools/type-into-element.js";
 import { waitForUi } from "./tools/wait-for-ui.js";
 import { suggestKnownRemediation } from "./tools/suggest-known-remediation.js";
+import { persistSessionEvidenceCapture } from "./tools/persist-session-evidence.js";
 
 export function createServer(): MobileE2EMcpServer {
   const withPolicy = <TInput, TOutput>(toolName: string, handler: (input: TInput) => Promise<TOutput>) => {
@@ -53,18 +54,30 @@ export function createServer(): MobileE2EMcpServer {
       return handler(input);
     };
   };
-  const captureJsConsoleLogsHandler = withPolicy("capture_js_console_logs", captureJsConsoleLogs);
-  const captureJsNetworkEventsHandler = withPolicy("capture_js_network_events", captureJsNetworkEvents);
+  const withPolicyAndAudit = <TInput extends { sessionId?: string }, TOutput extends { artifacts: string[]; data: unknown }>(
+    toolName: string,
+    handler: (input: TInput) => Promise<TOutput>,
+  ) => withPolicy(toolName, async (input: TInput): Promise<TOutput> => {
+    const result = await handler(input);
+    await persistSessionEvidenceCapture({
+      toolName,
+      sessionId: input.sessionId,
+      result: result as unknown as import("@mobile-e2e-mcp/contracts").ToolResult,
+    });
+    return result;
+  });
+  const captureJsConsoleLogsHandler = withPolicyAndAudit("capture_js_console_logs", captureJsConsoleLogs);
+  const captureJsNetworkEventsHandler = withPolicyAndAudit("capture_js_network_events", captureJsNetworkEvents);
   const compareAgainstBaselineHandler = withPolicy("compare_against_baseline", compareAgainstBaseline);
-  const collectDebugEvidenceHandler = withPolicy("collect_debug_evidence", collectDebugEvidence);
-  const collectDiagnosticsHandler = withPolicy("collect_diagnostics", collectDiagnostics);
+  const collectDebugEvidenceHandler = withPolicyAndAudit("collect_debug_evidence", collectDebugEvidence);
+  const collectDiagnosticsHandler = withPolicyAndAudit("collect_diagnostics", collectDiagnostics);
   const describeCapabilitiesHandler = withPolicy("describe_capabilities", describeCapabilities);
   const doctorHandler = withPolicy("doctor", doctor);
   const explainLastFailureHandler = withPolicy("explain_last_failure", explainLastFailure);
   const findSimilarFailuresHandler = withPolicy("find_similar_failures", findSimilarFailures);
   const getActionOutcomeHandler = withPolicy("get_action_outcome", getActionOutcome);
-  const getCrashSignalsHandler = withPolicy("get_crash_signals", getCrashSignals);
-  const getLogsHandler = withPolicy("get_logs", getLogs);
+  const getCrashSignalsHandler = withPolicyAndAudit("get_crash_signals", getCrashSignals);
+  const getLogsHandler = withPolicyAndAudit("get_logs", getLogs);
   const getScreenSummaryHandler = withPolicy("get_screen_summary", getScreenSummary);
   const getSessionStateHandler = withPolicy("get_session_state", getSessionState);
   const inspectUiHandler = withPolicy("inspect_ui", inspectUi);
@@ -78,8 +91,8 @@ export function createServer(): MobileE2EMcpServer {
   const listJsDebugTargetsHandler = withPolicy("list_js_debug_targets", listJsDebugTargets);
   const launchAppHandler = withPolicy("launch_app", launchApp);
   const listDevicesHandler = withPolicy("list_devices", listDevices);
-  const measureAndroidPerformanceHandler = withPolicy("measure_android_performance", measureAndroidPerformance);
-  const measureIosPerformanceHandler = withPolicy("measure_ios_performance", measureIosPerformance);
+  const measureAndroidPerformanceHandler = withPolicyAndAudit("measure_android_performance", measureAndroidPerformance);
+  const measureIosPerformanceHandler = withPolicyAndAudit("measure_ios_performance", measureIosPerformance);
   const rankFailureCandidatesHandler = withPolicy("rank_failure_candidates", rankFailureCandidates);
   const runFlowHandler = withPolicy("run_flow", runFlow);
   const takeScreenshotHandler = withPolicy("take_screenshot", takeScreenshot);

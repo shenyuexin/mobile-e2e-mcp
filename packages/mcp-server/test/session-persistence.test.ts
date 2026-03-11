@@ -249,6 +249,71 @@ test("perform_action_with_evidence appends an action event to the persisted sess
   }
 });
 
+test("get_logs appends evidence capture artifacts into the session audit", async () => {
+  const sessionId = `persisted-logs-evidence-${Date.now()}`;
+  await cleanupSessionArtifact(sessionId);
+  const server = createServer();
+
+  try {
+    await server.invoke("start_session", {
+      sessionId,
+      platform: "android",
+      profile: "phase1",
+    });
+
+    const result = await server.invoke("get_logs", {
+      sessionId,
+      platform: "android",
+      dryRun: true,
+      lines: 25,
+    });
+
+    assert.equal(result.status, "success");
+
+    const stored = await loadSessionRecord(repoRoot, sessionId);
+    const audit = await loadSessionAuditRecord(repoRoot, sessionId);
+    assert.ok(stored);
+    assert.ok(audit);
+    assert.equal(stored.session.timeline.some((event) => event.type === "get_logs_captured"), true);
+    assert.equal(audit.artifact_paths.some((entry) => entry.path.includes("artifacts/logs")), true);
+  } finally {
+    await cleanupSessionArtifact(sessionId);
+  }
+});
+
+test("measure_ios_performance appends planned performance artifacts into the session audit", async () => {
+  const sessionId = `persisted-ios-performance-${Date.now()}`;
+  await cleanupSessionArtifact(sessionId);
+  const server = createServer();
+
+  try {
+    await server.invoke("start_session", {
+      sessionId,
+      platform: "ios",
+      profile: "native_ios",
+    });
+
+    const result = await server.invoke("measure_ios_performance", {
+      sessionId,
+      runnerProfile: "native_ios",
+      dryRun: true,
+      durationMs: 2000,
+    });
+
+    assert.equal(result.status, "success");
+
+    const stored = await loadSessionRecord(repoRoot, sessionId);
+    const audit = await loadSessionAuditRecord(repoRoot, sessionId);
+    assert.ok(stored);
+    assert.ok(audit);
+    assert.equal(stored.session.timeline.some((event) => event.type === "measure_ios_performance_captured"), true);
+    assert.equal(audit.artifact_paths.some((entry) => entry.path.includes("artifacts/performance")), true);
+    assert.equal(audit.artifact_paths.some((entry) => entry.category === "reports" || entry.category === "debug-output"), true);
+  } finally {
+    await cleanupSessionArtifact(sessionId);
+  }
+});
+
 test("recordFailureSignature tolerates a truncated failure index and rewrites it", async () => {
   const failureIndexPath = path.resolve(repoRoot, "artifacts/ai-first/failure-index.json");
   await rm(failureIndexPath, { force: true });
