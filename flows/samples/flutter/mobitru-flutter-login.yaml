@@ -4,15 +4,16 @@ appId: com.epam.mobitru
     appId: com.epam.mobitru
     clearState: true
     stopApp: true
-- assertVisible: "Login"
+- assertVisible:
+    id: "login_email"
 - tapOn:
-    below:
-      text: "Login"
+    id: "login_email"
 - inputText: "testuser@mobitru.com"
 - tapOn:
-    below:
-      text: "Password"
+    id: "login_password"
 - inputText: "password1"
 - hideKeyboard
-- tapOn: "Sign In"
-- assertVisible: "category"
+- tapOn:
+    id: "login_signin"
+- assertVisible:
+    id: "category"
