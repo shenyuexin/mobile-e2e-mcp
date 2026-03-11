@@ -14,6 +14,100 @@ export type ActionOutcomeStatus = "success" | "failed" | "partial" | "unknown";
 export type SupportedActionType = "tap_element" | "type_into_element" | "wait_for_ui" | "launch_app" | "terminate_app";
 export type AffectedLayer = "ui_locator" | "ui_state" | "interruption" | "network" | "backend" | "runtime" | "crash" | "performance" | "environment" | "test_logic" | "unknown";
 export type RecoveryStrategy = "none" | "wait_until_ready" | "relaunch_app" | "replay_last_successful_action";
+export type OcrAllowedAction = "tap" | "assertText" | "longPress";
+export type OcrBlockedAction = "delete" | "purchase" | "confirmPayment";
+export type OcrMatchType = "exact" | "normalized" | "fuzzy" | "ai-reranked";
+
+export interface OcrBounds {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+}
+
+export interface OcrInput {
+  screenshotPath: string;
+  platform: Platform;
+  languageHints?: string[];
+  crop?: OcrBounds;
+}
+
+export interface OcrTextBlock {
+  text: string;
+  confidence: number;
+  bounds: OcrBounds;
+}
+
+export interface OcrOutput {
+  provider: string;
+  engine: string;
+  model?: string;
+  durationMs: number;
+  screenshotPath: string;
+  capturedAt: string;
+  blocks: OcrTextBlock[];
+}
+
+export interface OcrProvider {
+  extractTextRegions(input: OcrInput): Promise<OcrOutput>;
+}
+
+export interface ResolveTextTargetInput {
+  targetText: string;
+  blocks: OcrTextBlock[];
+  exact?: boolean;
+  fuzzy?: boolean;
+  maxCandidatesBeforeFail?: number;
+}
+
+export interface ResolveTextTargetResult {
+  matched: boolean;
+  confidence: number;
+  bestCandidate?: OcrTextBlock;
+  candidates: OcrTextBlock[];
+  matchType?: OcrMatchType;
+}
+
+export interface OcrFallbackPolicy {
+  enabled: boolean;
+  allowedActions: OcrAllowedAction[];
+  blockedActions: OcrBlockedAction[];
+  minConfidenceForAssert: number;
+  minConfidenceForTap: number;
+  minConfidenceForRiskyAction: number;
+  maxCandidatesBeforeFail: number;
+  maxScreenshotAgeMs: number;
+  retryLimit: number;
+}
+
+export interface OcrEvidence {
+  provider: string;
+  engine: string;
+  model?: string;
+  durationMs: number;
+  matchedText?: string;
+  candidateCount: number;
+  matchType?: OcrMatchType;
+  ocrConfidence?: number;
+  screenshotPath?: string;
+  selectedBounds?: OcrBounds;
+  fallbackReason?: string;
+  postVerificationResult?: "passed" | "failed" | "not_run";
+}
+
+export interface OcrCapabilitySummary {
+  supported: boolean;
+  deterministicFirst: boolean;
+  hostRequirement: "darwin";
+  defaultProvider?: string;
+  configuredProviders: string[];
+  allowedActions: OcrAllowedAction[];
+  blockedActions: OcrBlockedAction[];
+  minConfidenceForAssert: number;
+  minConfidenceForTap: number;
+  maxCandidatesBeforeFail: number;
+  retryLimit: number;
+}
 
 export interface ExecutionEvidence {
   kind: ExecutionEvidenceKind;
@@ -41,6 +135,7 @@ export interface CapabilityProfile {
   runnerProfile: RunnerProfile | null;
   toolCapabilities: ToolCapability[];
   groups: CapabilityGroup[];
+  ocrFallback?: OcrCapabilitySummary;
 }
 
 export interface StateSummary {
@@ -91,6 +186,7 @@ export interface ActionOutcomeSummary {
   fallbackUsed: boolean;
   retryCount: number;
   confidence?: number;
+  ocrEvidence?: OcrEvidence;
   outcome: ActionOutcomeStatus;
 }
 export interface FailureAttribution {
