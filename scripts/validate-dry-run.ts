@@ -372,6 +372,14 @@ const validationCases: ValidationCase[] = [
     },
   },
   {
+    name: "perform_action_with_evidence auto-remediation stop dry-run",
+    cliArgs: ["--perform-action-with-evidence", "--auto-remediate", "--session-id", "smoke-auto-remediation", "--platform", "android", "--action-type", "tap_element", "--content-desc", "View products", "--dry-run"],
+    validate: (result) => {
+      const typed = result as { performActionWithEvidenceResult: { data: { autoRemediation?: { stopReason: string } } } };
+      assert.equal(typeof typed.performActionWithEvidenceResult.data.autoRemediation?.stopReason, "string");
+    },
+  },
+  {
     name: "explain_last_failure Android dry-run",
     cliArgs: ["--session-id", "smoke-explain-failure", "--perform-action-with-evidence", "--platform", "android", "--action-type", "tap_element", "--content-desc", "View products", "--dry-run"],
     validate: (result) => {
