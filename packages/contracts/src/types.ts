@@ -5,6 +5,15 @@ export type ToolStatus = "success" | "failed" | "partial";
 export type RunnerProfile = "phase1" | "native_android" | "native_ios" | "flutter_android";
 export type CapabilitySupportLevel = "full" | "partial" | "unsupported";
 export type ExecutionEvidenceKind = "ui_dump" | "screenshot" | "log" | "crash_signal" | "diagnostics_bundle" | "debug_summary" | "performance_trace" | "performance_summary" | "performance_export";
+export type AppPhase = "launching" | "ready" | "loading" | "blocked" | "backgrounded" | "crashed" | "unknown";
+export type StateReadiness = "ready" | "waiting_network" | "waiting_ui" | "interrupted" | "unknown";
+export type TimelineEventLayer = "session" | "ui" | "state" | "action" | "log" | "crash" | "network" | "runtime" | "performance" | "environment" | "unknown";
+export type EvidenceCompletenessLevel = "complete" | "partial" | "minimal" | "missing";
+export type ActionResolutionStrategy = "deterministic" | "semantic" | "ocr" | "cv";
+export type ActionOutcomeStatus = "success" | "failed" | "partial" | "unknown";
+export type SupportedActionType = "tap_element" | "type_into_element" | "wait_for_ui" | "launch_app" | "terminate_app";
+export type AffectedLayer = "ui_locator" | "ui_state" | "interruption" | "network" | "backend" | "runtime" | "crash" | "performance" | "environment" | "test_logic" | "unknown";
+export type RecoveryStrategy = "none" | "wait_until_ready" | "relaunch_app" | "replay_last_successful_action";
 
 export interface ExecutionEvidence {
   kind: ExecutionEvidenceKind;
@@ -34,8 +43,106 @@ export interface CapabilityProfile {
   groups: CapabilityGroup[];
 }
 
-export interface SessionTimelineEvent { timestamp: string; type: string; detail?: string; }
-export interface Session { sessionId: string; platform: Platform; deviceId: string; appId: string; policyProfile: string; startedAt: string; artifactsRoot: string; timeline: SessionTimelineEvent[]; profile?: RunnerProfile | null; phase?: string | null; sampleName?: string | null; capabilities?: CapabilityProfile; }
+export interface StateSummary {
+  screenId?: string;
+  screenTitle?: string;
+  routeName?: string;
+  appPhase: AppPhase;
+  readiness: StateReadiness;
+  blockingSignals: string[];
+  visibleTargetCount?: number;
+  candidateActions?: string[];
+  recentFailures?: string[];
+  topVisibleTexts?: string[];
+}
+export interface EvidenceCompleteness {
+  level: EvidenceCompletenessLevel;
+  capturedKinds: ExecutionEvidenceKind[];
+  missingEvidence: string[];
+}
+export interface ActionIntent {
+  actionType: SupportedActionType;
+  resourceId?: string;
+  contentDesc?: string;
+  text?: string;
+  className?: string;
+  clickable?: boolean;
+  limit?: number;
+  value?: string;
+  appId?: string;
+  launchUrl?: string;
+  timeoutMs?: number;
+  intervalMs?: number;
+  waitUntil?: WaitForUiMode;
+}
+export interface EvidenceDeltaSummary {
+  uiDiffSummary?: string;
+  networkDeltaSummary?: string;
+  runtimeDeltaSummary?: string;
+  logDeltaSummary?: string;
+}
+export interface ActionOutcomeSummary {
+  actionId: string;
+  actionType: SupportedActionType;
+  resolutionStrategy: ActionResolutionStrategy;
+  preState?: StateSummary;
+  postState?: StateSummary;
+  stateChanged: boolean;
+  fallbackUsed: boolean;
+  retryCount: number;
+  confidence?: number;
+  outcome: ActionOutcomeStatus;
+}
+export interface FailureAttribution {
+  affectedLayer: AffectedLayer;
+  mostLikelyCause: string;
+  candidateCauses: string[];
+  missingEvidence: string[];
+  recommendedNextProbe?: string;
+  recommendedRecovery?: string;
+}
+export interface RecoverySummary {
+  strategy: RecoveryStrategy;
+  recovered: boolean;
+  note: string;
+  stateBefore?: StateSummary;
+  stateAfter?: StateSummary;
+  replayedActionId?: string;
+}
+export interface FailureSignature {
+  actionType: SupportedActionType;
+  screenId?: string;
+  affectedLayer: AffectedLayer;
+  topSignal?: string;
+  interruptionCategory?: string;
+}
+export interface SimilarFailure {
+  actionId: string;
+  sessionId: string;
+  signature: FailureSignature;
+  matchScore: number;
+}
+export interface BaselineComparison {
+  baselineActionId?: string;
+  comparedActionId: string;
+  differences: string[];
+  matched: boolean;
+}
+export interface TimelineEvent {
+  eventId?: string;
+  timestamp: string;
+  type: string;
+  detail?: string;
+  eventType?: string;
+  actionId?: string;
+  layer?: TimelineEventLayer;
+  summary?: string;
+  artifactRefs?: string[];
+  stateSummary?: StateSummary;
+  evidenceCompleteness?: EvidenceCompleteness;
+}
+export interface SessionTimelineEvent extends TimelineEvent {}
+export interface Session { sessionId: string; platform: Platform; deviceId: string; appId: string; policyProfile: string; startedAt: string; artifactsRoot: string; timeline: SessionTimelineEvent[]; profile?: RunnerProfile | null; phase?: string | null; sampleName?: string | null; capabilities?: CapabilityProfile; latestStateSummary?: StateSummary; }
 export interface ToolResult<TData = unknown> { status: ToolStatus; reasonCode: ReasonCode; sessionId: string; durationMs: number; attempts: number; artifacts: string[]; data: TData; nextSuggestions: string[]; }
 export interface DeviceInfo { id: string; name?: string; platform: Platform; state: string; available: boolean; capabilities?: CapabilityProfile; }
 export interface DoctorCheck { name: string; status: "pass" | "warn" | "fail"; detail: string; }
@@ -488,6 +595,159 @@ export interface DescribeCapabilitiesData {
   platform: Platform;
   runnerProfile: RunnerProfile | null;
   capabilities: CapabilityProfile;
+}
+export interface GetScreenSummaryInput {
+  sessionId: string;
+  platform: Platform;
+  runnerProfile?: RunnerProfile;
+  harnessConfigPath?: string;
+  deviceId?: string;
+  appId?: string;
+  outputPath?: string;
+  includeDebugSignals?: boolean;
+  dryRun?: boolean;
+}
+export interface GetScreenSummaryData {
+  dryRun: boolean;
+  runnerProfile: RunnerProfile;
+  outputPath: string;
+  command: string[];
+  exitCode: number | null;
+  supportLevel: "full" | "partial";
+  summarySource: "ui_only" | "ui_and_debug_signals";
+  screenSummary: StateSummary;
+  evidence?: ExecutionEvidence[];
+  content?: string;
+  uiSummary?: InspectUiSummary;
+  logSummary?: LogSummary;
+  crashSummary?: LogSummary;
+}
+export interface GetSessionStateInput {
+  sessionId: string;
+  platform?: Platform;
+  runnerProfile?: RunnerProfile;
+  harnessConfigPath?: string;
+  deviceId?: string;
+  appId?: string;
+  dryRun?: boolean;
+}
+export interface GetSessionStateData {
+  dryRun: boolean;
+  platform: Platform;
+  runnerProfile: RunnerProfile;
+  sessionRecordFound: boolean;
+  state: StateSummary;
+  latestKnownState?: StateSummary;
+  capabilities: CapabilityProfile;
+  screenSummary: StateSummary;
+  logSummary?: LogSummary;
+  crashSummary?: LogSummary;
+  evidence?: ExecutionEvidence[];
+}
+export interface PerformActionWithEvidenceInput {
+  sessionId: string;
+  platform?: Platform;
+  runnerProfile?: RunnerProfile;
+  harnessConfigPath?: string;
+  deviceId?: string;
+  appId?: string;
+  includeDebugSignals?: boolean;
+  action: ActionIntent;
+  dryRun?: boolean;
+}
+export interface PerformActionWithEvidenceData {
+  sessionRecordFound: boolean;
+  outcome: ActionOutcomeSummary;
+  evidenceDelta: EvidenceDeltaSummary;
+  preStateSummary?: StateSummary;
+  postStateSummary?: StateSummary;
+  lowLevelStatus: ToolStatus;
+  lowLevelReasonCode: ReasonCode;
+  evidence?: ExecutionEvidence[];
+}
+export interface GetActionOutcomeInput {
+  sessionId?: string;
+  actionId: string;
+}
+export interface GetActionOutcomeData {
+  found: boolean;
+  actionId: string;
+  sessionId?: string;
+  outcome?: ActionOutcomeSummary;
+  evidenceDelta?: EvidenceDeltaSummary;
+  evidence?: ExecutionEvidence[];
+  lowLevelStatus?: ToolStatus;
+  lowLevelReasonCode?: ReasonCode;
+}
+export interface ExplainLastFailureInput {
+  sessionId: string;
+}
+export interface ExplainLastFailureData {
+  found: boolean;
+  actionId?: string;
+  outcome?: ActionOutcomeSummary;
+  attribution?: FailureAttribution;
+}
+export interface RankFailureCandidatesInput {
+  sessionId: string;
+}
+export interface RankFailureCandidatesData {
+  found: boolean;
+  actionId?: string;
+  candidates: FailureAttribution[];
+}
+export interface RecoverToKnownStateInput {
+  sessionId: string;
+  platform?: Platform;
+  runnerProfile?: RunnerProfile;
+  harnessConfigPath?: string;
+  deviceId?: string;
+  appId?: string;
+  dryRun?: boolean;
+}
+export interface RecoverToKnownStateData {
+  summary: RecoverySummary;
+}
+export interface ReplayLastStablePathInput {
+  sessionId: string;
+  platform?: Platform;
+  runnerProfile?: RunnerProfile;
+  harnessConfigPath?: string;
+  deviceId?: string;
+  appId?: string;
+  dryRun?: boolean;
+}
+export interface ReplayLastStablePathData {
+  summary: RecoverySummary;
+  replayedOutcome?: ActionOutcomeSummary;
+}
+export interface FindSimilarFailuresInput {
+  sessionId: string;
+  actionId?: string;
+}
+export interface FindSimilarFailuresData {
+  found: boolean;
+  actionId?: string;
+  signature?: FailureSignature;
+  similarFailures: SimilarFailure[];
+}
+export interface CompareAgainstBaselineInput {
+  sessionId: string;
+  actionId?: string;
+}
+export interface CompareAgainstBaselineData {
+  found: boolean;
+  actionId?: string;
+  comparison?: BaselineComparison;
+}
+export interface SuggestKnownRemediationInput {
+  sessionId: string;
+  actionId?: string;
+}
+export interface SuggestKnownRemediationData {
+  found: boolean;
+  actionId?: string;
+  remediation: string[];
 }
 export interface InspectUiInput { sessionId: string; platform: Platform; runnerProfile?: RunnerProfile; harnessConfigPath?: string; deviceId?: string; outputPath?: string; dryRun?: boolean; }
 export interface InspectUiQueryInput extends InspectUiInput, InspectUiQuery {}
