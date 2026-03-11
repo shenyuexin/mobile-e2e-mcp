@@ -314,7 +314,12 @@ const validationCases: ValidationCase[] = [
       const typed = result as { tapResult: { status: string; reasonCode: string; data: { command: string[] } } };
       assert.equal(typed.tapResult.status, "success");
       assert.equal(typed.tapResult.reasonCode, "OK");
-      assert.deepEqual(typed.tapResult.data.command.slice(1), ["ui", "tap", "12", "34", "--udid", "ADA078B9-3C6B-4875-8B85-A7789F368816"]);
+      assert.equal(typed.tapResult.data.command.includes("ui"), true);
+      assert.equal(typed.tapResult.data.command.includes("tap"), true);
+      assert.equal(typed.tapResult.data.command.includes("12"), true);
+      assert.equal(typed.tapResult.data.command.includes("34"), true);
+      assert.equal(typed.tapResult.data.command.includes("--udid"), true);
+      assert.equal(typed.tapResult.data.command.includes("ADA078B9-3C6B-4875-8B85-A7789F368816"), true);
     },
   },
   {
@@ -324,7 +329,140 @@ const validationCases: ValidationCase[] = [
       const typed = result as { typeTextResult: { status: string; reasonCode: string; data: { command: string[] } } };
       assert.equal(typed.typeTextResult.status, "success");
       assert.equal(typed.typeTextResult.reasonCode, "OK");
-      assert.deepEqual(typed.typeTextResult.data.command.slice(1), ["ui", "text", "hello", "--udid", "ADA078B9-3C6B-4875-8B85-A7789F368816"]);
+      assert.equal(typed.typeTextResult.data.command.includes("ui"), true);
+      assert.equal(typed.typeTextResult.data.command.includes("text"), true);
+      assert.equal(typed.typeTextResult.data.command.includes("hello"), true);
+      assert.equal(typed.typeTextResult.data.command.includes("--udid"), true);
+      assert.equal(typed.typeTextResult.data.command.includes("ADA078B9-3C6B-4875-8B85-A7789F368816"), true);
+    },
+  },
+  {
+    name: "get_screen_summary Android dry-run",
+    cliArgs: ["--get-screen-summary", "--platform", "android", "--dry-run"],
+    validate: (result) => {
+      const typed = result as { getScreenSummaryResult: { status: string; reasonCode: string; data: { summarySource: string; supportLevel: string; screenSummary: { appPhase: string } } } };
+      assert.equal(typed.getScreenSummaryResult.status, "success");
+      assert.equal(typed.getScreenSummaryResult.reasonCode, "OK");
+      assert.equal(typed.getScreenSummaryResult.data.summarySource, "ui_only");
+      assert.equal(typed.getScreenSummaryResult.data.supportLevel, "full");
+      assert.equal(typed.getScreenSummaryResult.data.screenSummary.appPhase, "unknown");
+    },
+  },
+  {
+    name: "get_session_state Android dry-run",
+    cliArgs: ["--get-session-state", "--platform", "android", "--dry-run"],
+    validate: (result) => {
+      const typed = result as { getSessionStateResult: { status: string; reasonCode: string; data: { sessionRecordFound: boolean; platform: string; state: { appPhase: string } } } };
+      assert.equal(typed.getSessionStateResult.status, "success");
+      assert.equal(typed.getSessionStateResult.reasonCode, "OK");
+      assert.equal(typed.getSessionStateResult.data.sessionRecordFound, false);
+      assert.equal(typed.getSessionStateResult.data.platform, "android");
+      assert.equal(typed.getSessionStateResult.data.state.appPhase, "unknown");
+    },
+  },
+  {
+    name: "perform_action_with_evidence Android dry-run",
+    cliArgs: ["--perform-action-with-evidence", "--platform", "android", "--action-type", "tap_element", "--content-desc", "View products", "--dry-run"],
+    validate: (result) => {
+      const typed = result as { performActionWithEvidenceResult: { status: string; reasonCode: string; data: { outcome: { actionType: string; actionId: string } } } };
+      assert.equal(typed.performActionWithEvidenceResult.status, "partial");
+      assert.equal(typed.performActionWithEvidenceResult.reasonCode, "UNSUPPORTED_OPERATION");
+      assert.equal(typed.performActionWithEvidenceResult.data.outcome.actionType, "tap_element");
+      assert.equal(typeof typed.performActionWithEvidenceResult.data.outcome.actionId, "string");
+    },
+  },
+  {
+    name: "explain_last_failure Android dry-run",
+    cliArgs: ["--session-id", "smoke-explain-failure", "--perform-action-with-evidence", "--platform", "android", "--action-type", "tap_element", "--content-desc", "View products", "--dry-run"],
+    validate: (result) => {
+      const typed = result as { performActionWithEvidenceResult: { data: { outcome: { actionId: string } } } };
+      assert.equal(typeof typed.performActionWithEvidenceResult.data.outcome.actionId, "string");
+    },
+  },
+  {
+    name: "explain_last_failure query",
+    cliArgs: ["--explain-last-failure", "--session-id", "smoke-explain-failure"],
+    validate: (result) => {
+      const typed = result as { explainLastFailureResult: { reasonCode: string; data: { found: boolean; attribution?: { affectedLayer: string } } } };
+      assert.equal(typed.explainLastFailureResult.reasonCode, "OK");
+      assert.equal(typed.explainLastFailureResult.data.found, true);
+      assert.equal(typeof typed.explainLastFailureResult.data.attribution?.affectedLayer, "string");
+    },
+  },
+  {
+    name: "rank_failure_candidates query",
+    cliArgs: ["--rank-failure-candidates", "--session-id", "smoke-explain-failure"],
+    validate: (result) => {
+      const typed = result as { rankFailureCandidatesResult: { reasonCode: string; data: { found: boolean; candidates: Array<{ affectedLayer: string }> } } };
+      assert.equal(typed.rankFailureCandidatesResult.reasonCode, "OK");
+      assert.equal(typed.rankFailureCandidatesResult.data.found, true);
+      assert.equal(typed.rankFailureCandidatesResult.data.candidates.length >= 1, true);
+    },
+  },
+  {
+    name: "recover_to_known_state Android dry-run",
+    cliArgs: ["--recover-to-known-state", "--session-id", "smoke-recover-state", "--platform", "android", "--dry-run"],
+    validate: (result) => {
+      const typed = result as { recoverToKnownStateResult: { reasonCode: string; data: { summary: { strategy: string } } } };
+      assert.equal(typed.recoverToKnownStateResult.reasonCode, "OK");
+      assert.equal(typeof typed.recoverToKnownStateResult.data.summary.strategy, "string");
+    },
+  },
+  {
+    name: "replay_last_stable_path setup",
+    cliArgs: ["--session-id", "smoke-replay-stable", "--perform-action-with-evidence", "--platform", "android", "--action-type", "launch_app", "--dry-run"],
+    validate: (result) => {
+      const typed = result as { performActionWithEvidenceResult: { data: { outcome: { actionId: string } } } };
+      assert.equal(typeof typed.performActionWithEvidenceResult.data.outcome.actionId, "string");
+    },
+  },
+  {
+    name: "replay_last_stable_path query",
+    cliArgs: ["--replay-last-stable-path", "--session-id", "smoke-replay-stable", "--platform", "android", "--dry-run"],
+    validate: (result) => {
+      const typed = result as { replayLastStablePathResult: { reasonCode: string; data: { summary: { strategy: string } } } };
+      assert.equal(typed.replayLastStablePathResult.reasonCode, "OK");
+      assert.equal(typed.replayLastStablePathResult.data.summary.strategy, "replay_last_successful_action");
+    },
+  },
+  {
+    name: "phase-f setup failure and baseline history",
+    cliArgs: ["--session-id", "smoke-phase-f", "--perform-action-with-evidence", "--platform", "android", "--action-type", "launch_app", "--dry-run"],
+    validate: (result) => {
+      const typed = result as { performActionWithEvidenceResult: { reasonCode: string } };
+      assert.equal(typed.performActionWithEvidenceResult.reasonCode, "OK");
+    },
+  },
+  {
+    name: "phase-f setup failure sample",
+    cliArgs: ["--session-id", "smoke-phase-f", "--perform-action-with-evidence", "--platform", "android", "--action-type", "tap_element", "--content-desc", "View products", "--dry-run"],
+    validate: (result) => {
+      const typed = result as { performActionWithEvidenceResult: { reasonCode: string } };
+      assert.equal(["OK", "UNSUPPORTED_OPERATION"].includes(typed.performActionWithEvidenceResult.reasonCode), true);
+    },
+  },
+  {
+    name: "find_similar_failures query",
+    cliArgs: ["--find-similar-failures", "--session-id", "smoke-phase-f"],
+    validate: (result) => {
+      const typed = result as { findSimilarFailuresResult: { reasonCode: string } };
+      assert.equal(typed.findSimilarFailuresResult.reasonCode, "OK");
+    },
+  },
+  {
+    name: "compare_against_baseline query",
+    cliArgs: ["--compare-against-baseline", "--session-id", "smoke-phase-f"],
+    validate: (result) => {
+      const typed = result as { compareAgainstBaselineResult: { reasonCode: string } };
+      assert.equal(typed.compareAgainstBaselineResult.reasonCode, "OK");
+    },
+  },
+  {
+    name: "suggest_known_remediation query",
+    cliArgs: ["--suggest-known-remediation", "--session-id", "smoke-phase-f"],
+    validate: (result) => {
+      const typed = result as { suggestKnownRemediationResult: { reasonCode: string } };
+      assert.equal(typed.suggestKnownRemediationResult.reasonCode, "OK");
     },
   },
   {

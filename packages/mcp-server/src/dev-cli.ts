@@ -1,4 +1,4 @@
-import type { AndroidPerformancePreset, CaptureJsConsoleLogsInput, CaptureJsNetworkEventsInput, CollectDebugEvidenceInput, CollectDiagnosticsInput, DescribeCapabilitiesInput, DoctorInput, GetCrashSignalsInput, GetLogsInput, InspectUiInput, InstallAppInput, IosPerformanceTemplate, LaunchAppInput, ListDevicesInput, ListJsDebugTargetsInput, MeasureAndroidPerformanceInput, MeasureIosPerformanceInput, Platform, QueryUiInput, ResolveUiTargetInput, RunFlowInput, RunnerProfile, ScreenshotInput, ScrollAndResolveUiTargetInput, ScrollAndTapElementInput, StartSessionInput, TapElementInput, TapInput, TerminateAppInput, TypeTextInput, TypeIntoElementInput, UiScrollDirection, WaitForUiInput, WaitForUiMode } from "@mobile-e2e-mcp/contracts";
+import type { ActionIntent, AndroidPerformancePreset, CaptureJsConsoleLogsInput, CaptureJsNetworkEventsInput, CollectDebugEvidenceInput, CollectDiagnosticsInput, CompareAgainstBaselineInput, DescribeCapabilitiesInput, DoctorInput, ExplainLastFailureInput, FindSimilarFailuresInput, GetActionOutcomeInput, GetCrashSignalsInput, GetLogsInput, GetScreenSummaryInput, GetSessionStateInput, InspectUiInput, InstallAppInput, IosPerformanceTemplate, LaunchAppInput, ListDevicesInput, ListJsDebugTargetsInput, MeasureAndroidPerformanceInput, MeasureIosPerformanceInput, PerformActionWithEvidenceInput, Platform, QueryUiInput, RankFailureCandidatesInput, RecoverToKnownStateInput, ReplayLastStablePathInput, ResolveUiTargetInput, RunFlowInput, RunnerProfile, ScreenshotInput, ScrollAndResolveUiTargetInput, ScrollAndTapElementInput, StartSessionInput, SuggestKnownRemediationInput, TapElementInput, TapInput, TerminateAppInput, TypeTextInput, TypeIntoElementInput, UiScrollDirection, WaitForUiInput, WaitForUiMode } from "@mobile-e2e-mcp/contracts";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 import { createServer } from "./index.js";
@@ -6,13 +6,19 @@ import { createServer } from "./index.js";
 interface CliOptions {
   captureJsConsoleLogs: boolean;
   captureJsNetworkEvents: boolean;
+  compareAgainstBaseline: boolean;
   collectDebugEvidence: boolean;
   collectDiagnostics: boolean;
   describeCapabilities: boolean;
   platform: Platform;
   doctor: boolean;
+  explainLastFailure: boolean;
+  findSimilarFailures: boolean;
   dryRun: boolean;
   getCrashSignals: boolean;
+  getActionOutcome: boolean;
+  getScreenSummary: boolean;
+  getSessionState: boolean;
   includeUnavailable: boolean;
   getLogs: boolean;
   inspectUi: boolean;
@@ -22,11 +28,16 @@ interface CliOptions {
   listDevices: boolean;
   measureAndroidPerformance: boolean;
   measureIosPerformance: boolean;
+  performActionWithEvidence: boolean;
+  rankFailureCandidates: boolean;
+  recoverToKnownState: boolean;
+  replayLastStablePath: boolean;
   queryUi: boolean;
   resolveUiTarget: boolean;
   scrollAndResolveUiTarget: boolean;
   scrollAndTapElement: boolean;
   takeScreenshot: boolean;
+  suggestKnownRemediation: boolean;
   tap: boolean;
   tapElement: boolean;
   terminateApp: boolean;
@@ -64,6 +75,8 @@ interface CliOptions {
   metroBaseUrl?: string;
   targetId?: string;
   webSocketDebuggerUrl?: string;
+  actionId?: string;
+  actionType?: ActionIntent["actionType"];
   timeoutMs?: number;
   maxLogs?: number;
   maxEvents?: number;
@@ -91,12 +104,18 @@ export function parseCliArgs(argv: string[]): CliOptions {
   let platform: Platform = "android";
   let captureJsConsoleLogs = false;
   let captureJsNetworkEvents = false;
+  let compareAgainstBaseline = false;
   let collectDebugEvidence = false;
   let collectDiagnostics = false;
   let describeCapabilities = false;
   let doctor = false;
+  let explainLastFailure = false;
+  let findSimilarFailures = false;
   let dryRun = false;
   let getCrashSignals = false;
+  let getActionOutcome = false;
+  let getScreenSummary = false;
+  let getSessionState = false;
   let includeUnavailable = false;
   let getLogs = false;
   let inspectUi = false;
@@ -106,11 +125,16 @@ export function parseCliArgs(argv: string[]): CliOptions {
   let listDevices = false;
   let measureAndroidPerformance = false;
   let measureIosPerformance = false;
+  let performActionWithEvidence = false;
+  let rankFailureCandidates = false;
+  let recoverToKnownState = false;
+  let replayLastStablePath = false;
   let queryUi = false;
   let resolveUiTarget = false;
   let scrollAndResolveUiTarget = false;
   let scrollAndTapElement = false;
   let takeScreenshot = false;
+  let suggestKnownRemediation = false;
   let tap = false;
   let tapElement = false;
   let terminateApp = false;
@@ -148,6 +172,8 @@ export function parseCliArgs(argv: string[]): CliOptions {
   let metroBaseUrl: string | undefined;
   let targetId: string | undefined;
   let webSocketDebuggerUrl: string | undefined;
+  let actionId: string | undefined;
+  let actionType: ActionIntent["actionType"] | undefined;
   let timeoutMs: number | undefined;
   let maxLogs: number | undefined;
   let maxEvents: number | undefined;
@@ -164,12 +190,18 @@ export function parseCliArgs(argv: string[]): CliOptions {
     if (arg === "--platform" && (nextValue === "android" || nextValue === "ios")) { platform = nextValue; index += 1; }
     else if (arg === "--capture-js-console-logs") { captureJsConsoleLogs = true; }
     else if (arg === "--capture-js-network-events") { captureJsNetworkEvents = true; }
+    else if (arg === "--compare-against-baseline") { compareAgainstBaseline = true; }
     else if (arg === "--collect-debug-evidence") { collectDebugEvidence = true; }
     else if (arg === "--collect-diagnostics") { collectDiagnostics = true; }
     else if (arg === "--describe-capabilities") { describeCapabilities = true; }
     else if (arg === "--doctor") { doctor = true; }
+    else if (arg === "--explain-last-failure") { explainLastFailure = true; }
+    else if (arg === "--find-similar-failures") { findSimilarFailures = true; }
     else if (arg === "--dry-run") { dryRun = true; }
     else if (arg === "--get-crash-signals") { getCrashSignals = true; }
+    else if (arg === "--get-action-outcome") { getActionOutcome = true; }
+    else if (arg === "--get-screen-summary") { getScreenSummary = true; }
+    else if (arg === "--get-session-state") { getSessionState = true; }
     else if (arg === "--include-unavailable") { includeUnavailable = true; }
     else if (arg === "--get-logs") { getLogs = true; }
     else if (arg === "--inspect-ui") { inspectUi = true; }
@@ -179,6 +211,10 @@ export function parseCliArgs(argv: string[]): CliOptions {
     else if (arg === "--list-devices") { listDevices = true; }
     else if (arg === "--measure-android-performance") { measureAndroidPerformance = true; }
     else if (arg === "--measure-ios-performance") { measureIosPerformance = true; }
+    else if (arg === "--perform-action-with-evidence") { performActionWithEvidence = true; }
+    else if (arg === "--rank-failure-candidates") { rankFailureCandidates = true; }
+    else if (arg === "--recover-to-known-state") { recoverToKnownState = true; }
+    else if (arg === "--replay-last-stable-path") { replayLastStablePath = true; }
     else if (arg === "--duration-ms" && nextValue) { const parsed = Number(nextValue); if (Number.isFinite(parsed) && parsed > 0) durationMs = Math.floor(parsed); index += 1; }
     else if (arg === "--preset" && nextValue && ["general", "startup", "interaction", "scroll"].includes(nextValue)) { performancePreset = nextValue as AndroidPerformancePreset; index += 1; }
     else if (arg === "--template" && nextValue && ["time-profiler", "animation-hitches", "memory"].includes(nextValue)) { performanceTemplate = nextValue as IosPerformanceTemplate; index += 1; }
@@ -187,6 +223,7 @@ export function parseCliArgs(argv: string[]): CliOptions {
     else if (arg === "--scroll-and-resolve-ui-target") { scrollAndResolveUiTarget = true; }
     else if (arg === "--scroll-and-tap-element") { scrollAndTapElement = true; }
     else if (arg === "--take-screenshot") { takeScreenshot = true; }
+    else if (arg === "--suggest-known-remediation") { suggestKnownRemediation = true; }
     else if (arg === "--tap") { tap = true; }
     else if (arg === "--tap-element") { tapElement = true; }
     else if (arg === "--terminate-app") { terminateApp = true; }
@@ -221,6 +258,8 @@ export function parseCliArgs(argv: string[]): CliOptions {
     else if (arg === "--metro-base-url" && nextValue) { metroBaseUrl = nextValue; index += 1; }
     else if (arg === "--target-id" && nextValue) { targetId = nextValue; index += 1; }
     else if (arg === "--websocket-debugger-url" && nextValue) { webSocketDebuggerUrl = nextValue; index += 1; }
+    else if (arg === "--action-id" && nextValue) { actionId = nextValue; index += 1; }
+    else if (arg === "--action-type" && nextValue && ["tap_element", "type_into_element", "wait_for_ui", "launch_app", "terminate_app"].includes(nextValue)) { actionType = nextValue as ActionIntent["actionType"]; index += 1; }
     else if (arg === "--timeout-ms" && nextValue) { const parsed = Number(nextValue); if (Number.isFinite(parsed) && parsed > 0) timeoutMs = Math.floor(parsed); index += 1; }
     else if (arg === "--max-logs" && nextValue) { const parsed = Number(nextValue); if (Number.isFinite(parsed) && parsed > 0) maxLogs = Math.floor(parsed); index += 1; }
     else if (arg === "--max-events" && nextValue) { const parsed = Number(nextValue); if (Number.isFinite(parsed) && parsed > 0) maxEvents = Math.floor(parsed); index += 1; }
@@ -235,13 +274,19 @@ export function parseCliArgs(argv: string[]): CliOptions {
   return {
     captureJsConsoleLogs,
     captureJsNetworkEvents,
+    compareAgainstBaseline,
     collectDebugEvidence,
     collectDiagnostics,
     describeCapabilities,
     platform,
     doctor,
+    explainLastFailure,
+    findSimilarFailures,
     dryRun,
     getCrashSignals,
+    getActionOutcome,
+    getScreenSummary,
+    getSessionState,
     includeUnavailable,
     getLogs,
     inspectUi,
@@ -251,11 +296,16 @@ export function parseCliArgs(argv: string[]): CliOptions {
     listDevices,
     measureAndroidPerformance,
     measureIosPerformance,
+    performActionWithEvidence,
+    rankFailureCandidates,
+    recoverToKnownState,
+    replayLastStablePath,
     queryUi,
     resolveUiTarget,
     scrollAndResolveUiTarget,
     scrollAndTapElement,
     takeScreenshot,
+    suggestKnownRemediation,
     tap,
     tapElement,
     terminateApp,
@@ -293,6 +343,8 @@ export function parseCliArgs(argv: string[]): CliOptions {
     metroBaseUrl,
     targetId,
     webSocketDebuggerUrl,
+    actionId,
+    actionType,
     timeoutMs,
     maxLogs,
     maxEvents,
@@ -337,6 +389,16 @@ export async function main(): Promise<void> {
     };
     const result = await server.invoke("capture_js_network_events", captureJsNetworkEventsInput);
     console.log(JSON.stringify({ tools: server.listTools(), captureJsNetworkEventsResult: result }, null, 2));
+    if (result.status === "failed") process.exitCode = 1;
+    return;
+  }
+  if (cliOptions.compareAgainstBaseline) {
+    const compareAgainstBaselineInput: CompareAgainstBaselineInput = {
+      sessionId: cliOptions.sessionId ?? `baseline-${Date.now()}`,
+      actionId: cliOptions.actionId,
+    };
+    const result = await server.invoke("compare_against_baseline", compareAgainstBaselineInput);
+    console.log(JSON.stringify({ tools: server.listTools(), compareAgainstBaselineResult: result }, null, 2));
     if (result.status === "failed") process.exitCode = 1;
     return;
   }
@@ -394,6 +456,25 @@ export async function main(): Promise<void> {
   if (cliOptions.doctor) {
     const result = await server.invoke("doctor", { includeUnavailable: cliOptions.includeUnavailable } satisfies DoctorInput);
     console.log(JSON.stringify({ tools: server.listTools(), doctorResult: result }, null, 2));
+    if (result.status === "failed") process.exitCode = 1;
+    return;
+  }
+  if (cliOptions.explainLastFailure) {
+    const explainLastFailureInput: ExplainLastFailureInput = {
+      sessionId: cliOptions.sessionId ?? `failure-${Date.now()}`,
+    };
+    const result = await server.invoke("explain_last_failure", explainLastFailureInput);
+    console.log(JSON.stringify({ tools: server.listTools(), explainLastFailureResult: result }, null, 2));
+    if (result.status === "failed") process.exitCode = 1;
+    return;
+  }
+  if (cliOptions.findSimilarFailures) {
+    const findSimilarFailuresInput: FindSimilarFailuresInput = {
+      sessionId: cliOptions.sessionId ?? `similar-failures-${Date.now()}`,
+      actionId: cliOptions.actionId,
+    };
+    const result = await server.invoke("find_similar_failures", findSimilarFailuresInput);
+    console.log(JSON.stringify({ tools: server.listTools(), findSimilarFailuresResult: result }, null, 2));
     if (result.status === "failed") process.exitCode = 1;
     return;
   }
@@ -463,6 +544,128 @@ export async function main(): Promise<void> {
     };
     const result = await server.invoke("get_crash_signals", getCrashSignalsInput);
     console.log(JSON.stringify({ tools: server.listTools(), getCrashSignalsResult: result }, null, 2));
+    if (result.status === "failed") process.exitCode = 1;
+    return;
+  }
+  if (cliOptions.getActionOutcome) {
+    const getActionOutcomeInput: GetActionOutcomeInput = {
+      sessionId: cliOptions.sessionId,
+      actionId: cliOptions.actionId ?? "missing-action-id",
+    };
+    const result = await server.invoke("get_action_outcome", getActionOutcomeInput);
+    console.log(JSON.stringify({ tools: server.listTools(), getActionOutcomeResult: result }, null, 2));
+    if (result.status === "failed") process.exitCode = 1;
+    return;
+  }
+  if (cliOptions.getScreenSummary) {
+    const getScreenSummaryInput: GetScreenSummaryInput = {
+      sessionId: cliOptions.sessionId ?? `screen-summary-${Date.now()}`,
+      platform: cliOptions.platform,
+      runnerProfile: cliOptions.runnerProfile,
+      harnessConfigPath: cliOptions.harnessConfigPath,
+      deviceId: cliOptions.deviceId,
+      appId: cliOptions.appId,
+      outputPath: cliOptions.outputPath,
+      dryRun: cliOptions.dryRun,
+    };
+    const result = await server.invoke("get_screen_summary", getScreenSummaryInput);
+    console.log(JSON.stringify({ tools: server.listTools(), getScreenSummaryResult: result }, null, 2));
+    if (result.status === "failed") process.exitCode = 1;
+    return;
+  }
+  if (cliOptions.getSessionState) {
+    const getSessionStateInput: GetSessionStateInput = {
+      sessionId: cliOptions.sessionId ?? `session-state-${Date.now()}`,
+      platform: cliOptions.platform,
+      runnerProfile: cliOptions.runnerProfile,
+      harnessConfigPath: cliOptions.harnessConfigPath,
+      deviceId: cliOptions.deviceId,
+      appId: cliOptions.appId,
+      dryRun: cliOptions.dryRun,
+    };
+    const result = await server.invoke("get_session_state", getSessionStateInput);
+    console.log(JSON.stringify({ tools: server.listTools(), getSessionStateResult: result }, null, 2));
+    if (result.status === "failed") process.exitCode = 1;
+    return;
+  }
+  if (cliOptions.performActionWithEvidence) {
+    const action: ActionIntent = {
+      actionType: cliOptions.actionType ?? "tap_element",
+      resourceId: cliOptions.queryResourceId,
+      contentDesc: cliOptions.queryContentDesc,
+      text: cliOptions.queryText ?? cliOptions.text,
+      className: cliOptions.queryClassName,
+      clickable: cliOptions.queryClickable,
+      limit: cliOptions.queryLimit,
+      value: cliOptions.value,
+      appId: cliOptions.appId,
+      launchUrl: cliOptions.launchUrl,
+      timeoutMs: cliOptions.timeoutMs,
+      intervalMs: cliOptions.intervalMs,
+      waitUntil: cliOptions.waitUntil,
+    };
+    const performActionInput: PerformActionWithEvidenceInput = {
+      sessionId: cliOptions.sessionId ?? `action-${Date.now()}`,
+      platform: cliOptions.platform,
+      runnerProfile: cliOptions.runnerProfile,
+      harnessConfigPath: cliOptions.harnessConfigPath,
+      deviceId: cliOptions.deviceId,
+      appId: cliOptions.appId,
+      includeDebugSignals: true,
+      action,
+      dryRun: cliOptions.dryRun,
+    };
+    const result = await server.invoke("perform_action_with_evidence", performActionInput);
+    console.log(JSON.stringify({ tools: server.listTools(), performActionWithEvidenceResult: result }, null, 2));
+    if (result.status === "failed") process.exitCode = 1;
+    return;
+  }
+  if (cliOptions.rankFailureCandidates) {
+    const rankFailureCandidatesInput: RankFailureCandidatesInput = {
+      sessionId: cliOptions.sessionId ?? `failure-candidates-${Date.now()}`,
+    };
+    const result = await server.invoke("rank_failure_candidates", rankFailureCandidatesInput);
+    console.log(JSON.stringify({ tools: server.listTools(), rankFailureCandidatesResult: result }, null, 2));
+    if (result.status === "failed") process.exitCode = 1;
+    return;
+  }
+  if (cliOptions.recoverToKnownState) {
+    const recoverInput: RecoverToKnownStateInput = {
+      sessionId: cliOptions.sessionId ?? `recover-${Date.now()}`,
+      platform: cliOptions.platform,
+      runnerProfile: cliOptions.runnerProfile,
+      harnessConfigPath: cliOptions.harnessConfigPath,
+      deviceId: cliOptions.deviceId,
+      appId: cliOptions.appId,
+      dryRun: cliOptions.dryRun,
+    };
+    const result = await server.invoke("recover_to_known_state", recoverInput);
+    console.log(JSON.stringify({ tools: server.listTools(), recoverToKnownStateResult: result }, null, 2));
+    if (result.status === "failed") process.exitCode = 1;
+    return;
+  }
+  if (cliOptions.replayLastStablePath) {
+    const replayInput: ReplayLastStablePathInput = {
+      sessionId: cliOptions.sessionId ?? `replay-${Date.now()}`,
+      platform: cliOptions.platform,
+      runnerProfile: cliOptions.runnerProfile,
+      harnessConfigPath: cliOptions.harnessConfigPath,
+      deviceId: cliOptions.deviceId,
+      appId: cliOptions.appId,
+      dryRun: cliOptions.dryRun,
+    };
+    const result = await server.invoke("replay_last_stable_path", replayInput);
+    console.log(JSON.stringify({ tools: server.listTools(), replayLastStablePathResult: result }, null, 2));
+    if (result.status === "failed") process.exitCode = 1;
+    return;
+  }
+  if (cliOptions.suggestKnownRemediation) {
+    const suggestKnownRemediationInput: SuggestKnownRemediationInput = {
+      sessionId: cliOptions.sessionId ?? `remediation-${Date.now()}`,
+      actionId: cliOptions.actionId,
+    };
+    const result = await server.invoke("suggest_known_remediation", suggestKnownRemediationInput);
+    console.log(JSON.stringify({ tools: server.listTools(), suggestKnownRemediationResult: result }, null, 2));
     if (result.status === "failed") process.exitCode = 1;
     return;
   }
