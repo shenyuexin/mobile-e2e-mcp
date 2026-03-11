@@ -76,3 +76,8 @@ Minimum app-under-test contract expectations:
 - Deep-link or test-entry support for core screens.
 - Deterministic reset and seed-data strategy.
 - Framework-specific instrumentation profile compliance.
+
+## 8. Focused Architecture Notes
+
+- React Native debugger sequence and capability gap: [`docs/architecture/rn-debugger-sequence.md`](./rn-debugger-sequence.md)
+- AI-first capability model: [`docs/architecture/ai-first-capability-model.md`](./ai-first-capability-model.md)

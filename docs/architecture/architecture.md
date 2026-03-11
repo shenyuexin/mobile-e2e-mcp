@@ -99,6 +99,10 @@ Canonical fields for adapter conformance:
 
 For code ownership inside the current TypeScript adapter implementation, see [`docs/architecture/adapter-code-placement.md`](./adapter-code-placement.md).
 
+For the current React Native debugger sequence and the capability gap from Metro inspector snapshots to a full debugger, see [`docs/architecture/rn-debugger-sequence.md`](./rn-debugger-sequence.md).
+
+For the broader AI-first capability model of the project, including required state, evidence, attribution, recovery, memory, and governance layers, see [`docs/architecture/ai-first-capability-model.md`](./ai-first-capability-model.md).
+
 Routing policy should evaluate:
 
 1. Platform (Android/iOS)
