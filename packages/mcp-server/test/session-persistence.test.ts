@@ -1,16 +1,25 @@
 import assert from "node:assert/strict";
-import { rm } from "node:fs/promises";
+import { rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { buildSessionRecordRelativePath, loadSessionRecord } from "@mobile-e2e-mcp/core";
+import {
+  buildSessionAuditRelativePath,
+  buildSessionRecordRelativePath,
+  loadFailureIndex,
+  loadSessionAuditRecord,
+  loadSessionRecord,
+  recordFailureSignature,
+} from "@mobile-e2e-mcp/core";
 import { createServer } from "../src/index.ts";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 
 async function cleanupSessionArtifact(sessionId: string): Promise<void> {
   const absolutePath = path.resolve(repoRoot, buildSessionRecordRelativePath(sessionId));
+  const auditPath = path.resolve(repoRoot, buildSessionAuditRelativePath(sessionId));
   await rm(absolutePath, { force: true });
+  await rm(auditPath, { force: true });
 }
 
 test("start_session persists a recoverable session record", async () => {
@@ -29,11 +38,15 @@ test("start_session persists a recoverable session record", async () => {
     assert.equal(result.artifacts.includes(buildSessionRecordRelativePath(sessionId)), true);
 
     const stored = await loadSessionRecord(repoRoot, sessionId);
+    const audit = await loadSessionAuditRecord(repoRoot, sessionId);
     assert.ok(stored);
+    assert.ok(audit);
     assert.equal(stored.closed, false);
     assert.equal(stored.session.sessionId, sessionId);
     assert.equal(stored.session.platform, "android");
     assert.equal(stored.session.timeline[0]?.type, "session_started");
+    assert.equal(audit?.session_id, sessionId);
+    assert.equal(audit?.result, "in_progress");
   } finally {
     await cleanupSessionArtifact(sessionId);
   }
@@ -61,11 +74,16 @@ test("end_session finalizes an existing persisted session record", async () => {
     assert.equal(result.artifacts.includes(buildSessionRecordRelativePath(sessionId)), true);
 
     const stored = await loadSessionRecord(repoRoot, sessionId);
+    const audit = await loadSessionAuditRecord(repoRoot, sessionId);
     assert.ok(stored);
+    assert.ok(audit);
     assert.equal(stored.closed, true);
     assert.equal(stored.endedAt !== undefined, true);
     assert.deepEqual(stored.artifacts, ["artifacts/demo/output.txt"]);
     assert.equal(stored.session.timeline[stored.session.timeline.length - 1]?.type, "session_ended");
+    assert.equal(audit?.result, "completed");
+    assert.equal(audit?.artifact_paths[0]?.category, "debug-output");
+    assert.equal(Array.isArray(audit?.schema_required_fields), true);
   } finally {
     await cleanupSessionArtifact(sessionId);
   }
@@ -173,11 +191,39 @@ test("perform_action_with_evidence appends an action event to the persisted sess
     assert.equal(actionResult.status, "partial");
 
     const stored = await loadSessionRecord(repoRoot, sessionId);
+    const audit = await loadSessionAuditRecord(repoRoot, sessionId);
     assert.ok(stored);
+    assert.ok(audit);
     const lastEvent = stored.session.timeline[stored.session.timeline.length - 1];
     assert.equal(lastEvent?.type, "action_outcome_recorded");
     assert.equal(lastEvent?.actionId, actionResult.data.outcome.actionId);
+    assert.equal((audit?.artifact_paths.length ?? 0) > 0, true);
+    assert.equal(audit?.artifact_paths.some((entry) => typeof entry.retention === "string" || entry.retention === undefined), true);
   } finally {
     await cleanupSessionArtifact(sessionId);
+  }
+});
+
+test("recordFailureSignature tolerates a truncated failure index and rewrites it", async () => {
+  const failureIndexPath = path.resolve(repoRoot, "artifacts/ai-first/failure-index.json");
+  await rm(failureIndexPath, { force: true });
+
+  try {
+    await writeFile(failureIndexPath, "[\n  {\n", "utf8");
+    await recordFailureSignature(repoRoot, {
+      actionId: "action-corrupt-index-test",
+      sessionId: "session-corrupt-index-test",
+      signature: {
+        actionType: "tap_element",
+        affectedLayer: "runtime",
+      },
+      remediation: ["Inspect runtime output"],
+      updatedAt: new Date().toISOString(),
+    });
+
+    const index = await loadFailureIndex(repoRoot);
+    assert.equal(index.some((entry) => entry.actionId === "action-corrupt-index-test"), true);
+  } finally {
+    await rm(failureIndexPath, { force: true });
   }
 });

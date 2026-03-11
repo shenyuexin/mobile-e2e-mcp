@@ -76,7 +76,7 @@ export async function startSession(input: StartSessionInput): Promise<ToolResult
       },
     ],
   };
-  const sessionArtifactPath = await persistStartedSession(repoRoot, session);
+  const persisted = await persistStartedSession(repoRoot, session);
 
   return {
     status: "success",
@@ -84,7 +84,7 @@ export async function startSession(input: StartSessionInput): Promise<ToolResult
     sessionId,
     durationMs: 0,
     attempts: 1,
-    artifacts: [sessionArtifactPath],
+    artifacts: persisted.auditPath ? [persisted.relativePath, persisted.auditPath] : [persisted.relativePath],
     data: session,
     nextSuggestions: ["Invoke run_flow with the returned sessionId to execute the sample harness.", "Use the persisted session artifact to restore context across agent/tool restarts."],
   };

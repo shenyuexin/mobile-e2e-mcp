@@ -12,7 +12,9 @@ export async function endSession(input: EndSessionInput): Promise<ToolResult<{ c
     sessionId: input.sessionId,
     durationMs: 0,
     attempts: 1,
-    artifacts: persisted.relativePath ? [persisted.relativePath, ...(input.artifacts ?? [])] : (input.artifacts ?? []),
+    artifacts: persisted.relativePath
+      ? [persisted.relativePath, ...(persisted.auditPath ? [persisted.auditPath] : []), ...(input.artifacts ?? [])]
+      : (input.artifacts ?? []),
     data: {
       closed: persisted.closed,
       endedAt,
