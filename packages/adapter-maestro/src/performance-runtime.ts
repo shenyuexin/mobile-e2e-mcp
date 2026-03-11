@@ -84,6 +84,7 @@ export interface IosPerformanceCapturePlan {
   runnerProfile: RunnerProfile;
   template: IosPerformanceTemplate;
   appId?: string;
+  attachTarget?: string;
   outputPath: string;
   artifacts: PerformanceArtifactBundle;
   templateName: string;
@@ -275,18 +276,20 @@ export function buildAndroidPerformancePlan(input: MeasureAndroidPerformanceInpu
   };
 }
 
-export function buildIosPerformancePlan(input: MeasureIosPerformanceInput, runnerProfile: RunnerProfile, deviceId: string): IosPerformanceCapturePlan {
+export function buildIosPerformancePlan(input: MeasureIosPerformanceInput, runnerProfile: RunnerProfile, deviceId: string, attachTarget?: string): IosPerformanceCapturePlan {
   const durationMs = normalizePositiveInteger(input.durationMs, DEFAULT_PERFORMANCE_DURATION_MS);
   const template = input.template ?? "time-profiler";
   const outputRoot = buildPerformanceOutputRoot(input.sessionId, input.outputPath);
   const artifacts = buildIosArtifacts(outputRoot, runnerProfile, template);
   const templateName = templateNameForIos(template);
   const exportXPath = "/trace-toc/run[@number='1']/data/table";
+  const recordTargetArgs = attachTarget ? ["--attach", attachTarget] : ["--all-processes"];
   return {
     durationMs,
     runnerProfile,
     template,
     appId: input.appId,
+    attachTarget,
     outputPath: outputRoot,
     artifacts,
     templateName,
@@ -302,7 +305,7 @@ export function buildIosPerformancePlan(input: MeasureIosPerformanceInput, runne
           templateName,
           "--device",
           deviceId,
-          "--all-processes",
+          ...recordTargetArgs,
           "--time-limit",
           `${String(durationMs)}ms`,
           "--output",

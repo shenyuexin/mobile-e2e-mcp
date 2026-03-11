@@ -2,8 +2,9 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { classifyDoctorOutcome, isPerfettoShellProbeAvailable, measureAndroidPerformanceWithMaestro, measureIosPerformanceWithMaestro } from "../src/index.ts";
 import type { DoctorCheck } from "@mobile-e2e-mcp/contracts";
-import { buildAndroidPerformancePlan, resolveAndroidPerformancePlanStrategy, resolveTraceProcessorPath } from "../src/performance-runtime.ts";
+import { buildAndroidPerformancePlan, buildIosPerformancePlan, resolveAndroidPerformancePlanStrategy, resolveTraceProcessorPath } from "../src/performance-runtime.ts";
 import { parseTraceProcessorTsv, summarizeAndroidPerformance, summarizeIosPerformance } from "../src/performance-model.ts";
+import { buildFailureReason } from "../src/runtime-shared.ts";
 
 test("isPerfettoShellProbeAvailable rejects missing sentinel output", () => {
   assert.equal(isPerfettoShellProbeAvailable({ exitCode: 0, stdout: "missing\n", stderr: "" }), false);
@@ -55,6 +56,23 @@ test("buildAndroidPerformancePlan switches transport for older Android versions"
   assert.equal(legacyPlan.tracePullMode, "exec_out_cat");
   assert.equal(modernPlan.configTransport, "remote_file");
   assert.equal(modernPlan.tracePullMode, "adb_pull");
+});
+
+test("buildIosPerformancePlan uses attach target when provided", () => {
+  const plan = buildIosPerformancePlan({ sessionId: "ios-memory-attach", template: "memory", appId: "host.exp.Exponent" }, "phase1", "sim-1", "43127");
+
+  assert.equal(plan.attachTarget, "43127");
+  assert.deepEqual(plan.steps[0]?.command.slice(0, 9), [
+    "xcrun",
+    "xctrace",
+    "record",
+    "--template",
+    "Allocations",
+    "--device",
+    "sim-1",
+    "--attach",
+    "43127",
+  ]);
 });
 
 test("resolveTraceProcessorPath discovers common fallback paths", () => {
@@ -159,6 +177,10 @@ test("measureIosPerformanceWithMaestro returns configuration failure when xcrun 
   } finally {
     process.env.PATH = originalPath;
   }
+});
+
+test("buildFailureReason maps unsupported platform template errors to device unavailable", () => {
+  assert.equal(buildFailureReason("Hitches is not supported on this platform.", 2), "DEVICE_UNAVAILABLE");
 });
 
 test("summarizeIosPerformance extracts top processes and hotspots from time profiler export", () => {

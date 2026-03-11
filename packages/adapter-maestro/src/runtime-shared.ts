@@ -48,6 +48,9 @@ export function buildFailureReason(stderr: string, exitCode: number | null): Rea
   if ((combined.includes("xcrun") || combined.includes("trace_processor")) && (combined.includes("enoent") || combined.includes("not found"))) {
     return REASON_CODES.configurationError;
   }
+  if (combined.includes("not supported on this platform")) {
+    return REASON_CODES.deviceUnavailable;
+  }
   if (combined.includes("install_failed_version_downgrade") || combined.includes("failed to install")) {
     return REASON_CODES.configurationError;
   }
