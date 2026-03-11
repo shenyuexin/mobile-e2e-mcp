@@ -51,7 +51,7 @@ function buildIosToolCapabilities(): ToolCapability[] {
     buildToolCapability("get_crash_signals", FULL, "iOS simulator crash manifest capture is supported."),
     buildToolCapability("get_logs", FULL, "iOS simulator log capture is supported."),
     buildToolCapability("measure_android_performance", UNSUPPORTED, "Android Perfetto performance capture is not available on iOS targets."),
-    buildToolCapability("measure_ios_performance", PARTIAL, "iOS time-window performance capture is supported through xctrace with a lightweight export parser."),
+    buildToolCapability("measure_ios_performance", PARTIAL, "iOS time-window performance capture is partial: Time Profiler is real-validated on simulator, Allocations can be real-validated via attach-to-app, and Animation Hitches remains platform-limited on current simulator/runtime combinations."),
     buildToolCapability("inspect_ui", PARTIAL, "iOS can capture hierarchy artifacts through idb, but downstream query and action parity remains partial."),
     buildToolCapability("query_ui", FULL, "iOS query_ui can filter captured hierarchy nodes through idb-backed structured matching."),
     buildToolCapability("resolve_ui_target", FULL, "iOS target resolution can resolve structured hierarchy matches through idb-backed capture."),

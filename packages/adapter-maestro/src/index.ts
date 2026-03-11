@@ -2256,6 +2256,42 @@ async function collectPerformanceEnvironmentChecks(repoRoot: string, androidDevi
   return checks;
 }
 
+async function collectIosPerformanceEnvironmentChecks(repoRoot: string, iosDevices: DeviceInfo[]): Promise<DoctorCheck[]> {
+  const checks: DoctorCheck[] = [];
+  const selectedIosDeviceId = process.env.SIM_UDID ?? iosDevices.find((device) => device.available)?.id;
+  if (!selectedIosDeviceId) {
+    checks.push(summarizeInfoCheck("ios performance templates", "warn", "No available iOS simulator is selected, so template-specific performance guidance was skipped."));
+    return checks;
+  }
+
+  checks.push(summarizeInfoCheck(
+    "ios performance templates",
+    "pass",
+    "Time Profiler is real-validated on simulator. Allocations can be real-validated when the target app is attached by pid. Animation Hitches remains platform-limited on the current simulator/runtime and should be treated as device-preferred.",
+  ));
+
+  const appId = process.env.IOS_APP_ID;
+  if (!appId) {
+    checks.push(summarizeInfoCheck(
+      "ios memory attach readiness",
+      "warn",
+      "Allocations is most reliable when the target app can be attached by pid. Set IOS_APP_ID (or pass appId at runtime) if you want doctor to preflight that path.",
+    ));
+    return checks;
+  }
+
+  const processId = await resolveIosSimulatorProcessId(repoRoot, selectedIosDeviceId, appId);
+  checks.push(summarizeInfoCheck(
+    "ios memory attach readiness",
+    processId ? "pass" : "warn",
+    processId
+      ? `Allocations can attach to ${appId} on simulator ${selectedIosDeviceId} using pid ${processId}.`
+      : `Allocations could not resolve a running pid for ${appId} on simulator ${selectedIosDeviceId}; the tool will need to launch the app or may fall back to unsupported all-process capture.`,
+  ));
+
+  return checks;
+}
+
 async function collectInstallStateChecks(repoRoot: string): Promise<DoctorCheck[]> {
   const checks: DoctorCheck[] = [];
 
@@ -5336,7 +5372,7 @@ export async function measureAndroidPerformanceWithMaestro(input: MeasureAndroid
       {
         key: "memory",
         statements: [
-          [`SELECT ROUND(MIN(CAST(counter.value AS FLOAT)), 2), ROUND(MAX(CAST(counter.value AS FLOAT)), 2), ROUND(MAX(CAST(counter.value AS FLOAT)) - MIN(CAST(counter.value AS FLOAT)), 2) FROM counter JOIN process_counter_track ON counter.track_id = process_counter_track.id LEFT JOIN process ON process_counter_track.upid = process.upid WHERE lower(process_counter_track.name) LIKE '%rss%'${appId ? ` AND process.name = ${JSON.stringify(appId)}` : ""};`],
+          [`SELECT ROUND(MIN(CAST(counter.value AS FLOAT)), 2), ROUND(MAX(CAST(counter.value AS FLOAT)), 2), ROUND(MAX(CAST(counter.value AS FLOAT)) - MIN(CAST(counter.value AS FLOAT)), 2) FROM counter JOIN process_counter_track ON counter.track_id = process_counter_track.id LEFT JOIN process ON process_counter_track.upid = process.upid WHERE lower(process_counter_track.name) LIKE '%rss%'${appId ? ` AND (process.name = ${JSON.stringify(appId)} OR process.name LIKE ${JSON.stringify(`${appId}:%`)})` : ""};`],
           ["SELECT ROUND(MIN(CAST(counter.value AS FLOAT)), 2), ROUND(MAX(CAST(counter.value AS FLOAT)), 2), ROUND(MAX(CAST(counter.value AS FLOAT)) - MIN(CAST(counter.value AS FLOAT)), 2) FROM counter JOIN counter_track ON counter.track_id = counter_track.id WHERE lower(counter_track.name) LIKE '%rss%' OR lower(counter_track.name) LIKE '%mem%' OR lower(counter_track.name) LIKE '%heap%';"],
         ],
       },
@@ -5829,6 +5865,7 @@ export async function runDoctor(
   checks.push(summarizeDeviceCheck("android devices", deviceResult.data.android.filter((device) => device.available).length));
   checks.push(summarizeDeviceCheck("ios simulators", deviceResult.data.ios.filter((device) => device.available).length));
   checks.push(...(await collectPerformanceEnvironmentChecks(repoRoot, deviceResult.data.android)));
+  checks.push(...(await collectIosPerformanceEnvironmentChecks(repoRoot, deviceResult.data.ios)));
 
   const { status, reasonCode } = classifyDoctorOutcome(checks);
 
