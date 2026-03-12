@@ -25,6 +25,7 @@ import {
   resolveFirstTapTarget,
   shouldAbortWaitForUiAfterReadFailure,
 } from "../src/ui-model.ts";
+import { buildResolutionNextSuggestions } from "../src/ui-tools.ts";
 import { buildCapabilityProfile, buildDiagnosisBriefing, buildLogSummary, buildStateSummaryFromSignals, collectDebugEvidenceWithMaestro, collectDiagnosticsWithMaestro, compareAgainstBaselineWithMaestro, describeCapabilitiesWithMaestro, findSimilarFailuresWithMaestro, getActionOutcomeWithMaestro, getCrashSignalsWithMaestro, getLogsWithMaestro, getScreenSummaryWithMaestro, getSessionStateWithMaestro, inspectUiWithMaestro, performActionWithEvidenceWithMaestro, recoverToKnownStateWithMaestro, replayLastStablePathWithMaestro, resetOcrFallbackTestHooksForTesting, resolveUiTargetWithMaestro, scrollAndResolveUiTargetWithMaestro, scrollAndTapElementWithMaestro, setOcrFallbackTestHooksForTesting, suggestKnownRemediationWithMaestro, takeScreenshotWithMaestro, tapElementWithMaestro, tapWithMaestro, typeIntoElementWithMaestro, typeTextWithMaestro, waitForUiWithMaestro } from "../src/index.ts";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
@@ -924,6 +925,12 @@ test("diffAmbiguousCandidates returns selector-friendly field differences", () =
   assert.ok(diff);
   assert.equal(diff?.differingFields.some((field) => field.field === "resourceId"), true);
   assert.equal((diff?.suggestedSelectors.length ?? 0) > 0, true);
+});
+
+test("buildResolutionNextSuggestions explains off-screen scroll guidance", () => {
+  const suggestions = buildResolutionNextSuggestions("off_screen", "scroll_and_resolve_ui_target");
+
+  assert.equal(suggestions[0]?.includes("outside the visible viewport"), true);
 });
 
 test("performActionWithEvidenceWithMaestro uses screenshot fixture for OCR assert fallback success", async () => {

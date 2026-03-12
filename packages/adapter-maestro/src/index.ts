@@ -259,6 +259,10 @@ const DEFAULT_DEBUG_PACKET_JS_TIMEOUT_MS = 1000;
 const DEFAULT_DEVICE_COMMAND_TIMEOUT_MS = 5000;
 const DEFAULT_SCROLL_MAX_SWIPES = 3;
 const DEFAULT_SCROLL_DURATION_MS = 250;
+
+function shouldContinueScrollResolution(status: string): boolean {
+  return status === "no_match" || status === "off_screen";
+}
 const DEFAULT_WAIT_MAX_CONSECUTIVE_CAPTURE_FAILURES = 2;
 
 interface TypeTextData {
@@ -4137,7 +4141,7 @@ export async function scrollAndResolveUiTargetWithMaestro(input: ScrollAndResolv
       commandHistory.push(lastSnapshot.command);
       const result = { query, ...lastSnapshot.queryResult };
       const resolution = buildUiTargetResolution(query, result, "full");
-      if (resolution.status !== "no_match") {
+      if (!shouldContinueScrollResolution(resolution.status)) {
         return {
           status: resolution.status === "resolved" ? "success" : "partial",
           reasonCode: reasonCodeForResolutionStatus(resolution.status),
@@ -4191,7 +4195,9 @@ export async function scrollAndResolveUiTargetWithMaestro(input: ScrollAndResolv
             content: lastSnapshot.execution.stdout,
             summary: lastSnapshot.summary,
           },
-          nextSuggestions: ["Reached maxSwipes without finding a matching iOS target. Narrow the selector or increase maxSwipes."],
+          nextSuggestions: resolution.status === "off_screen"
+            ? ["Reached maxSwipes while the best iOS match stayed off-screen. Keep scrolling, change swipe direction, or refine the selector toward visible content."]
+            : ["Reached maxSwipes without finding a matching iOS target. Narrow the selector or increase maxSwipes."],
         };
       }
 
@@ -4328,7 +4334,7 @@ export async function scrollAndResolveUiTargetWithMaestro(input: ScrollAndResolv
 
     const result = { query, ...lastSnapshot.queryResult };
     const resolution = buildUiTargetResolution(query, result, "full");
-    if (resolution.status !== "no_match") {
+    if (!shouldContinueScrollResolution(resolution.status)) {
       return {
         status: resolution.status === "resolved" ? "success" : "partial",
         reasonCode: reasonCodeForResolutionStatus(resolution.status),
@@ -4382,7 +4388,9 @@ export async function scrollAndResolveUiTargetWithMaestro(input: ScrollAndResolv
           content: lastSnapshot.readExecution.stdout,
           summary: lastSnapshot.summary,
         },
-        nextSuggestions: ["Reached maxSwipes without finding a matching Android target. Narrow the selector or increase maxSwipes."],
+        nextSuggestions: resolution.status === "off_screen"
+          ? ["Reached maxSwipes while the best Android match stayed off-screen. Keep scrolling, change swipe direction, or refine the selector toward visible content."]
+          : ["Reached maxSwipes without finding a matching Android target. Narrow the selector or increase maxSwipes."],
       };
     }
 
