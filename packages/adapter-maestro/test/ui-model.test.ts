@@ -22,7 +22,7 @@ import {
   resolveFirstTapTarget,
   shouldAbortWaitForUiAfterReadFailure,
 } from "../src/ui-model.ts";
-import { buildCapabilityProfile, buildDiagnosisBriefing, buildLogSummary, collectDebugEvidenceWithMaestro, collectDiagnosticsWithMaestro, compareAgainstBaselineWithMaestro, describeCapabilitiesWithMaestro, findSimilarFailuresWithMaestro, getActionOutcomeWithMaestro, getCrashSignalsWithMaestro, getLogsWithMaestro, getScreenSummaryWithMaestro, getSessionStateWithMaestro, inspectUiWithMaestro, performActionWithEvidenceWithMaestro, recoverToKnownStateWithMaestro, replayLastStablePathWithMaestro, resetOcrFallbackTestHooksForTesting, resolveUiTargetWithMaestro, scrollAndResolveUiTargetWithMaestro, scrollAndTapElementWithMaestro, setOcrFallbackTestHooksForTesting, suggestKnownRemediationWithMaestro, takeScreenshotWithMaestro, tapElementWithMaestro, tapWithMaestro, typeIntoElementWithMaestro, typeTextWithMaestro, waitForUiWithMaestro } from "../src/index.ts";
+import { buildCapabilityProfile, buildDiagnosisBriefing, buildLogSummary, buildStateSummaryFromSignals, collectDebugEvidenceWithMaestro, collectDiagnosticsWithMaestro, compareAgainstBaselineWithMaestro, describeCapabilitiesWithMaestro, findSimilarFailuresWithMaestro, getActionOutcomeWithMaestro, getCrashSignalsWithMaestro, getLogsWithMaestro, getScreenSummaryWithMaestro, getSessionStateWithMaestro, inspectUiWithMaestro, performActionWithEvidenceWithMaestro, recoverToKnownStateWithMaestro, replayLastStablePathWithMaestro, resetOcrFallbackTestHooksForTesting, resolveUiTargetWithMaestro, scrollAndResolveUiTargetWithMaestro, scrollAndTapElementWithMaestro, setOcrFallbackTestHooksForTesting, suggestKnownRemediationWithMaestro, takeScreenshotWithMaestro, tapElementWithMaestro, tapWithMaestro, typeIntoElementWithMaestro, typeTextWithMaestro, waitForUiWithMaestro } from "../src/index.ts";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 const ocrFixtureRoot = path.join(repoRoot, "tests", "fixtures", "ocr");
@@ -737,6 +737,37 @@ test("getScreenSummaryWithMaestro returns compact dry-run state summary", async 
   assert.equal(result.data.evidence?.some((item) => item.kind === "crash_signal"), true);
 });
 
+test("buildStateSummaryFromSignals infers authentication and interruption hints", () => {
+  const summary = buildStateSummaryFromSignals({
+    uiSummary: buildInspectUiSummary([
+      { text: "Login", clickable: false, enabled: true, scrollable: false },
+      { text: "Password", clickable: false, enabled: true, scrollable: false },
+      { text: "Allow", clickable: true, enabled: true, scrollable: false },
+    ]),
+    logSummary: buildLogSummary("network timeout while signing in"),
+  });
+
+  assert.equal(summary.appPhase, "blocked");
+  assert.equal(summary.readiness, "interrupted");
+  assert.equal(summary.pageHints?.includes("authentication"), true);
+  assert.equal(summary.derivedSignals?.includes("network_instability"), true);
+  assert.equal(typeof summary.stateConfidence, "number");
+});
+
+test("buildStateSummaryFromSignals infers catalog state from visible product labels", () => {
+  const summary = buildStateSummaryFromSignals({
+    uiSummary: buildInspectUiSummary([
+      { text: "Mobile phones", clickable: true, enabled: true, scrollable: false },
+      { text: "Search", clickable: true, enabled: true, scrollable: false },
+      { text: "Category", clickable: false, enabled: true, scrollable: false },
+    ]),
+  });
+
+  assert.equal(summary.appPhase, "catalog");
+  assert.equal(summary.readiness, "unknown");
+  assert.equal(summary.pageHints?.includes("catalog"), true);
+});
+
 test("getSessionStateWithMaestro supports dry-run without persisted session", async () => {
   const result = await getSessionStateWithMaestro({
     sessionId: "session-state-dry-run",
@@ -768,6 +799,42 @@ test("performActionWithEvidenceWithMaestro records dry-run action outcome", asyn
   assert.equal(result.data.outcome.outcome, "partial");
   assert.equal(typeof result.data.outcome.actionId, "string");
   assert.equal(typeof result.data.evidenceDelta.uiDiffSummary, "string");
+  assert.equal(result.data.outcome.failureCategory, "unsupported");
+  assert.equal(Array.isArray(result.data.actionabilityReview), true);
+});
+
+test("queryUiNodes ranks exact id matches before fuzzy text matches", () => {
+  const query = normalizeQueryUiSelector({ resourceId: "login", text: "Login" });
+  const result = queryUiNodes([
+    { text: "Login", resourceId: "login_title", clickable: false, enabled: true, scrollable: false, bounds: "[0,0][100,100]" },
+    { text: "Login", resourceId: "login_email", clickable: true, enabled: true, scrollable: false, bounds: "[0,100][100,200]" },
+  ], query);
+
+  assert.equal(result.totalMatches, 2);
+  assert.equal(result.matches[0]?.node.resourceId, "login_email");
+  assert.equal(result.matches[0]?.score !== undefined, true);
+  assert.equal(Array.isArray(result.matches[0]?.scoreBreakdown), true);
+});
+
+test("buildUiTargetResolution returns disabled_match when best candidate is disabled", () => {
+  const resolution = buildUiTargetResolution(
+    { text: "Continue" },
+    {
+      query: { text: "Continue" },
+      totalMatches: 1,
+      matches: [{
+        node: { text: "Continue", clickable: true, enabled: false, scrollable: false, bounds: "[0,0][100,100]" },
+        matchedBy: ["text"],
+        score: 5,
+        matchQuality: "exact",
+        scoreBreakdown: ["exact text match"],
+      }],
+    },
+    "full",
+  );
+
+  assert.equal(resolution.status, "disabled_match");
+  assert.equal(resolution.bestCandidate?.node.enabled, false);
 });
 
 test("performActionWithEvidenceWithMaestro uses screenshot fixture for OCR assert fallback success", async () => {

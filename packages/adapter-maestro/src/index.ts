@@ -430,8 +430,14 @@ function detectBlockingSignals(visibleTexts: string[], candidateActions: string[
     if (value.includes("loading") || value.includes("please wait") || value.includes("signing in") || value.includes("progress")) {
       signals.add("loading_indicator");
     }
+    if (value.includes("offline") || value.includes("network") || value.includes("connection") || value.includes("timeout")) {
+      signals.add("network_instability");
+    }
     if (value.includes("try again") || value.includes("retry") || value.includes("failed") || value.includes("error")) {
       signals.add("error_state");
+    }
+    if (value.includes("empty") || value.includes("no items") || value.includes("no results") || value.includes("nothing here")) {
+      signals.add("empty_state");
     }
     if (value.includes("cancel") || value.includes("not now") || value.includes("ok") || value.includes("open settings")) {
       signals.add("dialog_actions");
@@ -448,7 +454,36 @@ function buildRecentFailures(logSummary?: LogSummary, crashSummary?: LogSummary)
   ], 5);
 }
 
-function buildStateSummaryFromSignals(params: {
+function inferPageHints(visibleTexts: string[], candidateActions: string[]): string[] {
+  const normalized = [...visibleTexts, ...candidateActions].map((value) => value.toLowerCase());
+  const hints = new Set<string>();
+  for (const value of normalized) {
+    if (value.includes("login") || value.includes("sign in") || value.includes("password") || value.includes("email")) {
+      hints.add("authentication");
+    }
+    if (value.includes("category") || value.includes("mobile phones") || value.includes("search")) {
+      hints.add("catalog");
+    }
+    if (value.includes("details") || value.includes("description") || value.includes("add to cart")) {
+      hints.add("detail");
+    }
+    if (value.includes("empty") || value.includes("no results") || value.includes("nothing here")) {
+      hints.add("empty");
+    }
+  }
+  return [...hints].slice(0, 5);
+}
+
+function buildStateConfidence(params: { appPhase: StateSummary["appPhase"]; readiness: StateSummary["readiness"]; uiSummary?: InspectUiSummary; blockingSignals: string[]; recentFailures: string[] }): number {
+  let confidence = (params.uiSummary?.totalNodes ?? 0) > 0 ? 0.55 : 0.2;
+  if (params.appPhase !== "unknown") confidence += 0.15;
+  if (params.readiness !== "unknown") confidence += 0.1;
+  if (params.blockingSignals.length > 0) confidence += 0.1;
+  if (params.recentFailures.length > 0) confidence += 0.05;
+  return Math.max(0.1, Math.min(0.98, Number(confidence.toFixed(2))));
+}
+
+export function buildStateSummaryFromSignals(params: {
   uiSummary?: InspectUiSummary;
   logSummary?: LogSummary;
   crashSummary?: LogSummary;
@@ -458,16 +493,27 @@ function buildStateSummaryFromSignals(params: {
   const candidateActions = uniqueNonEmpty(sampleNodes.filter((node) => node.clickable).flatMap((node) => [node.text, node.contentDesc, node.resourceId]));
   const blockingSignals = detectBlockingSignals(visibleTexts, candidateActions);
   const recentFailures = buildRecentFailures(params.logSummary, params.crashSummary);
+  const pageHints = inferPageHints(visibleTexts, candidateActions);
   const topCrash = params.crashSummary?.topSignals[0]?.sample?.toLowerCase();
   const topLog = params.logSummary?.topSignals[0]?.sample?.toLowerCase();
   const hasCrash = Boolean(topCrash && (topCrash.includes("crash") || topCrash.includes("fatal") || topCrash.includes("anr")));
   const hasLoading = blockingSignals.includes("loading_indicator");
   const hasInterruption = blockingSignals.includes("permission_prompt") || blockingSignals.includes("dialog_actions");
-  const hasErrorState = blockingSignals.includes("error_state") || Boolean(topLog && (topLog.includes("timeout") || topLog.includes("failed") || topLog.includes("error")));
+  const hasNetworkInstability = blockingSignals.includes("network_instability") || Boolean(topLog && (topLog.includes("network") || topLog.includes("http") || topLog.includes("timeout")));
+  const hasErrorState = blockingSignals.includes("error_state") || Boolean(topLog && (topLog.includes("failed") || topLog.includes("error") || topLog.includes("exception")));
+  const hasEmptyState = blockingSignals.includes("empty_state") || pageHints.includes("empty");
   const appPhase = hasCrash
     ? "crashed"
     : hasInterruption || hasErrorState
       ? "blocked"
+      : pageHints.includes("authentication")
+        ? "authentication"
+        : pageHints.includes("detail")
+          ? "detail"
+          : pageHints.includes("catalog")
+            ? "catalog"
+            : hasEmptyState
+              ? "empty"
       : hasLoading
         ? "loading"
         : (params.uiSummary?.totalNodes ?? 0) > 0
@@ -476,11 +522,29 @@ function buildStateSummaryFromSignals(params: {
   const readiness = hasInterruption
     ? "interrupted"
     : hasLoading
-      ? (topLog?.includes("network") || recentFailures.some((value) => value.toLowerCase().includes("http")) ? "waiting_network" : "waiting_ui")
+      ? (hasNetworkInstability || recentFailures.some((value) => value.toLowerCase().includes("http")) ? "waiting_network" : "waiting_ui")
+      : hasNetworkInstability
+        ? "waiting_network"
       : appPhase === "ready"
         ? "ready"
         : "unknown";
   const screenTitle = visibleTexts[0] ?? candidateActions[0];
+  const derivedSignals = uniqueNonEmpty([
+    hasCrash ? "crash_signal" : undefined,
+    hasLoading ? "loading_indicator" : undefined,
+    hasInterruption ? "interruption_signal" : undefined,
+    hasNetworkInstability ? "network_instability" : undefined,
+    hasErrorState ? "error_state" : undefined,
+    hasEmptyState ? "empty_state" : undefined,
+    ...pageHints.map((hint) => `page_hint:${hint}`),
+  ], 8);
+  const stateConfidence = buildStateConfidence({
+    appPhase,
+    readiness,
+    uiSummary: params.uiSummary,
+    blockingSignals,
+    recentFailures,
+  });
 
   return {
     screenId: toScreenId(screenTitle ?? visibleTexts.join("-")),
@@ -488,6 +552,9 @@ function buildStateSummaryFromSignals(params: {
     appPhase,
     readiness,
     blockingSignals,
+    stateConfidence,
+    pageHints,
+    derivedSignals,
     visibleTargetCount: params.uiSummary?.clickableNodes,
     candidateActions,
     recentFailures,
@@ -530,6 +597,68 @@ function buildActionOutcomeConfidence(status: ToolResult["status"], stateChanged
     return 0.45;
   }
   return 0.2;
+}
+
+function buildActionabilityReview(params: {
+  preStateSummary: StateSummary;
+  postStateSummary: StateSummary;
+  lowLevelStatus: ToolResult["status"];
+  lowLevelReasonCode: ReasonCode;
+  targetResolution?: { status?: string; matchCount?: number };
+  stateChanged: boolean;
+}): string[] {
+  return uniqueNonEmpty([
+    params.preStateSummary.readiness !== "ready" ? `pre_state_not_ready:${params.preStateSummary.readiness}` : undefined,
+    params.preStateSummary.blockingSignals.length > 0 ? `blocking:${params.preStateSummary.blockingSignals.join(",")}` : undefined,
+    params.targetResolution?.status ? `target_resolution:${params.targetResolution.status}` : undefined,
+    typeof params.targetResolution?.matchCount === "number" ? `target_match_count:${String(params.targetResolution.matchCount)}` : undefined,
+    !params.stateChanged ? "post_state_unchanged" : undefined,
+    params.lowLevelStatus !== "success" ? `low_level_status:${params.lowLevelStatus}` : undefined,
+    params.lowLevelReasonCode !== REASON_CODES.ok ? `low_level_reason:${params.lowLevelReasonCode}` : undefined,
+    params.postStateSummary.readiness !== "ready" ? `post_state_not_ready:${params.postStateSummary.readiness}` : undefined,
+  ], 8);
+}
+
+function classifyActionFailureCategory(params: {
+  finalStatus: ToolResult["status"];
+  finalReasonCode: ReasonCode;
+  preStateSummary: StateSummary;
+  postStateSummary: StateSummary;
+  lowLevelResult: ToolResult<unknown>;
+  stateChanged: boolean;
+}): ActionOutcomeSummary["failureCategory"] {
+  if (params.finalStatus === "success" && params.stateChanged) {
+    return undefined;
+  }
+  if (params.finalReasonCode === REASON_CODES.unsupportedOperation) {
+    return "unsupported";
+  }
+  if (params.finalReasonCode === REASON_CODES.noMatch) {
+    return "selector_missing";
+  }
+  if (params.finalReasonCode === REASON_CODES.ambiguousMatch) {
+    return "selector_ambiguous";
+  }
+  if (params.preStateSummary.readiness === "interrupted" || params.preStateSummary.blockingSignals.length > 0) {
+    return "blocked";
+  }
+  if (params.preStateSummary.readiness === "waiting_network" || params.preStateSummary.readiness === "waiting_ui") {
+    return "waiting";
+  }
+  if (!params.stateChanged) {
+    return "no_state_change";
+  }
+  return params.lowLevelResult.status === "failed" ? "transport" : "no_state_change";
+}
+
+function classifyTargetQuality(params: { failureCategory?: ActionOutcomeSummary["failureCategory"]; finalStatus: ToolResult["status"]; fallbackUsed: boolean; stateChanged: boolean }): ActionOutcomeSummary["targetQuality"] {
+  if (params.failureCategory === "selector_missing" || params.failureCategory === "selector_ambiguous") {
+    return "low";
+  }
+  if (params.finalStatus === "success" && params.stateChanged && !params.fallbackUsed) {
+    return "high";
+  }
+  return "medium";
 }
 
 interface OcrFallbackExecutionResult {
@@ -1550,6 +1679,12 @@ export async function performActionWithEvidenceWithMaestro(
   const postStateSummary = postStateResult.data.screenSummary;
   const stateChanged = JSON.stringify(preStateSummary) !== JSON.stringify(postStateSummary);
   const actionId = `action-${randomUUID()}`;
+  const targetResolution = isRecord(lowLevelResult.data) && isRecord(lowLevelResult.data.resolution)
+    ? {
+      status: typeof lowLevelResult.data.resolution.status === "string" ? lowLevelResult.data.resolution.status : undefined,
+      matchCount: typeof lowLevelResult.data.resolution.matchCount === "number" ? lowLevelResult.data.resolution.matchCount : undefined,
+    }
+    : undefined;
   const evidenceDelta = buildActionEvidenceDelta({
     preState: preStateSummary,
     postState: postStateSummary,
@@ -1557,6 +1692,14 @@ export async function performActionWithEvidenceWithMaestro(
     postLogSummary: postStateResult.data.logSummary,
     preCrashSummary: preStateResult.data.crashSummary,
     postCrashSummary: postStateResult.data.crashSummary,
+  });
+  const failureCategory = classifyActionFailureCategory({
+    finalStatus,
+    finalReasonCode,
+    preStateSummary,
+    postStateSummary,
+    lowLevelResult,
+    stateChanged,
   });
   const outcome: ActionOutcomeSummary = {
     actionId,
@@ -1567,6 +1710,13 @@ export async function performActionWithEvidenceWithMaestro(
     stateChanged,
     fallbackUsed,
     retryCount: ocrFallbackResult?.retryCount ?? 0,
+    targetQuality: classifyTargetQuality({
+      failureCategory,
+      finalStatus,
+      fallbackUsed,
+      stateChanged,
+    }),
+    failureCategory,
     confidence: ocrFallbackResult?.ocrEvidence?.ocrConfidence ?? buildActionOutcomeConfidence(finalStatus, stateChanged),
     ocrEvidence: ocrFallbackResult?.ocrEvidence,
     outcome: finalStatus === "success" ? "success" : finalStatus === "partial" ? "partial" : "failed",
@@ -1623,6 +1773,14 @@ export async function performActionWithEvidenceWithMaestro(
     });
   }
   const allArtifacts = persistedAction.relativePath ? [persistedAction.relativePath, ...artifacts] : artifacts;
+  const actionabilityReview = buildActionabilityReview({
+    preStateSummary,
+    postStateSummary,
+    lowLevelStatus: finalStatus,
+    lowLevelReasonCode: finalReasonCode,
+    targetResolution,
+    stateChanged,
+  });
 
   return {
     status: finalStatus,
@@ -1637,6 +1795,7 @@ export async function performActionWithEvidenceWithMaestro(
       evidenceDelta,
       preStateSummary,
       postStateSummary,
+      actionabilityReview,
       lowLevelStatus: finalStatus,
       lowLevelReasonCode: finalReasonCode,
       evidence,

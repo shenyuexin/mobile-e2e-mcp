@@ -194,36 +194,76 @@ function matchesQueryString(nodeValue: string | undefined, queryValue: string | 
   return nodeValue.toLocaleLowerCase().includes(queryValue.toLocaleLowerCase());
 }
 
+function classifyStringMatch(nodeValue: string | undefined, queryValue: string | undefined): { matched: boolean; quality?: "exact" | "prefix" | "substring"; score: number; note?: string } {
+  if (queryValue === undefined) {
+    return { matched: true, score: 0 };
+  }
+  if (!nodeValue) {
+    return { matched: false, score: 0 };
+  }
+  const normalizedNode = nodeValue.toLocaleLowerCase();
+  const normalizedQuery = queryValue.toLocaleLowerCase();
+  if (normalizedNode === normalizedQuery) {
+    return { matched: true, quality: "exact", score: 6, note: "exact text match" };
+  }
+  if (normalizedNode.startsWith(normalizedQuery)) {
+    return { matched: true, quality: "prefix", score: 4, note: "prefix text match" };
+  }
+  if (normalizedNode.includes(normalizedQuery)) {
+    return { matched: true, quality: "substring", score: 2, note: "substring text match" };
+  }
+  return { matched: false, score: 0 };
+}
+
 export function queryUiNodes(nodes: InspectUiNode[], query: QueryUiSelector): { totalMatches: number; matches: InspectUiMatch[] } {
   const allMatches = nodes.flatMap((node) => {
     const matchedBy: InspectUiMatchField[] = [];
+    const scoreBreakdown: string[] = [];
+    let score = 0;
+    let matchQuality: InspectUiMatch["matchQuality"];
 
     if (query.resourceId !== undefined) {
-      if (!matchesQueryString(node.resourceId, query.resourceId)) {
+      const result = classifyStringMatch(node.resourceId, query.resourceId);
+      if (!result.matched) {
         return [];
       }
       matchedBy.push("resourceId");
+      score += result.quality === "exact" ? 10 : result.quality === "prefix" ? 8 : 6;
+      scoreBreakdown.push(result.note ?? "resourceId match");
+      matchQuality = matchQuality ?? result.quality;
     }
 
     if (query.contentDesc !== undefined) {
-      if (!matchesQueryString(node.contentDesc, query.contentDesc)) {
+      const result = classifyStringMatch(node.contentDesc, query.contentDesc);
+      if (!result.matched) {
         return [];
       }
       matchedBy.push("contentDesc");
+      score += result.score;
+      scoreBreakdown.push(result.note ?? "content description match");
+      matchQuality = matchQuality ?? result.quality;
     }
 
     if (query.text !== undefined) {
-      if (!matchesQueryString(node.text, query.text)) {
+      const result = classifyStringMatch(node.text, query.text);
+      if (!result.matched) {
         return [];
       }
       matchedBy.push("text");
+      score += result.score;
+      scoreBreakdown.push(result.note ?? "text match");
+      matchQuality = matchQuality ?? result.quality;
     }
 
     if (query.className !== undefined) {
-      if (!matchesQueryString(node.className, query.className)) {
+      const result = classifyStringMatch(node.className, query.className);
+      if (!result.matched) {
         return [];
       }
       matchedBy.push("className");
+      score += result.score;
+      scoreBreakdown.push(result.note ?? "class name match");
+      matchQuality = matchQuality ?? result.quality;
     }
 
     if (query.clickable !== undefined) {
@@ -231,14 +271,49 @@ export function queryUiNodes(nodes: InspectUiNode[], query: QueryUiSelector): { 
         return [];
       }
       matchedBy.push("clickable");
+      score += 1;
+      scoreBreakdown.push("clickable flag matched");
+      matchQuality = matchQuality ?? "boolean";
     }
 
-    return [{ node, matchedBy, score: matchedBy.length }];
+    if (node.enabled === false) {
+      score -= 3;
+      scoreBreakdown.push("disabled node penalty");
+    }
+    if (!node.bounds) {
+      score -= 2;
+      scoreBreakdown.push("missing bounds penalty");
+    }
+    if (node.clickable) {
+      score += 1;
+      scoreBreakdown.push("clickable node bonus");
+    }
+    if (node.contentDesc || node.text) {
+      score += 1;
+      scoreBreakdown.push("human-readable node bonus");
+    }
+
+    return [{ node, matchedBy, score, matchQuality, scoreBreakdown }];
+  });
+
+  const sortedMatches = allMatches.sort((left, right) => {
+    const scoreDelta = (right.score ?? 0) - (left.score ?? 0);
+    if (scoreDelta !== 0) {
+      return scoreDelta;
+    }
+    const leftEnabled = left.node.enabled === false ? 0 : 1;
+    const rightEnabled = right.node.enabled === false ? 0 : 1;
+    if (rightEnabled !== leftEnabled) {
+      return rightEnabled - leftEnabled;
+    }
+    const leftBounds = left.node.bounds ? 1 : 0;
+    const rightBounds = right.node.bounds ? 1 : 0;
+    return rightBounds - leftBounds;
   });
 
   return {
-    totalMatches: allMatches.length,
-    matches: query.limit === undefined ? allMatches : allMatches.slice(0, query.limit),
+    totalMatches: sortedMatches.length,
+    matches: query.limit === undefined ? sortedMatches : sortedMatches.slice(0, query.limit),
   };
 }
 
@@ -304,15 +379,44 @@ export function buildUiTargetResolution(query: QueryUiSelector, result: InspectU
   }
 
   if (result.totalMatches > 1) {
+    const bestCandidate = result.matches[0];
+    const topScore = bestCandidate?.score;
+    const secondScore = result.matches[1]?.score;
+    if (bestCandidate?.node.enabled === false && result.matches.every((match) => match.node.enabled === false)) {
+      return {
+        status: "disabled_match",
+        matchCount: result.totalMatches,
+        query,
+        matches: result.matches,
+        bestCandidate,
+        ambiguityReason: "Only disabled matches were found for the selector.",
+      };
+    }
     return {
       status: "ambiguous",
       matchCount: result.totalMatches,
       query,
       matches: result.matches,
+      bestCandidate,
+      ambiguityReason: topScore !== undefined && secondScore !== undefined && topScore === secondScore
+        ? "Multiple candidates have the same top ranking score."
+        : "Multiple candidates matched; narrow the selector to disambiguate.",
     };
   }
 
   const matchedNode = result.matches[0]?.node;
+  const bestCandidate = result.matches[0];
+  if (matchedNode && matchedNode.enabled === false) {
+    return {
+      status: "disabled_match",
+      matchCount: result.totalMatches,
+      query,
+      matches: result.matches,
+      bestCandidate,
+      matchedNode,
+      ambiguityReason: "The best matching node is disabled.",
+    };
+  }
   const resolvedBounds = parseUiBounds(matchedNode?.bounds);
   if (!matchedNode || !resolvedBounds) {
     return {
@@ -320,6 +424,7 @@ export function buildUiTargetResolution(query: QueryUiSelector, result: InspectU
       matchCount: result.totalMatches,
       query,
       matches: result.matches,
+      bestCandidate,
       matchedNode,
     };
   }
@@ -329,6 +434,7 @@ export function buildUiTargetResolution(query: QueryUiSelector, result: InspectU
     matchCount: result.totalMatches,
     query,
     matches: result.matches,
+    bestCandidate,
     matchedNode,
     resolvedBounds,
     resolvedPoint: resolvedBounds.center,
@@ -356,6 +462,9 @@ export function reasonCodeForResolutionStatus(status: UiTargetResolutionStatus):
   }
   if (status === "missing_bounds") {
     return REASON_CODES.missingBounds;
+  }
+  if (status === "disabled_match") {
+    return REASON_CODES.actionFocusFailed;
   }
   if (status === "not_executed") {
     return REASON_CODES.adapterError;
