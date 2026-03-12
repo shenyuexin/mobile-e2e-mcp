@@ -128,6 +128,28 @@
 - `pnpm --filter @mobile-e2e-mcp/mcp-server test` 通过（138 tests）
 - `pnpm test:ci` 通过
 
+---
+
+## 后续已完成（Iteration 5 - Overlap / Leaf Bias）
+
+- `InspectUiNode` 增加：
+  - `depth`
+- `InspectUiMatch` 增加：
+  - `obscuredByHigherRanked`
+  - `overlapPercentWithHigherRanked`
+- `queryUiNodes` 现在会：
+  - 对被高优先级候选显著遮挡的节点降权
+  - 对更深层（更像叶子节点）的候选加分
+- 新增测试覆盖：
+  - overlap / obscured penalty
+  - leaf-node bias
+
+### Iteration 5 验证
+
+- `pnpm --filter @mobile-e2e-mcp/adapter-maestro test` 通过（107 tests）
+- `pnpm --filter @mobile-e2e-mcp/mcp-server test` 通过（138 tests）
+- `pnpm test:ci` 通过
+
 ### Iteration 3 验证
 
 - `pnpm --filter @mobile-e2e-mcp/adapter-maestro test` 通过（104 tests）
@@ -161,13 +183,18 @@
 ### 4. Locator（下一轮补充）
 
 - 在 ambiguity diff 上增加更结构化的 score / selector建议输出
-- 引入 overlap / obscured / leaf-node bias
+- 让 score-aware selector suggestion 直接进入 `nextSuggestions`
 
 ### 5. Stale-state（下一轮）
 
 - 增加节点级 staleness snapshot / checksum
 - 在 tap/type 之前做轻量 stale 检查
 - 当 post-action 无变化时尝试刷新目标并重新判定 stale-state
+
+### 6. Action precondition（下一轮）
+
+- 让 action precondition 更直接消费 locator 质量（off-screen / obscured / low target quality）
+- 在 `perform_action_with_evidence` 里更早区分 “应先滚动 / 应先等待 / 应先缩窄 selector”
 
 ---
 
