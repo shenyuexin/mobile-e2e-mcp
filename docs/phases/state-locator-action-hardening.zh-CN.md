@@ -270,11 +270,24 @@
 
 ---
 
+## 后续已完成（Iteration 10 - Suggestion Expansion）
+
+- `resolve_ui_target` 现在开始把 score-aware resolution guidance 直接写入 `nextSuggestions`
+- `tap_element` / `type_into_element` 现在也会携带带 resolution 上下文的建议，而不是只返回通用提示
+- `perform_action_with_evidence` 在 no-op / refresh 相关场景下会返回更分层的 retry recommendation
+
+### Iteration 10 验证
+
+- `pnpm --filter @mobile-e2e-mcp/mcp-server test` 通过（138 tests）
+- `pnpm test:ci` 通过
+
+---
+
 ## 下一轮最值得继续做的任务（更新）
 
-- 把 score-aware selector suggestion 进一步接到更多 tool 的 `nextSuggestions`
 - 为 overlap / obscured 增加更接近真实界面的结构化可见性启发式
 - 给 no-op / stale-state refresh 增加更明确的 retry recommendation 层级
+- 把 score-aware selector suggestion 扩展到更多 transport 输出（CLI / stdio / action review narrative）
 
 ---
 

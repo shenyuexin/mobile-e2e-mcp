@@ -53,6 +53,7 @@
 - 第七轮已完成：perform_action_with_evidence 开始做轻量 post-action refresh / retry 判定
 - 第八轮已完成：overlap / obscured 信号开始直接进入 action precondition 与 failureCategory
 - 第九轮已完成：ambiguity diff 开始输出 score-level 结构化信息
+- 第十轮已完成：score-aware selector suggestion 开始扩展到更多 high-frequency tool 输出
 - 详见：`docs/phases/state-locator-action-hardening.zh-CN.md`
 
 ---
