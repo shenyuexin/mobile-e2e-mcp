@@ -5,7 +5,7 @@ export type ToolStatus = "success" | "failed" | "partial";
 export type RunnerProfile = "phase1" | "native_android" | "native_ios" | "flutter_android";
 export type CapabilitySupportLevel = "full" | "partial" | "unsupported";
 export type ExecutionEvidenceKind = "ui_dump" | "screenshot" | "log" | "crash_signal" | "diagnostics_bundle" | "debug_summary" | "performance_trace" | "performance_summary" | "performance_export";
-export type AppPhase = "launching" | "ready" | "loading" | "blocked" | "backgrounded" | "crashed" | "unknown";
+export type AppPhase = "launching" | "ready" | "loading" | "blocked" | "backgrounded" | "crashed" | "authentication" | "detail" | "catalog" | "empty" | "unknown";
 export type StateReadiness = "ready" | "waiting_network" | "waiting_ui" | "interrupted" | "unknown";
 export type TimelineEventLayer = "session" | "ui" | "state" | "action" | "log" | "crash" | "network" | "runtime" | "performance" | "environment" | "unknown";
 export type EvidenceCompletenessLevel = "complete" | "partial" | "minimal" | "missing";
@@ -145,6 +145,9 @@ export interface StateSummary {
   appPhase: AppPhase;
   readiness: StateReadiness;
   blockingSignals: string[];
+   stateConfidence?: number;
+   pageHints?: string[];
+   derivedSignals?: string[];
   visibleTargetCount?: number;
   candidateActions?: string[];
   recentFailures?: string[];
@@ -185,6 +188,8 @@ export interface ActionOutcomeSummary {
   stateChanged: boolean;
   fallbackUsed: boolean;
   retryCount: number;
+  targetQuality?: "high" | "medium" | "low";
+  failureCategory?: "selector_missing" | "selector_ambiguous" | "blocked" | "waiting" | "no_state_change" | "transport" | "unsupported";
   confidence?: number;
   ocrEvidence?: OcrEvidence;
   outcome: ActionOutcomeStatus;
@@ -319,13 +324,17 @@ export interface InspectUiMatch {
   node: InspectUiNode;
   matchedBy: InspectUiMatchField[];
   score?: number;
+  matchQuality?: "exact" | "prefix" | "substring" | "boolean";
+  scoreBreakdown?: string[];
 }
-export type UiTargetResolutionStatus = "resolved" | "no_match" | "ambiguous" | "missing_bounds" | "unsupported" | "not_executed";
+export type UiTargetResolutionStatus = "resolved" | "no_match" | "ambiguous" | "missing_bounds" | "disabled_match" | "unsupported" | "not_executed";
 export interface UiTargetResolution {
   status: UiTargetResolutionStatus;
   matchCount: number;
   query: InspectUiQuery;
   matches: InspectUiMatch[];
+  bestCandidate?: InspectUiMatch;
+  ambiguityReason?: string;
   matchedNode?: InspectUiNode;
   resolvedBounds?: UiBounds;
   resolvedPoint?: UiPoint;
@@ -797,6 +806,7 @@ export interface PerformActionWithEvidenceData {
   evidenceDelta: EvidenceDeltaSummary;
   preStateSummary?: StateSummary;
   postStateSummary?: StateSummary;
+  actionabilityReview?: string[];
   lowLevelStatus: ToolStatus;
   lowLevelReasonCode: ReasonCode;
   evidence?: ExecutionEvidence[];
