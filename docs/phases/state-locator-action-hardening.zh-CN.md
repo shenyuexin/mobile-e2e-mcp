@@ -214,11 +214,33 @@
 
 ---
 
+## 后续已完成（Iteration 7 - Post-action Refresh）
+
+- `PerformActionWithEvidenceData` 增加：
+  - `postActionRefreshAttempted`
+- `perform_action_with_evidence` 现在会在以下场景做一次轻量 post-action refresh：
+  - `no_state_change`
+  - `transport`
+  - 未明确分类但 `stateChanged=false`
+- refresh 结果现在会写入：
+  - `actionabilityReview`
+  - `postActionRefreshAttempted`
+- dry-run / unsupported 场景保持诚实，不会强行声明 refresh 已执行
+
+### Iteration 7 验证
+
+- `pnpm --filter @mobile-e2e-mcp/adapter-maestro test` 通过（108 tests）
+- `pnpm --filter @mobile-e2e-mcp/mcp-server test` 通过（138 tests）
+- `pnpm test:ci` 通过
+
+---
+
 ## 下一轮最值得继续做的任务（更新）
 
-- 在 `perform_action_with_evidence` 中增加 post-action refresh / retry 判定，用于 stale-state/no-op 分流
 - 把 score-aware selector suggestion 进一步接到更多 tool 的 `nextSuggestions`
 - 为 overlap / obscured 增加更接近真实界面的结构化可见性启发式
+- 让 overlap / obscured 更直接进入 action precondition / failureCategory
+- 为 ambiguity diff 补充 score-level 结构化输出
 
 ---
 

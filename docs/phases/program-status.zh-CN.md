@@ -50,6 +50,7 @@
 - 第四轮已完成：scroll 决策开始真正消费 off-screen locator 信号
 - 第五轮已完成：locator 排序开始识别 overlap / obscured / leaf-node bias
 - 第六轮已完成：selector suggestion 与 action precondition 开始直接消费 locator 质量
+- 第七轮已完成：perform_action_with_evidence 开始做轻量 post-action refresh / retry 判定
 - 详见：`docs/phases/state-locator-action-hardening.zh-CN.md`
 
 ---
