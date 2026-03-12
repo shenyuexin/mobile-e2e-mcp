@@ -196,6 +196,30 @@
 - 让 action precondition 更直接消费 locator 质量（off-screen / obscured / low target quality）
 - 在 `perform_action_with_evidence` 里更早区分 “应先滚动 / 应先等待 / 应先缩窄 selector”
 
+## 后续已完成（Iteration 6 - Suggestion / Precondition）
+
+- `buildResolutionNextSuggestions` 现在开始输出更细粒度的 score-aware 建议：
+  - ambiguous 时包含 top differing fields
+  - ambiguous 时返回建议 narrowing selector
+  - off-screen 时返回 top candidate resourceId
+- `perform_action_with_evidence` 的 failureCategory 现在开始更直接消费 locator resolution：
+  - `off_screen` -> 更靠近 selector/state 前置问题
+  - `disabled_match` -> 更靠近 blocked 前置问题
+
+### Iteration 6 验证
+
+- `pnpm --filter @mobile-e2e-mcp/adapter-maestro test` 通过（108 tests）
+- `pnpm --filter @mobile-e2e-mcp/mcp-server test` 通过（138 tests）
+- `pnpm test:ci` 通过
+
+---
+
+## 下一轮最值得继续做的任务（更新）
+
+- 在 `perform_action_with_evidence` 中增加 post-action refresh / retry 判定，用于 stale-state/no-op 分流
+- 把 score-aware selector suggestion 进一步接到更多 tool 的 `nextSuggestions`
+- 为 overlap / obscured 增加更接近真实界面的结构化可见性启发式
+
 ---
 
 ## 建议推进顺序
