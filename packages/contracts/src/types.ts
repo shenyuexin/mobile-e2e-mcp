@@ -847,6 +847,7 @@ export interface GetActionOutcomeData {
   actionId: string;
   sessionId?: string;
   outcome?: ActionOutcomeSummary;
+  retryRecommendationTier?: PerformActionWithEvidenceData["retryRecommendationTier"];
   evidenceDelta?: EvidenceDeltaSummary;
   evidence?: ExecutionEvidence[];
   lowLevelStatus?: ToolStatus;
@@ -859,6 +860,7 @@ export interface ExplainLastFailureData {
   found: boolean;
   actionId?: string;
   outcome?: ActionOutcomeSummary;
+  retryRecommendationTier?: PerformActionWithEvidenceData["retryRecommendationTier"];
   attribution?: FailureAttribution;
 }
 export interface RankFailureCandidatesInput {

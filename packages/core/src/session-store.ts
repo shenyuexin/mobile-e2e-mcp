@@ -31,6 +31,7 @@ export interface PersistedActionRecord {
   sessionId: string;
   intent?: ActionIntent;
   outcome: ActionOutcomeSummary;
+  retryRecommendationTier?: "none" | "inspect_only" | "refine_selector" | "wait_then_retry" | "refresh_context" | "recover_first";
   evidenceDelta: EvidenceDeltaSummary;
   evidence: ExecutionEvidence[];
   lowLevelStatus: ToolStatus;

@@ -1396,6 +1396,7 @@ export function buildDiagnosisBriefing(params: {
   jsDebugTargetId?: string;
   jsConsoleLogCount?: number;
   jsNetworkEventCount?: number;
+  retryRecommendationTier?: PerformActionWithEvidenceData["retryRecommendationTier"];
 }): string[] {
   const briefing: string[] = [];
 
@@ -1413,6 +1414,10 @@ export function buildDiagnosisBriefing(params: {
 
   if ((params.jsConsoleLogCount ?? 0) > 0 || (params.jsNetworkEventCount ?? 0) > 0) {
     briefing.push(`JS evidence captured: ${String(params.jsConsoleLogCount ?? 0)} console event(s), ${String(params.jsNetworkEventCount ?? 0)} network event(s).`);
+  }
+
+  if (params.retryRecommendationTier && params.retryRecommendationTier !== "none") {
+    briefing.push(`Recommended next-action tier: ${params.retryRecommendationTier}.`);
   }
 
   if (params.status !== "success") {
@@ -1931,17 +1936,6 @@ export async function performActionWithEvidenceWithMaestro(
   const persistedSessionState = sessionRecord
     ? await persistSessionState(repoRoot, input.sessionId, postStateSummary, actionEvent, artifacts)
     : undefined;
-  const persistedAction = await persistActionRecord(repoRoot, {
-    actionId,
-    sessionId: input.sessionId,
-    intent: input.action,
-    outcome,
-      evidenceDelta,
-      evidence,
-      lowLevelStatus: finalStatus,
-      lowLevelReasonCode: finalReasonCode,
-      updatedAt: new Date().toISOString(),
-    });
   if (outcome.outcome === "success") {
     await recordBaselineEntry(repoRoot, {
       actionId,
@@ -1951,7 +1945,6 @@ export async function performActionWithEvidenceWithMaestro(
       updatedAt: new Date().toISOString(),
     });
   }
-  const allArtifacts = persistedAction.relativePath ? [persistedAction.relativePath, ...artifacts] : artifacts;
   const actionabilityReview = buildActionabilityReview({
     preStateSummary,
     postStateSummary,
@@ -1976,6 +1969,19 @@ export async function performActionWithEvidenceWithMaestro(
     failureCategory,
     ocrFallbackSuggestions: ocrFallbackResult?.nextSuggestions,
   });
+  const persistedAction = await persistActionRecord(repoRoot, {
+    actionId,
+    sessionId: input.sessionId,
+    intent: input.action,
+    outcome,
+    retryRecommendationTier,
+    evidenceDelta,
+    evidence,
+    lowLevelStatus: finalStatus,
+    lowLevelReasonCode: finalReasonCode,
+    updatedAt: new Date().toISOString(),
+  });
+  const allArtifacts = persistedAction.relativePath ? [persistedAction.relativePath, ...artifacts] : artifacts;
 
   return {
     status: finalStatus,
@@ -2030,6 +2036,7 @@ export async function getActionOutcomeWithMaestro(
         actionId: input.actionId,
         sessionId: record?.sessionId,
         outcome: record?.outcome,
+        retryRecommendationTier: record?.retryRecommendationTier,
         evidenceDelta: record?.evidenceDelta,
         evidence: record?.evidence,
         lowLevelStatus: record?.lowLevelStatus,
@@ -2174,9 +2181,16 @@ export async function explainLastFailureWithMaestro(
       found: true,
       actionId: resolvedActionId,
       outcome: record.outcome,
+      retryRecommendationTier: record.retryRecommendationTier,
       attribution,
     },
-    nextSuggestions: status === "success" ? [] : ["The last recorded action succeeded; use rank_failure_candidates only when the latest action window is actually problematic."],
+    nextSuggestions: status === "success"
+      ? []
+      : [
+        `Retry tier suggests: ${record.retryRecommendationTier ?? "inspect_only"}.`,
+        attribution.recommendedRecovery,
+        attribution.recommendedNextProbe,
+      ].filter((value): value is string => Boolean(value)),
   };
 }
 
