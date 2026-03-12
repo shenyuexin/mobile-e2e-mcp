@@ -86,6 +86,48 @@ function canReplaySafely(input: PerformActionWithEvidenceInput): boolean {
   return !haystacks.some((value) => HIGH_RISK_KEYWORDS.some((keyword) => value.includes(keyword)));
 }
 
+function buildMetadataStop(auto: {
+  stopReason: AutoRemediationResult["stopReason"];
+  stopDetail: string;
+  attempted?: boolean;
+}, base: ToolResult<PerformActionWithEvidenceData>, seed: Omit<AutoRemediationResult, "stopReason" | "stopDetail" | "attempted">): ToolResult<PerformActionWithEvidenceData> {
+  return buildResult(base, {
+    ...seed,
+    attempted: auto.attempted ?? false,
+    stopReason: auto.stopReason,
+    stopDetail: auto.stopDetail,
+  });
+}
+
+function classifyMetadataDrivenStop(base: ToolResult<PerformActionWithEvidenceData>): { stopReason: AutoRemediationResult["stopReason"]; stopDetail: string } | undefined {
+  const failureCategory = base.data.outcome.failureCategory;
+  if (failureCategory === "selector_missing") {
+    return {
+      stopReason: "selector_missing",
+      stopDetail: "The action failed because no target matched the selector, so remediation should refine the locator instead of recovering state.",
+    };
+  }
+  if (failureCategory === "selector_ambiguous") {
+    return {
+      stopReason: "selector_ambiguous",
+      stopDetail: "The action failed because multiple targets matched the selector, so remediation should narrow the locator before retrying.",
+    };
+  }
+  if (failureCategory === "blocked") {
+    return {
+      stopReason: "blocked_by_state",
+      stopDetail: "The action failed while the screen was blocked by interruption/error state, so auto-remediation stops at suggestion-only.",
+    };
+  }
+  if (base.data.outcome.targetQuality === "low") {
+    return {
+      stopReason: "low_target_quality",
+      stopDetail: "The target quality is too low for bounded remediation to safely continue.",
+    };
+  }
+  return undefined;
+}
+
 function chooseRecovery(params: {
   input: PerformActionWithEvidenceInput;
   attribution: FailureAttribution;
@@ -204,6 +246,11 @@ export async function performActionWithAutoRemediation(
     });
   }
 
+  const metadataStop = classifyMetadataDrivenStop(base);
+  if (metadataStop) {
+    return buildMetadataStop(metadataStop, base, seed);
+  }
+
   if (hasExistingAutoRemediationAttempt(actionId, sessionRecord.session.timeline)) {
     return buildResult(base, {
       ...seed,
@@ -234,6 +281,47 @@ export async function performActionWithAutoRemediation(
       ...seed,
       stopReason: "audit_unavailable",
       stopDetail: "The auto-remediation trigger could not be written to audit storage.",
+    });
+  }
+
+  if (base.data.outcome.failureCategory === "waiting") {
+    const recovery = await deps.recoverToKnownState({
+      sessionId: input.sessionId,
+      platform: input.platform,
+      runnerProfile: input.runnerProfile,
+      harnessConfigPath: input.harnessConfigPath,
+      deviceId: input.deviceId,
+      appId: input.appId,
+      dryRun: input.dryRun,
+    });
+    const recoverySummary = recovery.data.summary;
+    const finalArtifacts = Array.from(new Set([...base.artifacts, ...recovery.artifacts]));
+    await persistAutoRemediationEvent({
+      repoRoot,
+      sessionId: input.sessionId,
+      actionId,
+      type: recoverySummary.recovered ? "auto_remediation_succeeded" : "auto_remediation_stopped",
+      detail: recoverySummary.note,
+      stateSummary: recoverySummary.stateAfter ?? stateAfter,
+      artifacts: finalArtifacts,
+    });
+    return buildResult(base, {
+      ...seed,
+      attempted: true,
+      selectedRecovery: recoverySummary.strategy,
+      recovered: recoverySummary.recovered && recovery.status !== "failed",
+      stopReason: recovery.reasonCode === REASON_CODES.policyDenied
+        ? "policy_denied"
+        : recoverySummary.recovered
+          ? "recovered"
+          : "recovery_not_recovered",
+      stopDetail: recovery.reasonCode === REASON_CODES.policyDenied
+        ? "Policy denied the bounded wait-state recovery path."
+        : recoverySummary.note,
+      stateAfter: recoverySummary.stateAfter ?? stateAfter,
+      artifactRefs: finalArtifacts,
+      remediationSuggestions: base.data.actionabilityReview ?? [],
+      policyProfile,
     });
   }
 

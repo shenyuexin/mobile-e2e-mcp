@@ -22,6 +22,9 @@ function buildBasePerformActionResult(params: {
   actionType?: PerformActionWithEvidenceInput["action"]["actionType"];
   appPhase?: "loading" | "crashed" | "unknown" | "ready";
   readiness?: "waiting_ui" | "waiting_network" | "unknown" | "ready" | "interrupted";
+  failureCategory?: NonNullable<PerformActionWithEvidenceData["outcome"]["failureCategory"]>;
+  targetQuality?: NonNullable<PerformActionWithEvidenceData["outcome"]["targetQuality"]>;
+  actionabilityReview?: string[];
 }): ToolResult<PerformActionWithEvidenceData> {
   return {
     status: params.status,
@@ -49,6 +52,8 @@ function buildBasePerformActionResult(params: {
         stateChanged: false,
         fallbackUsed: false,
         retryCount: 0,
+        targetQuality: params.targetQuality,
+        failureCategory: params.failureCategory,
         confidence: 0.2,
         outcome: params.status === "success" ? "success" : params.status,
       },
@@ -65,6 +70,7 @@ function buildBasePerformActionResult(params: {
         readiness: params.readiness ?? "unknown",
         blockingSignals: [],
       },
+      actionabilityReview: params.actionabilityReview,
       lowLevelStatus: params.status,
       lowLevelReasonCode: params.status === "failed" ? REASON_CODES.adapterError : REASON_CODES.unsupportedOperation,
       evidence: [],
@@ -241,6 +247,102 @@ test("performActionWithAutoRemediation blocks high-risk replay suggestions", asy
     );
 
     assert.equal(result.data.autoRemediation?.stopReason, "high_risk_replay");
+  } finally {
+    await cleanupSessionArtifacts(sessionId);
+  }
+});
+
+test("performActionWithAutoRemediation short-circuits selector-missing failures before attribution", async () => {
+  const sessionId = `auto-remediation-selector-missing-${Date.now()}`;
+  const server = createServer();
+
+  try {
+    await server.invoke("start_session", { sessionId, platform: "android", profile: "phase1" });
+    const result = await performActionWithAutoRemediation(
+      {
+        sessionId,
+        platform: "android",
+        dryRun: true,
+        autoRemediate: true,
+        action: { actionType: "tap_element", contentDesc: "Missing target" },
+      },
+      {
+        performAction: async () => buildBasePerformActionResult({ sessionId, status: "failed", actionId: "auto-selector-missing", failureCategory: "selector_missing", targetQuality: "low" }),
+        explainLastFailure: async () => { throw new Error("explain should not run"); },
+        rankFailureCandidates: async () => { throw new Error("rank should not run"); },
+        suggestKnownRemediation: async () => { throw new Error("suggest should not run"); },
+        recoverToKnownState: async () => { throw new Error("recover should not run"); },
+        replayLastStablePath: async () => { throw new Error("replay should not run"); },
+      },
+    );
+
+    assert.equal(result.data.autoRemediation?.stopReason, "selector_missing");
+    assert.equal(result.data.autoRemediation?.attempted, false);
+  } finally {
+    await cleanupSessionArtifacts(sessionId);
+  }
+});
+
+test("performActionWithAutoRemediation short-circuits ambiguous selector failures before attribution", async () => {
+  const sessionId = `auto-remediation-selector-ambiguous-${Date.now()}`;
+  const server = createServer();
+
+  try {
+    await server.invoke("start_session", { sessionId, platform: "android", profile: "phase1" });
+    const result = await performActionWithAutoRemediation(
+      {
+        sessionId,
+        platform: "android",
+        dryRun: true,
+        autoRemediate: true,
+        action: { actionType: "tap_element", contentDesc: "Duplicate target" },
+      },
+      {
+        performAction: async () => buildBasePerformActionResult({ sessionId, status: "partial", actionId: "auto-selector-ambiguous", failureCategory: "selector_ambiguous", targetQuality: "low" }),
+        explainLastFailure: async () => { throw new Error("explain should not run"); },
+        rankFailureCandidates: async () => { throw new Error("rank should not run"); },
+        suggestKnownRemediation: async () => { throw new Error("suggest should not run"); },
+        recoverToKnownState: async () => { throw new Error("recover should not run"); },
+        replayLastStablePath: async () => { throw new Error("replay should not run"); },
+      },
+    );
+
+    assert.equal(result.data.autoRemediation?.stopReason, "selector_ambiguous");
+    assert.equal(result.data.autoRemediation?.attempted, false);
+  } finally {
+    await cleanupSessionArtifacts(sessionId);
+  }
+});
+
+test("performActionWithAutoRemediation directly recovers waiting-state failures using action metadata", async () => {
+  const sessionId = `auto-remediation-waiting-${Date.now()}`;
+  const server = createServer();
+  let explainCalled = false;
+
+  try {
+    await server.invoke("start_session", { sessionId, platform: "android", profile: "phase1" });
+    const result = await performActionWithAutoRemediation(
+      {
+        sessionId,
+        platform: "android",
+        dryRun: true,
+        autoRemediate: true,
+        action: { actionType: "wait_for_ui", contentDesc: "Loading" },
+      },
+      {
+        performAction: async () => buildBasePerformActionResult({ sessionId, status: "partial", actionId: "auto-waiting", actionType: "wait_for_ui", failureCategory: "waiting", targetQuality: "medium", appPhase: "loading", readiness: "waiting_ui", actionabilityReview: ["pre_state_not_ready:waiting_ui"] }),
+        explainLastFailure: async () => { explainCalled = true; throw new Error("explain should not run"); },
+        rankFailureCandidates: async () => { throw new Error("rank should not run"); },
+        suggestKnownRemediation: async () => { throw new Error("suggest should not run"); },
+        recoverToKnownState: async () => ({ status: "success", reasonCode: REASON_CODES.ok, sessionId, durationMs: 1, attempts: 1, artifacts: ["artifacts/recovery/wait.txt"], data: { summary: { strategy: "wait_until_ready", recovered: true, note: "Recovered after waiting for readiness.", stateBefore: { appPhase: "loading", readiness: "waiting_ui", blockingSignals: [] }, stateAfter: { appPhase: "ready", readiness: "ready", blockingSignals: [] } } }, nextSuggestions: [] }),
+        replayLastStablePath: async () => { throw new Error("replay should not run"); },
+      },
+    );
+
+    assert.equal(explainCalled, false);
+    assert.equal(result.data.autoRemediation?.attempted, true);
+    assert.equal(result.data.autoRemediation?.selectedRecovery, "wait_until_ready");
+    assert.equal(result.data.autoRemediation?.stopReason, "recovered");
   } finally {
     await cleanupSessionArtifacts(sessionId);
   }
