@@ -1,4 +1,5 @@
 import type {
+  AmbiguityDiff,
   InspectUiMatch,
   InspectUiMatchField,
   InspectUiNode,
@@ -215,12 +216,96 @@ function classifyStringMatch(nodeValue: string | undefined, queryValue: string |
   return { matched: false, score: 0 };
 }
 
+export function detectViewportBounds(nodes: InspectUiNode[]): UiBounds {
+  const candidateBounds = nodes
+    .map((node) => parseUiBounds(node.bounds))
+    .filter((bounds): bounds is UiBounds => bounds !== undefined);
+  const scrollableBounds = nodes
+    .filter((node) => node.scrollable)
+    .map((node) => parseUiBounds(node.bounds))
+    .filter((bounds): bounds is UiBounds => bounds !== undefined);
+
+  return scrollableBounds[0]
+    ?? candidateBounds.sort((left, right) => (right.width * right.height) - (left.width * left.height))[0]
+    ?? {
+      left: 0,
+      top: 0,
+      right: 1080,
+      bottom: 1920,
+      width: 1080,
+      height: 1920,
+      center: { x: 540, y: 960 },
+    };
+}
+
+export function calculateViewportOverlap(bounds: UiBounds, viewport: UiBounds): number {
+  const visibleX = Math.max(0, Math.min(bounds.right, viewport.right) - Math.max(bounds.left, viewport.left));
+  const visibleY = Math.max(0, Math.min(bounds.bottom, viewport.bottom) - Math.max(bounds.top, viewport.top));
+  const visibleArea = visibleX * visibleY;
+  const totalArea = bounds.width * bounds.height;
+  if (totalArea <= 0) {
+    return 0;
+  }
+  return Number((visibleArea / totalArea).toFixed(2));
+}
+
+function calculateDistanceToViewportCenter(bounds: UiBounds, viewport: UiBounds): number {
+  const dx = bounds.center.x - viewport.center.x;
+  const dy = bounds.center.y - viewport.center.y;
+  return Math.round(Math.sqrt((dx * dx) + (dy * dy)));
+}
+
+export function diffAmbiguousCandidates(matches: InspectUiMatch[]): AmbiguityDiff | undefined {
+  const left = matches[0];
+  const right = matches[1];
+  if (!left || !right) {
+    return undefined;
+  }
+
+  const differingFields: AmbiguityDiff["differingFields"] = [];
+  const maybePush = (field: AmbiguityDiff["differingFields"][number]["field"], leftValue: unknown, rightValue: unknown) => {
+    if (leftValue === rightValue) {
+      return;
+    }
+    differingFields.push({
+      field,
+      left: leftValue === undefined ? undefined : String(leftValue),
+      right: rightValue === undefined ? undefined : String(rightValue),
+    });
+  };
+
+  maybePush("resourceId", left.node.resourceId, right.node.resourceId);
+  maybePush("contentDesc", left.node.contentDesc, right.node.contentDesc);
+  maybePush("text", left.node.text, right.node.text);
+  maybePush("className", left.node.className, right.node.className);
+  maybePush("clickable", left.node.clickable, right.node.clickable);
+  maybePush("enabled", left.node.enabled, right.node.enabled);
+  maybePush("bounds", left.node.bounds, right.node.bounds);
+
+  const suggestedSelectors = [
+    left.node.resourceId ? { resourceId: left.node.resourceId } : undefined,
+    left.node.contentDesc ? { contentDesc: left.node.contentDesc } : undefined,
+    left.node.text ? { text: left.node.text } : undefined,
+    left.node.clickable !== right.node.clickable ? { clickable: left.node.clickable } : undefined,
+  ].filter((value): value is NonNullable<typeof value> => value !== undefined).slice(0, 3);
+
+  return {
+    differingFields,
+    suggestedSelectors,
+  };
+}
+
 export function queryUiNodes(nodes: InspectUiNode[], query: QueryUiSelector): { totalMatches: number; matches: InspectUiMatch[] } {
+  const viewport = detectViewportBounds(nodes);
   const allMatches = nodes.flatMap((node) => {
     const matchedBy: InspectUiMatchField[] = [];
     const scoreBreakdown: string[] = [];
     let score = 0;
     let matchQuality: InspectUiMatch["matchQuality"];
+    const parsedBounds = parseUiBounds(node.bounds);
+    const viewportOverlapPercent = parsedBounds ? calculateViewportOverlap(parsedBounds, viewport) : undefined;
+    const isOffScreen = typeof viewportOverlapPercent === "number" ? viewportOverlapPercent <= 0 : false;
+    const distanceToViewportCenter = parsedBounds ? calculateDistanceToViewportCenter(parsedBounds, viewport) : undefined;
 
     if (query.resourceId !== undefined) {
       const result = classifyStringMatch(node.resourceId, query.resourceId);
@@ -284,6 +369,13 @@ export function queryUiNodes(nodes: InspectUiNode[], query: QueryUiSelector): { 
       score -= 2;
       scoreBreakdown.push("missing bounds penalty");
     }
+    if (isOffScreen) {
+      score -= 2;
+      scoreBreakdown.push(`off-screen penalty (${String(viewportOverlapPercent)})`);
+    } else if (typeof viewportOverlapPercent === "number") {
+      score += 2;
+      scoreBreakdown.push(`visible in viewport bonus (${String(viewportOverlapPercent)})`);
+    }
     if (node.clickable) {
       score += 1;
       scoreBreakdown.push("clickable node bonus");
@@ -292,8 +384,15 @@ export function queryUiNodes(nodes: InspectUiNode[], query: QueryUiSelector): { 
       score += 1;
       scoreBreakdown.push("human-readable node bonus");
     }
+    if (typeof distanceToViewportCenter === "number") {
+      const centerBonus = Math.max(0, 2 - Math.floor(distanceToViewportCenter / 500));
+      if (centerBonus > 0) {
+        score += centerBonus;
+        scoreBreakdown.push(`viewport centrality bonus (${String(centerBonus)})`);
+      }
+    }
 
-    return [{ node, matchedBy, score, matchQuality, scoreBreakdown }];
+    return [{ node, matchedBy, score, matchQuality, scoreBreakdown, isOffScreen, viewportOverlapPercent, distanceToViewportCenter }];
   });
 
   const sortedMatches = allMatches.sort((left, right) => {
@@ -306,9 +405,19 @@ export function queryUiNodes(nodes: InspectUiNode[], query: QueryUiSelector): { 
     if (rightEnabled !== leftEnabled) {
       return rightEnabled - leftEnabled;
     }
-    const leftBounds = left.node.bounds ? 1 : 0;
-    const rightBounds = right.node.bounds ? 1 : 0;
-    return rightBounds - leftBounds;
+    const leftVisible = left.isOffScreen ? 0 : 1;
+    const rightVisible = right.isOffScreen ? 0 : 1;
+    if (rightVisible !== leftVisible) {
+      return rightVisible - leftVisible;
+    }
+    const leftClickable = left.node.clickable ? 1 : 0;
+    const rightClickable = right.node.clickable ? 1 : 0;
+    if (rightClickable !== leftClickable) {
+      return rightClickable - leftClickable;
+    }
+    const leftDistance = left.distanceToViewportCenter ?? Number.MAX_SAFE_INTEGER;
+    const rightDistance = right.distanceToViewportCenter ?? Number.MAX_SAFE_INTEGER;
+    return leftDistance - rightDistance;
   });
 
   return {
@@ -378,10 +487,22 @@ export function buildUiTargetResolution(query: QueryUiSelector, result: InspectU
     };
   }
 
+  if (result.totalMatches > 1 && result.matches.every((match) => match.isOffScreen)) {
+    return {
+      status: "off_screen",
+      matchCount: result.totalMatches,
+      query,
+      matches: result.matches,
+      bestCandidate: result.matches[0],
+      ambiguityReason: "Matching nodes were found, but they are currently outside the visible viewport.",
+    };
+  }
+
   if (result.totalMatches > 1) {
     const bestCandidate = result.matches[0];
     const topScore = bestCandidate?.score;
     const secondScore = result.matches[1]?.score;
+    const ambiguityDiff = diffAmbiguousCandidates(result.matches);
     if (bestCandidate?.node.enabled === false && result.matches.every((match) => match.node.enabled === false)) {
       return {
         status: "disabled_match",
@@ -390,6 +511,7 @@ export function buildUiTargetResolution(query: QueryUiSelector, result: InspectU
         matches: result.matches,
         bestCandidate,
         ambiguityReason: "Only disabled matches were found for the selector.",
+        ambiguityDiff,
       };
     }
     return {
@@ -399,8 +521,9 @@ export function buildUiTargetResolution(query: QueryUiSelector, result: InspectU
       matches: result.matches,
       bestCandidate,
       ambiguityReason: topScore !== undefined && secondScore !== undefined && topScore === secondScore
-        ? "Multiple candidates have the same top ranking score."
+        ? `Multiple candidates have the same top ranking score. Top diff: ${ambiguityDiff?.differingFields.map((item) => `${item.field}(${item.left ?? "∅"} vs ${item.right ?? "∅"})`).join(", ") ?? "none"}.`
         : "Multiple candidates matched; narrow the selector to disambiguate.",
+      ambiguityDiff,
     };
   }
 
@@ -466,6 +589,9 @@ export function reasonCodeForResolutionStatus(status: UiTargetResolutionStatus):
   if (status === "disabled_match") {
     return REASON_CODES.actionFocusFailed;
   }
+  if (status === "off_screen") {
+    return REASON_CODES.noMatch;
+  }
   if (status === "not_executed") {
     return REASON_CODES.adapterError;
   }
@@ -487,25 +613,7 @@ export function shouldAbortWaitForUiAfterReadFailure(state: WaitForUiReadFailure
 }
 
 export function buildScrollSwipeCoordinates(nodes: InspectUiNode[], direction: UiScrollDirection, durationMs: number): UiSwipeCoordinates {
-  const candidateBounds = nodes
-    .map((node) => parseUiBounds(node.bounds))
-    .filter((bounds): bounds is UiBounds => bounds !== undefined);
-  const scrollableBounds = nodes
-    .filter((node) => node.scrollable)
-    .map((node) => parseUiBounds(node.bounds))
-    .filter((bounds): bounds is UiBounds => bounds !== undefined);
-
-  const viewport = scrollableBounds[0]
-    ?? candidateBounds.sort((left, right) => (right.width * right.height) - (left.width * left.height))[0]
-    ?? {
-      left: 0,
-      top: 0,
-      right: 1080,
-      bottom: 1920,
-      width: 1080,
-      height: 1920,
-      center: { x: 540, y: 960 },
-    };
+  const viewport = detectViewportBounds(nodes);
 
   const x = viewport.center.x;
   const upper = Math.round(viewport.top + viewport.height * 0.25);

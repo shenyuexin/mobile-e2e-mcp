@@ -6,9 +6,12 @@ import test from "node:test";
 import { REASON_CODES, type GetScreenSummaryData, type StateSummary, type ToolResult } from "@mobile-e2e-mcp/contracts";
 import { MacVisionOcrProvider, OcrService, type MacVisionExecutionResult } from "@mobile-e2e-mcp/adapter-vision";
 import {
+  calculateViewportOverlap,
   buildNonExecutedUiTargetResolution,
   buildScrollSwipeCoordinates,
   buildUiTargetResolution,
+  detectViewportBounds,
+  diffAmbiguousCandidates,
   buildInspectUiSummary,
   hasQueryUiSelector,
   isWaitConditionMet,
@@ -803,10 +806,10 @@ test("performActionWithEvidenceWithMaestro records dry-run action outcome", asyn
   assert.equal(Array.isArray(result.data.actionabilityReview), true);
 });
 
-test("queryUiNodes ranks exact id matches before fuzzy text matches", () => {
-  const query = normalizeQueryUiSelector({ resourceId: "login", text: "Login" });
+test("queryUiNodes prefers clickable candidates over static label matches", () => {
+  const query = normalizeQueryUiSelector({ text: "Login" });
   const result = queryUiNodes([
-    { text: "Login", resourceId: "login_title", clickable: false, enabled: true, scrollable: false, bounds: "[0,0][100,100]" },
+    { text: "Login", resourceId: "login_title", clickable: false, enabled: true, scrollable: false, bounds: "[0,100][100,200]" },
     { text: "Login", resourceId: "login_email", clickable: true, enabled: true, scrollable: false, bounds: "[0,100][100,200]" },
   ], query);
 
@@ -835,6 +838,92 @@ test("buildUiTargetResolution returns disabled_match when best candidate is disa
 
   assert.equal(resolution.status, "disabled_match");
   assert.equal(resolution.bestCandidate?.node.enabled, false);
+});
+
+test("detectViewportBounds prefers the primary scrollable container", () => {
+  const viewport = detectViewportBounds([
+    { resourceId: "header", clickable: false, enabled: true, scrollable: false, bounds: "[0,0][1080,200]" },
+    { resourceId: "list", clickable: false, enabled: true, scrollable: true, bounds: "[0,200][1080,1800]" },
+  ]);
+
+  assert.equal(viewport.top, 200);
+  assert.equal(viewport.bottom, 1800);
+});
+
+test("calculateViewportOverlap reports partially visible candidates", () => {
+  const overlap = calculateViewportOverlap(
+    { left: 0, top: 1600, right: 100, bottom: 2200, width: 100, height: 600, center: { x: 50, y: 1900 } },
+    { left: 0, top: 0, right: 1080, bottom: 1920, width: 1080, height: 1920, center: { x: 540, y: 960 } },
+  );
+
+  assert.equal(overlap < 1, true);
+  assert.equal(overlap > 0, true);
+});
+
+test("queryUiNodes marks off-screen candidates and ranks visible ones first", () => {
+  const query = normalizeQueryUiSelector({ text: "Continue" });
+  const result = queryUiNodes([
+    { text: "Continue", clickable: true, enabled: true, scrollable: false, bounds: "[0,100][100,200]" },
+    { text: "Continue", clickable: true, enabled: true, scrollable: false, bounds: "[0,2100][100,2300]" },
+  ], query);
+
+  assert.equal(result.totalMatches, 2);
+  assert.equal(result.matches[0]?.isOffScreen, false);
+  assert.equal(result.matches[1]?.isOffScreen, true);
+});
+
+test("buildUiTargetResolution returns off_screen when all candidates are outside viewport", () => {
+  const resolution = buildUiTargetResolution(
+    { text: "Continue" },
+    {
+      query: { text: "Continue" },
+      totalMatches: 2,
+      matches: [
+        {
+          node: { text: "Continue", clickable: true, enabled: true, scrollable: false, bounds: "[0,2100][100,2300]" },
+          matchedBy: ["text"],
+          score: 3,
+          matchQuality: "exact",
+          scoreBreakdown: ["exact text match"],
+          isOffScreen: true,
+          viewportOverlapPercent: 0,
+        },
+        {
+          node: { text: "Continue", clickable: false, enabled: true, scrollable: false, bounds: "[0,2400][100,2600]" },
+          matchedBy: ["text"],
+          score: 2,
+          matchQuality: "exact",
+          scoreBreakdown: ["exact text match"],
+          isOffScreen: true,
+          viewportOverlapPercent: 0,
+        },
+      ],
+    },
+    "full",
+  );
+
+  assert.equal(resolution.status, "off_screen");
+});
+
+test("diffAmbiguousCandidates returns selector-friendly field differences", () => {
+  const diff = diffAmbiguousCandidates([
+    {
+      node: { text: "Continue", resourceId: "primary_cta", clickable: true, enabled: true, scrollable: false, bounds: "[0,100][100,200]" },
+      matchedBy: ["text"],
+      score: 5,
+      scoreBreakdown: ["exact text match"],
+    },
+    {
+      node: { text: "Continue", resourceId: "secondary_cta", clickable: false, enabled: true, scrollable: false, bounds: "[0,300][100,400]" },
+      matchedBy: ["text"],
+      score: 5,
+      scoreBreakdown: ["exact text match"],
+    },
+  ]);
+
+  assert.ok(diff);
+  assert.equal(diff?.differingFields.some((field) => field.field === "resourceId"), true);
+  assert.equal((diff?.suggestedSelectors.length ?? 0) > 0, true);
 });
 
 test("performActionWithEvidenceWithMaestro uses screenshot fixture for OCR assert fallback success", async () => {

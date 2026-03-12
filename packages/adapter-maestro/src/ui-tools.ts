@@ -4,12 +4,13 @@ import { REASON_CODES } from "@mobile-e2e-mcp/contracts";
 const DEFAULT_WAIT_UNTIL: WaitForUiMode = "visible";
 const DEFAULT_SCROLL_DIRECTION: UiScrollDirection = "up";
 
-export function buildResolutionNextSuggestions(status: "resolved" | "no_match" | "ambiguous" | "missing_bounds" | "disabled_match" | "unsupported" | "not_executed", toolName: string): string[] {
+export function buildResolutionNextSuggestions(status: "resolved" | "no_match" | "ambiguous" | "missing_bounds" | "disabled_match" | "off_screen" | "unsupported" | "not_executed", toolName: string): string[] {
   if (status === "resolved") return [];
   if (status === "no_match") return [`No UI nodes matched the provided selector for ${toolName}. Broaden the selector or inspect nearby nodes.`];
   if (status === "ambiguous") return [`Multiple UI nodes matched the selector for ${toolName}. Narrow the selector before performing an element action.`];
   if (status === "missing_bounds") return [`A matching UI node was found for ${toolName}, but its bounds were not parseable.`];
   if (status === "disabled_match") return [`A matching UI node was found for ${toolName}, but the best candidate is disabled. Wait for the UI to become actionable or refine the selector.`];
+  if (status === "off_screen") return [`A matching UI node was found for ${toolName}, but it is currently outside the visible viewport. Scroll toward the candidate before retrying.`];
   if (status === "not_executed") return [`${toolName} did not execute live UI resolution in this run. Re-run without dryRun or fix the upstream capture failure.`];
   return [`${toolName} is not fully supported for this platform in the current repository state.`];
 }
