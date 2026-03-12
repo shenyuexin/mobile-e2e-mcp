@@ -303,10 +303,24 @@
 
 ---
 
+## 后续已完成（Iteration 12 - Transport Suggestion Expansion）
+
+- `resolve_ui_target` 的 transport 输出现在会携带更完整的 score-aware suggestion
+- `tap_element` / `type_into_element` 的 selector guidance 已在 transport 层保持一致
+- `server` / `CLI` / `stdio` 路径对 `perform_action_with_evidence` 的 retry-tier 相关输出已保持一致
+
+### Iteration 12 验证
+
+- `pnpm --filter @mobile-e2e-mcp/mcp-server test` 通过（138 tests）
+- `pnpm test:ci` 通过
+
+---
+
 ## 下一轮最值得继续做的任务（更新）
 
 - 为 overlap / obscured 增加更接近真实界面的结构化可见性启发式
 - 把 score-aware selector suggestion 扩展到更多 transport 输出（CLI / stdio / action review narrative）
+- 给 no-op / stale-state refresh 增加结构化 retry tier code / taxonomy
 - 为 no-op / stale-state refresh 增加更结构化的 retry tier code / taxonomy
 
 ---
