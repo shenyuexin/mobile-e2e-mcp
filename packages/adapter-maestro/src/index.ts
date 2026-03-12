@@ -483,6 +483,19 @@ function buildStateConfidence(params: { appPhase: StateSummary["appPhase"]; read
   return Math.max(0.1, Math.min(0.98, Number(confidence.toFixed(2))));
 }
 
+function summarizeStateDelta(previous: StateSummary | undefined, current: StateSummary): string[] {
+  if (!previous) {
+    return [];
+  }
+  return uniqueNonEmpty([
+    previous.appPhase !== current.appPhase ? `appPhase:${previous.appPhase}->${current.appPhase}` : undefined,
+    previous.readiness !== current.readiness ? `readiness:${previous.readiness}->${current.readiness}` : undefined,
+    JSON.stringify(previous.blockingSignals ?? []) !== JSON.stringify(current.blockingSignals ?? []) ? `blockingSignals:${(previous.blockingSignals ?? []).join(",")}->${(current.blockingSignals ?? []).join(",")}` : undefined,
+    previous.screenTitle !== current.screenTitle ? `screenTitle:${previous.screenTitle ?? "unknown"}->${current.screenTitle ?? "unknown"}` : undefined,
+    previous.screenId !== current.screenId ? `screenId:${previous.screenId ?? "unknown"}->${current.screenId ?? "unknown"}` : undefined,
+  ], 6);
+}
+
 export function buildStateSummaryFromSignals(params: {
   uiSummary?: InspectUiSummary;
   logSummary?: LogSummary;
@@ -602,12 +615,14 @@ function buildActionOutcomeConfidence(status: ToolResult["status"], stateChanged
 function buildActionabilityReview(params: {
   preStateSummary: StateSummary;
   postStateSummary: StateSummary;
+  latestKnownState?: StateSummary;
   lowLevelStatus: ToolResult["status"];
   lowLevelReasonCode: ReasonCode;
   targetResolution?: { status?: string; matchCount?: number };
   stateChanged: boolean;
 }): string[] {
   return uniqueNonEmpty([
+    params.latestKnownState ? summarizeStateDelta(params.latestKnownState, params.preStateSummary).map((item) => `stale_state_candidate:${item}`).join(";") || undefined : undefined,
     params.preStateSummary.readiness !== "ready" ? `pre_state_not_ready:${params.preStateSummary.readiness}` : undefined,
     params.preStateSummary.blockingSignals.length > 0 ? `blocking:${params.preStateSummary.blockingSignals.join(",")}` : undefined,
     params.targetResolution?.status ? `target_resolution:${params.targetResolution.status}` : undefined,
@@ -1566,6 +1581,7 @@ export async function getSessionStateWithMaestro(
   const artifacts = persisted.relativePath
     ? Array.from(new Set([persisted.relativePath, ...screenSummaryResult.artifacts]))
     : screenSummaryResult.artifacts;
+  const latestKnownStateDelta = summarizeStateDelta(sessionRecord?.session.latestStateSummary, screenSummaryResult.data.screenSummary);
 
   return {
     status: screenSummaryResult.status,
@@ -1581,6 +1597,7 @@ export async function getSessionStateWithMaestro(
       sessionRecordFound: Boolean(sessionRecord),
       state: screenSummaryResult.data.screenSummary,
       latestKnownState: sessionRecord?.session.latestStateSummary,
+      latestKnownStateDelta: latestKnownStateDelta.length > 0 ? latestKnownStateDelta : undefined,
       capabilities,
       screenSummary: screenSummaryResult.data.screenSummary,
       logSummary: screenSummaryResult.data.logSummary,
@@ -1776,6 +1793,7 @@ export async function performActionWithEvidenceWithMaestro(
   const actionabilityReview = buildActionabilityReview({
     preStateSummary,
     postStateSummary,
+    latestKnownState: sessionRecord?.session.latestStateSummary,
     lowLevelStatus: finalStatus,
     lowLevelReasonCode: finalReasonCode,
     targetResolution,

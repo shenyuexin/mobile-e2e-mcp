@@ -127,6 +127,7 @@ test("server invoke supports get_session_state Android dry-run without persisted
   assert.equal(result.data.platform, "android");
   assert.equal(result.data.state.appPhase, "unknown");
   assert.equal(typeof result.data.state.stateConfidence, "number");
+  assert.equal(result.data.latestKnownStateDelta, undefined);
 });
 
 test("server invoke supports perform_action_with_evidence Android dry-run", async () => {

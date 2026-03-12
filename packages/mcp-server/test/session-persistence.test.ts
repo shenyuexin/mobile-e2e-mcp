@@ -212,6 +212,49 @@ test("get_session_state persists latest known state into the session record", as
   }
 });
 
+test("get_session_state reports delta from the previously persisted state", async () => {
+  const sessionId = `persisted-session-state-delta-${Date.now()}`;
+  await cleanupSessionArtifact(sessionId);
+  const server = createServer();
+
+  try {
+    await server.invoke("start_session", {
+      sessionId,
+      platform: "android",
+      profile: "phase1",
+    });
+
+    await persistSessionState(
+      repoRoot,
+      sessionId,
+      {
+        appPhase: "loading",
+        readiness: "waiting_ui",
+        blockingSignals: ["loading_indicator"],
+        screenTitle: "Loading",
+      },
+      {
+        timestamp: new Date().toISOString(),
+        type: "state_summary_captured",
+        detail: "seeded old state",
+      },
+      [],
+    );
+
+    const result = await server.invoke("get_session_state", {
+      sessionId,
+      dryRun: true,
+    });
+
+    assert.equal(result.status, "success");
+    assert.equal(Array.isArray(result.data.latestKnownStateDelta), true);
+    assert.equal(result.data.latestKnownStateDelta.some((item: string) => item.startsWith("appPhase:")), true);
+    assert.equal(result.data.latestKnownStateDelta.some((item: string) => item.startsWith("readiness:")), true);
+  } finally {
+    await cleanupSessionArtifact(sessionId);
+  }
+});
+
 test("perform_action_with_evidence appends an action event to the persisted session", async () => {
   const sessionId = "persisted-action-event-test";
   await cleanupSessionArtifact(sessionId);
