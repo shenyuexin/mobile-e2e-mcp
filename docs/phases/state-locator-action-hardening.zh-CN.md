@@ -252,11 +252,28 @@
 
 ---
 
+## 后续已完成（Iteration 9 - Ambiguity Score Diff）
+
+- `AmbiguityDiff` 增加：
+  - `scoreDelta`
+- `buildResolutionNextSuggestions` 现在会在 ambiguous 场景里输出：
+  - top differing fields
+  - top score delta
+  - 建议 narrowing selector
+- 这让上层 agent 不只知道“有歧义”，还能知道“为什么 top candidate 更优”
+
+### Iteration 9 验证
+
+- `pnpm --filter @mobile-e2e-mcp/adapter-maestro test` 通过（109 tests）
+- `pnpm --filter @mobile-e2e-mcp/mcp-server test` 通过（138 tests）
+- `pnpm test:ci` 通过
+
+---
+
 ## 下一轮最值得继续做的任务（更新）
 
 - 把 score-aware selector suggestion 进一步接到更多 tool 的 `nextSuggestions`
 - 为 overlap / obscured 增加更接近真实界面的结构化可见性启发式
-- 为 ambiguity diff 补充 score-level 结构化输出
 - 给 no-op / stale-state refresh 增加更明确的 retry recommendation 层级
 
 ---
