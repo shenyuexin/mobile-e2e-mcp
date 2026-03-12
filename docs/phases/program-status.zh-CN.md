@@ -45,6 +45,7 @@
 
 - 已启动 `state + locator + action` 主链优化
 - 第一轮已完成：状态分类增强、locator 排序增强、action failure taxonomy 增强
+- 第二轮已完成：auto-remediation 开始直接复用 `failureCategory / targetQuality / actionabilityReview`
 - 详见：`docs/phases/state-locator-action-hardening.zh-CN.md`
 
 ---

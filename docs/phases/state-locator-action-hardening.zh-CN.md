@@ -75,6 +75,29 @@
 
 ---
 
+## 后续已完成（Iteration 2 - Action/Remediation）
+
+- `perform_action_with_auto_remediation` 开始直接消费：
+  - `failureCategory`
+  - `targetQuality`
+  - `actionabilityReview`
+- 对以下高频失败场景新增 metadata-driven stop / shortcut：
+  - `selector_missing`
+  - `selector_ambiguous`
+  - `blocked_by_state`
+  - `low_target_quality`
+- `waiting` 类型失败现在会直接走受限 `recover_to_known_state` 快捷路径，不再总是先 explain/rank 一轮
+- `packages/mcp-server/test/auto-remediation.test.ts` 已补：
+  - selector missing short-circuit
+  - selector ambiguous short-circuit
+  - waiting-state direct recovery
+
+### Iteration 2 验证
+
+- `pnpm --filter @mobile-e2e-mcp/mcp-server test` 通过（137 tests）
+
+---
+
 ## 下一轮最值得继续做的任务
 
 ### 1. State（下一轮）
@@ -95,8 +118,14 @@
 
 - 明确 no-op 的不同成因（wrong selector / blocked / app ignored action）
 - 在 action precondition 里更主动利用 state 信息
-- 把 `actionabilityReview` 扩成更稳定的 stop taxonomy
-- 让 auto-remediation 直接复用新的 failureCategory / targetQuality
+- 继续把 `actionabilityReview` 扩成更稳定的 stop taxonomy
+- 让 explain/rank/remediation 结果和新的 `failureCategory / targetQuality` 进一步对齐
+
+### 4. Locator（下一轮补充）
+
+- 区分 off-screen candidate 与 truly missing target
+- 为 ambiguity 返回 score diff，而不只是文本说明
+- 引入 viewport / visibility / centrality 对排序的影响
 
 ---
 
