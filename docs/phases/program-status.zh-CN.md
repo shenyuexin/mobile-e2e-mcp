@@ -41,6 +41,12 @@
 - 已落地 bounded auto-remediation 最小闭环（sample / dry-run / Android real-run stop-path 范围）
 - 尚未接入开放式真实 agentic 自动修复闭环
 
+### 主链路加固（进行中）
+
+- 已启动 `state + locator + action` 主链优化
+- 第一轮已完成：状态分类增强、locator 排序增强、action failure taxonomy 增强
+- 详见：`docs/phases/state-locator-action-hardening.zh-CN.md`
+
 ---
 
 ## 当前最重要的剩余工作
@@ -49,6 +55,7 @@
 2. 在 GitHub self-hosted runner 上完成一次正式 `phase3-real-run` 工作流执行并沉淀证据
 3. 继续扩大 Phase 4 运行时治理覆盖面，尤其是更细粒度的 redaction / retention 执行
 4. 在 bounded auto-remediation 基线之上再讨论更强但仍受控的 Phase 5 agentic integration
+5. 继续推进 `state + locator + action` 主链的第二轮加固
 
 ---
 
