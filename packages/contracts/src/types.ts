@@ -829,6 +829,7 @@ export interface PerformActionWithEvidenceData {
   preStateSummary?: StateSummary;
   postStateSummary?: StateSummary;
   postActionRefreshAttempted?: boolean;
+  retryRecommendationTier?: "none" | "inspect_only" | "refine_selector" | "wait_then_retry" | "refresh_context" | "recover_first";
   actionabilityReview?: string[];
   lowLevelStatus: ToolStatus;
   lowLevelReasonCode: ReasonCode;
