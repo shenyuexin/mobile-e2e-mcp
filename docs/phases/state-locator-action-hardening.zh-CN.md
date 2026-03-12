@@ -98,13 +98,35 @@
 
 ---
 
+## 后续已完成（Iteration 3 - Locator/State）
+
+- `queryUiNodes` 增加 viewport-aware ranking：
+  - `isOffScreen`
+  - `viewportOverlapPercent`
+  - `distanceToViewportCenter`
+- `buildUiTargetResolution` 增加：
+  - `off_screen` 状态
+  - `ambiguityDiff`
+- `diffAmbiguousCandidates` 现在会返回候选差异和建议 selector
+- `get_session_state` 现在会返回：
+  - `latestKnownStateDelta`
+- `perform_action_with_evidence` 的 `actionabilityReview` 现在会纳入：
+  - `stale_state_candidate:*`
+
+### Iteration 3 验证
+
+- `pnpm --filter @mobile-e2e-mcp/adapter-maestro test` 通过（104 tests）
+- `pnpm --filter @mobile-e2e-mcp/mcp-server test` 通过（138 tests）
+- `pnpm test:ci` 通过
+
+---
+
 ## 下一轮最值得继续做的任务
 
 ### 1. State（下一轮）
 
 - 让 `get_screen_summary` 对 loading / error / interruption 的分类更少依赖关键词，更依赖结构化 UI 模式
 - 增加 route / screen kind 识别
-- 增加 `latestKnownState` vs live state 差异摘要
 - 让状态分类和 bounded remediation stop reason 更直接联动
 
 ### 2. Locator（下一轮）
@@ -123,9 +145,15 @@
 
 ### 4. Locator（下一轮补充）
 
-- 区分 off-screen candidate 与 truly missing target
-- 为 ambiguity 返回 score diff，而不只是文本说明
-- 引入 viewport / visibility / centrality 对排序的影响
+- 把 off-screen 检测真正接到 scroll 决策里，而不是只停在 resolution 输出
+- 在 ambiguity diff 上增加更结构化的 score / selector建议输出
+- 引入 overlap / obscured / leaf-node bias
+
+### 5. Stale-state（下一轮）
+
+- 增加节点级 staleness snapshot / checksum
+- 在 tap/type 之前做轻量 stale 检查
+- 当 post-action 无变化时尝试刷新目标并重新判定 stale-state
 
 ---
 
