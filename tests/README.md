@@ -12,6 +12,7 @@ Current committed fixtures:
 - `tests/fixtures/ui/ios-sample.json` - stable iOS hierarchy sample for partial-support summary tests
 - `tests/fixtures/ocr/*.png` - screenshot-style OCR fixtures for semi-real fallback regression tests
 - `tests/fixtures/ocr/*.observations.json` - normalized MacVision-style OCR observation fixtures paired with the screenshot assets
+- `tests/fixtures/ocr/manifest.json` - expected OCR fixture triads and text inventory used to catch fixture drift in unit tests
 
 Current no-device regression layers:
 
@@ -45,6 +46,7 @@ Current screenshot-driven OCR fallback coverage includes:
 Current regression layers are now explicitly named:
 
 - `pnpm test:adapter` - adapter-only deterministic unit coverage
+- `pnpm test:ocr-smoke` - macOS-only OCR provider smoke coverage against a committed screenshot fixture
 - `pnpm test:mcp-server` - server/stdio/dev-cli smoke coverage
 - `pnpm test:unit` - combined no-device regression layer
 - `pnpm test:smoke` - asserted root dry-run validation layer

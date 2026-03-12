@@ -11,6 +11,7 @@
     "typecheck": "pnpm build && pnpm -r --if-present typecheck",
     "lint": "pnpm -r --if-present lint",
     "test:adapter": "pnpm --filter @mobile-e2e-mcp/adapter-vision test && pnpm --filter @mobile-e2e-mcp/adapter-maestro test",
+    "test:ocr-smoke": "pnpm --filter @mobile-e2e-mcp/adapter-vision exec tsx --test test/ocr-smoke.test.ts",
     "test:mcp-server": "pnpm --filter @mobile-e2e-mcp/mcp-server test",
     "test:unit": "pnpm --filter @mobile-e2e-mcp/adapter-vision test && pnpm --filter @mobile-e2e-mcp/adapter-maestro test && pnpm --filter @mobile-e2e-mcp/mcp-server test",
     "test:smoke": "pnpm run validate:dry-run && pnpm run validate:phase3-samples",
