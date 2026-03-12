@@ -1905,10 +1905,20 @@ export async function performActionWithEvidenceWithMaestro(
     nextSuggestions: finalStatus === "success"
       ? stateChanged
         ? []
-        : ["Action transport succeeded but the app state did not change; inspect selector quality or blocking UI state."]
+        : postActionRefreshAttempted
+          ? [
+            "Action transport succeeded but the app state did not change even after a follow-up refresh; retry only after refining the selector or waiting for the screen to stabilize.",
+            "If the target is expected to move the screen, inspect stale-state hints and target quality before retrying the same action.",
+          ]
+          : ["Action transport succeeded but the app state did not change; inspect selector quality or blocking UI state." ]
       : ocrFallbackResult?.nextSuggestions.length
         ? ocrFallbackResult.nextSuggestions
-        : ["Inspect the returned pre/post state summaries and action evidence before retrying the same action."],
+        : postActionRefreshAttempted
+          ? [
+            "Inspect the returned pre/post state summaries and post-action refresh review before retrying the same action.",
+            "Prefer waiting or selector refinement before repeating a no-op action on the same screen.",
+          ]
+          : ["Inspect the returned pre/post state summaries and action evidence before retrying the same action."],
   };
 }
 
@@ -3299,7 +3309,7 @@ export async function resolveUiTargetWithMaestro(input: ResolveUiTargetInput): P
       },
       nextSuggestions: resolution.status === "resolved"
         ? []
-        : buildResolutionNextSuggestions(resolution.status, "resolve_ui_target"),
+        : buildResolutionNextSuggestions(resolution.status, "resolve_ui_target", resolution),
     };
   }
 
@@ -3402,7 +3412,7 @@ export async function resolveUiTargetWithMaestro(input: ResolveUiTargetInput): P
     },
     nextSuggestions: resolution.status === "resolved"
       ? []
-      : buildResolutionNextSuggestions(resolution.status, "resolve_ui_target"),
+      : buildResolutionNextSuggestions(resolution.status, "resolve_ui_target", resolution),
   };
 }
 
@@ -3500,7 +3510,7 @@ export async function tapElementWithMaestro(input: TapElementInput): Promise<Too
         exitCode: resolveResult.data.exitCode,
         supportLevel: resolveResult.data.supportLevel,
       },
-      nextSuggestions: buildResolutionNextSuggestions(resolution.status, "tap_element"),
+      nextSuggestions: buildResolutionNextSuggestions(resolution.status, "tap_element", resolution),
     };
   }
 
@@ -3622,7 +3632,7 @@ export async function typeIntoElementWithMaestro(input: TypeIntoElementInput): P
         exitCode: resolveResult.data.exitCode,
         supportLevel: resolveResult.data.supportLevel,
       },
-      nextSuggestions: buildResolutionNextSuggestions(resolution.status, "type_into_element"),
+      nextSuggestions: buildResolutionNextSuggestions(resolution.status, "type_into_element", resolution),
     };
   }
 

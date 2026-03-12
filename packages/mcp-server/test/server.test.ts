@@ -76,6 +76,7 @@ test("server invoke keeps resolve_ui_target Android dry-run semantics", async ()
   assert.equal(result.reasonCode, "UNSUPPORTED_OPERATION");
   assert.equal(result.data.supportLevel, "full");
   assert.equal(result.data.resolution.status, "not_executed");
+  assert.equal(result.nextSuggestions[0]?.includes("resolve_ui_target dry-run"), true);
 });
 
 test("server invoke keeps query_ui Android dry-run semantics", async () => {
@@ -148,6 +149,7 @@ test("server invoke supports perform_action_with_evidence Android dry-run", asyn
   assert.equal(typeof result.data.outcome.actionId, "string");
   assert.equal(result.data.outcome.failureCategory, "unsupported");
   assert.equal(Array.isArray(result.data.actionabilityReview), true);
+  assert.equal(result.nextSuggestions[0]?.includes("Inspect the returned pre/post state summaries"), true);
 });
 
 test("server invoke returns bounded auto-remediation stop details for allowlist misses", async () => {
