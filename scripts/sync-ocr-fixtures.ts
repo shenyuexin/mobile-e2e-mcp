@@ -87,13 +87,26 @@ async function main(): Promise<void> {
   const fixtureRoot = path.join(repoRootFromScript(), "tests", "fixtures", "ocr");
   const manifest = await loadManifest(fixtureRoot);
   const requested = new Set(process.argv.slice(2));
+  const validNames = new Set(manifest.fixtures.map((fixture) => fixture.name));
+  const unknownNames = Array.from(requested).filter((name) => !validNames.has(name));
+  if (unknownNames.length > 0) {
+    throw new Error(`Unknown OCR fixture name(s): ${unknownNames.join(", ")}. Valid names: ${Array.from(validNames).join(", ")}.`);
+  }
+
+  let syncedCount = 0;
   for (const fixture of manifest.fixtures) {
     if (requested.size > 0 && !requested.has(fixture.name)) {
       continue;
     }
     await syncFixture(fixtureRoot, fixture);
+    syncedCount += 1;
   }
-  console.log(`Synced OCR fixtures${requested.size > 0 ? `: ${Array.from(requested).join(", ")}` : ""}.`);
+
+  if (syncedCount === 0) {
+    throw new Error("No OCR fixtures were synced.");
+  }
+
+  console.log(`Synced ${String(syncedCount)} OCR fixture(s)${requested.size > 0 ? `: ${Array.from(requested).join(", ")}` : ""}.`);
 }
 
 main().catch((error: unknown) => {
