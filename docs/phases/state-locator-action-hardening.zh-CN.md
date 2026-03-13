@@ -364,11 +364,29 @@
 
 ---
 
+## 后续已完成（Iteration 16 - Suggestion Prioritization）
+
+- `explain_last_failure` 的 `nextSuggestions` 现在会做去重并按优先级输出：
+  - retry tier
+  - recommended recovery
+  - recommended next probe
+- `rank_failure_candidates` 现在会沿用同一套优先级建议，而不是简单转发
+- `suggest_known_remediation` 的 `nextSuggestions` 现在会对 remediation 提示做去重保序
+
+### Iteration 16 验证
+
+- `pnpm --filter @mobile-e2e-mcp/adapter-maestro test` 通过（111 tests）
+- `pnpm --filter @mobile-e2e-mcp/mcp-server test` 通过（138 tests）
+- `pnpm test:ci` 通过
+
+---
+
 ## 下一轮最值得继续做的任务（更新）
 
 - 把 score-aware selector suggestion 扩展到更多 transport 输出（CLI / stdio / action review narrative）
 - 给 no-op / stale-state refresh 增加结构化 retry tier code / taxonomy
 - 让 explain/rank/remediation 三者的建议去重并按优先级分层
+- 让 action review narrative 继续直接吸收 selector / visibility / refresh 信号
 - 让 action review narrative / explain flows 直接吸收 score-aware selector guidance
 - 为 no-op / stale-state refresh 增加更结构化的 retry tier code / taxonomy
 

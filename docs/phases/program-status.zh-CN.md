@@ -59,6 +59,7 @@
 - 第十三轮已完成：retryRecommendationTier 开始在 transport 层保持一致
 - 第十四轮已完成：locator 排序开始引入更细的 visibility heuristics
 - 第十五轮已完成：retry tier 与 selector guidance 开始进入 explanation / narrative 层
+- 第十六轮已完成：explain / rank / remediation 建议开始去重并按优先级分层
 - 详见：`docs/phases/state-locator-action-hardening.zh-CN.md`
 
 ---
