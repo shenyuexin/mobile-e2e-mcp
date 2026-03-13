@@ -93,13 +93,24 @@ test("handleRequest supports tools/call alias for describe_capabilities", async 
   const typedResult = result as {
     status: string;
     reasonCode: string;
-    data: { capabilities: { platform: string; toolCapabilities: Array<{ toolName: string; supportLevel: string }> } };
+    data: {
+      capabilities: {
+        platform: string;
+        toolCapabilities: Array<{ toolName: string; supportLevel: string }>;
+        ocrFallback?: {
+          hostRequirement: string;
+          configuredProviders: string[];
+        };
+      };
+    };
   };
 
   assert.equal(typedResult.status, "success");
   assert.equal(typedResult.reasonCode, "OK");
   assert.equal(typedResult.data.capabilities.platform, "android");
   assert.equal(typedResult.data.capabilities.toolCapabilities.find((tool) => tool.toolName === "tap_element")?.supportLevel, "full");
+  assert.equal(typedResult.data.capabilities.ocrFallback?.hostRequirement, "darwin");
+  assert.equal(Array.isArray(typedResult.data.capabilities.ocrFallback?.configuredProviders), true);
 });
 
 test("handleRequest supports tools/call alias for resolve_ui_target", async () => {
