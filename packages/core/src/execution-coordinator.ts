@@ -1,7 +1,7 @@
 import { mkdir, rm } from "node:fs/promises";
 import path from "node:path";
 import type { Platform } from "@mobile-e2e-mcp/contracts";
-import { buildDeviceLeaseRecordRelativePath, type DeviceLease, loadLeaseByDevice, persistLease, removeLease } from "./device-lease-store.js";
+import { buildDeviceLeaseRecordRelativePath, type DeviceLease, listLeases, loadLeaseByDevice, persistLease, removeLease } from "./device-lease-store.js";
 import { loadSessionRecord } from "./session-store.js";
 
 export interface AcquireLeaseInput {
@@ -24,6 +24,15 @@ export interface ReleaseLeaseResult {
   released: boolean;
   relativePath: string;
   reason?: "not_found" | "owned_by_another";
+}
+
+export interface MarkLeaseResult {
+  updated: boolean;
+  lease?: DeviceLease;
+}
+
+export interface RecoverStaleLeasesResult {
+  recovered: DeviceLease[];
 }
 
 function nowIso(): string {
@@ -147,5 +156,94 @@ export async function releaseLease(repoRoot: string, input: ReleaseLeaseInput): 
     released: removed.removed,
     reason: removed.removed ? undefined : "not_found",
     relativePath: removed.relativePath,
+  };
+}
+
+async function updateLeaseState(
+  repoRoot: string,
+  input: { sessionId: string; platform: Platform; deviceId: string; state: DeviceLease["state"] },
+): Promise<MarkLeaseResult> {
+  return withDeviceLeaseLock(repoRoot, input.platform, input.deviceId, async () => {
+    const existing = await loadLeaseByDevice(repoRoot, input.platform, input.deviceId);
+    if (!existing || existing.sessionId !== input.sessionId) {
+      return { updated: false };
+    }
+
+    const nextLease: DeviceLease = {
+      ...existing,
+      state: input.state,
+      heartbeatAt: nowIso(),
+      ownerPid: process.pid,
+    };
+    await persistLease(repoRoot, nextLease);
+    return {
+      updated: true,
+      lease: nextLease,
+    };
+  });
+}
+
+export async function markBusy(
+  repoRoot: string,
+  input: { sessionId: string; platform: Platform; deviceId: string },
+): Promise<MarkLeaseResult> {
+  return updateLeaseState(repoRoot, { ...input, state: "busy" });
+}
+
+export async function markIdle(
+  repoRoot: string,
+  input: { sessionId: string; platform: Platform; deviceId: string },
+): Promise<MarkLeaseResult> {
+  return updateLeaseState(repoRoot, { ...input, state: "leased" });
+}
+
+export async function refreshHeartbeat(
+  repoRoot: string,
+  input: { sessionId: string; platform: Platform; deviceId: string },
+): Promise<MarkLeaseResult> {
+  return withDeviceLeaseLock(repoRoot, input.platform, input.deviceId, async () => {
+    const existing = await loadLeaseByDevice(repoRoot, input.platform, input.deviceId);
+    if (!existing || existing.sessionId !== input.sessionId) {
+      return { updated: false };
+    }
+    const nextLease: DeviceLease = {
+      ...existing,
+      heartbeatAt: nowIso(),
+      ownerPid: process.pid,
+    };
+    await persistLease(repoRoot, nextLease);
+    return {
+      updated: true,
+      lease: nextLease,
+    };
+  });
+}
+
+export async function recoverStaleLeases(repoRoot: string, staleAfterMs: number): Promise<RecoverStaleLeasesResult> {
+  const now = Date.now();
+  const recovered: DeviceLease[] = [];
+  const leases = await listLeases(repoRoot);
+  for (const lease of leases) {
+    const heartbeatAt = Date.parse(lease.heartbeatAt);
+    if (Number.isNaN(heartbeatAt) || now - heartbeatAt <= staleAfterMs) {
+      continue;
+    }
+
+    await withDeviceLeaseLock(repoRoot, lease.platform, lease.deviceId, async () => {
+      const current = await loadLeaseByDevice(repoRoot, lease.platform, lease.deviceId);
+      if (!current) {
+        return;
+      }
+      const currentHeartbeat = Date.parse(current.heartbeatAt);
+      if (!Number.isNaN(currentHeartbeat) && now - currentHeartbeat <= staleAfterMs) {
+        return;
+      }
+      await removeLease(repoRoot, lease.platform, lease.deviceId);
+      recovered.push(current);
+    });
+  }
+
+  return {
+    recovered,
   };
 }

@@ -42,6 +42,15 @@ export interface SessionAuditRecord {
   interruption_events: string[];
   policy_profile: string;
   retention_profile: string;
+  scheduler_metrics?: {
+    queue_wait_ms: {
+      p50: number;
+      p95: number;
+      max: number;
+    };
+    lease_conflicts: number;
+    stale_recoveries: number;
+  };
   schema_required_fields: string[];
   generated_at: string;
 }
@@ -190,6 +199,46 @@ export function collectInterruptionEvents(timeline: SessionTimelineEvent[], conf
     .map((event) => redactSensitiveText(event.detail ?? event.summary ?? event.type, config));
 }
 
+function parseQueueWaitMs(timeline: SessionTimelineEvent[]): number[] {
+  const values: number[] = [];
+  for (const event of timeline) {
+    if (event.type !== "queue_wait_ended") {
+      continue;
+    }
+    const detail = event.detail ?? "";
+    const match = detail.match(/(\d+)ms/);
+    if (!match) {
+      continue;
+    }
+    const value = Number.parseInt(match[1] ?? "", 10);
+    if (!Number.isNaN(value)) {
+      values.push(value);
+    }
+  }
+  return values;
+}
+
+function percentile(sortedValues: number[], p: number): number {
+  if (sortedValues.length === 0) {
+    return 0;
+  }
+  const index = Math.min(sortedValues.length - 1, Math.max(0, Math.ceil((p / 100) * sortedValues.length) - 1));
+  return sortedValues[index] ?? 0;
+}
+
+function buildSchedulerMetrics(timeline: SessionTimelineEvent[]): SessionAuditRecord["scheduler_metrics"] {
+  const queueWait = parseQueueWaitMs(timeline).sort((a, b) => a - b);
+  return {
+    queue_wait_ms: {
+      p50: percentile(queueWait, 50),
+      p95: percentile(queueWait, 95),
+      max: queueWait[queueWait.length - 1] ?? 0,
+    },
+    lease_conflicts: timeline.filter((event) => event.type === "session_start_rejected" && (event.detail ?? "").includes("already leased")).length,
+    stale_recoveries: timeline.filter((event) => event.type === "lease_recovered_stale").length,
+  };
+}
+
 export function buildSessionAuditRecord(
   sessionRecord: PersistedSessionRecord,
   governanceConfig: ArtifactGovernanceConfig,
@@ -207,6 +256,7 @@ export function buildSessionAuditRecord(
     interruption_events: collectInterruptionEvents(sessionRecord.session.timeline, governanceConfig),
     policy_profile: sessionRecord.session.policyProfile,
     retention_profile: resolveRetentionProfileName(),
+    scheduler_metrics: buildSchedulerMetrics(sessionRecord.session.timeline),
     schema_required_fields: schemaConfig.session_audit.required_fields,
     generated_at: new Date().toISOString(),
   };

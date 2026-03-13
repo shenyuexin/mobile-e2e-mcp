@@ -76,6 +76,33 @@ def build_payload() -> dict:
         for run in platform.get("runs", [])
         if run.get("result") != "PASS"
     ]
+    scheduler_metrics = {
+        "queue_wait_p50_ms": 0,
+        "queue_wait_p95_ms": 0,
+        "queue_wait_max_ms": 0,
+        "lease_conflict_count": 0,
+        "stale_lease_recovered_count": 0,
+    }
+    queue_p50_values: list[int] = []
+    queue_p95_values: list[int] = []
+    queue_max_values: list[int] = []
+    for platform_entry in platforms:
+        platform_metrics = platform_entry.get("scheduler_metrics")
+        if not isinstance(platform_metrics, dict):
+            continue
+        queue_p50_values.append(int(platform_metrics.get("queue_wait_p50_ms", 0) or 0))
+        queue_p95_values.append(int(platform_metrics.get("queue_wait_p95_ms", 0) or 0))
+        queue_max_values.append(int(platform_metrics.get("queue_wait_max_ms", 0) or 0))
+        scheduler_metrics["lease_conflict_count"] += int(platform_metrics.get("lease_conflict_count", 0) or 0)
+        scheduler_metrics["stale_lease_recovered_count"] += int(platform_metrics.get("stale_lease_recovered_count", 0) or 0)
+
+    if queue_p50_values:
+        scheduler_metrics["queue_wait_p50_ms"] = sorted(queue_p50_values)[len(queue_p50_values) // 2]
+    if queue_p95_values:
+        scheduler_metrics["queue_wait_p95_ms"] = sorted(queue_p95_values)[max(0, len(queue_p95_values) - 1)]
+    if queue_max_values:
+        scheduler_metrics["queue_wait_max_ms"] = max(queue_max_values)
+
     return {
         "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "scope": {
@@ -97,6 +124,7 @@ def build_payload() -> dict:
             "passed_runs": passed_runs,
             "pass_rate": 0 if total_runs == 0 else round(passed_runs / total_runs, 4),
             "failures": failures,
+            "scheduler_metrics": scheduler_metrics,
         },
         "artifacts": {
             "phase_report_json": str(PHASE_REPORT.relative_to(ROOT)) if PHASE_REPORT.exists() else None,
@@ -132,6 +160,9 @@ def write_markdown(payload: dict) -> None:
         f"- Passed runs: {payload['results']['passed_runs']}",
         f"- Pass rate: {payload['results']['pass_rate']:.0%}",
         f"- Failure count: {len(payload['results']['failures'])}",
+        f"- Queue wait p50/p95/max (ms): {payload['results']['scheduler_metrics']['queue_wait_p50_ms']}/{payload['results']['scheduler_metrics']['queue_wait_p95_ms']}/{payload['results']['scheduler_metrics']['queue_wait_max_ms']}",
+        f"- Lease conflicts: {payload['results']['scheduler_metrics']['lease_conflict_count']}",
+        f"- Stale lease recoveries: {payload['results']['scheduler_metrics']['stale_lease_recovered_count']}",
         "",
         "## Attached Evidence",
         "",

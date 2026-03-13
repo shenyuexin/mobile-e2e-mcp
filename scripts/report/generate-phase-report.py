@@ -23,6 +23,7 @@ class PlatformReport(TypedDict):
     pass_rate: float
     status: str
     runs: list[RunResult]
+    scheduler_metrics: dict[str, float | int]
 
 
 class PhaseReport(TypedDict):
@@ -55,6 +56,13 @@ def collect_platform(platform: str, root: Path) -> PlatformReport:
             "pass_rate": 0.0,
             "status": "NO_DATA",
             "runs": [],
+            "scheduler_metrics": {
+                "queue_wait_p50_ms": 0,
+                "queue_wait_p95_ms": 0,
+                "queue_wait_max_ms": 0,
+                "lease_conflict_count": 0,
+                "stale_lease_recovered_count": 0,
+            },
         }
 
     for run_dir in sorted(p for p in root.glob("run-*") if p.is_dir()):
@@ -75,6 +83,7 @@ def collect_platform(platform: str, root: Path) -> PlatformReport:
     passed = sum(1 for run in runs if run["result"] == "PASS")
     pass_rate = 0.0 if total == 0 else passed / total
     status = "NO_DATA" if total == 0 else ("GO" if pass_rate >= 0.95 else "NO_GO")
+    scheduler_metrics = collect_scheduler_metrics(platform)
     return {
         "platform": platform,
         "total_runs": total,
@@ -82,6 +91,60 @@ def collect_platform(platform: str, root: Path) -> PlatformReport:
         "pass_rate": round(pass_rate, 4),
         "status": status,
         "runs": runs,
+        "scheduler_metrics": scheduler_metrics,
+    }
+
+
+def collect_scheduler_metrics(platform: str) -> dict[str, float | int]:
+    audit_root = ROOT / "artifacts" / "audit"
+    if not audit_root.exists():
+        return {
+            "queue_wait_p50_ms": 0,
+            "queue_wait_p95_ms": 0,
+            "queue_wait_max_ms": 0,
+            "lease_conflict_count": 0,
+            "stale_lease_recovered_count": 0,
+        }
+
+    queue_wait_values: list[int] = []
+    lease_conflicts = 0
+    stale_recoveries = 0
+    for audit_file in audit_root.glob("*.json"):
+        try:
+            payload = json.loads(audit_file.read_text())
+        except json.JSONDecodeError:
+            continue
+        if payload.get("platform") != platform:
+            continue
+        scheduler = payload.get("scheduler_metrics")
+        if not isinstance(scheduler, dict):
+            continue
+        queue_wait = scheduler.get("queue_wait_ms")
+        if isinstance(queue_wait, dict):
+            max_wait = queue_wait.get("max")
+            if isinstance(max_wait, (int, float)):
+                queue_wait_values.append(int(max_wait))
+        lease_conflicts += int(scheduler.get("lease_conflicts", 0) or 0)
+        stale_recoveries += int(scheduler.get("stale_recoveries", 0) or 0)
+
+    queue_wait_values.sort()
+    if queue_wait_values:
+        p50_index = max(0, min(len(queue_wait_values) - 1, (len(queue_wait_values) * 50 + 99) // 100 - 1))
+        p95_index = max(0, min(len(queue_wait_values) - 1, (len(queue_wait_values) * 95 + 99) // 100 - 1))
+        p50_value = queue_wait_values[p50_index]
+        p95_value = queue_wait_values[p95_index]
+        max_value = queue_wait_values[-1]
+    else:
+        p50_value = 0
+        p95_value = 0
+        max_value = 0
+
+    return {
+        "queue_wait_p50_ms": p50_value,
+        "queue_wait_p95_ms": p95_value,
+        "queue_wait_max_ms": max_value,
+        "lease_conflict_count": lease_conflicts,
+        "stale_lease_recovered_count": stale_recoveries,
     }
 
 
@@ -107,6 +170,14 @@ def main() -> None:
     for platform in report["platforms"]:
         lines.append(
             f"| {platform['platform']} | {platform['passed_runs']} | {platform['total_runs']} | {platform['pass_rate']:.0%} | {platform['status']} |"
+        )
+    lines.extend(["", "## Scheduler Metrics", ""])
+    lines.append("| Platform | Queue p50 ms | Queue p95 ms | Queue max ms | Lease conflicts | Stale recoveries |")
+    lines.append("|---|---:|---:|---:|---:|---:|")
+    for platform in report["platforms"]:
+        metrics = platform["scheduler_metrics"]
+        lines.append(
+            f"| {platform['platform']} | {metrics['queue_wait_p50_ms']} | {metrics['queue_wait_p95_ms']} | {metrics['queue_wait_max_ms']} | {metrics['lease_conflict_count']} | {metrics['stale_lease_recovered_count']} |"
         )
     lines.extend(["", "## Run Details", ""])
     for platform in report["platforms"]:

@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { Platform } from "@mobile-e2e-mcp/contracts";
 
@@ -14,6 +14,8 @@ export interface DeviceLease {
   ownerPid: number;
   acquiredAt: string;
   heartbeatAt: string;
+  coordinationKey?: string;
+  barrierId?: string;
 }
 
 export interface DeviceLeaseConflict {
@@ -44,7 +46,9 @@ function isDeviceLease(value: unknown): value is DeviceLease {
     && typeof value.ownerPid === "number"
     && Number.isFinite(value.ownerPid)
     && typeof value.acquiredAt === "string"
-    && typeof value.heartbeatAt === "string";
+    && typeof value.heartbeatAt === "string"
+    && (typeof value.coordinationKey === "undefined" || typeof value.coordinationKey === "string")
+    && (typeof value.barrierId === "undefined" || typeof value.barrierId === "string");
 }
 
 export function buildDeviceLeaseRecordRelativePath(platform: Platform, deviceId: string): string {
@@ -57,11 +61,15 @@ function buildDeviceLeaseRecordAbsolutePath(repoRoot: string, platform: Platform
   return path.resolve(repoRoot, buildDeviceLeaseRecordRelativePath(platform, deviceId));
 }
 
+function buildLeaseDirectoryAbsolutePath(repoRoot: string): string {
+  return path.resolve(repoRoot, "artifacts", "leases");
+}
+
 async function writeJsonFile(absolutePath: string, value: unknown): Promise<void> {
   await mkdir(path.dirname(absolutePath), { recursive: true });
   const tempPath = path.join(path.dirname(absolutePath), `.${path.basename(absolutePath)}.${randomUUID()}.tmp`);
   try {
-    await writeFile(tempPath, JSON.stringify(value, null, 2) + "\n", "utf8");
+    await writeFile(tempPath, `${JSON.stringify(value, null, 2)}\n`, "utf8");
     await rename(tempPath, absolutePath);
   } catch (error: unknown) {
     await unlink(tempPath).catch(() => undefined);
@@ -105,6 +113,33 @@ export async function removeLease(repoRoot: string, platform: Platform, deviceId
   } catch (error: unknown) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") {
       return { removed: false, relativePath };
+    }
+    throw error;
+  }
+}
+
+export async function listLeases(repoRoot: string): Promise<DeviceLease[]> {
+  const directoryPath = buildLeaseDirectoryAbsolutePath(repoRoot);
+  try {
+    const entries = await readdir(directoryPath, { withFileTypes: true });
+    const leases: DeviceLease[] = [];
+    for (const entry of entries) {
+      if (!entry.isFile() || !entry.name.endsWith(".json")) {
+        continue;
+      }
+      const absolutePath = path.resolve(directoryPath, entry.name);
+      try {
+        const parsed: unknown = JSON.parse(await readFile(absolutePath, "utf8"));
+        if (isDeviceLease(parsed)) {
+          leases.push(parsed);
+        }
+      } catch {
+      }
+    }
+    return leases;
+  } catch (error: unknown) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      return [];
     }
     throw error;
   }

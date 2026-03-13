@@ -1,5 +1,8 @@
+import { resolveRepoPath } from "@mobile-e2e-mcp/adapter-maestro";
+import { appendSessionTimelineEvent, loadSessionRecord, recoverStaleLeases, runExclusive } from "@mobile-e2e-mcp/core";
+import type { PerformActionWithEvidenceInput, Platform, ToolResult } from "@mobile-e2e-mcp/contracts";
+import { REASON_CODES } from "@mobile-e2e-mcp/contracts";
 import { MobileE2EMcpServer } from "./server.js";
-import type { PerformActionWithEvidenceInput } from "@mobile-e2e-mcp/contracts";
 import { enforcePolicyForTool } from "./policy-guard.js";
 import { captureJsConsoleLogs } from "./tools/capture-js-console-logs.js";
 import { captureJsNetworkEvents } from "./tools/capture-js-network-events.js";
@@ -68,6 +71,108 @@ export function createServer(): MobileE2EMcpServer {
     });
     return result;
   });
+  const withSessionExecution = <
+    TInput extends { sessionId?: string; platform?: Platform; deviceId?: string },
+    TOutput extends ToolResult,
+  >(
+    toolName: string,
+    handler: (input: TInput) => Promise<TOutput>,
+  ) => {
+    return async (input: TInput): Promise<TOutput> => {
+      const asOutput = (result: ToolResult): TOutput => result as unknown as TOutput;
+      const sessionId = input.sessionId;
+      if (!sessionId) {
+        return handler(input);
+      }
+
+      const repoRoot = resolveRepoPath();
+      const staleRecovered = await recoverStaleLeases(repoRoot, 5 * 60 * 1000);
+      for (const lease of staleRecovered.recovered) {
+        await appendSessionTimelineEvent(repoRoot, lease.sessionId, {
+          timestamp: new Date().toISOString(),
+          type: "lease_recovered_stale",
+          detail: `Recovered stale lease for ${lease.platform}/${lease.deviceId}.`,
+        });
+      }
+      const sessionRecord = await loadSessionRecord(repoRoot, sessionId);
+      if (!sessionRecord || sessionRecord.closed) {
+        return handler(input);
+      }
+
+      if (input.platform && input.platform !== sessionRecord.session.platform) {
+        return asOutput({
+          status: "failed",
+          reasonCode: REASON_CODES.configurationError,
+          sessionId,
+          durationMs: 0,
+          attempts: 1,
+          artifacts: [],
+          data: {
+            expectedPlatform: sessionRecord.session.platform,
+            receivedPlatform: input.platform,
+          },
+          nextSuggestions: ["Use the same platform as the active session for session-bound tools."],
+        });
+      }
+
+      if (input.deviceId && input.deviceId !== sessionRecord.session.deviceId) {
+        return asOutput({
+          status: "failed",
+          reasonCode: REASON_CODES.configurationError,
+          sessionId,
+          durationMs: 0,
+          attempts: 1,
+          artifacts: [],
+          data: {
+            expectedDeviceId: sessionRecord.session.deviceId,
+            receivedDeviceId: input.deviceId,
+          },
+          nextSuggestions: ["Use the same deviceId as the active session for session-bound tools."],
+        });
+      }
+
+      const normalizedInput = {
+        ...input,
+        sessionId,
+        platform: sessionRecord.session.platform,
+        deviceId: sessionRecord.session.deviceId,
+      } as TInput;
+
+      const exclusive = await runExclusive(
+        {
+          repoRoot,
+          sessionId,
+          platform: sessionRecord.session.platform,
+          deviceId: sessionRecord.session.deviceId,
+          toolName,
+        },
+        async () => handler(normalizedInput),
+      );
+
+      const result = exclusive.value;
+      if (result.status !== "success" && result.status !== "partial") {
+        return result;
+      }
+
+      const artifacts = [
+        ...result.artifacts,
+        ...staleRecovered.recovered.map((lease: { platform: string; deviceId: string }) => `artifacts/leases/${lease.platform}-${lease.deviceId}.json`),
+      ];
+
+      const resultData = typeof result.data === "object" && result.data !== null
+        ? result.data as Record<string, unknown>
+        : {};
+
+      return {
+        ...result,
+        artifacts: Array.from(new Set(artifacts)),
+        data: {
+          ...resultData,
+          queueWaitMs: exclusive.queueWaitMs,
+        },
+      };
+    };
+  };
   const captureJsConsoleLogsHandler = withPolicyAndAudit("capture_js_console_logs", captureJsConsoleLogs);
   const captureJsNetworkEventsHandler = withPolicyAndAudit("capture_js_network_events", captureJsNetworkEvents);
   const compareAgainstBaselineHandler = withPolicy("compare_against_baseline", compareAgainstBaseline);
@@ -78,26 +183,26 @@ export function createServer(): MobileE2EMcpServer {
   const explainLastFailureHandler = withPolicy("explain_last_failure", explainLastFailure);
   const findSimilarFailuresHandler = withPolicy("find_similar_failures", findSimilarFailures);
   const getActionOutcomeHandler = withPolicy("get_action_outcome", getActionOutcome);
-  const getCrashSignalsHandler = withPolicyAndAudit("get_crash_signals", getCrashSignals);
-  const getLogsHandler = withPolicyAndAudit("get_logs", getLogs);
+  const getCrashSignalsHandler = withSessionExecution("get_crash_signals", withPolicyAndAudit("get_crash_signals", getCrashSignals));
+  const getLogsHandler = withSessionExecution("get_logs", withPolicyAndAudit("get_logs", getLogs));
   const getScreenSummaryHandler = withPolicy("get_screen_summary", getScreenSummary);
-  const getSessionStateHandler = withPolicy("get_session_state", getSessionState);
+  const getSessionStateHandler = withSessionExecution("get_session_state", withPolicy("get_session_state", getSessionState));
   const inspectUiHandler = withPolicy("inspect_ui", inspectUi);
   const queryUiHandler = withPolicy("query_ui", queryUi);
-  const recoverToKnownStateHandler = withPolicy("recover_to_known_state", recoverToKnownState);
+  const recoverToKnownStateHandler = withSessionExecution("recover_to_known_state", withPolicy("recover_to_known_state", recoverToKnownState));
   const resolveUiTargetHandler = withPolicy("resolve_ui_target", resolveUiTarget);
-  const replayLastStablePathHandler = withPolicy("replay_last_stable_path", replayLastStablePath);
+  const replayLastStablePathHandler = withSessionExecution("replay_last_stable_path", withPolicy("replay_last_stable_path", replayLastStablePath));
   const scrollAndResolveUiTargetHandler = withPolicy("scroll_and_resolve_ui_target", scrollAndResolveUiTarget);
   const scrollAndTapElementHandler = withPolicy("scroll_and_tap_element", scrollAndTapElement);
   const installAppHandler = withPolicy("install_app", installApp);
   const listJsDebugTargetsHandler = withPolicy("list_js_debug_targets", listJsDebugTargets);
   const launchAppHandler = withPolicy("launch_app", launchApp);
   const listDevicesHandler = withPolicy("list_devices", listDevices);
-  const measureAndroidPerformanceHandler = withPolicyAndAudit("measure_android_performance", measureAndroidPerformance);
-  const measureIosPerformanceHandler = withPolicyAndAudit("measure_ios_performance", measureIosPerformance);
+  const measureAndroidPerformanceHandler = withSessionExecution("measure_android_performance", withPolicyAndAudit("measure_android_performance", measureAndroidPerformance));
+  const measureIosPerformanceHandler = withSessionExecution("measure_ios_performance", withPolicyAndAudit("measure_ios_performance", measureIosPerformance));
   const rankFailureCandidatesHandler = withPolicy("rank_failure_candidates", rankFailureCandidates);
-  const recordScreenHandler = withPolicyAndAudit("record_screen", recordScreen);
-  const runFlowHandler = withPolicy("run_flow", runFlow);
+  const recordScreenHandler = withSessionExecution("record_screen", withPolicyAndAudit("record_screen", recordScreen));
+  const runFlowHandler = withSessionExecution("run_flow", withPolicy("run_flow", runFlow));
   const resetAppStateHandler = withPolicy("reset_app_state", resetAppState);
   const takeScreenshotHandler = withPolicy("take_screenshot", takeScreenshot);
   const tapHandler = withPolicy("tap", tap);
@@ -107,7 +212,7 @@ export function createServer(): MobileE2EMcpServer {
   const typeIntoElementHandler = withPolicy("type_into_element", typeIntoElement);
   const waitForUiHandler = withPolicy("wait_for_ui", waitForUi);
   const suggestKnownRemediationHandler = withPolicy("suggest_known_remediation", suggestKnownRemediation);
-  const performActionWithEvidenceHandler = withPolicy(
+  const performActionWithEvidenceHandler = withSessionExecution("perform_action_with_evidence", withPolicy(
     "perform_action_with_evidence",
     (input: PerformActionWithEvidenceInput) => performActionWithAutoRemediation(input, {
       performAction: performActionWithEvidence,
@@ -117,7 +222,7 @@ export function createServer(): MobileE2EMcpServer {
       recoverToKnownState: recoverToKnownStateHandler,
       replayLastStablePath: replayLastStablePathHandler,
     }),
-  );
+  ));
 
   return new MobileE2EMcpServer({
     capture_js_console_logs: captureJsConsoleLogsHandler,

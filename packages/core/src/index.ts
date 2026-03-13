@@ -26,8 +26,15 @@ export {
 } from "./device-lease-store.js";
 export {
   acquireLease,
+  markBusy,
+  markIdle,
+  recoverStaleLeases,
+  refreshHeartbeat,
   releaseLease,
 } from "./execution-coordinator.js";
+export {
+  runExclusive,
+} from "./session-scheduler.js";
 export {
   buildAuditedArtifactEntries,
   buildSessionAuditRecord,
@@ -45,5 +52,6 @@ export {
 export type { AccessPolicyConfig, AccessProfile } from "./policy-engine.js";
 export type { ArtifactGovernanceConfig, ArtifactRetentionProfile, SessionAuditArtifactEntry, SessionAuditRecord, SessionAuditSchemaConfig } from "./governance.js";
 export type { DeviceLease, DeviceLeaseConflict, DeviceLeaseState } from "./device-lease-store.js";
-export type { AcquireLeaseInput, AcquireLeaseResult, ReleaseLeaseInput, ReleaseLeaseResult } from "./execution-coordinator.js";
+export type { AcquireLeaseInput, AcquireLeaseResult, MarkLeaseResult, RecoverStaleLeasesResult, ReleaseLeaseInput, ReleaseLeaseResult } from "./execution-coordinator.js";
 export type { AppendSessionTimelineEventResult, PersistActionRecordResult, PersistEndedSessionResult, PersistSessionStateResult, PersistStartedSessionResult, PersistedActionRecord, PersistedBaselineIndexEntry, PersistedFailureIndexEntry, PersistedSessionRecord, TimelineQueryResult } from "./session-store.js";
+export type { RunExclusiveInput, RunExclusiveResult } from "./session-scheduler.js";
