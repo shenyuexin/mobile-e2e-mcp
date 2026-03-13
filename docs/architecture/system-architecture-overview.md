@@ -73,7 +73,8 @@ graph TD
 
 ## 4. 开发指引
 
-了解代码细节的最佳入口：
+了解代码细节的最佳入口（建议按此顺序阅读）：
+- 第一入口：`repomix-output.xml`（整合代码全景，先建立上下文）
+- 第二步：`git ls-files` + 定向文件读取（核对 repomix 与当前仓库差异）
 - 核心逻辑：`packages/adapter-maestro/src/index.ts`
 - 工具定义：`packages/mcp-server/src/tools/`
-- 架构上下文：`repomix-output.xml` (整合的代码文件)

@@ -6,6 +6,19 @@ This repository contains a comprehensive technical blueprint for building a larg
 
 - `repomix-output.xml` — A consolidated XML file containing the entire codebase for AI analysis and context gathering.
 
+### Recommended Analysis Order (Important)
+
+For any AI/code-analysis workflow, use this order:
+
+1. **Read `repomix-output.xml` first** to get a fast global view (architecture, directory structure, and major code paths).
+2. **Run a delta check against the live repo** (`git ls-files` / targeted reads) before making conclusions.
+3. Treat `repomix-output.xml` as the **primary context entry**, but not the sole source of truth.
+
+Why this matters:
+
+- Repomix can exclude some files (for example binary assets, ignored patterns, or files not captured in the packed file section).
+- Therefore, final judgments must be validated against real repository files.
+
 ## Documentation Index
 
 - `README.zh-CN.md` — 中文能力介绍与阶段说明
