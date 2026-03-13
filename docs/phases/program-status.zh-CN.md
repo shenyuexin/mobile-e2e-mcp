@@ -29,6 +29,7 @@
 - Flutter onboarding 已完成第一轮本机构建与 harness 验证
 - 已建立 `validate:phase3-samples` 自动校验链，并新增 self-hosted real-run lane plumbing
 - 本机 Android emulator real-run 已跑通，`flutter-android` 2/2 通过，`native-android` 1/1 通过，并已生成 acceptance evidence
+- 本机 iOS / React Native real-run 已补齐（2026-03-13）：`react-native-ios` 1/1 通过，`native-ios` 2/2 通过，证据见 `reports/acceptance-evidence-ios-rn.{json,md}`
 
 ### Phase 4
 
@@ -67,7 +68,7 @@
 
 ## 当前最重要的剩余工作
 
-1. 在新的 sample 上继续验证 Phase 3 的扩展有效性，尤其补齐 iOS / React Native 的 real-run 验收
+1. 在新的 sample 上继续验证 Phase 3 的扩展有效性（iOS / React Native real-run 验收已在本机补齐）
 2. 在 GitHub self-hosted runner 上完成一次正式 `phase3-real-run` 工作流执行并沉淀证据
 3. 继续扩大 Phase 4 运行时治理覆盖面，尤其是更细粒度的 redaction / retention 执行
 4. 在 bounded auto-remediation 基线之上再讨论更强但仍受控的 Phase 5 agentic integration
@@ -84,6 +85,6 @@
 - **Phase 3：共享 runner/report 路径已覆盖 RN / Native / Flutter，等待新 sample 实证**
 - **Phase 3：RN / Native / Flutter 三条主路径均已建立实证样本与 harness 基线**
 - **Phase 3：dry-run 校验链、自托管 real-run lane 与本机 Android emulator real-run 已打通，并已生成 `reports/acceptance-evidence.*`**
-- **Phase 3：Android sample real-run 当前已通过；后续重点转向 iOS / React Native real-run 与新 sample 扩展**
+- **Phase 3：Android + iOS + React Native sample real-run 均已完成一轮本机实证；后续重点转向 GitHub self-hosted workflow 正式留痕与新 sample 扩展**
 - **Phase 4：基线已建，运行时接入已开始但仍未完全覆盖**
 - **Phase 5：bounded auto-remediation baseline 已落地，等待更完整的 agentic integration 讨论**
