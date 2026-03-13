@@ -60,6 +60,7 @@
 - 第十四轮已完成：locator 排序开始引入更细的 visibility heuristics
 - 第十五轮已完成：retry tier 与 selector guidance 开始进入 explanation / narrative 层
 - 第十六轮已完成：explain / rank / remediation 建议开始去重并按优先级分层
+- 第十七轮已完成：retry recommendation 开始升级为结构化 taxonomy 与 narrative 输出
 - 详见：`docs/phases/state-locator-action-hardening.zh-CN.md`
 
 ---

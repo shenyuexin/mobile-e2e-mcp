@@ -381,6 +381,23 @@
 
 ---
 
+## 后续已完成（Iteration 17 - Structured Retry Taxonomy）
+
+- `retryRecommendationTier` 之外，新增结构化 `retryRecommendation`：
+  - `tier`
+  - `reason`
+  - `suggestedAction`
+- `get_action_outcome` / `explain_last_failure` / diagnosis briefing 现在开始直接消费这份结构化 recommendation
+- narrative 层不再只暴露 tier 字符串，而是带原因和建议动作
+
+### Iteration 17 验证
+
+- `pnpm --filter @mobile-e2e-mcp/adapter-maestro test` 通过（111 tests）
+- `pnpm --filter @mobile-e2e-mcp/mcp-server test` 通过（138 tests）
+- `pnpm test:ci` 通过
+
+---
+
 ## 下一轮最值得继续做的任务（更新）
 
 - 把 score-aware selector suggestion 扩展到更多 transport 输出（CLI / stdio / action review narrative）
