@@ -392,6 +392,7 @@ pnpm mcp:stdio
 
 - `tests/fixtures/ui/android-cart.xml`
 - `tests/fixtures/ui/ios-sample.json`
+- `tests/fixtures/ocr/*.svg` / `*.png` / `*.observations.json`
 
 这些 fixture 主要用于回归验证：
 
@@ -409,6 +410,13 @@ pnpm mcp:stdio
 - `packages/mcp-server`：验证 `createServer`、stdio `handleRequest`、dev CLI `parseCliArgs` / `main()` 对新 UI 工具入口的关键 dispatch 和 transport 语义
 
 顶层 `pnpm run validate:dry-run` 现已不再只是串联命令退出码，而是通过 `scripts/validate-dry-run.ts` 真实调用 dev CLI dry-run，并断言返回 JSON 的关键语义字段（如 `status`、`reasonCode`、`supportLevel` 与部分 tool-specific data）。
+
+OCR fixture 维护现在也有两层入口：
+
+- `pnpm validate:ocr-fixtures`：跨平台校验 OCR fixture triad 的 text inventory、SVG/PNG hash 与 PNG 尺寸
+- `pnpm fixtures:ocr:sync [fixture-name...]`：仅在 macOS 上运行，使用真实 Vision provider 重新生成 `.png` 与 `.observations.json`
+
+另外新增了一个独立的 macOS smoke workflow：`.github/workflows/ocr-smoke.yml`。它只在 OCR 相关路径变更时自动触发，也可以手动触发；默认 Ubuntu CI 仍然只承担无设备回归，不会被真实 OCR host 依赖拖慢或拖脆弱。
 
 当前还新增了一个 capability discovery 入口：`describe_capabilities`。它会返回当前 `platform` / `runnerProfile` 下的 tool capability matrix；同时 `start_session` 和 `list_devices` 的返回结果也会附带 capability profile，方便调用方在动作前先判断 Android full support 与 iOS partial/unsupported 的边界。
 

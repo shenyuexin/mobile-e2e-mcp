@@ -13,4 +13,13 @@ Current mappings:
 - `continue-low-confidence.*` - OCR low-confidence safe fail
 - `continue-ambiguous.*` - OCR ambiguity safe fail
 
-When updating a fixture, regenerate or replace the matching `.png` and keep the paired `.observations.json` in sync with the visual content.
+When updating a fixture, use this maintenance loop:
+
+1. Edit the source `.svg`
+2. Run `pnpm fixtures:ocr:sync [fixture-name...]` on macOS to regenerate `.png` and `.observations.json`
+3. Run `pnpm validate:ocr-fixtures` on any platform to verify hashes, dimensions, and expected text inventory
+
+Smoke coverage:
+
+- `pnpm test:ocr-smoke` runs the real `MacVisionOcrProvider` against `signin-success.png`
+- `.github/workflows/ocr-smoke.yml` is path-gated to OCR-related files and is intentionally separate from the default Ubuntu CI lane

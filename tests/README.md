@@ -60,4 +60,5 @@ Current regression layers are now explicitly named:
 Current GitHub Actions CI scope:
 
 - `.github/workflows/ci.yml` runs on `ubuntu-latest` because the current workflow is intentionally limited to no-device, no-simulator regression layers
+- `.github/workflows/ocr-smoke.yml` is a separate macOS-only lane; it runs automatically only when OCR-related paths change, and it can also be started manually with `workflow_dispatch`
 - real Android emulator and real iOS simulator/device regression are still separate future lanes and should not be inferred from the current Ubuntu-only workflow
