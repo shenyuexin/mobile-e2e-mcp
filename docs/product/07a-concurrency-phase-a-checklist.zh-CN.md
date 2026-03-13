@@ -41,7 +41,7 @@
   - [x] case2：session1 end 后 session2 start 应成功
   - [x] case3：重复 end_session 仍成功（幂等）
 
-- [ ] 新增测试：`packages/core/test/device-lease-store.test.ts`
+- [x] 新增测试：`packages/core/test/device-lease-store.test.ts`
   - [ ] 读写一致性
   - [ ] 原子写覆盖
   - [ ] remove 后不存在

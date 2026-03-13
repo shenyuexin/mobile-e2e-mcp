@@ -53,12 +53,12 @@
 
 ## B.4 测试与验收（Phase B）
 
-- [ ] 新增 `packages/mcp-server/test/session-scheduler.test.ts`
+- [x] 新增 `packages/mcp-server/test/session-scheduler.test.ts`
   - [ ] 同一 session 并发调用两个 session-bound 工具，验证串行化
   - [ ] 不同设备并发调用，验证可并发
   - [ ] task 失败后 lease 状态恢复
 
-- [ ] 新增 `packages/core/test/session-scheduler.test.ts`
+- [x] 新增 `packages/core/test/session-scheduler.test.ts`
   - [ ] `runExclusive` busy/idle 状态转换
   - [ ] stale recovery 逻辑
 

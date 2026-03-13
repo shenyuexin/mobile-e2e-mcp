@@ -105,10 +105,10 @@
 
 ## 6) 测试文件建议
 
-- [ ] `packages/core/test/device-lease-store.test.ts`
-- [ ] `packages/core/test/session-scheduler.test.ts`
+- [x] `packages/core/test/device-lease-store.test.ts`
+- [x] `packages/core/test/session-scheduler.test.ts`
 - [x] `packages/mcp-server/test/session-lease.test.ts`
-- [ ] `packages/mcp-server/test/session-scheduler.test.ts`
+- [x] `packages/mcp-server/test/session-scheduler.test.ts`
 - [x] 更新已有 `session-persistence.test.ts`（确认新事件不破坏既有断言）
 
 ---
@@ -121,5 +121,5 @@
 
 若有并发 smoke 脚本，再补：
 
-- [ ] `pnpm run validate:dry-run`
-- [ ] 并发自定义脚本（2 设备并行）
+- [x] `pnpm run validate:dry-run`
+- [x] 并发自定义脚本（2 设备并行）
