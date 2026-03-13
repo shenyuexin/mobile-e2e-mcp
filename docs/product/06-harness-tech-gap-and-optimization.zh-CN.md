@@ -149,6 +149,14 @@
 - [x] 增加 app reset/clear-data 策略矩阵（第一版）
 - [ ] phase3-real-run 在 self-hosted runner 留痕常态化
 
+并发调度实施请直接按以下清单执行：
+
+- `07-concurrency-scheduler-implementation-plan-and-checklists.zh-CN.md`
+- `07a-concurrency-phase-a-checklist.zh-CN.md`
+- `07b-concurrency-phase-b-checklist.zh-CN.md`
+- `07c-concurrency-phase-c-checklist.zh-CN.md`
+- `07d-concurrency-package-file-checklist.zh-CN.md`
+
 ### 5.3 90 天（形成开源竞争力）
 
 - [ ] 抽象 Device Provider 并接入一个云真机提供方

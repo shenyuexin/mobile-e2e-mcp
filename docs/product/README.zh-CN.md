@@ -23,6 +23,16 @@
   说明目录迁移完成后，后续 AI 和工程实现应如何继续推进。
 - `06-harness-tech-gap-and-optimization.zh-CN.md`
   记录当前 harness 技术基线、高频工具路径、技术缺口与优先级优化建议。
+- `07-concurrency-scheduler-implementation-plan-and-checklists.zh-CN.md`
+  并发调度改造总清单（总目标、分阶段里程碑、风险与完工判定）。
+- `07a-concurrency-phase-a-checklist.zh-CN.md`
+  Phase A（基础租约）可执行清单。
+- `07b-concurrency-phase-b-checklist.zh-CN.md`
+  Phase B（会话并发守卫）可执行清单。
+- `07c-concurrency-phase-c-checklist.zh-CN.md`
+  Phase C（观测收口与双设备 sync 预留）可执行清单。
+- `07d-concurrency-package-file-checklist.zh-CN.md`
+  按 package/file 维度的逐文件改造核对清单。
 - `minimal-mcp-contracts-and-boundaries.zh-CN.md`
   说明当前阶段 `contracts`、`adapter-maestro`、`mcp-server` 与脚本层的最小职责边界。
 
