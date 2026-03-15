@@ -1,0 +1,7 @@
+appId: org.wordpress.android.prealpha
+---
+- launchApp:
+    appId: org.wordpress.android.prealpha
+    clearState: true
+    stopApp: true
+- takeScreenshot: wordpress-android-launch

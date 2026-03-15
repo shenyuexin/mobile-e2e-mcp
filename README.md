@@ -185,6 +185,7 @@ If you want to get productive quickly, read in this sequence:
 - [docs/architecture/policy-engine-runtime-architecture.zh-CN.md](docs/architecture/policy-engine-runtime-architecture.zh-CN.md) — policy runtime/guard/scope mapping
 - [docs/architecture/platform-implementation-matrix.zh-CN.md](docs/architecture/platform-implementation-matrix.zh-CN.md) — cross-platform support matrix
 - [docs/delivery/roadmap.md](docs/delivery/roadmap.md) — delivery phases
+- [docs/delivery/real-app-pilot-checklist-and-acceptance.zh-CN.md](docs/delivery/real-app-pilot-checklist-and-acceptance.zh-CN.md) — real-app pilot checklist + go/no-go acceptance flow
 - [docs/product/README.zh-CN.md](docs/product/README.zh-CN.md) — product/deployment scope
 - [tests/README.md](tests/README.md) — test layers and CI scope
 
