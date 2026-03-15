@@ -10,6 +10,12 @@ Define policy profiles:
 
 Each MCP tool declares required policy scope.
 
+Current enforced baseline:
+
+- access profiles are currently defined in `configs/policies/access-profiles.yaml`
+- profile actions are coarse-grained but auditable
+- unknown high-risk write actions should be treated as deny-by-default
+
 Interruption orchestration governance scopes:
 
 - `interrupt`: allows low-risk automatic interruption detection/classification/resolution.
@@ -24,6 +30,8 @@ Interruption orchestration governance scopes:
 - Per-session credentials with TTL.
 - Explicit device reservation and lock model.
 - Secret redaction in logs and screenshots (PII handling).
+
+Policy engine failure behavior should be fail-closed for destructive operations.
 
 ---
 
@@ -88,3 +96,21 @@ Policy requirements:
 - Define retention tiers by environment and data classification.
 - Apply redaction policy for PII-sensitive screenshots/logs.
 - Track retention exceptions with owner and expiry.
+
+## 9. Scope Granularity Roadmap (P1)
+
+To align with least-privilege best practices, evolve from coarse action scopes to finer controls:
+
+- `record-screen`
+- `diagnostics-export`
+- `crash-export`
+- `js-debug-read`
+- `recovery-write`
+- `ocr-action`
+- `cv-action`
+
+This roadmap should be reflected consistently in:
+
+- `docs/architecture/policy-engine-runtime-architecture.zh-CN.md`
+- tool-level scope mapping in server/tool docs
+- policy regression tests

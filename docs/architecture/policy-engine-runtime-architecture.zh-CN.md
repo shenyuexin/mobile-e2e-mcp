@@ -84,6 +84,21 @@ Tool Request
 - Read-only / Interactive / Full-control。
 - 映射工具最低 required scope。
 
+当前仓库基线（`configs/policies/access-profiles.yaml`）已落地 scope：
+
+- `inspect`
+- `screenshot`
+- `logs`
+- `performance`
+- `tap`
+- `type`
+- `swipe`
+- `install`
+- `uninstall`
+- `clear-data`
+- `interrupt`
+- `interrupt-high-risk`
+
 ### 6.2 Interruption Policy
 
 - 平台维度规则（iOS / Android）。
@@ -92,6 +107,39 @@ Tool Request
 ### 6.3 Fallback Policy
 
 - 允许 deterministic 失败后进入 OCR/CV 的场景、阈值、上限。
+
+### 6.4 Scope Granularity Gap（最佳实践差距）
+
+相对最佳实践，当前 scope 仍偏粗粒度。建议补齐并逐步落地：
+
+- `record-screen`
+- `diagnostics-export`
+- `crash-export`
+- `js-debug-read`
+- `recovery-write`
+- `ocr-action`
+- `cv-action`
+
+这些 scope 先以文档规范和 policy map 维护，随后再推进到工具级强约束。
+
+### 6.5 工具族 -> Scope 映射（当前基线 + 目标粒度）
+
+> 说明：此表是当前仓库文档侧的 canonical mapping。若与代码实现冲突，以 `policy-guard` + 配置文件为准。
+
+| Tool Family（示例） | Current Required Scope（基线） | Future Finer Scope（目标） | 风险级别 |
+|---|---|---|---|
+| `inspect_ui` / `query_ui` / `resolve_ui_target` | `inspect` | `inspect` | 低 |
+| `take_screenshot` | `screenshot` | `screenshot` | 低 |
+| `get_logs` | `logs` | `logs` | 中（可能含敏感信息） |
+| `collect_diagnostics` / `get_crash_signals` | `logs` / `performance` | `diagnostics-export` / `crash-export` | 中-高 |
+| `tap` / `type_text` / `scroll_and_tap_element` | `tap` / `type` / `swipe` | `tap` / `type` / `swipe` | 中 |
+| `install_app` / `terminate_app` / reset 类 | `install` / `uninstall` / `clear-data` | `install` / `uninstall` / `clear-data` | 高 |
+| `capture_js_console_logs` / `capture_js_network_events` | `logs` | `js-debug-read` | 中 |
+| `recover_to_known_state` / `replay_last_stable_path` | `tap` / `type` / `swipe`（组合） | `recovery-write` | 高 |
+| interruption resolver（低风险） | `interrupt` | `interrupt` | 中 |
+| interruption resolver（高风险槽位） | `interrupt-high-risk` | `interrupt-high-risk` | 高 |
+| OCR coordinate action | `tap`（间接） | `ocr-action` | 高 |
+| CV/template coordinate action | `tap`（间接） | `cv-action` | 高 |
 
 ---
 
@@ -127,6 +175,9 @@ Tool Request
 - `requiredScope`
 - `currentProfile`
 - `nextSuggestions`
+
+说明：当前 `packages/contracts/tool-result.schema.json` 对 `data` 为通用 object。
+建议把策略决策细节统一落在 `data.policyDecision`（或等价命名）下，并保持 envelope 不变。
 
 ---
 
