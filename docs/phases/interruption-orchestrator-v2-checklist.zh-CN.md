@@ -38,6 +38,9 @@
 ### WS-7 P0/P1 通用编排强化（hard guard + strategy hardening）
 - [x] 完成
 
+### WS-8 P2 端到端集成断言强化（guard + policy + resume）
+- [x] 完成
+
 ---
 
 ## 2. 任务清单
@@ -209,6 +212,30 @@
 
 ---
 
+## WS-8 P2 端到端集成断言强化（guard + policy + resume）
+
+### Task 8.1 增加可控全链路测试钩子（仅测试）
+- [x] `packages/adapter-maestro/src/index.ts`
+  - 新增 interruption guard test hooks：
+    - `setInterruptionGuardTestHooksForTesting(...)`
+    - `resetInterruptionGuardTestHooksForTesting()`
+  - 使 `performActionWithEvidenceWithMaestro(...)` 在测试中可稳定注入 pre/post resolve 与 resume 行为。
+
+### Task 8.2 增加 action 前后 guard + policy + resume 全链路断言
+- [x] `packages/adapter-maestro/test/ui-model.test.ts`（扩展）
+  - 新增：pre-guard denied 时，主 action 被阻断（failed + blocked 分类断言）。
+  - 新增：pre/post resolve + resume 顺序执行断言（resolve*2 + resume*1）。
+  - 新增：artifacts 合并包含 resume 产物断言。
+
+### Task 8.3 P2 回归验证
+- [x] `pnpm --filter @mobile-e2e-mcp/adapter-maestro test`
+- [x] `pnpm --filter @mobile-e2e-mcp/core test`
+- [x] `pnpm typecheck`
+- [x] `pnpm test`
+- [x] `pnpm build`
+
+---
+
 ## 3. 每项任务完成记录（本轮摘要）
 
 - 完成记录：
@@ -226,6 +253,9 @@
   - Notes:
     - interruption v2 与 v1 规则保持兼容，避免中断既有 sample harness。
     - 本轮新增 P0/P1 强化后，中断处理从“可观测调用”升级为“流程硬门禁 + 有界验证闭环”。
+    - 本轮新增 P2 端到端断言后，已覆盖 action 前后 guard + policy + resume 的可测闭环路径。
+  - Commits:
+    - `5ce1f38 feat: harden interruption guards and add end-to-end flow assertions`
 
 ---
 
