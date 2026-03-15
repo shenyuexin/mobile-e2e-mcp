@@ -102,6 +102,22 @@ failure branch:
 - `attempts`
 - `artifacts[]`
 
+### 6.1 当前契约落点（避免歧义）
+
+当前强约束来自 `packages/contracts/tool-result.schema.json`，即通用 envelope：
+
+- `status`
+- `reasonCode`
+- `sessionId`
+- `durationMs`
+- `attempts`
+- `artifacts`
+- `data`
+- `nextSuggestions`
+
+因此本设计文档中提到的 `resolutionStrategy` / `fallbackUsed` / `confidence` / `attributionReason`，
+在当前阶段应统一归入 `data`（建议 `data.outcome`）进行承载，直至 schema 升级为更强类型。
+
 ---
 
 ## 7. 验收指标

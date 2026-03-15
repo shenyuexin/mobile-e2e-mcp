@@ -37,6 +37,11 @@
 - `policyProfile`
 - `artifactRefs[]`
 
+当前契约说明：
+
+- `packages/contracts/session.schema.json` 当前仅强约束 `timeline` 为对象数组，未强约束 event 子字段。
+- 本文档中的事件字段视为**目标标准模型**，用于指导实现与后续 schema 收敛。
+
 ### 3.2 Evidence Packet
 
 建议字段：
@@ -47,6 +52,11 @@
 - `fallbackUsed`
 - `confidence`
 - `logs/crash/network snippets`
+
+当前落点建议：
+
+- 将 evidence packet 作为 `tool-result.data` 的结构化子字段（例如 `data.evidence[]`）。
+- 与 `artifacts[]` 做“索引 + 引用”关系，而非重复存放大体积原文。
 
 ### 3.3 Artifact Taxonomy
 
@@ -88,6 +98,9 @@
 - Action 结果必须可映射到 audit record。
 - 敏感数据遵循 redaction 与 retention tier。
 - 审计导出时保留 hash/reference，避免泄漏原始敏感 payload。
+
+`configs/policies/session-audit-schema.yaml` 目前为最小必填集合（session/phase/platform/result/time/artifacts/interruption）。
+建议后续增量扩展字段时遵循“向后兼容 + 分阶段启用”原则。
 
 ---
 
