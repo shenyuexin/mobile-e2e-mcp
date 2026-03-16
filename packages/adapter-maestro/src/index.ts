@@ -226,6 +226,7 @@ import {
 } from "./ui-tools.js";
 import { classifyInterruptionFromSignals } from "./interruption-classifier.js";
 import { detectInterruptionFromSummary } from "./interruption-detector.js";
+import { buildDoctorNextSuggestions } from "./doctor-guidance.js";
 import { buildInterruptionEvent, decideInterruptionResolution } from "./interruption-resolver.js";
 import { buildInterruptionTimelineEvent, buildResumeCheckpoint, hasStateDrift, pickEventSource, summarizeInterruptionDetail } from "./interruption-orchestrator.js";
 import {
@@ -6238,7 +6239,7 @@ export async function recordScreenWithMaestro(input: RecordScreenInput): Promise
     `sleep ${String(durationSeconds)}`,
     "kill -INT \"$pid\" >/dev/null 2>&1 || true",
     "wait \"$pid\" >/dev/null 2>&1 || true",
-  ].join("; ");
+  ].join("\n");
   const recordCommand = ["sh", "-lc", iosScript];
   const commandLabels = ["record"]; 
   const commands = [recordCommand];
@@ -8056,9 +8057,7 @@ export async function runDoctor(
 
   const { status, reasonCode } = classifyDoctorOutcome(checks);
 
-  const nextSuggestions = checks
-    .filter((check) => check.status !== "pass")
-    .map((check) => `Resolve ${check.name}: ${check.detail}`);
+  const nextSuggestions = buildDoctorNextSuggestions(checks);
 
   return {
     status,

@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
-import type { InspectUiNode, InspectUiSummary, Platform, QueryUiInput, QueryUiMatch, ReasonCode } from "@mobile-e2e-mcp/contracts";
+import type { InspectUiNode, InspectUiSummary, QueryUiInput, QueryUiMatch, ReasonCode } from "@mobile-e2e-mcp/contracts";
 import { REASON_CODES } from "@mobile-e2e-mcp/contracts";
 import { buildInspectUiSummary, parseAndroidUiHierarchyNodes, parseIosInspectNodes, queryUiNodes } from "./ui-model.js";
 import { executeRunner, type CommandExecution, buildFailureReason } from "./runtime-shared.js";
@@ -76,11 +76,40 @@ function resolveConfiguredExecutable(configuredValue: string | undefined, fallba
 }
 
 export function resolveIdbCliPath(): string | undefined {
-  return resolveConfiguredExecutable(process.env.IDB_CLI_PATH, "idb");
+  if (process.env.IDB_CLI_PATH) {
+    return resolveConfiguredExecutable(process.env.IDB_CLI_PATH, "idb");
+  }
+
+  const preferredCliPaths = [
+    path.join(process.env.HOME ?? "", "Library", "Python", "3.9", "bin", "idb"),
+    "/opt/homebrew/bin/idb",
+    "/usr/local/bin/idb",
+  ];
+  for (const candidate of preferredCliPaths) {
+    if (candidate && existsSync(candidate)) {
+      return candidate;
+    }
+  }
+
+  return resolveConfiguredExecutable(undefined, "idb");
 }
 
 export function resolveIdbCompanionPath(): string | undefined {
-  return resolveConfiguredExecutable(process.env.IDB_COMPANION_PATH, "idb_companion");
+  if (process.env.IDB_COMPANION_PATH) {
+    return resolveConfiguredExecutable(process.env.IDB_COMPANION_PATH, "idb_companion");
+  }
+
+  const preferredCompanionPaths = [
+    "/opt/homebrew/bin/idb_companion",
+    "/usr/local/bin/idb_companion",
+  ];
+  for (const candidate of preferredCompanionPaths) {
+    if (existsSync(candidate)) {
+      return candidate;
+    }
+  }
+
+  return resolveConfiguredExecutable(undefined, "idb_companion");
 }
 
 export function buildIdbCommand(baseArgs: string[]): string[] {
