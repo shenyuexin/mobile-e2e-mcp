@@ -700,6 +700,876 @@ test("handleRequest supports tools/call alias for terminate_app dry-run", async 
   assert.equal(typedResult.data.command[0], "xcrun");
 });
 
+test("handleRequest resolves launch_app context from active session with sessionId-only arguments", async () => {
+  const sessionId = `stdio-launch-context-${Date.now()}`;
+  await cleanupSessionArtifact(sessionId);
+  try {
+    await handleRequest({
+      id: 110,
+      method: "tools/call",
+      params: {
+        name: "start_session",
+        arguments: {
+          sessionId,
+          platform: "android",
+          deviceId: buildTestDeviceId(sessionId),
+          appId: "com.example.demo",
+          profile: "native_android",
+        },
+      },
+    });
+
+    const result = await handleRequest({
+      id: 111,
+      method: "tools/call",
+      params: {
+        name: "launch_app",
+        arguments: {
+          sessionId,
+          dryRun: true,
+        },
+      },
+    });
+    const typedResult = result as {
+      status: string;
+      reasonCode: string;
+      data: { dryRun: boolean; appId: string; launchCommand: string[]; queueWaitMs?: number };
+    };
+
+    assert.equal(typedResult.status, "success");
+    assert.equal(typedResult.reasonCode, "OK");
+    assert.equal(typedResult.data.dryRun, true);
+    assert.equal(typedResult.data.appId, "com.example.demo");
+    assert.equal(typedResult.data.launchCommand.includes("monkey"), true);
+    assert.equal(typedResult.data.launchCommand.includes(buildTestDeviceId(sessionId)), true);
+  } finally {
+    await cleanupSessionArtifact(sessionId);
+  }
+});
+
+test("handleRequest resolves terminate_app context from active session with sessionId-only arguments", async () => {
+  const sessionId = `stdio-terminate-context-${Date.now()}`;
+  await cleanupSessionArtifact(sessionId);
+  try {
+    await handleRequest({
+      id: 112,
+      method: "tools/call",
+      params: {
+        name: "start_session",
+        arguments: {
+          sessionId,
+          platform: "android",
+          deviceId: buildTestDeviceId(sessionId),
+          appId: "com.example.demo",
+          profile: "native_android",
+        },
+      },
+    });
+
+    const result = await handleRequest({
+      id: 113,
+      method: "tools/call",
+      params: {
+        name: "terminate_app",
+        arguments: {
+          sessionId,
+          dryRun: true,
+        },
+      },
+    });
+    const typedResult = result as {
+      status: string;
+      reasonCode: string;
+      data: { dryRun: boolean; appId: string; command: string[] };
+    };
+
+    assert.equal(typedResult.status, "success");
+    assert.equal(typedResult.reasonCode, "OK");
+    assert.equal(typedResult.data.dryRun, true);
+    assert.equal(typedResult.data.appId, "com.example.demo");
+    assert.equal(typedResult.data.command[0], "adb");
+    assert.equal(typedResult.data.command.includes(buildTestDeviceId(sessionId)), true);
+  } finally {
+    await cleanupSessionArtifact(sessionId);
+  }
+});
+
+test("handleRequest resolves install_app and reset_app_state context from active session", async () => {
+  const sessionId = `stdio-lifecycle-context-${Date.now()}`;
+  await cleanupSessionArtifact(sessionId);
+  try {
+    await handleRequest({
+      id: 114,
+      method: "tools/call",
+      params: {
+        name: "start_session",
+        arguments: {
+          sessionId,
+          platform: "android",
+          deviceId: buildTestDeviceId(sessionId),
+          appId: "com.example.demo",
+          profile: "native_android",
+        },
+      },
+    });
+
+    const install = await handleRequest({
+      id: 115,
+      method: "tools/call",
+      params: {
+        name: "install_app",
+        arguments: {
+          sessionId,
+          artifactPath: "package.json",
+          dryRun: true,
+        },
+      },
+    });
+    const typedInstall = install as {
+      status: string;
+      reasonCode: string;
+      data: { dryRun: boolean; installCommand: string[] };
+    };
+    assert.equal(typedInstall.status, "success");
+    assert.equal(typedInstall.reasonCode, "OK");
+    assert.equal(typedInstall.data.installCommand.includes(buildTestDeviceId(sessionId)), true);
+
+    const reset = await handleRequest({
+      id: 116,
+      method: "tools/call",
+      params: {
+        name: "reset_app_state",
+        arguments: {
+          sessionId,
+          strategy: "clear_data",
+          dryRun: true,
+        },
+      },
+    });
+    const typedReset = reset as {
+      status: string;
+      reasonCode: string;
+      data: { dryRun: boolean; appId: string; commands: string[][] };
+    };
+    assert.equal(typedReset.status, "success");
+    assert.equal(typedReset.reasonCode, "OK");
+    assert.equal(typedReset.data.appId, "com.example.demo");
+    assert.equal(typedReset.data.commands[0]?.includes(buildTestDeviceId(sessionId)), true);
+  } finally {
+    await cleanupSessionArtifact(sessionId);
+  }
+});
+
+test("handleRequest resolves inspect_ui/query_ui/resolve_ui_target/wait_for_ui context from active session", async () => {
+  const sessionId = `stdio-wave1a-context-${Date.now()}`;
+  await cleanupSessionArtifact(sessionId);
+  try {
+    await handleRequest({
+      id: 123,
+      method: "tools/call",
+      params: {
+        name: "start_session",
+        arguments: {
+          sessionId,
+          platform: "android",
+          deviceId: buildTestDeviceId(sessionId),
+          profile: "phase1",
+        },
+      },
+    });
+
+    const inspectResult = await handleRequest({
+      id: 124,
+      method: "tools/call",
+      params: {
+        name: "inspect_ui",
+        arguments: {
+          sessionId,
+          dryRun: true,
+        },
+      },
+    });
+    const typedInspect = inspectResult as { status: string; reasonCode: string; data: { dryRun: boolean; supportLevel: string; outputPath: string } };
+    assert.equal(typedInspect.status, "success");
+    assert.equal(typedInspect.reasonCode, "OK");
+    assert.equal(typedInspect.data.dryRun, true);
+    assert.equal(typedInspect.data.supportLevel, "full");
+    assert.equal(typedInspect.data.outputPath.includes(`${sessionId}/android-phase1`), true);
+
+    const queryResult = await handleRequest({
+      id: 125,
+      method: "tools/call",
+      params: {
+        name: "query_ui",
+        arguments: {
+          sessionId,
+          contentDesc: "View products",
+          dryRun: true,
+        },
+      },
+    });
+    const typedQuery = queryResult as { status: string; reasonCode: string; data: { dryRun: boolean; supportLevel: string } };
+    assert.equal(typedQuery.status, "success");
+    assert.equal(typedQuery.reasonCode, "OK");
+    assert.equal(typedQuery.data.dryRun, true);
+    assert.equal(typedQuery.data.supportLevel, "full");
+
+    const resolveResult = await handleRequest({
+      id: 126,
+      method: "tools/call",
+      params: {
+        name: "resolve_ui_target",
+        arguments: {
+          sessionId,
+          contentDesc: "View products",
+          dryRun: true,
+        },
+      },
+    });
+    const typedResolve = resolveResult as { status: string; reasonCode: string; data: { supportLevel: string; resolution: { status: string } } };
+    assert.equal(typedResolve.status, "partial");
+    assert.equal(typedResolve.reasonCode, "UNSUPPORTED_OPERATION");
+    assert.equal(typedResolve.data.supportLevel, "full");
+    assert.equal(typedResolve.data.resolution.status, "not_executed");
+
+    const waitResult = await handleRequest({
+      id: 127,
+      method: "tools/call",
+      params: {
+        name: "wait_for_ui",
+        arguments: {
+          sessionId,
+          contentDesc: "View products",
+          dryRun: true,
+        },
+      },
+    });
+    const typedWait = waitResult as { status: string; reasonCode: string; data: { supportLevel: string; polls: number } };
+    assert.equal(typedWait.status, "partial");
+    assert.equal(typedWait.reasonCode, "UNSUPPORTED_OPERATION");
+    assert.equal(typedWait.data.supportLevel, "full");
+    assert.equal(typedWait.data.polls, 0);
+  } finally {
+    await cleanupSessionArtifact(sessionId);
+  }
+});
+
+test("handleRequest returns configurationError for sessionId-only Wave 1A call when session is missing", async () => {
+  const sessionId = `stdio-wave1a-missing-${Date.now()}`;
+  await cleanupSessionArtifact(sessionId);
+
+  const result = await handleRequest({
+    id: 128,
+    method: "tools/call",
+    params: {
+      name: "query_ui",
+      arguments: {
+        sessionId,
+        contentDesc: "View products",
+        dryRun: true,
+      },
+    },
+  });
+  const typedResult = result as { status: string; reasonCode: string; data: { sessionFound: boolean; sessionClosed: boolean } };
+
+  assert.equal(typedResult.status, "failed");
+  assert.equal(typedResult.reasonCode, "CONFIGURATION_ERROR");
+  assert.equal(typedResult.data.sessionFound, false);
+  assert.equal(typedResult.data.sessionClosed, false);
+});
+
+test("handleRequest returns configurationError for sessionId-only Wave 1A call when session is closed", async () => {
+  const sessionId = `stdio-wave1a-closed-${Date.now()}`;
+  await cleanupSessionArtifact(sessionId);
+  try {
+    await handleRequest({
+      id: 129,
+      method: "tools/call",
+      params: {
+        name: "start_session",
+        arguments: {
+          sessionId,
+          platform: "android",
+          deviceId: buildTestDeviceId(sessionId),
+          profile: "phase1",
+        },
+      },
+    });
+    await handleRequest({
+      id: 130,
+      method: "tools/call",
+      params: {
+        name: "end_session",
+        arguments: {
+          sessionId,
+        },
+      },
+    });
+
+    const result = await handleRequest({
+      id: 131,
+      method: "tools/call",
+      params: {
+        name: "inspect_ui",
+        arguments: {
+          sessionId,
+          dryRun: true,
+        },
+      },
+    });
+    const typedResult = result as { status: string; reasonCode: string; data: { sessionFound: boolean; sessionClosed: boolean } };
+
+    assert.equal(typedResult.status, "failed");
+    assert.equal(typedResult.reasonCode, "CONFIGURATION_ERROR");
+    assert.equal(typedResult.data.sessionFound, true);
+    assert.equal(typedResult.data.sessionClosed, true);
+  } finally {
+    await cleanupSessionArtifact(sessionId);
+  }
+});
+
+test("handleRequest rejects Wave 1A call when explicit platform mismatches active session", async () => {
+  const sessionId = `stdio-wave1a-platform-mismatch-${Date.now()}`;
+  await cleanupSessionArtifact(sessionId);
+  try {
+    await handleRequest({
+      id: 132,
+      method: "tools/call",
+      params: {
+        name: "start_session",
+        arguments: {
+          sessionId,
+          platform: "android",
+          deviceId: buildTestDeviceId(sessionId),
+          profile: "phase1",
+        },
+      },
+    });
+
+    const result = await handleRequest({
+      id: 133,
+      method: "tools/call",
+      params: {
+        name: "wait_for_ui",
+        arguments: {
+          sessionId,
+          platform: "ios",
+          contentDesc: "View products",
+          dryRun: true,
+        },
+      },
+    });
+    const typedResult = result as { status: string; reasonCode: string; data: { expectedPlatform: string; receivedPlatform: string } };
+
+    assert.equal(typedResult.status, "failed");
+    assert.equal(typedResult.reasonCode, "CONFIGURATION_ERROR");
+    assert.equal(typedResult.data.expectedPlatform, "android");
+    assert.equal(typedResult.data.receivedPlatform, "ios");
+  } finally {
+    await cleanupSessionArtifact(sessionId);
+  }
+});
+
+test("handleRequest resolves Wave 1B context from active session", async () => {
+  const sessionId = `stdio-wave1b-context-${Date.now()}`;
+  await cleanupSessionArtifact(sessionId);
+  try {
+    await handleRequest({
+      id: 134,
+      method: "tools/call",
+      params: {
+        name: "start_session",
+        arguments: {
+          sessionId,
+          platform: "android",
+          deviceId: buildTestDeviceId(sessionId),
+          profile: "phase1",
+        },
+      },
+    });
+
+    const tapElementResult = await handleRequest({
+      id: 135,
+      method: "tools/call",
+      params: {
+        name: "tap_element",
+        arguments: {
+          sessionId,
+          contentDesc: "View products",
+          dryRun: true,
+        },
+      },
+    });
+    const typedTap = tapElementResult as { status: string; reasonCode: string; data: { supportLevel: string; resolution?: { status: string } } };
+    assert.equal(typedTap.status, "partial");
+    assert.equal(typedTap.reasonCode, "UNSUPPORTED_OPERATION");
+    assert.equal(typedTap.data.supportLevel, "full");
+
+    const typeIntoResult = await handleRequest({
+      id: 136,
+      method: "tools/call",
+      params: {
+        name: "type_into_element",
+        arguments: {
+          sessionId,
+          contentDesc: "View products",
+          value: "hello",
+          dryRun: true,
+        },
+      },
+    });
+    const typedTypeInto = typeIntoResult as { status: string; reasonCode: string; data: { supportLevel: string } };
+    assert.equal(typedTypeInto.status, "partial");
+    assert.equal(typedTypeInto.reasonCode, "UNSUPPORTED_OPERATION");
+    assert.equal(typedTypeInto.data.supportLevel, "full");
+
+    const scrollResolveResult = await handleRequest({
+      id: 137,
+      method: "tools/call",
+      params: {
+        name: "scroll_and_resolve_ui_target",
+        arguments: {
+          sessionId,
+          contentDesc: "View products",
+          maxSwipes: 2,
+          dryRun: true,
+        },
+      },
+    });
+    const typedScrollResolve = scrollResolveResult as { status: string; reasonCode: string; data: { supportLevel: string; resolution: { status: string } } };
+    assert.equal(typedScrollResolve.status, "partial");
+    assert.equal(typedScrollResolve.reasonCode, "UNSUPPORTED_OPERATION");
+    assert.equal(typedScrollResolve.data.supportLevel, "full");
+    assert.equal(typedScrollResolve.data.resolution.status, "not_executed");
+
+    const scrollTapResult = await handleRequest({
+      id: 138,
+      method: "tools/call",
+      params: {
+        name: "scroll_and_tap_element",
+        arguments: {
+          sessionId,
+          contentDesc: "View products",
+          maxSwipes: 2,
+          dryRun: true,
+        },
+      },
+    });
+    const typedScrollTap = scrollTapResult as { status: string; reasonCode: string; data: { supportLevel: string } };
+    assert.equal(typedScrollTap.status, "partial");
+    assert.equal(typedScrollTap.reasonCode, "UNSUPPORTED_OPERATION");
+    assert.equal(typedScrollTap.data.supportLevel, "full");
+  } finally {
+    await cleanupSessionArtifact(sessionId);
+  }
+});
+
+test("handleRequest returns configurationError for sessionId-only Wave 1B call when session is missing", async () => {
+  const sessionId = `stdio-wave1b-missing-${Date.now()}`;
+  await cleanupSessionArtifact(sessionId);
+
+  const result = await handleRequest({
+    id: 139,
+    method: "tools/call",
+    params: {
+      name: "tap_element",
+      arguments: {
+        sessionId,
+        contentDesc: "View products",
+        dryRun: true,
+      },
+    },
+  });
+  const typedResult = result as { status: string; reasonCode: string; data: { sessionFound: boolean; sessionClosed: boolean } };
+
+  assert.equal(typedResult.status, "failed");
+  assert.equal(typedResult.reasonCode, "CONFIGURATION_ERROR");
+  assert.equal(typedResult.data.sessionFound, false);
+  assert.equal(typedResult.data.sessionClosed, false);
+});
+
+test("handleRequest returns configurationError for sessionId-only Wave 1B call when session is closed", async () => {
+  const sessionId = `stdio-wave1b-closed-${Date.now()}`;
+  await cleanupSessionArtifact(sessionId);
+  try {
+    await handleRequest({
+      id: 140,
+      method: "tools/call",
+      params: {
+        name: "start_session",
+        arguments: {
+          sessionId,
+          platform: "android",
+          deviceId: buildTestDeviceId(sessionId),
+          profile: "phase1",
+        },
+      },
+    });
+    await handleRequest({
+      id: 141,
+      method: "tools/call",
+      params: {
+        name: "end_session",
+        arguments: {
+          sessionId,
+        },
+      },
+    });
+
+    const result = await handleRequest({
+      id: 142,
+      method: "tools/call",
+      params: {
+        name: "scroll_and_resolve_ui_target",
+        arguments: {
+          sessionId,
+          contentDesc: "View products",
+          dryRun: true,
+        },
+      },
+    });
+    const typedResult = result as { status: string; reasonCode: string; data: { sessionFound: boolean; sessionClosed: boolean } };
+
+    assert.equal(typedResult.status, "failed");
+    assert.equal(typedResult.reasonCode, "CONFIGURATION_ERROR");
+    assert.equal(typedResult.data.sessionFound, true);
+    assert.equal(typedResult.data.sessionClosed, true);
+  } finally {
+    await cleanupSessionArtifact(sessionId);
+  }
+});
+
+test("handleRequest rejects Wave 1B call when explicit platform mismatches active session", async () => {
+  const sessionId = `stdio-wave1b-platform-mismatch-${Date.now()}`;
+  await cleanupSessionArtifact(sessionId);
+  try {
+    await handleRequest({
+      id: 143,
+      method: "tools/call",
+      params: {
+        name: "start_session",
+        arguments: {
+          sessionId,
+          platform: "android",
+          deviceId: buildTestDeviceId(sessionId),
+          profile: "phase1",
+        },
+      },
+    });
+
+    const result = await handleRequest({
+      id: 144,
+      method: "tools/call",
+      params: {
+        name: "type_into_element",
+        arguments: {
+          sessionId,
+          platform: "ios",
+          contentDesc: "View products",
+          value: "hello",
+          dryRun: true,
+        },
+      },
+    });
+    const typedResult = result as { status: string; reasonCode: string; data: { expectedPlatform: string; receivedPlatform: string } };
+
+    assert.equal(typedResult.status, "failed");
+    assert.equal(typedResult.reasonCode, "CONFIGURATION_ERROR");
+    assert.equal(typedResult.data.expectedPlatform, "android");
+    assert.equal(typedResult.data.receivedPlatform, "ios");
+  } finally {
+    await cleanupSessionArtifact(sessionId);
+  }
+});
+
+test("handleRequest resolves Wave 2 session-bound context from active session", async () => {
+  const sessionId = `stdio-wave2-context-${Date.now()}`;
+  await cleanupSessionArtifact(sessionId);
+  try {
+    await handleRequest({
+      id: 145,
+      method: "tools/call",
+      params: {
+        name: "start_session",
+        arguments: {
+          sessionId,
+          platform: "android",
+          deviceId: buildTestDeviceId(sessionId),
+          appId: "com.example.demo",
+          profile: "phase1",
+        },
+      },
+    });
+
+    const tapResult = await handleRequest({ id: 146, method: "tools/call", params: { name: "tap", arguments: { sessionId, x: 120, y: 320, dryRun: true } } }) as { status: string; reasonCode: string; data: { command: string[] } };
+    assert.equal(tapResult.status, "success");
+    assert.equal(tapResult.reasonCode, "OK");
+    assert.equal(tapResult.data.command.includes(buildTestDeviceId(sessionId)), true);
+
+    const typeTextResult = await handleRequest({ id: 147, method: "tools/call", params: { name: "type_text", arguments: { sessionId, text: "hello", dryRun: true } } }) as { status: string; reasonCode: string };
+    assert.equal(typeTextResult.status, "partial");
+    assert.equal(typeTextResult.reasonCode, "UNSUPPORTED_OPERATION");
+
+    const screenshotResult = await handleRequest({ id: 148, method: "tools/call", params: { name: "take_screenshot", arguments: { sessionId, dryRun: true } } }) as { status: string; reasonCode: string; data: { outputPath: string } };
+    assert.equal(screenshotResult.status, "success");
+    assert.equal(screenshotResult.reasonCode, "OK");
+    assert.equal(screenshotResult.data.outputPath.includes(`${sessionId}/android-phase1`), true);
+
+    const recordResult = await handleRequest({ id: 149, method: "tools/call", params: { name: "record_screen", arguments: { sessionId, durationMs: 3000, dryRun: true } } }) as { status: string; reasonCode: string };
+    assert.equal(recordResult.status, "success");
+    assert.equal(recordResult.reasonCode, "OK");
+
+    const logsResult = await handleRequest({ id: 150, method: "tools/call", params: { name: "get_logs", arguments: { sessionId, dryRun: true } } }) as { status: string; reasonCode: string };
+    assert.equal(logsResult.status, "success");
+    assert.equal(logsResult.reasonCode, "OK");
+
+    const crashResult = await handleRequest({ id: 151, method: "tools/call", params: { name: "get_crash_signals", arguments: { sessionId, dryRun: true } } }) as { status: string; reasonCode: string };
+    assert.equal(crashResult.status, "success");
+    assert.equal(crashResult.reasonCode, "OK");
+
+    const diagnosticsResult = await handleRequest({ id: 152, method: "tools/call", params: { name: "collect_diagnostics", arguments: { sessionId, dryRun: true } } }) as { status: string; reasonCode: string };
+    assert.equal(diagnosticsResult.status, "success");
+    assert.equal(diagnosticsResult.reasonCode, "OK");
+  } finally {
+    await cleanupSessionArtifact(sessionId);
+  }
+});
+
+test("handleRequest resolves Wave 3/4 session-bound context from active session", async () => {
+  const sessionId = `stdio-wave34-context-${Date.now()}`;
+  await cleanupSessionArtifact(sessionId);
+  try {
+    await handleRequest({
+      id: 153,
+      method: "tools/call",
+      params: {
+        name: "start_session",
+        arguments: {
+          sessionId,
+          platform: "android",
+          deviceId: buildTestDeviceId(sessionId),
+          appId: "com.example.demo",
+          profile: "phase1",
+        },
+      },
+    });
+
+    const debugResult = await handleRequest({ id: 154, method: "tools/call", params: { name: "collect_debug_evidence", arguments: { sessionId, dryRun: true } } }) as { status: string; reasonCode: string };
+    assert.equal(debugResult.reasonCode, "OK");
+
+    const screenSummary = await handleRequest({ id: 155, method: "tools/call", params: { name: "get_screen_summary", arguments: { sessionId, dryRun: true } } }) as { status: string; reasonCode: string };
+    assert.equal(screenSummary.reasonCode === "OK" || screenSummary.reasonCode === "UNSUPPORTED_OPERATION", true);
+
+    const perfAndroid = await handleRequest({ id: 156, method: "tools/call", params: { name: "measure_android_performance", arguments: { sessionId, dryRun: true } } }) as { status: string; reasonCode: string };
+    assert.equal(perfAndroid.status, "success");
+    assert.equal(perfAndroid.reasonCode, "OK");
+
+    const runFlow = await handleRequest({ id: 157, method: "tools/call", params: { name: "run_flow", arguments: { sessionId, runCount: 1, dryRun: true } } }) as { status: string; reasonCode: string };
+    assert.equal(runFlow.status, "success");
+    assert.equal(runFlow.reasonCode, "OK");
+
+    const action = await handleRequest({ id: 158, method: "tools/call", params: { name: "perform_action_with_evidence", arguments: { sessionId, dryRun: true, action: { actionType: "tap_element", contentDesc: "View products" } } } }) as { reasonCode: string };
+    assert.equal(action.reasonCode, "UNSUPPORTED_OPERATION");
+
+    const recover = await handleRequest({ id: 159, method: "tools/call", params: { name: "recover_to_known_state", arguments: { sessionId, dryRun: true } } }) as { reasonCode: string };
+    assert.equal(recover.reasonCode, "OK");
+
+    const replay = await handleRequest({ id: 163, method: "tools/call", params: { name: "replay_last_stable_path", arguments: { sessionId, dryRun: true } } }) as { reasonCode: string };
+    assert.equal(typeof replay.reasonCode, "string");
+
+    const resolveInterruption = await handleRequest({ id: 164, method: "tools/call", params: { name: "resolve_interruption", arguments: { sessionId, dryRun: true } } }) as { reasonCode: string };
+    assert.equal(typeof resolveInterruption.reasonCode, "string");
+
+    const resume = await handleRequest({ id: 165, method: "tools/call", params: { name: "resume_interrupted_action", arguments: { sessionId, dryRun: true } } }) as { reasonCode: string };
+    assert.equal(typeof resume.reasonCode, "string");
+  } finally {
+    await cleanupSessionArtifact(sessionId);
+  }
+});
+
+test("handleRequest returns configurationError for sessionId-only downshifted calls when session is missing", async () => {
+  const sessionId = `stdio-wave234-missing-${Date.now()}`;
+  await cleanupSessionArtifact(sessionId);
+
+  const wave2 = await handleRequest({ id: 160, method: "tools/call", params: { name: "tap", arguments: { sessionId, x: 1, y: 1, dryRun: true } } }) as { status: string; reasonCode: string };
+  assert.equal(wave2.status, "failed");
+  assert.equal(wave2.reasonCode, "CONFIGURATION_ERROR");
+
+  const wave3 = await handleRequest({ id: 161, method: "tools/call", params: { name: "get_screen_summary", arguments: { sessionId, dryRun: true } } }) as { status: string; reasonCode: string };
+  assert.equal(wave3.status, "failed");
+  assert.equal(wave3.reasonCode, "CONFIGURATION_ERROR");
+
+  const wave4 = await handleRequest({ id: 162, method: "tools/call", params: { name: "run_flow", arguments: { sessionId, runCount: 1, dryRun: true } } }) as { status: string; reasonCode: string };
+  assert.equal(wave4.status, "failed");
+  assert.equal(wave4.reasonCode, "CONFIGURATION_ERROR");
+
+  const wave4Resolve = await handleRequest({ id: 166, method: "tools/call", params: { name: "resolve_interruption", arguments: { sessionId, dryRun: true } } }) as { status: string; reasonCode: string };
+  assert.equal(wave4Resolve.status, "failed");
+  assert.equal(wave4Resolve.reasonCode, "CONFIGURATION_ERROR");
+
+  const wave4Resume = await handleRequest({ id: 167, method: "tools/call", params: { name: "resume_interrupted_action", arguments: { sessionId, dryRun: true } } }) as { status: string; reasonCode: string };
+  assert.equal(wave4Resume.status, "failed");
+  assert.equal(wave4Resume.reasonCode, "CONFIGURATION_ERROR");
+
+  const wave4Replay = await handleRequest({ id: 168, method: "tools/call", params: { name: "replay_last_stable_path", arguments: { sessionId, dryRun: true } } }) as { status: string; reasonCode: string };
+  assert.equal(wave4Replay.status, "failed");
+  assert.equal(wave4Replay.reasonCode, "CONFIGURATION_ERROR");
+});
+
+test("handleRequest classify_interruption supports sessionId-only with active session", async () => {
+  const sessionId = `stdio-classify-active-${Date.now()}`;
+  await cleanupSessionArtifact(sessionId);
+  try {
+    await handleRequest({
+      id: 169,
+      method: "tools/call",
+      params: {
+        name: "start_session",
+        arguments: {
+          sessionId,
+          platform: "android",
+          deviceId: buildTestDeviceId(sessionId),
+          profile: "phase1",
+        },
+      },
+    });
+
+    const result = await handleRequest({ id: 170, method: "tools/call", params: { name: "classify_interruption", arguments: { sessionId, dryRun: true } } }) as { status: string; reasonCode: string };
+    assert.equal(result.status === "success" || result.status === "partial", true);
+    assert.equal(typeof result.reasonCode, "string");
+  } finally {
+    await cleanupSessionArtifact(sessionId);
+  }
+});
+
+test("handleRequest classify_interruption returns configurationError when session is missing and platform omitted", async () => {
+  const sessionId = `stdio-classify-missing-${Date.now()}`;
+  await cleanupSessionArtifact(sessionId);
+  const result = await handleRequest({ id: 171, method: "tools/call", params: { name: "classify_interruption", arguments: { sessionId, dryRun: true } } }) as { status: string; reasonCode: string };
+  assert.equal(result.status, "failed");
+  assert.equal(result.reasonCode, "CONFIGURATION_ERROR");
+});
+
+test("handleRequest returns configurationError for sessionId-only lifecycle call when session is missing", async () => {
+  const sessionId = `stdio-missing-session-${Date.now()}`;
+  await cleanupSessionArtifact(sessionId);
+
+  const result = await handleRequest({
+    id: 117,
+    method: "tools/call",
+    params: {
+      name: "launch_app",
+      arguments: {
+        sessionId,
+        dryRun: true,
+      },
+    },
+  });
+  const typedResult = result as { status: string; reasonCode: string; data: { sessionFound: boolean; sessionClosed: boolean } };
+
+  assert.equal(typedResult.status, "failed");
+  assert.equal(typedResult.reasonCode, "CONFIGURATION_ERROR");
+  assert.equal(typedResult.data.sessionFound, false);
+  assert.equal(typedResult.data.sessionClosed, false);
+});
+
+test("handleRequest returns configurationError for sessionId-only lifecycle call when session is closed", async () => {
+  const sessionId = `stdio-closed-session-${Date.now()}`;
+  await cleanupSessionArtifact(sessionId);
+  try {
+    await handleRequest({
+      id: 118,
+      method: "tools/call",
+      params: {
+        name: "start_session",
+        arguments: {
+          sessionId,
+          platform: "android",
+          deviceId: buildTestDeviceId(sessionId),
+          appId: "com.example.demo",
+          profile: "native_android",
+        },
+      },
+    });
+    await handleRequest({
+      id: 119,
+      method: "tools/call",
+      params: {
+        name: "end_session",
+        arguments: {
+          sessionId,
+        },
+      },
+    });
+
+    const result = await handleRequest({
+      id: 120,
+      method: "tools/call",
+      params: {
+        name: "terminate_app",
+        arguments: {
+          sessionId,
+          dryRun: true,
+        },
+      },
+    });
+    const typedResult = result as { status: string; reasonCode: string; data: { sessionFound: boolean; sessionClosed: boolean } };
+
+    assert.equal(typedResult.status, "failed");
+    assert.equal(typedResult.reasonCode, "CONFIGURATION_ERROR");
+    assert.equal(typedResult.data.sessionFound, true);
+    assert.equal(typedResult.data.sessionClosed, true);
+  } finally {
+    await cleanupSessionArtifact(sessionId);
+  }
+});
+
+test("handleRequest rejects lifecycle call when runnerProfile mismatches active session", async () => {
+  const sessionId = `stdio-profile-mismatch-${Date.now()}`;
+  await cleanupSessionArtifact(sessionId);
+  try {
+    await handleRequest({
+      id: 121,
+      method: "tools/call",
+      params: {
+        name: "start_session",
+        arguments: {
+          sessionId,
+          platform: "android",
+          deviceId: buildTestDeviceId(sessionId),
+          appId: "com.example.demo",
+          profile: "native_android",
+        },
+      },
+    });
+
+    const result = await handleRequest({
+      id: 122,
+      method: "tools/call",
+      params: {
+        name: "launch_app",
+        arguments: {
+          sessionId,
+          runnerProfile: "phase1",
+          dryRun: true,
+        },
+      },
+    });
+    const typedResult = result as {
+      status: string;
+      reasonCode: string;
+      data: { expectedRunnerProfile: string; receivedRunnerProfile: string };
+    };
+
+    assert.equal(typedResult.status, "failed");
+    assert.equal(typedResult.reasonCode, "CONFIGURATION_ERROR");
+    assert.equal(typedResult.data.expectedRunnerProfile, "native_android");
+    assert.equal(typedResult.data.receivedRunnerProfile, "phase1");
+  } finally {
+    await cleanupSessionArtifact(sessionId);
+  }
+});
+
 test("handleRequest supports tools/call alias for iOS tap dry-run", async () => {
   const result = await handleRequest({
     id: 12,
