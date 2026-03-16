@@ -4,7 +4,7 @@ import path from "node:path";
 import type { CollectDiagnosticsInput, DeviceInfo, DoctorCheck, GetCrashSignalsInput, GetLogsInput, Platform, ReasonCode, RunnerProfile } from "@mobile-e2e-mcp/contracts";
 import { REASON_CODES } from "@mobile-e2e-mcp/contracts";
 import { buildCapabilityProfile } from "./capability-model.js";
-import { DEFAULT_FLOWS, DEFAULT_HARNESS_CONFIG_PATH, isRecord, parseHarnessConfig, readNonEmptyString, readStringArray } from "./harness-config.js";
+import { buildDefaultDeviceId, DEFAULT_FLOWS, DEFAULT_HARNESS_CONFIG_PATH, isRecord, parseHarnessConfig, readNonEmptyString, readStringArray } from "./harness-config.js";
 import { executeRunner, normalizePositiveInteger, shellEscape } from "./runtime-shared.js";
 
 export interface GetLogsCapture {
@@ -214,10 +214,11 @@ export async function collectHarnessChecks(repoRoot: string): Promise<DoctorChec
   if (isRecord(platforms)) {
     for (const [platform, config] of Object.entries(platforms)) {
       if (!isRecord(config)) continue;
+      if (platform !== "android" && platform !== "ios") continue;
       const runnerScript = readNonEmptyString(config, "runner_script");
       const interruptionPolicy = readNonEmptyString(config, "interruption_policy");
       const launchUrl = readNonEmptyString(config, "launch_url");
-      const deviceId = readNonEmptyString(config, "device_udid") ?? (platform === "android" ? "emulator-5554" : "ADA078B9-3C6B-4875-8B85-A7789F368816");
+      const deviceId = readNonEmptyString(config, "device_udid") ?? buildDefaultDeviceId(platform);
       const adbReverseMappings = readStringArray(config, "adb_reverse");
       if (runnerScript) checks.push(summarizeFileCheck(`${platform} phase1 runner`, path.resolve(repoRoot, runnerScript)));
       if (interruptionPolicy) checks.push(summarizeFileCheck(`${platform} interruption policy`, path.resolve(repoRoot, interruptionPolicy)));

@@ -31,11 +31,23 @@ export interface SessionDefaults {
 
 export const DEFAULT_HARNESS_CONFIG_PATH = "configs/harness/sample-harness.yaml";
 export const DEFAULT_RUNNER_PROFILE: RunnerProfile = "phase1";
+export const DEFAULT_ANDROID_DEVICE_ID = "emulator-5554";
+export const DEFAULT_IOS_SIMULATOR_UDID = "ADA078B9-3C6B-4875-8B85-A7789F368816";
+export const DEFAULT_ANDROID_APP_ID = "host.exp.exponent";
+export const DEFAULT_IOS_APP_ID = "host.exp.Exponent";
 
 export const DEFAULT_FLOWS: Record<Platform, string> = {
   android: "flows/samples/react-native/android-login-smoke.yaml",
   ios: "flows/samples/react-native/ios-login-smoke.yaml",
 };
+
+export function buildDefaultDeviceId(platform: Platform): string {
+  return platform === "android" ? DEFAULT_ANDROID_DEVICE_ID : DEFAULT_IOS_SIMULATOR_UDID;
+}
+
+export function buildDefaultAppId(platform: Platform): string {
+  return platform === "android" ? DEFAULT_ANDROID_APP_ID : DEFAULT_IOS_APP_ID;
+}
 
 export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;

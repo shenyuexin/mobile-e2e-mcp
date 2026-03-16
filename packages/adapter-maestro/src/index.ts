@@ -159,6 +159,9 @@ import { buildCapabilityProfile } from "./capability-model.js";
 import {
   type ArtifactDirectory,
   buildArtifactsDir,
+  buildDefaultDeviceId,
+  DEFAULT_ANDROID_DEVICE_ID,
+  DEFAULT_IOS_SIMULATOR_UDID,
   DEFAULT_FLOWS,
   DEFAULT_HARNESS_CONFIG_PATH,
   DEFAULT_RUNNER_PROFILE,
@@ -276,7 +279,17 @@ import {
 } from "./runtime-shared.js";
 
 export { buildCapabilityProfile } from "./capability-model.js";
-export { buildArtifactsDir, resolveRepoPath, resolveSessionDefaults } from "./harness-config.js";
+export {
+  buildArtifactsDir,
+  buildDefaultAppId,
+  buildDefaultDeviceId,
+  DEFAULT_ANDROID_APP_ID,
+  DEFAULT_ANDROID_DEVICE_ID,
+  DEFAULT_IOS_APP_ID,
+  DEFAULT_IOS_SIMULATOR_UDID,
+  resolveRepoPath,
+  resolveSessionDefaults,
+} from "./harness-config.js";
 export {
   buildInspectorExceptionLogEntry,
   buildJsConsoleLogSummary,
@@ -3812,12 +3825,12 @@ export async function runFlowWithMaestro(input: RunFlowInput): Promise<ToolResul
   };
 
   if (input.platform === "android") {
-    env.DEVICE_ID = input.deviceId ?? selection.deviceId ?? "emulator-5554";
+    env.DEVICE_ID = input.deviceId ?? selection.deviceId ?? DEFAULT_ANDROID_DEVICE_ID;
     if (selection.launchUrl || input.launchUrl) {
       env.EXPO_URL = input.launchUrl ?? selection.launchUrl;
     }
   } else {
-    env.SIM_UDID = input.deviceId ?? selection.deviceId ?? "ADA078B9-3C6B-4875-8B85-A7789F368816";
+    env.SIM_UDID = input.deviceId ?? selection.deviceId ?? DEFAULT_IOS_SIMULATOR_UDID;
     if (selection.launchUrl || input.launchUrl) {
       env.EXPO_URL = input.launchUrl ?? selection.launchUrl;
     }
@@ -3978,7 +3991,7 @@ async function collectRuntimeStateChecks(repoRoot: string): Promise<DoctorCheck[
   const checks: DoctorCheck[] = [];
 
   try {
-    const androidState = await executeRunner(["adb", "-s", process.env.DEVICE_ID ?? "emulator-5554", "get-state"], repoRoot, process.env);
+    const androidState = await executeRunner(["adb", "-s", process.env.DEVICE_ID ?? DEFAULT_ANDROID_DEVICE_ID, "get-state"], repoRoot, process.env);
     checks.push(
       summarizeInfoCheck(
         "android target state",
@@ -3991,7 +4004,7 @@ async function collectRuntimeStateChecks(repoRoot: string): Promise<DoctorCheck[
   }
 
   try {
-    const iosBoot = await executeRunner(["xcrun", "simctl", "bootstatus", process.env.SIM_UDID ?? "ADA078B9-3C6B-4875-8B85-A7789F368816", "-b"], repoRoot, process.env);
+    const iosBoot = await executeRunner(["xcrun", "simctl", "bootstatus", process.env.SIM_UDID ?? DEFAULT_IOS_SIMULATOR_UDID, "-b"], repoRoot, process.env);
     checks.push(
       summarizeInfoCheck(
         "ios target boot status",
@@ -4142,7 +4155,7 @@ async function collectInstallStateChecks(repoRoot: string): Promise<DoctorCheck[
   const checks: DoctorCheck[] = [];
 
   try {
-    const androidPackage = await executeRunner(["adb", "-s", process.env.DEVICE_ID ?? "emulator-5554", "shell", "pm", "path", "com.epam.mobitru"], repoRoot, process.env);
+    const androidPackage = await executeRunner(["adb", "-s", process.env.DEVICE_ID ?? DEFAULT_ANDROID_DEVICE_ID, "shell", "pm", "path", "com.epam.mobitru"], repoRoot, process.env);
     checks.push({
       name: "native_android install state",
       status: androidPackage.exitCode === 0 && androidPackage.stdout.includes("package:") ? "pass" : "warn",
@@ -4160,7 +4173,7 @@ async function collectInstallStateChecks(repoRoot: string): Promise<DoctorCheck[
   }
 
   try {
-    const flutterPackage = await executeRunner(["adb", "-s", process.env.DEVICE_ID ?? "emulator-5554", "shell", "pm", "path", "com.epam.mobitru"], repoRoot, process.env);
+    const flutterPackage = await executeRunner(["adb", "-s", process.env.DEVICE_ID ?? DEFAULT_ANDROID_DEVICE_ID, "shell", "pm", "path", "com.epam.mobitru"], repoRoot, process.env);
     checks.push({
       name: "flutter_android install state",
       status: flutterPackage.exitCode === 0 && flutterPackage.stdout.includes("package:") ? "pass" : "warn",
@@ -4179,7 +4192,7 @@ async function collectInstallStateChecks(repoRoot: string): Promise<DoctorCheck[
 
   try {
     const iosPackage = await executeRunner(
-      ["xcrun", "simctl", "get_app_container", process.env.SIM_UDID ?? "ADA078B9-3C6B-4875-8B85-A7789F368816", "com.epam.mobitru.demoapp"],
+      ["xcrun", "simctl", "get_app_container", process.env.SIM_UDID ?? DEFAULT_IOS_SIMULATOR_UDID, "com.epam.mobitru.demoapp"],
       repoRoot,
       process.env,
     );
@@ -4258,7 +4271,7 @@ export async function typeTextWithMaestro(input: TypeTextInput): Promise<ToolRes
   const repoRoot = resolveRepoPath();
   const runnerProfile = input.runnerProfile ?? DEFAULT_RUNNER_PROFILE;
   const selection = await loadHarnessSelection(repoRoot, input.platform, runnerProfile, input.harnessConfigPath ?? DEFAULT_HARNESS_CONFIG_PATH);
-  const deviceId = input.deviceId ?? selection.deviceId ?? (input.platform === "android" ? "emulator-5554" : "ADA078B9-3C6B-4875-8B85-A7789F368816");
+  const deviceId = input.deviceId ?? selection.deviceId ?? buildDefaultDeviceId(input.platform);
 
   const command = input.platform === "ios"
     ? buildIdbCommand(["ui", "text", input.text, "--udid", deviceId])
@@ -4344,7 +4357,7 @@ export async function resolveUiTargetWithMaestro(input: ResolveUiTargetInput): P
   }
 
   if (input.platform === "ios") {
-    const deviceId = input.deviceId ?? "ADA078B9-3C6B-4875-8B85-A7789F368816";
+    const deviceId = input.deviceId ?? DEFAULT_IOS_SIMULATOR_UDID;
     const idbCommand = buildIosUiDescribeCommand(deviceId);
     if (input.dryRun) {
       return {
@@ -4422,7 +4435,7 @@ export async function resolveUiTargetWithMaestro(input: ResolveUiTargetInput): P
   }
 
   const selection = await loadHarnessSelection(repoRoot, input.platform, runnerProfile, input.harnessConfigPath ?? DEFAULT_HARNESS_CONFIG_PATH);
-  const deviceId = input.deviceId ?? selection.deviceId ?? "emulator-5554";
+  const deviceId = input.deviceId ?? selection.deviceId ?? DEFAULT_ANDROID_DEVICE_ID;
   const { dumpCommand, readCommand } = buildAndroidUiDumpCommands(deviceId);
   const command = [...dumpCommand, ...readCommand];
 
@@ -4921,7 +4934,7 @@ export async function waitForUiWithMaestro(input: WaitForUiInput): Promise<ToolR
   }
 
   if (input.platform === "ios") {
-    const deviceId = input.deviceId ?? "ADA078B9-3C6B-4875-8B85-A7789F368816";
+    const deviceId = input.deviceId ?? DEFAULT_IOS_SIMULATOR_UDID;
     const idbCommand = buildIosUiDescribeCommand(deviceId);
     if (input.dryRun) {
       return {
@@ -5043,7 +5056,7 @@ export async function waitForUiWithMaestro(input: WaitForUiInput): Promise<ToolR
   }
 
   const selection = await loadHarnessSelection(repoRoot, input.platform, runnerProfile, input.harnessConfigPath ?? DEFAULT_HARNESS_CONFIG_PATH);
-  const deviceId = input.deviceId ?? selection.deviceId ?? "emulator-5554";
+  const deviceId = input.deviceId ?? selection.deviceId ?? DEFAULT_ANDROID_DEVICE_ID;
   const { dumpCommand, readCommand } = buildAndroidUiDumpCommands(deviceId);
   const command = [...dumpCommand, ...readCommand];
 
@@ -5271,7 +5284,7 @@ export async function scrollAndResolveUiTargetWithMaestro(input: ScrollAndResolv
   }
 
   if (input.platform === "ios") {
-    const deviceId = input.deviceId ?? "ADA078B9-3C6B-4875-8B85-A7789F368816";
+    const deviceId = input.deviceId ?? DEFAULT_IOS_SIMULATOR_UDID;
     const previewSwipe = buildScrollSwipeCoordinates([], swipeDirection, swipeDurationMs);
     const previewSwipeCommand = buildIosSwipeCommand(deviceId, previewSwipe);
 
@@ -5436,7 +5449,7 @@ export async function scrollAndResolveUiTargetWithMaestro(input: ScrollAndResolv
   }
 
   const selection = await loadHarnessSelection(repoRoot, input.platform, runnerProfile, input.harnessConfigPath ?? DEFAULT_HARNESS_CONFIG_PATH);
-  const deviceId = input.deviceId ?? selection.deviceId ?? "emulator-5554";
+  const deviceId = input.deviceId ?? selection.deviceId ?? DEFAULT_ANDROID_DEVICE_ID;
   const { dumpCommand, readCommand } = buildAndroidUiDumpCommands(deviceId);
   const previewSwipe = buildScrollSwipeCoordinates([], swipeDirection, swipeDurationMs);
   const previewSwipeCommand = ["adb", "-s", deviceId, "shell", "input", "swipe", String(previewSwipe.start.x), String(previewSwipe.start.y), String(previewSwipe.end.x), String(previewSwipe.end.y), String(previewSwipe.durationMs)];
@@ -5658,7 +5671,7 @@ export async function tapWithMaestro(input: TapInput): Promise<ToolResult<TapDat
   const repoRoot = resolveRepoPath();
   const runnerProfile = input.runnerProfile ?? DEFAULT_RUNNER_PROFILE;
   const selection = await loadHarnessSelection(repoRoot, input.platform, runnerProfile, input.harnessConfigPath ?? DEFAULT_HARNESS_CONFIG_PATH);
-  const deviceId = input.deviceId ?? selection.deviceId ?? (input.platform === "android" ? "emulator-5554" : "ADA078B9-3C6B-4875-8B85-A7789F368816");
+  const deviceId = input.deviceId ?? selection.deviceId ?? buildDefaultDeviceId(input.platform);
 
   const command = input.platform === "ios"
     ? buildIdbCommand(["ui", "tap", String(input.x), String(input.y), "--udid", deviceId])
@@ -5710,7 +5723,7 @@ export async function inspectUiWithMaestro(input: InspectUiInput): Promise<ToolR
   const repoRoot = resolveRepoPath();
   const runnerProfile = input.runnerProfile ?? DEFAULT_RUNNER_PROFILE;
   const selection = await loadHarnessSelection(repoRoot, input.platform, runnerProfile, input.harnessConfigPath ?? DEFAULT_HARNESS_CONFIG_PATH);
-  const deviceId = input.deviceId ?? selection.deviceId ?? (input.platform === "android" ? "emulator-5554" : "ADA078B9-3C6B-4875-8B85-A7789F368816");
+  const deviceId = input.deviceId ?? selection.deviceId ?? buildDefaultDeviceId(input.platform);
   const relativeOutputPath = input.outputPath ?? path.posix.join("artifacts", "ui-dumps", input.sessionId, `${input.platform}-${runnerProfile}.xml`);
   const absoluteOutputPath = path.resolve(repoRoot, relativeOutputPath);
 
@@ -5838,7 +5851,7 @@ export async function queryUiWithMaestro(input: QueryUiInput): Promise<ToolResul
   const repoRoot = resolveRepoPath();
   const runnerProfile = input.runnerProfile ?? DEFAULT_RUNNER_PROFILE;
   const selection = await loadHarnessSelection(repoRoot, input.platform, runnerProfile, input.harnessConfigPath ?? DEFAULT_HARNESS_CONFIG_PATH);
-  const deviceId = input.deviceId ?? selection.deviceId ?? (input.platform === "android" ? "emulator-5554" : "ADA078B9-3C6B-4875-8B85-A7789F368816");
+  const deviceId = input.deviceId ?? selection.deviceId ?? buildDefaultDeviceId(input.platform);
   const query = normalizeQueryUiSelector({
     resourceId: input.resourceId,
     contentDesc: input.contentDesc,
@@ -6045,7 +6058,7 @@ export async function terminateAppWithMaestro(input: TerminateAppInput): Promise
   const repoRoot = resolveRepoPath();
   const runnerProfile = input.runnerProfile ?? DEFAULT_RUNNER_PROFILE;
   const selection = await loadHarnessSelection(repoRoot, input.platform, runnerProfile, input.harnessConfigPath ?? DEFAULT_HARNESS_CONFIG_PATH);
-  const deviceId = input.deviceId ?? selection.deviceId ?? (input.platform === "android" ? "emulator-5554" : "ADA078B9-3C6B-4875-8B85-A7789F368816");
+  const deviceId = input.deviceId ?? selection.deviceId ?? buildDefaultDeviceId(input.platform);
   const appId = input.appId ?? selection.appId;
   const command = input.platform === "android"
     ? ["adb", "-s", deviceId, "shell", "am", "force-stop", appId]
@@ -6073,7 +6086,7 @@ export async function takeScreenshotWithMaestro(input: ScreenshotInput): Promise
   const repoRoot = resolveRepoPath();
   const runnerProfile = input.runnerProfile ?? DEFAULT_RUNNER_PROFILE;
   const selection = await loadHarnessSelection(repoRoot, input.platform, runnerProfile, input.harnessConfigPath ?? DEFAULT_HARNESS_CONFIG_PATH);
-  const deviceId = input.deviceId ?? selection.deviceId ?? (input.platform === "android" ? "emulator-5554" : "ADA078B9-3C6B-4875-8B85-A7789F368816");
+  const deviceId = input.deviceId ?? selection.deviceId ?? buildDefaultDeviceId(input.platform);
   const relativeOutputPath = input.outputPath ?? path.posix.join("artifacts", "screenshots", input.sessionId, `${input.platform}-${runnerProfile}.png`);
   const absoluteOutputPath = path.resolve(repoRoot, relativeOutputPath);
   const command = input.platform === "android"
@@ -6138,7 +6151,7 @@ export async function recordScreenWithMaestro(input: RecordScreenInput): Promise
   const repoRoot = resolveRepoPath();
   const runnerProfile = input.runnerProfile ?? DEFAULT_RUNNER_PROFILE;
   const selection = await loadHarnessSelection(repoRoot, input.platform, runnerProfile, input.harnessConfigPath ?? DEFAULT_HARNESS_CONFIG_PATH);
-  const deviceId = input.deviceId ?? selection.deviceId ?? (input.platform === "android" ? "emulator-5554" : "ADA078B9-3C6B-4875-8B85-A7789F368816");
+  const deviceId = input.deviceId ?? selection.deviceId ?? buildDefaultDeviceId(input.platform);
   const durationMs = normalizeRecordDurationMs(input.durationMs, input.platform);
   const durationSeconds = Math.max(1, Math.ceil(durationMs / 1000));
   const bitrateMbps = normalizeRecordBitrateMbps(input.bitrateMbps);
@@ -6297,7 +6310,7 @@ export async function resetAppStateWithMaestro(input: ResetAppStateInput): Promi
   const repoRoot = resolveRepoPath();
   const runnerProfile = input.runnerProfile ?? DEFAULT_RUNNER_PROFILE;
   const selection = await loadHarnessSelection(repoRoot, input.platform, runnerProfile, input.harnessConfigPath ?? DEFAULT_HARNESS_CONFIG_PATH);
-  const deviceId = input.deviceId ?? selection.deviceId ?? (input.platform === "android" ? "emulator-5554" : "ADA078B9-3C6B-4875-8B85-A7789F368816");
+  const deviceId = input.deviceId ?? selection.deviceId ?? buildDefaultDeviceId(input.platform);
   const appId = input.appId ?? selection.appId;
   const strategy: ResetAppStateStrategy = input.strategy ?? "clear_data";
   const artifactPath = resolveInstallArtifactPath(repoRoot, runnerProfile, input.artifactPath);
@@ -6473,7 +6486,7 @@ export async function getLogsWithMaestro(input: GetLogsInput): Promise<ToolResul
   const repoRoot = resolveRepoPath();
   const runnerProfile = input.runnerProfile ?? DEFAULT_RUNNER_PROFILE;
   const selection = await loadHarnessSelection(repoRoot, input.platform, runnerProfile, input.harnessConfigPath ?? DEFAULT_HARNESS_CONFIG_PATH);
-  const deviceId = input.deviceId ?? selection.deviceId ?? (input.platform === "android" ? "emulator-5554" : "ADA078B9-3C6B-4875-8B85-A7789F368816");
+  const deviceId = input.deviceId ?? selection.deviceId ?? buildDefaultDeviceId(input.platform);
   const appId = input.appId ?? selection.appId;
   let capture = buildGetLogsCapture(repoRoot, input, runnerProfile, deviceId, appId, false);
 
@@ -6571,7 +6584,7 @@ export async function getCrashSignalsWithMaestro(input: GetCrashSignalsInput): P
   const repoRoot = resolveRepoPath();
   const runnerProfile = input.runnerProfile ?? DEFAULT_RUNNER_PROFILE;
   const selection = await loadHarnessSelection(repoRoot, input.platform, runnerProfile, input.harnessConfigPath ?? DEFAULT_HARNESS_CONFIG_PATH);
-  const deviceId = input.deviceId ?? selection.deviceId ?? (input.platform === "android" ? "emulator-5554" : "ADA078B9-3C6B-4875-8B85-A7789F368816");
+  const deviceId = input.deviceId ?? selection.deviceId ?? buildDefaultDeviceId(input.platform);
   const appId = input.appId ?? selection.appId;
   const capture = buildGetCrashSignalsCapture(repoRoot, input, runnerProfile, deviceId);
 
@@ -6743,7 +6756,7 @@ export async function collectDiagnosticsWithMaestro(input: CollectDiagnosticsInp
   const repoRoot = resolveRepoPath();
   const runnerProfile = input.runnerProfile ?? DEFAULT_RUNNER_PROFILE;
   const selection = await loadHarnessSelection(repoRoot, input.platform, runnerProfile, input.harnessConfigPath ?? DEFAULT_HARNESS_CONFIG_PATH);
-  const deviceId = input.deviceId ?? selection.deviceId ?? (input.platform === "android" ? "emulator-5554" : "ADA078B9-3C6B-4875-8B85-A7789F368816");
+  const deviceId = input.deviceId ?? selection.deviceId ?? buildDefaultDeviceId(input.platform);
   const capture = buildCollectDiagnosticsCapture(repoRoot, input, runnerProfile, deviceId);
 
   await mkdir(path.dirname(capture.absoluteOutputPath), { recursive: true });
@@ -7217,7 +7230,7 @@ export async function measureAndroidPerformanceWithMaestro(input: MeasureAndroid
   const repoRoot = resolveRepoPath();
   const runnerProfile = input.runnerProfile ?? DEFAULT_RUNNER_PROFILE;
   const selection = await loadHarnessSelection(repoRoot, "android", runnerProfile, input.harnessConfigPath ?? DEFAULT_HARNESS_CONFIG_PATH);
-  const deviceId = input.deviceId ?? selection.deviceId ?? "emulator-5554";
+  const deviceId = input.deviceId ?? selection.deviceId ?? DEFAULT_ANDROID_DEVICE_ID;
   const appId = input.appId ?? selection.appId;
   const androidSdkLevel = input.dryRun ? undefined : await resolveAndroidSdkLevel(repoRoot, deviceId);
   const plan = buildAndroidPerformancePlan({ ...input, appId }, runnerProfile, deviceId, androidSdkLevel);
@@ -7694,7 +7707,7 @@ export async function measureIosPerformanceWithMaestro(input: MeasureIosPerforma
   const repoRoot = resolveRepoPath();
   const runnerProfile = input.runnerProfile ?? DEFAULT_RUNNER_PROFILE;
   const selection = await loadHarnessSelection(repoRoot, "ios", runnerProfile, input.harnessConfigPath ?? DEFAULT_HARNESS_CONFIG_PATH);
-  const deviceId = input.deviceId ?? selection.deviceId ?? "ADA078B9-3C6B-4875-8B85-A7789F368816";
+  const deviceId = input.deviceId ?? selection.deviceId ?? DEFAULT_IOS_SIMULATOR_UDID;
   const appId = input.appId ?? selection.appId;
   const requestedTemplate = input.template ?? "time-profiler";
   let attachTarget = !input.dryRun && requestedTemplate === "memory" && appId
@@ -7844,7 +7857,7 @@ export async function launchAppWithMaestro(input: LaunchAppInput): Promise<ToolR
   const repoRoot = resolveRepoPath();
   const runnerProfile = input.runnerProfile ?? DEFAULT_RUNNER_PROFILE;
   const selection = await loadHarnessSelection(repoRoot, input.platform, runnerProfile, input.harnessConfigPath ?? DEFAULT_HARNESS_CONFIG_PATH);
-  const deviceId = input.deviceId ?? selection.deviceId ?? (input.platform === "android" ? "emulator-5554" : "ADA078B9-3C6B-4875-8B85-A7789F368816");
+  const deviceId = input.deviceId ?? selection.deviceId ?? buildDefaultDeviceId(input.platform);
   const appId = input.appId ?? selection.appId;
   const launchUrl = input.launchUrl ?? selection.launchUrl;
 
@@ -7923,8 +7936,8 @@ export async function installAppWithMaestro(input: InstallAppInput): Promise<Too
   const selection = await loadHarnessSelection(repoRoot, input.platform, runnerProfile, input.harnessConfigPath ?? DEFAULT_HARNESS_CONFIG_PATH);
   const installCommand =
     input.platform === "android"
-      ? ["adb", "-s", input.deviceId ?? selection.deviceId ?? "emulator-5554", "install", "-r", artifactPath ?? ""]
-      : ["xcrun", "simctl", "install", input.deviceId ?? selection.deviceId ?? "ADA078B9-3C6B-4875-8B85-A7789F368816", artifactPath ?? ""];
+      ? ["adb", "-s", input.deviceId ?? selection.deviceId ?? DEFAULT_ANDROID_DEVICE_ID, "install", "-r", artifactPath ?? ""]
+      : ["xcrun", "simctl", "install", input.deviceId ?? selection.deviceId ?? DEFAULT_IOS_SIMULATOR_UDID, artifactPath ?? ""];
 
   const spec = getInstallArtifactSpec(runnerProfile);
   const exists = artifactPath ? existsSync(artifactPath) : false;
@@ -8032,7 +8045,7 @@ export async function runDoctor(
   }
   try {
     const idbTargetResult = await executeRunner(buildIdbCommand(["list-targets"]), repoRoot, process.env);
-    const targetUdid = process.env.SIM_UDID ?? "ADA078B9-3C6B-4875-8B85-A7789F368816";
+    const targetUdid = process.env.SIM_UDID ?? DEFAULT_IOS_SIMULATOR_UDID;
     checks.push(summarizeInfoCheck(
       "idb target visibility",
       idbTargetResult.exitCode === 0 && idbTargetResult.stdout.includes(targetUdid) ? "pass" : "warn",

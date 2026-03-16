@@ -1,14 +1,6 @@
-import { buildCapabilityProfile, resolveRepoPath, resolveSessionDefaults } from "@mobile-e2e-mcp/adapter-maestro";
+import { buildCapabilityProfile, buildDefaultAppId, buildDefaultDeviceId, resolveRepoPath, resolveSessionDefaults } from "@mobile-e2e-mcp/adapter-maestro";
 import { acquireLease, buildSessionRecordRelativePath, loadAccessProfile, loadSessionRecord, persistStartedSession, releaseLease } from "@mobile-e2e-mcp/core";
 import { REASON_CODES, type Session, type StartSessionInput, type ToolResult } from "@mobile-e2e-mcp/contracts";
-
-function buildDefaultDeviceId(platform: StartSessionInput["platform"]): string {
-  return platform === "android" ? "emulator-5554" : "ADA078B9-3C6B-4875-8B85-A7789F368816";
-}
-
-function buildDefaultAppId(platform: StartSessionInput["platform"]): string {
-  return platform === "android" ? "host.exp.exponent" : "host.exp.Exponent";
-}
 
 export async function startSession(input: StartSessionInput): Promise<ToolResult<Session>> {
   const repoRoot = resolveRepoPath();

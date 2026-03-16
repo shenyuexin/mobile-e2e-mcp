@@ -4,6 +4,9 @@ import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 import { buildDeviceLeaseRecordRelativePath, buildSessionAuditRelativePath, buildSessionRecordRelativePath } from "@mobile-e2e-mcp/core";
+import type { CliOptions } from "../src/cli/types.js";
+import type { ResolvedContextMeta } from "../src/cli/context-resolver.js";
+import { executePreset } from "../src/cli/preset-runner.js";
 import { createServer } from "../src/index.ts";
 import { main, parseCliArgs } from "../src/dev-cli.ts";
 
@@ -534,19 +537,51 @@ test("main executes quick_e2e_android preset via CLI", async () => {
 test("main executes quick_debug_ios preset via CLI", async () => {
   const output = await runCli([
     "--preset-name", "quick_debug_ios",
-    "--platform", "ios",
     "--no-context-alias",
     "--dry-run",
   ]) as {
     presetResult: {
       status: string;
-      data: { presetName: string; steps: Array<{ tool: string }> };
+      data: {
+        presetName: string;
+        steps: Array<{ tool: string }>;
+        resolvedContext?: {
+          platform?: string;
+        };
+      };
     };
   };
 
   assert.equal(output.presetResult.data.presetName, "quick_debug_ios");
   assert.equal(output.presetResult.data.steps.length > 0, true);
   assert.equal(output.presetResult.data.steps[0]?.tool, "start_session");
+  assert.equal(output.presetResult.data.resolvedContext?.platform, "preset");
+});
+
+test("executePreset enforces alias precedence over preset platform defaults", async () => {
+  const server = createServer();
+  const cliOptions = parseCliArgs(["--preset-name", "quick_debug_ios", "--dry-run"]);
+  cliOptions.platform = "android";
+
+  const resolvedContext: ResolvedContextMeta = {
+    sessionId: "alias",
+    platform: "alias",
+    deviceId: "alias",
+    appId: "alias",
+    runnerProfile: "default",
+  };
+
+  const result = await executePreset(
+    server,
+    cliOptions as CliOptions,
+    "quick_debug_ios",
+    resolvedContext,
+  );
+
+  assert.equal(result.status, "failed");
+  assert.equal(result.reasonCode, "CONFIGURATION_ERROR");
+  assert.equal(result.nextSuggestions[0]?.includes("expects platform ios"), true);
+  assert.equal(result.nextSuggestions[1]?.includes("override alias precedence"), true);
 });
 
 test("main preset rejects explicit session-id when preset includes start_session", async () => {

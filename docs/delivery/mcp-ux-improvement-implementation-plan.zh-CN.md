@@ -83,7 +83,7 @@ pnpm --filter @mobile-e2e-mcp/mcp-server dev-cli \
 改进后（Context Alias + Preset）：
 
 ```bash
-pnpm --filter @mobile-e2e-mcp/mcp-server dev-cli --preset-name quick_e2e_ios --action tap_login
+pnpm --filter @mobile-e2e-mcp/mcp-server dev-cli --preset-name quick_debug_ios
 ```
 
 > 说明：preset 展开后仍调用原工具，只是由系统自动补齐上下文与参数。
@@ -156,10 +156,10 @@ interface DoctorGuidanceItem {
 
 - 输入：显式参数 + `sessionId` + 当前会话记录；
 - 解析优先级：
-  1. 显式参数（用户传入）
-  2. 会话记录（已持久化）
-  3. harness 默认值
-  4. 平台兜底值
+  1. `flag`（用户显式参数）
+  2. `alias`（活动会话上下文）
+  3. `preset`（preset 默认平台）
+  4. `default`（CLI/工具默认值）
 - 输出：完整 tool input + `resolvedFrom` 元信息（用于审计/调试）。
 
 ### B.2.1 会话选择与失败规则（必须写死）
@@ -207,9 +207,11 @@ interface ContextAliasInput {
 
 ```ts
 interface ResolvedContextMeta {
-  platform: "explicit" | "session" | "harness" | "fallback";
-  deviceId: "explicit" | "session" | "harness" | "fallback";
-  appId: "explicit" | "session" | "harness" | "fallback";
+  sessionId: "flag" | "alias" | "preset" | "default";
+  platform: "flag" | "alias" | "preset" | "default";
+  deviceId: "flag" | "alias" | "preset" | "default";
+  appId: "flag" | "alias" | "preset" | "default";
+  runnerProfile: "flag" | "alias" | "preset" | "default";
 }
 ```
 
@@ -428,3 +430,35 @@ presets:
 
 - Preset 配置文件化（`configs/presets/*.yaml`）在 V1 中暂未启用，当前采用**代码内注册表**，优先保证可用性与回归稳定；
 - V2 可将 preset 注册表外置为 YAML 配置，并加入配置 schema 校验。
+
+## 12. 本轮增量落地状态（2026-03-16，第二批）
+
+已完成：
+
+1. **默认值统一来源（deviceId/appId）**
+   - 在 `adapter-maestro` 统一定义并导出默认值与构建函数：
+     - `DEFAULT_ANDROID_DEVICE_ID`
+     - `DEFAULT_IOS_SIMULATOR_UDID`
+     - `DEFAULT_ANDROID_APP_ID`
+     - `DEFAULT_IOS_APP_ID`
+     - `buildDefaultDeviceId(platform)`
+     - `buildDefaultAppId(platform)`
+   - 相关落点：
+     - `packages/adapter-maestro/src/harness-config.ts`
+     - `packages/adapter-maestro/src/index.ts`
+     - `packages/adapter-maestro/src/device-runtime.ts`
+     - `packages/mcp-server/src/tools/start-session.ts`
+
+2. **上下文优先级规则固化**
+   - 在 CLI 层统一为：`flag > alias > preset > default`；
+   - alias 与 preset 平台冲突时返回 `CONFIGURATION_ERROR`，并给出可执行建议；
+   - preset 包含 `start_session` 时，alias 推断出的 `sessionId` 不再当作显式参数复用。
+   - 相关落点：
+     - `packages/mcp-server/src/cli/context-resolver.ts`
+     - `packages/mcp-server/src/cli/preset-runner.ts`
+
+3. **回归测试补充（优先级/来源可解释性）**
+   - 新增 alias-vs-preset 平台优先级测试；
+   - 新增 preset 注入平台来源标记（`resolvedContext.platform = "preset"`）断言。
+   - 相关落点：
+     - `packages/mcp-server/test/dev-cli.test.ts`
