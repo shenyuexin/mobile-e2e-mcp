@@ -16,6 +16,7 @@ import type {
   DescribeCapabilitiesData,
   DescribeCapabilitiesInput,
   DeviceInfo,
+  DoctorData,
   DoctorCheck,
   DoctorInput,
   EndSessionInput,
@@ -94,7 +95,7 @@ export interface MobileE2EMcpToolRegistry {
   detect_interruption: (input: DetectInterruptionInput) => Promise<ToolResult<DetectInterruptionData>>;
   classify_interruption: (input: ClassifyInterruptionInput) => Promise<ToolResult<ClassifyInterruptionData>>;
   describe_capabilities: (input: DescribeCapabilitiesInput) => Promise<ToolResult<DescribeCapabilitiesData>>;
-  doctor: (input: DoctorInput) => Promise<ToolResult<{ checks: DoctorCheck[]; devices: { android: DeviceInfo[]; ios: DeviceInfo[] } }>>;
+  doctor: (input: DoctorInput) => Promise<ToolResult<DoctorData>>;
   explain_last_failure: (input: ExplainLastFailureInput) => Promise<ToolResult<ExplainLastFailureData>>;
   find_similar_failures: (input: FindSimilarFailuresInput) => Promise<ToolResult<FindSimilarFailuresData>>;
   get_action_outcome: (input: GetActionOutcomeInput) => Promise<ToolResult<GetActionOutcomeData>>;
@@ -149,7 +150,7 @@ export class MobileE2EMcpServer {
   async invoke(toolName: "detect_interruption", input: DetectInterruptionInput): Promise<ToolResult<DetectInterruptionData>>;
   async invoke(toolName: "classify_interruption", input: ClassifyInterruptionInput): Promise<ToolResult<ClassifyInterruptionData>>;
   async invoke(toolName: "describe_capabilities", input: DescribeCapabilitiesInput): Promise<ToolResult<DescribeCapabilitiesData>>;
-  async invoke(toolName: "doctor", input: DoctorInput): Promise<ToolResult<{ checks: DoctorCheck[]; devices: { android: DeviceInfo[]; ios: DeviceInfo[] } }>>;
+  async invoke(toolName: "doctor", input: DoctorInput): Promise<ToolResult<DoctorData>>;
   async invoke(toolName: "explain_last_failure", input: ExplainLastFailureInput): Promise<ToolResult<ExplainLastFailureData>>;
   async invoke(toolName: "find_similar_failures", input: FindSimilarFailuresInput): Promise<ToolResult<FindSimilarFailuresData>>;
   async invoke(toolName: "get_action_outcome", input: GetActionOutcomeInput): Promise<ToolResult<GetActionOutcomeData>>;
@@ -199,7 +200,7 @@ export class MobileE2EMcpServer {
       | ToolResult<DetectInterruptionData>
       | ToolResult<ClassifyInterruptionData>
       | ToolResult<DescribeCapabilitiesData>
-      | ToolResult<{ checks: DoctorCheck[]; devices: { android: DeviceInfo[]; ios: DeviceInfo[] } }>
+      | ToolResult<DoctorData>
       | ToolResult<ExplainLastFailureData>
       | ToolResult<FindSimilarFailuresData>
       | ToolResult<GetActionOutcomeData>
