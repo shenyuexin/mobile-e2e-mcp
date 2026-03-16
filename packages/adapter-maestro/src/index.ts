@@ -1799,6 +1799,29 @@ export async function getScreenSummaryWithMaestro(
   input: GetScreenSummaryInput,
 ): Promise<ToolResult<GetScreenSummaryData>> {
   const startTime = Date.now();
+  if (!input.platform) {
+    const runnerProfile = input.runnerProfile ?? DEFAULT_RUNNER_PROFILE;
+    const fallbackState: StateSummary = { appPhase: "unknown", readiness: "unknown", blockingSignals: [] };
+    return {
+      status: "failed",
+      reasonCode: REASON_CODES.configurationError,
+      sessionId: input.sessionId,
+      durationMs: Date.now() - startTime,
+      attempts: 1,
+      artifacts: [],
+      data: {
+        dryRun: Boolean(input.dryRun),
+        runnerProfile,
+        outputPath: input.outputPath ?? path.posix.join("artifacts", "state-summaries", input.sessionId, `unknown-${runnerProfile}.json`),
+        command: [],
+        exitCode: null,
+        supportLevel: "partial",
+        summarySource: "ui_only",
+        screenSummary: fallbackState,
+      },
+      nextSuggestions: ["Provide platform explicitly, or call get_screen_summary with an active sessionId so MCP can resolve platform from session context."],
+    };
+  }
   const runnerProfile = input.runnerProfile ?? DEFAULT_RUNNER_PROFILE;
   const inspectResult = await inspectUiWithMaestro({
     sessionId: input.sessionId,
@@ -2073,6 +2096,22 @@ export async function classifyInterruptionWithMaestro(
 ): Promise<ToolResult<ClassifyInterruptionData>> {
   const startTime = Date.now();
   const detected = await detectInterruptionWithMaestro(input);
+  if (detected.status === "failed") {
+    return {
+      status: "failed",
+      reasonCode: detected.reasonCode,
+      sessionId: input.sessionId,
+      durationMs: Date.now() - startTime,
+      attempts: 1,
+      artifacts: detected.artifacts,
+      data: {
+        found: false,
+        classification: undefined,
+        signals: input.signals ?? detected.data.signals,
+      },
+      nextSuggestions: detected.nextSuggestions,
+    };
+  }
   const signals = input.signals ?? detected.data.signals;
   const classification = classifyInterruptionFromSignals(signals);
   return {
@@ -3774,6 +3813,33 @@ export async function collectBasicRunResult(params: {
 
 export async function runFlowWithMaestro(input: RunFlowInput): Promise<ToolResult<BasicRunData>> {
   const startTime = Date.now();
+  if (!input.platform) {
+    return {
+      status: "failed",
+      reasonCode: REASON_CODES.configurationError,
+      sessionId: input.sessionId,
+      durationMs: Date.now() - startTime,
+      attempts: 1,
+      artifacts: [],
+      data: {
+        dryRun: Boolean(input.dryRun),
+        harnessConfigPath: input.harnessConfigPath ?? DEFAULT_HARNESS_CONFIG_PATH,
+        runnerProfile: input.runnerProfile ?? DEFAULT_RUNNER_PROFILE,
+        runnerScript: input.runnerScript ?? "",
+        flowPath: input.flowPath ?? "",
+        requestedFlowPath: input.flowPath,
+        configuredFlows: [],
+        artifactsDir: path.posix.join("artifacts", "run-flow", input.sessionId),
+        totalRuns: input.runCount ?? 1,
+        passedRuns: 0,
+        failedRuns: 0,
+        command: [],
+        exitCode: null,
+        summaryLine: "",
+      },
+      nextSuggestions: ["Provide platform explicitly, or call run_flow with an active sessionId so MCP can resolve platform from session context."],
+    };
+  }
   const repoRoot = resolveRepoPath();
   const harnessConfigPath = input.harnessConfigPath ?? DEFAULT_HARNESS_CONFIG_PATH;
   const runnerProfile = input.runnerProfile ?? DEFAULT_RUNNER_PROFILE;
@@ -4268,6 +4334,18 @@ async function collectInstallStateChecks(repoRoot: string): Promise<DoctorCheck[
 
 export async function typeTextWithMaestro(input: TypeTextInput): Promise<ToolResult<TypeTextData>> {
   const startTime = Date.now();
+  if (!input.platform) {
+    return {
+      status: "failed",
+      reasonCode: REASON_CODES.configurationError,
+      sessionId: input.sessionId,
+      durationMs: Date.now() - startTime,
+      attempts: 1,
+      artifacts: [],
+      data: { dryRun: Boolean(input.dryRun), runnerProfile: input.runnerProfile ?? DEFAULT_RUNNER_PROFILE, text: input.text, command: [], exitCode: null },
+      nextSuggestions: ["Provide platform explicitly, or call type_text with an active sessionId so MCP can resolve platform from session context."],
+    };
+  }
   const repoRoot = resolveRepoPath();
   const runnerProfile = input.runnerProfile ?? DEFAULT_RUNNER_PROFILE;
   const selection = await loadHarnessSelection(repoRoot, input.platform, runnerProfile, input.harnessConfigPath ?? DEFAULT_HARNESS_CONFIG_PATH);
@@ -4320,7 +4398,40 @@ export async function typeTextWithMaestro(input: TypeTextInput): Promise<ToolRes
 
 export async function resolveUiTargetWithMaestro(input: ResolveUiTargetInput): Promise<ToolResult<ResolveUiTargetData>> {
   const startTime = Date.now();
+  if (!input.platform) {
+    const runnerProfile = input.runnerProfile ?? DEFAULT_RUNNER_PROFILE;
+    const query = normalizeQueryUiSelector({
+      resourceId: input.resourceId,
+      contentDesc: input.contentDesc,
+      text: input.text,
+      className: input.className,
+      clickable: input.clickable,
+      limit: input.limit,
+    });
+    const outputPath = input.outputPath ?? path.posix.join("artifacts", "ui-dumps", input.sessionId, `unknown-${runnerProfile}.json`);
+    return {
+      status: "failed",
+      reasonCode: REASON_CODES.configurationError,
+      sessionId: input.sessionId,
+      durationMs: Date.now() - startTime,
+      attempts: 1,
+      artifacts: [],
+      data: {
+        dryRun: Boolean(input.dryRun),
+        runnerProfile,
+        outputPath,
+        query,
+        command: [],
+        exitCode: null,
+        result: { query, totalMatches: 0, matches: [] },
+        resolution: buildNonExecutedUiTargetResolution(query, "partial"),
+        supportLevel: "partial",
+      },
+      nextSuggestions: ["Provide platform explicitly, or call resolve_ui_target with an active sessionId so MCP can resolve platform from session context."],
+    };
+  }
   const repoRoot = resolveRepoPath();
+  const platform = input.platform;
   const runnerProfile = input.runnerProfile ?? DEFAULT_RUNNER_PROFILE;
   const query = normalizeQueryUiSelector({
     resourceId: input.resourceId,
@@ -4331,7 +4442,7 @@ export async function resolveUiTargetWithMaestro(input: ResolveUiTargetInput): P
     limit: input.limit,
   });
 
-  const defaultOutputPath = input.outputPath ?? path.posix.join("artifacts", "ui-dumps", input.sessionId, `${input.platform}-${runnerProfile}.${input.platform === "android" ? "xml" : "json"}`);
+  const defaultOutputPath = input.outputPath ?? path.posix.join("artifacts", "ui-dumps", input.sessionId, `${platform}-${runnerProfile}.${platform === "android" ? "xml" : "json"}`);
 
   if (!hasQueryUiSelector(query)) {
     return {
@@ -4349,14 +4460,14 @@ export async function resolveUiTargetWithMaestro(input: ResolveUiTargetInput): P
         command: [],
         exitCode: null,
         result: { query, totalMatches: 0, matches: [] },
-        resolution: buildNonExecutedUiTargetResolution(query, input.platform === "android" ? "full" : "partial"),
-        supportLevel: input.platform === "android" ? "full" : "partial",
+          resolution: buildNonExecutedUiTargetResolution(query, platform === "android" ? "full" : "partial"),
+          supportLevel: platform === "android" ? "full" : "partial",
       },
       nextSuggestions: ["Provide at least one selector field before calling resolve_ui_target."],
     };
   }
 
-  if (input.platform === "ios") {
+  if (platform === "ios") {
     const deviceId = input.deviceId ?? DEFAULT_IOS_SIMULATOR_UDID;
     const idbCommand = buildIosUiDescribeCommand(deviceId);
     if (input.dryRun) {
@@ -4382,7 +4493,7 @@ export async function resolveUiTargetWithMaestro(input: ResolveUiTargetInput): P
       };
     }
 
-    const snapshot = await captureIosUiSnapshot(repoRoot, deviceId, input.sessionId, runnerProfile, input.outputPath, { sessionId: input.sessionId, platform: input.platform, runnerProfile, harnessConfigPath: input.harnessConfigPath, deviceId, outputPath: input.outputPath, dryRun: false, ...query });
+    const snapshot = await captureIosUiSnapshot(repoRoot, deviceId, input.sessionId, runnerProfile, input.outputPath, { sessionId: input.sessionId, platform, runnerProfile, harnessConfigPath: input.harnessConfigPath, deviceId, outputPath: input.outputPath, dryRun: false, ...query });
     if (isIosUiSnapshotFailure(snapshot)) {
       return {
         status: "failed",
@@ -4539,10 +4650,39 @@ export async function resolveUiTargetWithMaestro(input: ResolveUiTargetInput): P
 
 export async function tapElementWithMaestro(input: TapElementInput): Promise<ToolResult<TapElementData>> {
   const startTime = Date.now();
+  if (!input.platform) {
+    const runnerProfile = input.runnerProfile ?? DEFAULT_RUNNER_PROFILE;
+    const query = normalizeQueryUiSelector({
+      resourceId: input.resourceId,
+      contentDesc: input.contentDesc,
+      text: input.text,
+      className: input.className,
+      clickable: input.clickable,
+      limit: input.limit,
+    });
+    return {
+      status: "failed",
+      reasonCode: REASON_CODES.configurationError,
+      sessionId: input.sessionId,
+      durationMs: Date.now() - startTime,
+      attempts: 1,
+      artifacts: [],
+      data: {
+        dryRun: Boolean(input.dryRun),
+        runnerProfile,
+        query,
+        command: [],
+        exitCode: null,
+        supportLevel: "partial",
+      },
+      nextSuggestions: ["Provide platform explicitly, or call tap_element with an active sessionId so MCP can resolve platform from session context."],
+    };
+  }
+  const platform = input.platform;
   const runnerProfile = input.runnerProfile ?? DEFAULT_RUNNER_PROFILE;
   const resolveResult = await resolveUiTargetWithMaestro({
     sessionId: input.sessionId,
-    platform: input.platform,
+    platform,
     runnerProfile: input.runnerProfile,
     harnessConfigPath: input.harnessConfigPath,
     deviceId: input.deviceId,
@@ -4637,7 +4777,7 @@ export async function tapElementWithMaestro(input: TapElementInput): Promise<Too
 
   const tapResult = await tapWithMaestro({
     sessionId: input.sessionId,
-    platform: input.platform,
+    platform,
     runnerProfile: input.runnerProfile,
     harnessConfigPath: input.harnessConfigPath,
     deviceId: input.deviceId,
@@ -4672,10 +4812,41 @@ export async function tapElementWithMaestro(input: TapElementInput): Promise<Too
 
 export async function typeIntoElementWithMaestro(input: TypeIntoElementInput): Promise<ToolResult<TypeIntoElementData>> {
   const startTime = Date.now();
+  if (!input.platform) {
+    const runnerProfile = input.runnerProfile ?? DEFAULT_RUNNER_PROFILE;
+    const query = normalizeQueryUiSelector({
+      resourceId: input.resourceId,
+      contentDesc: input.contentDesc,
+      text: input.text,
+      className: input.className,
+      clickable: input.clickable,
+      limit: input.limit,
+    });
+    return {
+      status: "failed",
+      reasonCode: REASON_CODES.configurationError,
+      sessionId: input.sessionId,
+      durationMs: Date.now() - startTime,
+      attempts: 1,
+      artifacts: [],
+      data: {
+        dryRun: Boolean(input.dryRun),
+        runnerProfile,
+        query,
+        value: input.value,
+        resolution: buildNonExecutedUiTargetResolution(query, "partial"),
+        commands: [],
+        exitCode: null,
+        supportLevel: "partial",
+      },
+      nextSuggestions: ["Provide platform explicitly, or call type_into_element with an active sessionId so MCP can resolve platform from session context."],
+    };
+  }
+  const platform = input.platform;
   const runnerProfile = input.runnerProfile ?? DEFAULT_RUNNER_PROFILE;
   const resolveResult = await resolveUiTargetWithMaestro({
     sessionId: input.sessionId,
-    platform: input.platform,
+    platform,
     runnerProfile: input.runnerProfile,
     harnessConfigPath: input.harnessConfigPath,
     deviceId: input.deviceId,
@@ -4759,7 +4930,7 @@ export async function typeIntoElementWithMaestro(input: TypeIntoElementInput): P
 
   const focusResult = await tapWithMaestro({
     sessionId: input.sessionId,
-    platform: input.platform,
+    platform,
     runnerProfile: input.runnerProfile,
     harnessConfigPath: input.harnessConfigPath,
     deviceId: input.deviceId,
@@ -4769,7 +4940,7 @@ export async function typeIntoElementWithMaestro(input: TypeIntoElementInput): P
   });
   const typeResult = await typeTextWithMaestro({
     sessionId: input.sessionId,
-    platform: input.platform,
+    platform,
     runnerProfile: input.runnerProfile,
     harnessConfigPath: input.harnessConfigPath,
     deviceId: input.deviceId,
@@ -4823,6 +4994,52 @@ export async function typeIntoElementWithMaestro(input: TypeIntoElementInput): P
 
 export async function scrollAndTapElementWithMaestro(input: ScrollAndTapElementInput): Promise<ToolResult<ScrollAndTapElementData>> {
   const startTime = Date.now();
+  if (!input.platform) {
+    const runnerProfile = input.runnerProfile ?? DEFAULT_RUNNER_PROFILE;
+    const query = normalizeQueryUiSelector({
+      resourceId: input.resourceId,
+      contentDesc: input.contentDesc,
+      text: input.text,
+      className: input.className,
+      clickable: input.clickable,
+      limit: input.limit,
+    });
+    return {
+      status: "failed",
+      reasonCode: REASON_CODES.configurationError,
+      sessionId: input.sessionId,
+      durationMs: Date.now() - startTime,
+      attempts: 1,
+      artifacts: [],
+      data: {
+        dryRun: Boolean(input.dryRun),
+        runnerProfile,
+        query,
+        maxSwipes: typeof input.maxSwipes === "number" && input.maxSwipes >= 0 ? Math.floor(input.maxSwipes) : DEFAULT_SCROLL_MAX_SWIPES,
+        swipeDirection: normalizeScrollDirection(input.swipeDirection),
+        swipeDurationMs: typeof input.swipeDurationMs === "number" && input.swipeDurationMs > 0 ? Math.floor(input.swipeDurationMs) : DEFAULT_SCROLL_DURATION_MS,
+        stepResults: [],
+        resolveResult: {
+          dryRun: Boolean(input.dryRun),
+          runnerProfile,
+          outputPath: input.outputPath ?? path.posix.join("artifacts", "ui-dumps", input.sessionId, `unknown-${runnerProfile}.json`),
+          query,
+          maxSwipes: typeof input.maxSwipes === "number" && input.maxSwipes >= 0 ? Math.floor(input.maxSwipes) : DEFAULT_SCROLL_MAX_SWIPES,
+          swipeDirection: normalizeScrollDirection(input.swipeDirection),
+          swipeDurationMs: typeof input.swipeDurationMs === "number" && input.swipeDurationMs > 0 ? Math.floor(input.swipeDurationMs) : DEFAULT_SCROLL_DURATION_MS,
+          swipesPerformed: 0,
+          commandHistory: [],
+          exitCode: null,
+          result: { query, totalMatches: 0, matches: [] },
+          resolution: buildNonExecutedUiTargetResolution(query, "partial"),
+          supportLevel: "partial",
+        },
+        supportLevel: "partial",
+      },
+      nextSuggestions: ["Provide platform explicitly, or call scroll_and_tap_element with an active sessionId so MCP can resolve platform from session context."],
+    };
+  }
+  const platform = input.platform;
   const runnerProfile = input.runnerProfile ?? DEFAULT_RUNNER_PROFILE;
   const stepResults: UiOrchestrationStepResult[] = [];
   const resolveResult = await scrollAndResolveUiTargetWithMaestro(input);
@@ -4853,7 +5070,7 @@ export async function scrollAndTapElementWithMaestro(input: ScrollAndTapElementI
 
   const tapResult = await tapElementWithMaestro({
     sessionId: input.sessionId,
-    platform: input.platform,
+    platform,
     runnerProfile: input.runnerProfile,
     harnessConfigPath: input.harnessConfigPath,
     deviceId: input.deviceId,
@@ -4892,7 +5109,46 @@ export async function scrollAndTapElementWithMaestro(input: ScrollAndTapElementI
 
 export async function waitForUiWithMaestro(input: WaitForUiInput): Promise<ToolResult<WaitForUiData>> {
   const startTime = Date.now();
+  if (!input.platform) {
+    const runnerProfile = input.runnerProfile ?? DEFAULT_RUNNER_PROFILE;
+    const query = normalizeQueryUiSelector({
+      resourceId: input.resourceId,
+      contentDesc: input.contentDesc,
+      text: input.text,
+      className: input.className,
+      clickable: input.clickable,
+      limit: input.limit,
+    });
+    const timeoutMs = typeof input.timeoutMs === "number" && input.timeoutMs > 0 ? Math.floor(input.timeoutMs) : DEFAULT_WAIT_TIMEOUT_MS;
+    const intervalMs = typeof input.intervalMs === "number" && input.intervalMs > 0 ? Math.floor(input.intervalMs) : DEFAULT_WAIT_INTERVAL_MS;
+    const waitUntil = normalizeWaitForUiMode(input.waitUntil);
+    const outputPath = input.outputPath ?? path.posix.join("artifacts", "ui-dumps", input.sessionId, `unknown-${runnerProfile}.json`);
+    return {
+      status: "failed",
+      reasonCode: REASON_CODES.configurationError,
+      sessionId: input.sessionId,
+      durationMs: Date.now() - startTime,
+      attempts: 1,
+      artifacts: [],
+      data: {
+        dryRun: Boolean(input.dryRun),
+        runnerProfile,
+        outputPath,
+        query,
+        timeoutMs,
+        intervalMs,
+        waitUntil,
+        polls: 0,
+        command: [],
+        exitCode: null,
+        result: { query, totalMatches: 0, matches: [] },
+        supportLevel: "partial",
+      },
+      nextSuggestions: ["Provide platform explicitly, or call wait_for_ui with an active sessionId so MCP can resolve platform from session context."],
+    };
+  }
   const repoRoot = resolveRepoPath();
+  const platform = input.platform;
   const runnerProfile = input.runnerProfile ?? DEFAULT_RUNNER_PROFILE;
   const query = normalizeQueryUiSelector({
     resourceId: input.resourceId,
@@ -4905,7 +5161,7 @@ export async function waitForUiWithMaestro(input: WaitForUiInput): Promise<ToolR
   const timeoutMs = typeof input.timeoutMs === "number" && input.timeoutMs > 0 ? Math.floor(input.timeoutMs) : DEFAULT_WAIT_TIMEOUT_MS;
   const intervalMs = typeof input.intervalMs === "number" && input.intervalMs > 0 ? Math.floor(input.intervalMs) : DEFAULT_WAIT_INTERVAL_MS;
   const waitUntil = normalizeWaitForUiMode(input.waitUntil);
-  const defaultOutputPath = input.outputPath ?? path.posix.join("artifacts", "ui-dumps", input.sessionId, `${input.platform}-${runnerProfile}.${input.platform === "android" ? "xml" : "json"}`);
+  const defaultOutputPath = input.outputPath ?? path.posix.join("artifacts", "ui-dumps", input.sessionId, `${platform}-${runnerProfile}.${platform === "android" ? "xml" : "json"}`);
 
   if (!hasQueryUiSelector(query)) {
     return {
@@ -4927,13 +5183,13 @@ export async function waitForUiWithMaestro(input: WaitForUiInput): Promise<ToolR
         command: [],
         exitCode: null,
         result: { query, totalMatches: 0, matches: [] },
-        supportLevel: input.platform === "android" ? "full" : "partial",
+          supportLevel: platform === "android" ? "full" : "partial",
       },
       nextSuggestions: ["Provide at least one selector field before calling wait_for_ui."],
     };
   }
 
-  if (input.platform === "ios") {
+  if (platform === "ios") {
     const deviceId = input.deviceId ?? DEFAULT_IOS_SIMULATOR_UDID;
     const idbCommand = buildIosUiDescribeCommand(deviceId);
     if (input.dryRun) {
@@ -4967,7 +5223,7 @@ export async function waitForUiWithMaestro(input: WaitForUiInput): Promise<ToolR
     const deadline = Date.now() + timeoutMs;
     while (Date.now() <= deadline) {
       polls += 1;
-      lastSnapshot = await captureIosUiSnapshot(repoRoot, deviceId, input.sessionId, runnerProfile, input.outputPath, { sessionId: input.sessionId, platform: input.platform, runnerProfile, harnessConfigPath: input.harnessConfigPath, deviceId, outputPath: input.outputPath, dryRun: false, ...query });
+      lastSnapshot = await captureIosUiSnapshot(repoRoot, deviceId, input.sessionId, runnerProfile, input.outputPath, { sessionId: input.sessionId, platform, runnerProfile, harnessConfigPath: input.harnessConfigPath, deviceId, outputPath: input.outputPath, dryRun: false, ...query });
       if (!isIosUiSnapshotFailure(lastSnapshot) && isWaitConditionMet({ query, ...lastSnapshot.queryResult }, waitUntil)) {
         return {
           status: "success",
@@ -5241,6 +5497,46 @@ export async function waitForUiWithMaestro(input: WaitForUiInput): Promise<ToolR
 
 export async function scrollAndResolveUiTargetWithMaestro(input: ScrollAndResolveUiTargetInput): Promise<ToolResult<ScrollAndResolveUiTargetData>> {
   const startTime = Date.now();
+  if (!input.platform) {
+    const runnerProfile = input.runnerProfile ?? DEFAULT_RUNNER_PROFILE;
+    const query = normalizeQueryUiSelector({
+      resourceId: input.resourceId,
+      contentDesc: input.contentDesc,
+      text: input.text,
+      className: input.className,
+      clickable: input.clickable,
+      limit: input.limit,
+    });
+    const maxSwipes = typeof input.maxSwipes === "number" && input.maxSwipes >= 0 ? Math.floor(input.maxSwipes) : DEFAULT_SCROLL_MAX_SWIPES;
+    const swipeDurationMs = typeof input.swipeDurationMs === "number" && input.swipeDurationMs > 0 ? Math.floor(input.swipeDurationMs) : DEFAULT_SCROLL_DURATION_MS;
+    const swipeDirection = normalizeScrollDirection(input.swipeDirection);
+    const outputPath = input.outputPath ?? path.posix.join("artifacts", "ui-dumps", input.sessionId, `unknown-${runnerProfile}.json`);
+    return {
+      status: "failed",
+      reasonCode: REASON_CODES.configurationError,
+      sessionId: input.sessionId,
+      durationMs: Date.now() - startTime,
+      attempts: 1,
+      artifacts: [],
+      data: {
+        dryRun: Boolean(input.dryRun),
+        runnerProfile,
+        outputPath,
+        query,
+        maxSwipes,
+        swipeDirection,
+        swipeDurationMs,
+        swipesPerformed: 0,
+        commandHistory: [],
+        exitCode: null,
+        result: { query, totalMatches: 0, matches: [] },
+        resolution: buildNonExecutedUiTargetResolution(query, "partial"),
+        supportLevel: "partial",
+      },
+      nextSuggestions: ["Provide platform explicitly, or call scroll_and_resolve_ui_target with an active sessionId so MCP can resolve platform from session context."],
+    };
+  }
+  const platform = input.platform;
   const repoRoot = resolveRepoPath();
   const runnerProfile = input.runnerProfile ?? DEFAULT_RUNNER_PROFILE;
   const query = normalizeQueryUiSelector({
@@ -5254,7 +5550,7 @@ export async function scrollAndResolveUiTargetWithMaestro(input: ScrollAndResolv
   const maxSwipes = typeof input.maxSwipes === "number" && input.maxSwipes >= 0 ? Math.floor(input.maxSwipes) : DEFAULT_SCROLL_MAX_SWIPES;
   const swipeDurationMs = typeof input.swipeDurationMs === "number" && input.swipeDurationMs > 0 ? Math.floor(input.swipeDurationMs) : DEFAULT_SCROLL_DURATION_MS;
   const swipeDirection = normalizeScrollDirection(input.swipeDirection);
-  const defaultOutputPath = input.outputPath ?? path.posix.join("artifacts", "ui-dumps", input.sessionId, `${input.platform}-${runnerProfile}.${input.platform === "android" ? "xml" : "json"}`);
+  const defaultOutputPath = input.outputPath ?? path.posix.join("artifacts", "ui-dumps", input.sessionId, `${platform}-${runnerProfile}.${platform === "android" ? "xml" : "json"}`);
 
   if (!hasQueryUiSelector(query)) {
     return {
@@ -5276,14 +5572,14 @@ export async function scrollAndResolveUiTargetWithMaestro(input: ScrollAndResolv
         commandHistory: [],
         exitCode: null,
         result: { query, totalMatches: 0, matches: [] },
-        resolution: buildNonExecutedUiTargetResolution(query, input.platform === "android" ? "full" : "partial"),
-        supportLevel: input.platform === "android" ? "full" : "partial",
+          resolution: buildNonExecutedUiTargetResolution(query, platform === "android" ? "full" : "partial"),
+          supportLevel: platform === "android" ? "full" : "partial",
       },
       nextSuggestions: ["Provide at least one selector field before calling scroll_and_resolve_ui_target."],
     };
   }
 
-  if (input.platform === "ios") {
+  if (platform === "ios") {
     const deviceId = input.deviceId ?? DEFAULT_IOS_SIMULATOR_UDID;
     const previewSwipe = buildScrollSwipeCoordinates([], swipeDirection, swipeDurationMs);
     const previewSwipeCommand = buildIosSwipeCommand(deviceId, previewSwipe);
@@ -5320,7 +5616,7 @@ export async function scrollAndResolveUiTargetWithMaestro(input: ScrollAndResolv
     let lastSnapshot: IosUiSnapshot | IosUiSnapshotFailure | undefined;
 
     while (swipesPerformed <= maxSwipes) {
-      lastSnapshot = await captureIosUiSnapshot(repoRoot, deviceId, input.sessionId, runnerProfile, input.outputPath, { sessionId: input.sessionId, platform: input.platform, runnerProfile, harnessConfigPath: input.harnessConfigPath, deviceId, outputPath: input.outputPath, dryRun: false, ...query });
+      lastSnapshot = await captureIosUiSnapshot(repoRoot, deviceId, input.sessionId, runnerProfile, input.outputPath, { sessionId: input.sessionId, platform, runnerProfile, harnessConfigPath: input.harnessConfigPath, deviceId, outputPath: input.outputPath, dryRun: false, ...query });
       if (isIosUiSnapshotFailure(lastSnapshot)) {
         return {
           status: "failed",
@@ -5448,7 +5744,7 @@ export async function scrollAndResolveUiTargetWithMaestro(input: ScrollAndResolv
     }
   }
 
-  const selection = await loadHarnessSelection(repoRoot, input.platform, runnerProfile, input.harnessConfigPath ?? DEFAULT_HARNESS_CONFIG_PATH);
+  const selection = await loadHarnessSelection(repoRoot, platform, runnerProfile, input.harnessConfigPath ?? DEFAULT_HARNESS_CONFIG_PATH);
   const deviceId = input.deviceId ?? selection.deviceId ?? DEFAULT_ANDROID_DEVICE_ID;
   const { dumpCommand, readCommand } = buildAndroidUiDumpCommands(deviceId);
   const previewSwipe = buildScrollSwipeCoordinates([], swipeDirection, swipeDurationMs);
@@ -5668,6 +5964,18 @@ export async function scrollAndResolveUiTargetWithMaestro(input: ScrollAndResolv
 
 export async function tapWithMaestro(input: TapInput): Promise<ToolResult<TapData>> {
   const startTime = Date.now();
+  if (!input.platform) {
+    return {
+      status: "failed",
+      reasonCode: REASON_CODES.configurationError,
+      sessionId: input.sessionId,
+      durationMs: Date.now() - startTime,
+      attempts: 1,
+      artifacts: [],
+      data: { dryRun: Boolean(input.dryRun), runnerProfile: input.runnerProfile ?? DEFAULT_RUNNER_PROFILE, x: input.x, y: input.y, command: [], exitCode: null },
+      nextSuggestions: ["Provide platform explicitly, or call tap with an active sessionId so MCP can resolve platform from session context."],
+    };
+  }
   const repoRoot = resolveRepoPath();
   const runnerProfile = input.runnerProfile ?? DEFAULT_RUNNER_PROFILE;
   const selection = await loadHarnessSelection(repoRoot, input.platform, runnerProfile, input.harnessConfigPath ?? DEFAULT_HARNESS_CONFIG_PATH);
@@ -5720,15 +6028,30 @@ export async function tapWithMaestro(input: TapInput): Promise<ToolResult<TapDat
 
 export async function inspectUiWithMaestro(input: InspectUiInput): Promise<ToolResult<InspectUiData>> {
   const startTime = Date.now();
+  if (!input.platform) {
+    const runnerProfile = input.runnerProfile ?? DEFAULT_RUNNER_PROFILE;
+    const outputPath = input.outputPath ?? path.posix.join("artifacts", "ui-dumps", input.sessionId, `unknown-${runnerProfile}.json`);
+    return {
+      status: "failed",
+      reasonCode: REASON_CODES.configurationError,
+      sessionId: input.sessionId,
+      durationMs: Date.now() - startTime,
+      attempts: 1,
+      artifacts: [],
+      data: { dryRun: Boolean(input.dryRun), runnerProfile, outputPath, command: [], exitCode: null, supportLevel: "partial" },
+      nextSuggestions: ["Provide platform explicitly, or call inspect_ui with an active sessionId so MCP can resolve platform from session context."],
+    };
+  }
   const repoRoot = resolveRepoPath();
+  const platform = input.platform;
   const runnerProfile = input.runnerProfile ?? DEFAULT_RUNNER_PROFILE;
-  const selection = await loadHarnessSelection(repoRoot, input.platform, runnerProfile, input.harnessConfigPath ?? DEFAULT_HARNESS_CONFIG_PATH);
-  const deviceId = input.deviceId ?? selection.deviceId ?? buildDefaultDeviceId(input.platform);
-  const relativeOutputPath = input.outputPath ?? path.posix.join("artifacts", "ui-dumps", input.sessionId, `${input.platform}-${runnerProfile}.xml`);
+  const selection = await loadHarnessSelection(repoRoot, platform, runnerProfile, input.harnessConfigPath ?? DEFAULT_HARNESS_CONFIG_PATH);
+  const deviceId = input.deviceId ?? selection.deviceId ?? buildDefaultDeviceId(platform);
+  const relativeOutputPath = input.outputPath ?? path.posix.join("artifacts", "ui-dumps", input.sessionId, `${platform}-${runnerProfile}.xml`);
   const absoluteOutputPath = path.resolve(repoRoot, relativeOutputPath);
 
-  if (input.platform === "ios") {
-    const iosRelativeOutputPath = input.outputPath ?? path.posix.join("artifacts", "ui-dumps", input.sessionId, `${input.platform}-${runnerProfile}.json`);
+  if (platform === "ios") {
+    const iosRelativeOutputPath = input.outputPath ?? path.posix.join("artifacts", "ui-dumps", input.sessionId, `${platform}-${runnerProfile}.json`);
     const iosAbsoluteOutputPath = path.resolve(repoRoot, iosRelativeOutputPath);
     const idbCommand = buildIosUiDescribeCommand(deviceId);
 
@@ -5848,10 +6171,42 @@ export async function inspectUiWithMaestro(input: InspectUiInput): Promise<ToolR
 
 export async function queryUiWithMaestro(input: QueryUiInput): Promise<ToolResult<QueryUiData>> {
   const startTime = Date.now();
+  if (!input.platform) {
+    const runnerProfile = input.runnerProfile ?? DEFAULT_RUNNER_PROFILE;
+    const query = normalizeQueryUiSelector({
+      resourceId: input.resourceId,
+      contentDesc: input.contentDesc,
+      text: input.text,
+      className: input.className,
+      clickable: input.clickable,
+      limit: input.limit,
+    });
+    const outputPath = input.outputPath ?? path.posix.join("artifacts", "ui-dumps", input.sessionId, `unknown-${runnerProfile}.json`);
+    return {
+      status: "failed",
+      reasonCode: REASON_CODES.configurationError,
+      sessionId: input.sessionId,
+      durationMs: Date.now() - startTime,
+      attempts: 1,
+      artifacts: [],
+      data: {
+        dryRun: Boolean(input.dryRun),
+        runnerProfile,
+        outputPath,
+        query,
+        command: [],
+        exitCode: null,
+        result: { query, totalMatches: 0, matches: [] },
+        supportLevel: "partial",
+      },
+      nextSuggestions: ["Provide platform explicitly, or call query_ui with an active sessionId so MCP can resolve platform from session context."],
+    };
+  }
   const repoRoot = resolveRepoPath();
+  const platform = input.platform;
   const runnerProfile = input.runnerProfile ?? DEFAULT_RUNNER_PROFILE;
-  const selection = await loadHarnessSelection(repoRoot, input.platform, runnerProfile, input.harnessConfigPath ?? DEFAULT_HARNESS_CONFIG_PATH);
-  const deviceId = input.deviceId ?? selection.deviceId ?? buildDefaultDeviceId(input.platform);
+  const selection = await loadHarnessSelection(repoRoot, platform, runnerProfile, input.harnessConfigPath ?? DEFAULT_HARNESS_CONFIG_PATH);
+  const deviceId = input.deviceId ?? selection.deviceId ?? buildDefaultDeviceId(platform);
   const query = normalizeQueryUiSelector({
     resourceId: input.resourceId,
     contentDesc: input.contentDesc,
@@ -5872,19 +6227,19 @@ export async function queryUiWithMaestro(input: QueryUiInput): Promise<ToolResul
       data: {
         dryRun: Boolean(input.dryRun),
         runnerProfile,
-        outputPath: input.outputPath ?? path.posix.join("artifacts", "ui-dumps", input.sessionId, `${input.platform}-${runnerProfile}.${input.platform === "android" ? "xml" : "json"}`),
+        outputPath: input.outputPath ?? path.posix.join("artifacts", "ui-dumps", input.sessionId, `${platform}-${runnerProfile}.${platform === "android" ? "xml" : "json"}`),
         query,
         command: [],
         exitCode: null,
         result: { query, totalMatches: 0, matches: [] },
-        supportLevel: input.platform === "android" ? "full" : "partial",
+        supportLevel: platform === "android" ? "full" : "partial",
       },
       nextSuggestions: ["Provide at least one query selector: resourceId, contentDesc, text, className, or clickable."],
     };
   }
 
-  if (input.platform === "ios") {
-    const iosRelativeOutputPath = input.outputPath ?? path.posix.join("artifacts", "ui-dumps", input.sessionId, `${input.platform}-${runnerProfile}.json`);
+  if (platform === "ios") {
+    const iosRelativeOutputPath = input.outputPath ?? path.posix.join("artifacts", "ui-dumps", input.sessionId, `${platform}-${runnerProfile}.json`);
     const idbCommand = buildIosUiDescribeCommand(deviceId);
 
     if (input.dryRun) {
@@ -5909,7 +6264,7 @@ export async function queryUiWithMaestro(input: QueryUiInput): Promise<ToolResul
       };
     }
 
-    const snapshot = await captureIosUiSnapshot(repoRoot, deviceId, input.sessionId, runnerProfile, input.outputPath, { sessionId: input.sessionId, platform: input.platform, runnerProfile, harnessConfigPath: input.harnessConfigPath, deviceId, outputPath: input.outputPath, dryRun: false, ...query });
+    const snapshot = await captureIosUiSnapshot(repoRoot, deviceId, input.sessionId, runnerProfile, input.outputPath, { sessionId: input.sessionId, platform, runnerProfile, harnessConfigPath: input.harnessConfigPath, deviceId, outputPath: input.outputPath, dryRun: false, ...query });
     if (isIosUiSnapshotFailure(snapshot)) {
       return {
         status: "failed",
@@ -5961,7 +6316,7 @@ export async function queryUiWithMaestro(input: QueryUiInput): Promise<ToolResul
     };
   }
 
-  const relativeOutputPath = input.outputPath ?? path.posix.join("artifacts", "ui-dumps", input.sessionId, `${input.platform}-${runnerProfile}.xml`);
+  const relativeOutputPath = input.outputPath ?? path.posix.join("artifacts", "ui-dumps", input.sessionId, `${platform}-${runnerProfile}.xml`);
   const absoluteOutputPath = path.resolve(repoRoot, relativeOutputPath);
   const { dumpCommand, readCommand } = buildAndroidUiDumpCommands(deviceId);
   const command = [...dumpCommand, ...readCommand];
@@ -6055,12 +6410,25 @@ export async function queryUiWithMaestro(input: QueryUiInput): Promise<ToolResul
 
 export async function terminateAppWithMaestro(input: TerminateAppInput): Promise<ToolResult<TerminateAppData>> {
   const startTime = Date.now();
+  if (!input.platform) {
+    return {
+      status: "failed",
+      reasonCode: REASON_CODES.configurationError,
+      sessionId: input.sessionId,
+      durationMs: Date.now() - startTime,
+      attempts: 1,
+      artifacts: [],
+      data: { dryRun: Boolean(input.dryRun), runnerProfile: input.runnerProfile ?? DEFAULT_RUNNER_PROFILE, appId: input.appId ?? "", command: [], exitCode: null },
+      nextSuggestions: ["Provide platform explicitly, or call terminate_app with an active sessionId so MCP can resolve platform from session context."],
+    };
+  }
   const repoRoot = resolveRepoPath();
+  const platform = input.platform;
   const runnerProfile = input.runnerProfile ?? DEFAULT_RUNNER_PROFILE;
-  const selection = await loadHarnessSelection(repoRoot, input.platform, runnerProfile, input.harnessConfigPath ?? DEFAULT_HARNESS_CONFIG_PATH);
-  const deviceId = input.deviceId ?? selection.deviceId ?? buildDefaultDeviceId(input.platform);
+  const selection = await loadHarnessSelection(repoRoot, platform, runnerProfile, input.harnessConfigPath ?? DEFAULT_HARNESS_CONFIG_PATH);
+  const deviceId = input.deviceId ?? selection.deviceId ?? buildDefaultDeviceId(platform);
   const appId = input.appId ?? selection.appId;
-  const command = input.platform === "android"
+  const command = platform === "android"
     ? ["adb", "-s", deviceId, "shell", "am", "force-stop", appId]
     : ["xcrun", "simctl", "terminate", deviceId, appId];
 
@@ -6083,6 +6451,24 @@ export async function terminateAppWithMaestro(input: TerminateAppInput): Promise
 
 export async function takeScreenshotWithMaestro(input: ScreenshotInput): Promise<ToolResult<ScreenshotData>> {
   const startTime = Date.now();
+  if (!input.platform) {
+    return {
+      status: "failed",
+      reasonCode: REASON_CODES.configurationError,
+      sessionId: input.sessionId,
+      durationMs: Date.now() - startTime,
+      attempts: 1,
+      artifacts: [],
+      data: {
+        dryRun: Boolean(input.dryRun),
+        runnerProfile: input.runnerProfile ?? DEFAULT_RUNNER_PROFILE,
+        outputPath: input.outputPath ?? path.posix.join("artifacts", "screenshots", input.sessionId, "unknown.png"),
+        command: [],
+        exitCode: null,
+      },
+      nextSuggestions: ["Provide platform explicitly, or call take_screenshot with an active sessionId so MCP can resolve platform from session context."],
+    };
+  }
   const repoRoot = resolveRepoPath();
   const runnerProfile = input.runnerProfile ?? DEFAULT_RUNNER_PROFILE;
   const selection = await loadHarnessSelection(repoRoot, input.platform, runnerProfile, input.harnessConfigPath ?? DEFAULT_HARNESS_CONFIG_PATH);
@@ -6148,6 +6534,28 @@ export async function takeScreenshotWithMaestro(input: ScreenshotInput): Promise
 
 export async function recordScreenWithMaestro(input: RecordScreenInput): Promise<ToolResult<RecordScreenData>> {
   const startTime = Date.now();
+  if (!input.platform) {
+    return {
+      status: "failed",
+      reasonCode: REASON_CODES.configurationError,
+      sessionId: input.sessionId,
+      durationMs: Date.now() - startTime,
+      attempts: 1,
+      artifacts: [],
+      data: {
+        dryRun: Boolean(input.dryRun),
+        runnerProfile: input.runnerProfile ?? DEFAULT_RUNNER_PROFILE,
+        outputPath: input.outputPath ?? path.posix.join("artifacts", "screen-recordings", input.sessionId, "unknown.mp4"),
+        durationMs: normalizeRecordDurationMs(input.durationMs, "android"),
+        bitrateMbps: normalizeRecordBitrateMbps(input.bitrateMbps),
+        commandLabels: [],
+        commands: [],
+        exitCode: null,
+        supportLevel: "partial",
+      },
+      nextSuggestions: ["Provide platform explicitly, or call record_screen with an active sessionId so MCP can resolve platform from session context."],
+    };
+  }
   const repoRoot = resolveRepoPath();
   const runnerProfile = input.runnerProfile ?? DEFAULT_RUNNER_PROFILE;
   const selection = await loadHarnessSelection(repoRoot, input.platform, runnerProfile, input.harnessConfigPath ?? DEFAULT_HARNESS_CONFIG_PATH);
@@ -6307,17 +6715,40 @@ export async function recordScreenWithMaestro(input: RecordScreenInput): Promise
 
 export async function resetAppStateWithMaestro(input: ResetAppStateInput): Promise<ToolResult<ResetAppStateData>> {
   const startTime = Date.now();
+  if (!input.platform) {
+    return {
+      status: "failed",
+      reasonCode: REASON_CODES.configurationError,
+      sessionId: input.sessionId,
+      durationMs: Date.now() - startTime,
+      attempts: 1,
+      artifacts: [],
+      data: {
+        dryRun: Boolean(input.dryRun),
+        runnerProfile: input.runnerProfile ?? DEFAULT_RUNNER_PROFILE,
+        strategy: input.strategy ?? "clear_data",
+        appId: input.appId,
+        artifactPath: input.artifactPath,
+        commandLabels: [],
+        commands: [],
+        exitCode: null,
+        supportLevel: "full",
+      },
+      nextSuggestions: ["Provide platform explicitly, or call reset_app_state with an active sessionId so MCP can resolve platform from session context."],
+    };
+  }
   const repoRoot = resolveRepoPath();
+  const platform = input.platform;
   const runnerProfile = input.runnerProfile ?? DEFAULT_RUNNER_PROFILE;
-  const selection = await loadHarnessSelection(repoRoot, input.platform, runnerProfile, input.harnessConfigPath ?? DEFAULT_HARNESS_CONFIG_PATH);
-  const deviceId = input.deviceId ?? selection.deviceId ?? buildDefaultDeviceId(input.platform);
+  const selection = await loadHarnessSelection(repoRoot, platform, runnerProfile, input.harnessConfigPath ?? DEFAULT_HARNESS_CONFIG_PATH);
+  const deviceId = input.deviceId ?? selection.deviceId ?? buildDefaultDeviceId(platform);
   const appId = input.appId ?? selection.appId;
   const strategy: ResetAppStateStrategy = input.strategy ?? "clear_data";
   const artifactPath = resolveInstallArtifactPath(repoRoot, runnerProfile, input.artifactPath);
   const commandLabels: string[] = [];
   const commands: string[][] = [];
 
-  if (strategy === "keychain_reset" && input.platform === "android") {
+  if (strategy === "keychain_reset" && platform === "android") {
     return {
       status: "partial",
       reasonCode: REASON_CODES.unsupportedOperation,
@@ -6365,7 +6796,7 @@ export async function resetAppStateWithMaestro(input: ResetAppStateInput): Promi
   const targetAppId = appId ?? "";
 
   if (strategy === "clear_data") {
-    if (input.platform === "android") {
+    if (platform === "android") {
       commandLabels.push("clear_data");
       commands.push(["adb", "-s", deviceId, "shell", "pm", "clear", targetAppId]);
     } else {
@@ -6396,7 +6827,7 @@ export async function resetAppStateWithMaestro(input: ResetAppStateInput): Promi
       };
     }
     commandLabels.push("uninstall", "install");
-    if (input.platform === "android") {
+    if (platform === "android") {
       commands.push(["adb", "-s", deviceId, "uninstall", targetAppId]);
       commands.push(["adb", "-s", deviceId, "install", "-r", artifactPath]);
     } else {
@@ -6408,7 +6839,7 @@ export async function resetAppStateWithMaestro(input: ResetAppStateInput): Promi
     commands.push(["xcrun", "simctl", "keychain", deviceId, "reset"]);
   }
 
-  const supportLevel: "full" | "partial" = input.platform === "ios" && strategy === "keychain_reset" ? "partial" : "full";
+  const supportLevel: "full" | "partial" = platform === "ios" && strategy === "keychain_reset" ? "partial" : "full";
 
   if (input.dryRun) {
     return {
@@ -6483,6 +6914,31 @@ export async function resetAppStateWithMaestro(input: ResetAppStateInput): Promi
 
 export async function getLogsWithMaestro(input: GetLogsInput): Promise<ToolResult<GetLogsData>> {
   const startTime = Date.now();
+  if (!input.platform) {
+    return {
+      status: "failed",
+      reasonCode: REASON_CODES.configurationError,
+      sessionId: input.sessionId,
+      durationMs: Date.now() - startTime,
+      attempts: 1,
+      artifacts: [],
+      data: {
+        dryRun: Boolean(input.dryRun),
+        runnerProfile: input.runnerProfile ?? DEFAULT_RUNNER_PROFILE,
+        outputPath: input.outputPath ?? path.posix.join("artifacts", "logs", input.sessionId, "unknown.log"),
+        command: [],
+        exitCode: null,
+        supportLevel: "partial",
+        lineCount: 0,
+        linesRequested: input.lines,
+        sinceSeconds: input.sinceSeconds ?? 0,
+        appId: input.appId,
+        appFilterApplied: false,
+        query: input.query,
+      },
+      nextSuggestions: ["Provide platform explicitly, or call get_logs with an active sessionId so MCP can resolve platform from session context."],
+    };
+  }
   const repoRoot = resolveRepoPath();
   const runnerProfile = input.runnerProfile ?? DEFAULT_RUNNER_PROFILE;
   const selection = await loadHarnessSelection(repoRoot, input.platform, runnerProfile, input.harnessConfigPath ?? DEFAULT_HARNESS_CONFIG_PATH);
@@ -6581,6 +7037,29 @@ export async function getLogsWithMaestro(input: GetLogsInput): Promise<ToolResul
 
 export async function getCrashSignalsWithMaestro(input: GetCrashSignalsInput): Promise<ToolResult<GetCrashSignalsData>> {
   const startTime = Date.now();
+  if (!input.platform) {
+    return {
+      status: "failed",
+      reasonCode: REASON_CODES.configurationError,
+      sessionId: input.sessionId,
+      durationMs: Date.now() - startTime,
+      attempts: 1,
+      artifacts: [],
+      data: {
+        dryRun: Boolean(input.dryRun),
+        runnerProfile: input.runnerProfile ?? DEFAULT_RUNNER_PROFILE,
+        outputPath: input.outputPath ?? path.posix.join("artifacts", "crash-signals", input.sessionId, "unknown.log"),
+        commands: [],
+        exitCode: null,
+        supportLevel: "partial",
+        signalCount: 0,
+        linesRequested: input.lines,
+        appId: input.appId,
+        entries: [],
+      },
+      nextSuggestions: ["Provide platform explicitly, or call get_crash_signals with an active sessionId so MCP can resolve platform from session context."],
+    };
+  }
   const repoRoot = resolveRepoPath();
   const runnerProfile = input.runnerProfile ?? DEFAULT_RUNNER_PROFILE;
   const selection = await loadHarnessSelection(repoRoot, input.platform, runnerProfile, input.harnessConfigPath ?? DEFAULT_HARNESS_CONFIG_PATH);
@@ -6753,6 +7232,27 @@ export async function getCrashSignalsWithMaestro(input: GetCrashSignalsInput): P
 
 export async function collectDiagnosticsWithMaestro(input: CollectDiagnosticsInput): Promise<ToolResult<CollectDiagnosticsData>> {
   const startTime = Date.now();
+  if (!input.platform) {
+    return {
+      status: "failed",
+      reasonCode: REASON_CODES.configurationError,
+      sessionId: input.sessionId,
+      durationMs: Date.now() - startTime,
+      attempts: 1,
+      artifacts: [],
+      data: {
+        dryRun: Boolean(input.dryRun),
+        runnerProfile: input.runnerProfile ?? DEFAULT_RUNNER_PROFILE,
+        outputPath: input.outputPath ?? path.posix.join("artifacts", "diagnostics", input.sessionId, "unknown"),
+        commands: [],
+        exitCode: null,
+        supportLevel: "partial",
+        artifactCount: 0,
+        artifacts: [],
+      },
+      nextSuggestions: ["Provide platform explicitly, or call collect_diagnostics with an active sessionId so MCP can resolve platform from session context."],
+    };
+  }
   const repoRoot = resolveRepoPath();
   const runnerProfile = input.runnerProfile ?? DEFAULT_RUNNER_PROFILE;
   const selection = await loadHarnessSelection(repoRoot, input.platform, runnerProfile, input.harnessConfigPath ?? DEFAULT_HARNESS_CONFIG_PATH);
@@ -6842,6 +7342,30 @@ export async function collectDiagnosticsWithMaestro(input: CollectDiagnosticsInp
 
 export async function collectDebugEvidenceWithMaestro(input: CollectDebugEvidenceInput): Promise<ToolResult<CollectDebugEvidenceData>> {
   const startTime = Date.now();
+  if (!input.platform) {
+    return {
+      status: "failed",
+      reasonCode: REASON_CODES.configurationError,
+      sessionId: input.sessionId,
+      durationMs: Date.now() - startTime,
+      attempts: 1,
+      artifacts: [],
+      data: {
+        dryRun: Boolean(input.dryRun),
+        runnerProfile: input.runnerProfile ?? DEFAULT_RUNNER_PROFILE,
+        outputPath: input.outputPath ?? path.posix.join("artifacts", "debug-evidence", input.sessionId, "unknown.md"),
+        supportLevel: "partial",
+        appId: input.appId,
+        diagnosisBriefing: ["Missing platform context"],
+        suspectAreas: ["configuration"],
+        interestingSignals: [],
+        evidencePaths: [],
+        evidenceCount: 0,
+        narrative: ["Platform was not provided and could not be inferred from session context."],
+      },
+      nextSuggestions: ["Provide platform explicitly, or call collect_debug_evidence with an active sessionId so MCP can resolve platform from session context."],
+    };
+  }
   const repoRoot = resolveRepoPath();
   const runnerProfile = input.runnerProfile ?? DEFAULT_RUNNER_PROFILE;
   const selection = await loadHarnessSelection(repoRoot, input.platform, runnerProfile, input.harnessConfigPath ?? DEFAULT_HARNESS_CONFIG_PATH);
@@ -7854,19 +8378,32 @@ export async function measureIosPerformanceWithMaestro(input: MeasureIosPerforma
 
 export async function launchAppWithMaestro(input: LaunchAppInput): Promise<ToolResult<LaunchAppData>> {
   const startTime = Date.now();
+  if (!input.platform) {
+    return {
+      status: "failed",
+      reasonCode: REASON_CODES.configurationError,
+      sessionId: input.sessionId,
+      durationMs: Date.now() - startTime,
+      attempts: 1,
+      artifacts: [],
+      data: { dryRun: Boolean(input.dryRun), runnerProfile: input.runnerProfile ?? DEFAULT_RUNNER_PROFILE, appId: input.appId ?? "", launchUrl: input.launchUrl, launchCommand: [], exitCode: null },
+      nextSuggestions: ["Provide platform explicitly, or call launch_app with an active sessionId so MCP can resolve platform from session context."],
+    };
+  }
   const repoRoot = resolveRepoPath();
+  const platform = input.platform;
   const runnerProfile = input.runnerProfile ?? DEFAULT_RUNNER_PROFILE;
-  const selection = await loadHarnessSelection(repoRoot, input.platform, runnerProfile, input.harnessConfigPath ?? DEFAULT_HARNESS_CONFIG_PATH);
-  const deviceId = input.deviceId ?? selection.deviceId ?? buildDefaultDeviceId(input.platform);
+  const selection = await loadHarnessSelection(repoRoot, platform, runnerProfile, input.harnessConfigPath ?? DEFAULT_HARNESS_CONFIG_PATH);
+  const deviceId = input.deviceId ?? selection.deviceId ?? buildDefaultDeviceId(platform);
   const appId = input.appId ?? selection.appId;
   const launchUrl = input.launchUrl ?? selection.launchUrl;
 
   const launchCommand =
     runnerProfile === "phase1"
-      ? input.platform === "android"
+      ? platform === "android"
         ? ["adb", "-s", deviceId, "shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", launchUrl ?? "", appId]
         : ["xcrun", "simctl", "openurl", deviceId, launchUrl ?? ""]
-      : input.platform === "android"
+      : platform === "android"
         ? ["adb", "-s", deviceId, "shell", "monkey", "-p", appId, "-c", "android.intent.category.LAUNCHER", "1"]
         : ["xcrun", "simctl", "launch", deviceId, appId];
 
@@ -7911,7 +8448,26 @@ export async function launchAppWithMaestro(input: LaunchAppInput): Promise<ToolR
 
 export async function installAppWithMaestro(input: InstallAppInput): Promise<ToolResult<InstallAppData>> {
   const startTime = Date.now();
+  if (!input.platform) {
+    return {
+      status: "failed",
+      reasonCode: REASON_CODES.configurationError,
+      sessionId: input.sessionId,
+      durationMs: Date.now() - startTime,
+      attempts: 1,
+      artifacts: [],
+      data: {
+        dryRun: Boolean(input.dryRun),
+        runnerProfile: input.runnerProfile ?? DEFAULT_RUNNER_PROFILE,
+        artifactPath: input.artifactPath,
+        installCommand: [],
+        exitCode: null,
+      },
+      nextSuggestions: ["Provide platform explicitly, or call install_app with an active sessionId so MCP can resolve platform from session context."],
+    };
+  }
   const repoRoot = resolveRepoPath();
+  const platform = input.platform;
   const runnerProfile = input.runnerProfile ?? DEFAULT_RUNNER_PROFILE;
 
   if (runnerProfile === "phase1") {
@@ -7933,9 +8489,9 @@ export async function installAppWithMaestro(input: InstallAppInput): Promise<Too
   }
 
   const artifactPath = resolveInstallArtifactPath(repoRoot, runnerProfile, input.artifactPath);
-  const selection = await loadHarnessSelection(repoRoot, input.platform, runnerProfile, input.harnessConfigPath ?? DEFAULT_HARNESS_CONFIG_PATH);
+  const selection = await loadHarnessSelection(repoRoot, platform, runnerProfile, input.harnessConfigPath ?? DEFAULT_HARNESS_CONFIG_PATH);
   const installCommand =
-    input.platform === "android"
+    platform === "android"
       ? ["adb", "-s", input.deviceId ?? selection.deviceId ?? DEFAULT_ANDROID_DEVICE_ID, "install", "-r", artifactPath ?? ""]
       : ["xcrun", "simctl", "install", input.deviceId ?? selection.deviceId ?? DEFAULT_IOS_SIMULATOR_UDID, artifactPath ?? ""];
 

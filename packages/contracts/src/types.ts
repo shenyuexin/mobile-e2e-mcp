@@ -461,7 +461,7 @@ export interface QueryUiData {
 }
 export interface GetLogsInput {
   sessionId: string;
-  platform: Platform;
+  platform?: Platform;
   runnerProfile?: RunnerProfile;
   harnessConfigPath?: string;
   deviceId?: string;
@@ -503,7 +503,7 @@ export interface GetLogsData {
 }
 export interface GetCrashSignalsInput {
   sessionId: string;
-  platform: Platform;
+  platform?: Platform;
   runnerProfile?: RunnerProfile;
   harnessConfigPath?: string;
   deviceId?: string;
@@ -529,7 +529,7 @@ export interface GetCrashSignalsData {
 }
 export interface CollectDiagnosticsInput {
   sessionId: string;
-  platform: Platform;
+  platform?: Platform;
   runnerProfile?: RunnerProfile;
   harnessConfigPath?: string;
   deviceId?: string;
@@ -549,7 +549,7 @@ export interface CollectDiagnosticsData {
 }
 export interface CollectDebugEvidenceInput {
   sessionId: string;
-  platform: Platform;
+  platform?: Platform;
   runnerProfile?: RunnerProfile;
   harnessConfigPath?: string;
   deviceId?: string;
@@ -841,7 +841,7 @@ export interface DescribeCapabilitiesData {
 }
 export interface GetScreenSummaryInput {
   sessionId: string;
-  platform: Platform;
+  platform?: Platform;
   runnerProfile?: RunnerProfile;
   harnessConfigPath?: string;
   deviceId?: string;
@@ -1071,17 +1071,17 @@ export interface SuggestKnownRemediationData {
   actionId?: string;
   remediation: string[];
 }
-export interface InspectUiInput { sessionId: string; platform: Platform; runnerProfile?: RunnerProfile; harnessConfigPath?: string; deviceId?: string; outputPath?: string; dryRun?: boolean; }
+export interface InspectUiInput { sessionId: string; platform?: Platform; runnerProfile?: RunnerProfile; harnessConfigPath?: string; deviceId?: string; outputPath?: string; dryRun?: boolean; }
 export interface InspectUiQueryInput extends InspectUiInput, InspectUiQuery {}
 export interface QueryUiInput extends InspectUiQueryInput {}
-export interface InstallAppInput { sessionId: string; platform: Platform; runnerProfile?: RunnerProfile; harnessConfigPath?: string; artifactPath?: string; deviceId?: string; dryRun?: boolean; }
-export interface LaunchAppInput { sessionId: string; platform: Platform; runnerProfile?: RunnerProfile; harnessConfigPath?: string; deviceId?: string; appId?: string; launchUrl?: string; dryRun?: boolean; }
+export interface InstallAppInput { sessionId: string; platform?: Platform; runnerProfile?: RunnerProfile; harnessConfigPath?: string; artifactPath?: string; deviceId?: string; dryRun?: boolean; }
+export interface LaunchAppInput { sessionId: string; platform?: Platform; runnerProfile?: RunnerProfile; harnessConfigPath?: string; deviceId?: string; appId?: string; launchUrl?: string; dryRun?: boolean; }
 export interface ListDevicesInput { includeUnavailable?: boolean; }
-export interface ScreenshotInput { sessionId: string; platform: Platform; runnerProfile?: RunnerProfile; harnessConfigPath?: string; deviceId?: string; outputPath?: string; dryRun?: boolean; }
+export interface ScreenshotInput { sessionId: string; platform?: Platform; runnerProfile?: RunnerProfile; harnessConfigPath?: string; deviceId?: string; outputPath?: string; dryRun?: boolean; }
 export type ResetAppStateStrategy = "clear_data" | "uninstall_reinstall" | "keychain_reset";
 export interface ResetAppStateInput {
   sessionId: string;
-  platform: Platform;
+  platform?: Platform;
   runnerProfile?: RunnerProfile;
   harnessConfigPath?: string;
   deviceId?: string;
@@ -1103,7 +1103,7 @@ export interface ResetAppStateData {
 }
 export interface RecordScreenInput {
   sessionId: string;
-  platform: Platform;
+  platform?: Platform;
   runnerProfile?: RunnerProfile;
   harnessConfigPath?: string;
   deviceId?: string;
@@ -1124,12 +1124,12 @@ export interface RecordScreenData {
   supportLevel: "full" | "partial";
   evidence?: ExecutionEvidence[];
 }
-export interface TapInput { sessionId: string; platform: Platform; runnerProfile?: RunnerProfile; harnessConfigPath?: string; deviceId?: string; x: number; y: number; dryRun?: boolean; }
-export interface TerminateAppInput { sessionId: string; platform: Platform; runnerProfile?: RunnerProfile; harnessConfigPath?: string; deviceId?: string; appId?: string; dryRun?: boolean; }
-export interface TypeTextInput { sessionId: string; platform: Platform; runnerProfile?: RunnerProfile; harnessConfigPath?: string; deviceId?: string; text: string; dryRun?: boolean; }
+export interface TapInput { sessionId: string; platform?: Platform; runnerProfile?: RunnerProfile; harnessConfigPath?: string; deviceId?: string; x: number; y: number; dryRun?: boolean; }
+export interface TerminateAppInput { sessionId: string; platform?: Platform; runnerProfile?: RunnerProfile; harnessConfigPath?: string; deviceId?: string; appId?: string; dryRun?: boolean; }
+export interface TypeTextInput { sessionId: string; platform?: Platform; runnerProfile?: RunnerProfile; harnessConfigPath?: string; deviceId?: string; text: string; dryRun?: boolean; }
 export interface TapElementInput extends InspectUiQuery {
   sessionId: string;
-  platform: Platform;
+  platform?: Platform;
   runnerProfile?: RunnerProfile;
   harnessConfigPath?: string;
   deviceId?: string;
@@ -1165,6 +1165,7 @@ export interface ResolveUiTargetData {
   summary?: InspectUiSummary;
 }
 export interface TypeIntoElementInput extends InspectUiQueryInput {
+  platform?: Platform;
   value: string;
 }
 export interface TypeIntoElementData {
@@ -1233,6 +1234,7 @@ export interface WaitForUiData {
 }
 export type UiScrollDirection = "up" | "down";
 export interface ScrollAndResolveUiTargetInput extends ResolveUiTargetInput {
+  platform?: Platform;
   maxSwipes?: number;
   swipeDirection?: UiScrollDirection;
   swipeDurationMs?: number;
@@ -1254,6 +1256,6 @@ export interface ScrollAndResolveUiTargetData {
   content?: string;
   summary?: InspectUiSummary;
 }
-export interface RunFlowInput { sessionId: string; platform: Platform; runnerProfile?: RunnerProfile; flowPath?: string; harnessConfigPath?: string; runnerScript?: string; runCount?: number; dryRun?: boolean; artifactRoot?: string; deviceId?: string; appId?: string; launchUrl?: string; env?: Record<string, string>; }
+export interface RunFlowInput { sessionId: string; platform?: Platform; runnerProfile?: RunnerProfile; flowPath?: string; harnessConfigPath?: string; runnerScript?: string; runCount?: number; dryRun?: boolean; artifactRoot?: string; deviceId?: string; appId?: string; launchUrl?: string; env?: Record<string, string>; }
 export interface StartSessionInput { platform: Platform; sessionId?: string; deviceId?: string; appId?: string; policyProfile?: string; phase?: string | null; profile?: RunnerProfile | null; sampleName?: string | null; artifactsRoot?: string; harnessConfigPath?: string; }
 export interface EndSessionInput { sessionId: string; artifacts?: string[]; }
