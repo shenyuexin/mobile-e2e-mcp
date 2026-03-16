@@ -1,4 +1,9 @@
-import type { ActionIntent, AndroidPerformancePreset, CaptureJsConsoleLogsInput, CaptureJsNetworkEventsInput, CollectDebugEvidenceInput, CollectDiagnosticsInput, CompareAgainstBaselineInput, DescribeCapabilitiesInput, DoctorInput, ExplainLastFailureInput, FindSimilarFailuresInput, GetActionOutcomeInput, GetCrashSignalsInput, GetLogsInput, GetScreenSummaryInput, GetSessionStateInput, InspectUiInput, InstallAppInput, IosPerformanceTemplate, LaunchAppInput, ListDevicesInput, ListJsDebugTargetsInput, MeasureAndroidPerformanceInput, MeasureIosPerformanceInput, PerformActionWithEvidenceInput, Platform, QueryUiInput, RankFailureCandidatesInput, RecordScreenInput, RecoverToKnownStateInput, ReplayLastStablePathInput, ResetAppStateInput, ResetAppStateStrategy, ResolveUiTargetInput, RunFlowInput, RunnerProfile, ScreenshotInput, ScrollAndResolveUiTargetInput, ScrollAndTapElementInput, StartSessionInput, SuggestKnownRemediationInput, TapElementInput, TapInput, TerminateAppInput, TypeTextInput, TypeIntoElementInput, UiScrollDirection, WaitForUiInput, WaitForUiMode } from "@mobile-e2e-mcp/contracts";
+import type { ActionIntent, AndroidPerformancePreset, CaptureJsConsoleLogsInput, CaptureJsNetworkEventsInput, CollectDebugEvidenceInput, CollectDiagnosticsInput, CompareAgainstBaselineInput, DescribeCapabilitiesInput, DoctorInput, ExplainLastFailureInput, FindSimilarFailuresInput, GetActionOutcomeInput, GetCrashSignalsInput, GetLogsInput, GetScreenSummaryInput, GetSessionStateInput, InspectUiInput, InstallAppInput, IosPerformanceTemplate, LaunchAppInput, ListDevicesInput, ListJsDebugTargetsInput, MeasureAndroidPerformanceInput, MeasureIosPerformanceInput, PerformActionWithEvidenceInput, Platform, QueryUiInput, RankFailureCandidatesInput, RecordScreenInput, RecoverToKnownStateInput, ReplayLastStablePathInput, ResetAppStateInput, ResetAppStateStrategy, ResolveUiTargetInput, RunFlowInput, RunnerProfile, ScreenshotInput, ScrollAndResolveUiTargetInput, ScrollAndTapElementInput, StartSessionInput, SuggestKnownRemediationInput, TapElementInput, TapInput, TerminateAppInput, ToolResult, TypeTextInput, TypeIntoElementInput, UiScrollDirection, WaitForUiInput, WaitForUiMode } from "@mobile-e2e-mcp/contracts";
+import { REASON_CODES } from "@mobile-e2e-mcp/contracts";
+import { loadSessionRecord } from "@mobile-e2e-mcp/core";
+import { resolveRepoPath } from "@mobile-e2e-mcp/adapter-maestro";
+import { readdir } from "node:fs/promises";
+import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 import { createServer } from "./index.js";
@@ -91,6 +96,9 @@ interface CliOptions {
   maxSwipes?: number;
   swipeDirection?: UiScrollDirection;
   swipeDurationMs?: number;
+  platformProvided: boolean;
+  useContextAlias: boolean;
+  presetName?: "quick_debug_ios" | "quick_e2e_android" | "crash_triage_android";
 }
 
 const RUNNER_PROFILES: RunnerProfile[] = ["phase1", "native_android", "native_ios", "flutter_android"];
@@ -105,8 +113,509 @@ function parseBooleanArg(value: string | undefined): boolean | undefined {
   return undefined;
 }
 
+type ResolvedFrom = "explicit" | "session" | "default";
+interface ResolvedContextMeta {
+  platform: ResolvedFrom;
+  deviceId: ResolvedFrom;
+  appId: ResolvedFrom;
+  runnerProfile: ResolvedFrom;
+}
+
+interface ContextAliasResult {
+  ok: boolean;
+  sessionId?: string;
+  resolvedContext?: ResolvedContextMeta;
+  errorResult?: ToolResult<{ resolvedContext?: ResolvedContextMeta }>;
+}
+
+interface ActiveSessionCandidate {
+  sessionId: string;
+  platform: Platform;
+  deviceId: string;
+  appId: string;
+  profile: RunnerProfile | null;
+}
+
+async function listActiveSessionCandidates(repoRoot: string): Promise<ActiveSessionCandidate[]> {
+  const sessionsDir = path.resolve(repoRoot, "artifacts", "sessions");
+  try {
+    const entries = await readdir(sessionsDir, { withFileTypes: true });
+    const candidates: ActiveSessionCandidate[] = [];
+    for (const entry of entries) {
+      if (!entry.isFile() || !entry.name.endsWith(".json")) {
+        continue;
+      }
+      const sessionId = entry.name.slice(0, -".json".length);
+      const record = await loadSessionRecord(repoRoot, sessionId);
+      if (!record || record.closed) {
+        continue;
+      }
+      candidates.push({
+        sessionId,
+        platform: record.session.platform,
+        deviceId: record.session.deviceId,
+        appId: record.session.appId,
+        profile: record.session.profile ?? null,
+      });
+    }
+    return candidates;
+  } catch {
+    return [];
+  }
+}
+
+function buildContextAliasError(sessionId: string, detail: string, nextSuggestions: string[]): ToolResult<{ resolvedContext?: ResolvedContextMeta }> {
+  return {
+    status: "failed",
+    reasonCode: REASON_CODES.configurationError,
+    sessionId,
+    durationMs: 0,
+    attempts: 1,
+    artifacts: [],
+    data: {},
+    nextSuggestions: [detail, ...nextSuggestions],
+  };
+}
+
+async function applyContextAlias(cliOptions: CliOptions): Promise<ContextAliasResult> {
+  const resolvedContext: ResolvedContextMeta = {
+    platform: cliOptions.platformProvided ? "explicit" : "default",
+    deviceId: cliOptions.deviceId ? "explicit" : "default",
+    appId: cliOptions.appId ? "explicit" : "default",
+    runnerProfile: cliOptions.runnerProfile ? "explicit" : "default",
+  };
+
+  if (!cliOptions.useContextAlias) {
+    return { ok: true, sessionId: cliOptions.sessionId, resolvedContext };
+  }
+
+  const repoRoot = resolveRepoPath();
+  let targetSessionId = cliOptions.sessionId;
+
+  if (!targetSessionId && cliOptions.presetName) {
+    const candidates = await listActiveSessionCandidates(repoRoot);
+    const platformCandidates = cliOptions.platformProvided
+      ? candidates.filter((candidate) => candidate.platform === cliOptions.platform)
+      : candidates;
+    if (platformCandidates.length === 1) {
+      targetSessionId = platformCandidates[0].sessionId;
+    } else if (platformCandidates.length > 1) {
+      return {
+        ok: false,
+        errorResult: buildContextAliasError(
+          `context-alias-${Date.now()}`,
+          "Multiple active sessions matched context alias resolution.",
+          ["Pass --session-id explicitly or close extra sessions with end_session before retrying."],
+        ),
+      };
+    }
+  }
+
+  if (!targetSessionId) {
+    return { ok: true, sessionId: undefined, resolvedContext };
+  }
+
+  const sessionRecord = await loadSessionRecord(repoRoot, targetSessionId);
+  if (!sessionRecord || sessionRecord.closed) {
+    return { ok: true, sessionId: targetSessionId, resolvedContext };
+  }
+
+  if (!cliOptions.platformProvided) {
+    cliOptions.platform = sessionRecord.session.platform;
+    resolvedContext.platform = "session";
+  }
+  if (!cliOptions.deviceId) {
+    cliOptions.deviceId = sessionRecord.session.deviceId;
+    resolvedContext.deviceId = "session";
+  }
+  if (!cliOptions.appId) {
+    cliOptions.appId = sessionRecord.session.appId;
+    resolvedContext.appId = "session";
+  }
+  if (!cliOptions.runnerProfile && sessionRecord.session.profile) {
+    cliOptions.runnerProfile = sessionRecord.session.profile;
+    resolvedContext.runnerProfile = "session";
+  }
+
+  cliOptions.sessionId = targetSessionId;
+  return { ok: true, sessionId: targetSessionId, resolvedContext };
+}
+
+type PresetName = NonNullable<CliOptions["presetName"]>;
+type PresetStepTool = "start_session" | "get_screen_summary" | "get_logs" | "get_crash_signals" | "collect_debug_evidence" | "launch_app" | "query_ui" | "tap_element" | "wait_for_ui" | "take_screenshot" | "explain_last_failure" | "rank_failure_candidates" | "suggest_known_remediation";
+
+interface PresetStep {
+  tool: PresetStepTool;
+  onFailure?: "stop" | "continue";
+}
+
+interface PresetDefinition {
+  platform: Platform;
+  stopOnFailure: boolean;
+  steps: PresetStep[];
+}
+
+const PRESETS: Record<PresetName, PresetDefinition> = {
+  quick_debug_ios: {
+    platform: "ios",
+    stopOnFailure: true,
+    steps: [
+      { tool: "start_session" },
+      { tool: "get_screen_summary" },
+      { tool: "get_logs" },
+      { tool: "get_crash_signals" },
+      { tool: "collect_debug_evidence" },
+    ],
+  },
+  quick_e2e_android: {
+    platform: "android",
+    stopOnFailure: true,
+    steps: [
+      { tool: "start_session" },
+      { tool: "launch_app" },
+      { tool: "query_ui" },
+      { tool: "tap_element" },
+      { tool: "wait_for_ui" },
+      { tool: "take_screenshot" },
+    ],
+  },
+  crash_triage_android: {
+    platform: "android",
+    stopOnFailure: true,
+    steps: [
+      { tool: "get_crash_signals" },
+      { tool: "explain_last_failure" },
+      { tool: "rank_failure_candidates" },
+      { tool: "suggest_known_remediation" },
+    ],
+  },
+};
+
+interface PresetStepResult {
+  tool: PresetStepTool;
+  status: ToolResult["status"];
+  reasonCode: ToolResult["reasonCode"];
+  artifacts: string[];
+  nextSuggestions: string[];
+}
+
+function pushArtifacts(target: string[], source: string[]): void {
+  for (const item of source) {
+    if (!target.includes(item)) {
+      target.push(item);
+    }
+  }
+}
+
+function defaultSelector(cliOptions: CliOptions): { resourceId?: string; contentDesc?: string; text?: string; className?: string; clickable?: boolean; limit?: number } {
+  return {
+    resourceId: cliOptions.queryResourceId,
+    contentDesc: cliOptions.queryContentDesc ?? "View products",
+    text: cliOptions.queryText ?? cliOptions.text,
+    className: cliOptions.queryClassName,
+    clickable: cliOptions.queryClickable,
+    limit: cliOptions.queryLimit,
+  };
+}
+
+async function invokePresetStep(
+  server: ReturnType<typeof createServer>,
+  tool: PresetStepTool,
+  cliOptions: CliOptions,
+  sessionId: string,
+): Promise<ToolResult> {
+  const selector = defaultSelector(cliOptions);
+  if (tool === "start_session") {
+    return server.invoke("start_session", {
+      platform: cliOptions.platform,
+      profile: cliOptions.runnerProfile ?? null,
+      policyProfile: cliOptions.policyProfile,
+      harnessConfigPath: cliOptions.harnessConfigPath,
+      sessionId,
+      deviceId: cliOptions.deviceId,
+      appId: cliOptions.appId,
+    } satisfies StartSessionInput);
+  }
+  if (tool === "get_screen_summary") {
+    return server.invoke("get_screen_summary", {
+      sessionId,
+      platform: cliOptions.platform,
+      runnerProfile: cliOptions.runnerProfile,
+      harnessConfigPath: cliOptions.harnessConfigPath,
+      deviceId: cliOptions.deviceId,
+      appId: cliOptions.appId,
+      outputPath: cliOptions.outputPath,
+      dryRun: cliOptions.dryRun,
+    } satisfies GetScreenSummaryInput);
+  }
+  if (tool === "get_logs") {
+    return server.invoke("get_logs", {
+      sessionId,
+      platform: cliOptions.platform,
+      runnerProfile: cliOptions.runnerProfile,
+      harnessConfigPath: cliOptions.harnessConfigPath,
+      deviceId: cliOptions.deviceId,
+      appId: cliOptions.appId,
+      outputPath: cliOptions.outputPath,
+      lines: cliOptions.lines,
+      sinceSeconds: cliOptions.sinceSeconds,
+      query: cliOptions.queryText ?? cliOptions.text,
+      dryRun: cliOptions.dryRun,
+    } satisfies GetLogsInput);
+  }
+  if (tool === "get_crash_signals") {
+    return server.invoke("get_crash_signals", {
+      sessionId,
+      platform: cliOptions.platform,
+      runnerProfile: cliOptions.runnerProfile,
+      harnessConfigPath: cliOptions.harnessConfigPath,
+      deviceId: cliOptions.deviceId,
+      appId: cliOptions.appId,
+      outputPath: cliOptions.outputPath,
+      lines: cliOptions.lines,
+      dryRun: cliOptions.dryRun,
+    } satisfies GetCrashSignalsInput);
+  }
+  if (tool === "collect_debug_evidence") {
+    return server.invoke("collect_debug_evidence", {
+      sessionId,
+      platform: cliOptions.platform,
+      runnerProfile: cliOptions.runnerProfile,
+      harnessConfigPath: cliOptions.harnessConfigPath,
+      deviceId: cliOptions.deviceId,
+      appId: cliOptions.appId,
+      metroBaseUrl: cliOptions.metroBaseUrl,
+      outputPath: cliOptions.outputPath,
+      logLines: cliOptions.lines,
+      targetId: cliOptions.targetId,
+      webSocketDebuggerUrl: cliOptions.webSocketDebuggerUrl,
+      includeJsInspector: true,
+      jsInspectorTimeoutMs: cliOptions.jsInspectorTimeoutMs,
+      sinceSeconds: cliOptions.sinceSeconds,
+      query: cliOptions.queryText ?? cliOptions.text,
+      includeDiagnostics: cliOptions.includeDiagnostics,
+      dryRun: cliOptions.dryRun,
+    } satisfies CollectDebugEvidenceInput);
+  }
+  if (tool === "launch_app") {
+    return server.invoke("launch_app", {
+      sessionId,
+      platform: cliOptions.platform,
+      runnerProfile: cliOptions.runnerProfile,
+      harnessConfigPath: cliOptions.harnessConfigPath,
+      deviceId: cliOptions.deviceId,
+      appId: cliOptions.appId,
+      launchUrl: cliOptions.launchUrl,
+      dryRun: cliOptions.dryRun,
+    } satisfies LaunchAppInput);
+  }
+  if (tool === "query_ui") {
+    return server.invoke("query_ui", {
+      sessionId,
+      platform: cliOptions.platform,
+      runnerProfile: cliOptions.runnerProfile,
+      harnessConfigPath: cliOptions.harnessConfigPath,
+      deviceId: cliOptions.deviceId,
+      outputPath: cliOptions.outputPath,
+      ...selector,
+      dryRun: cliOptions.dryRun,
+    } satisfies QueryUiInput);
+  }
+  if (tool === "tap_element") {
+    return server.invoke("tap_element", {
+      sessionId,
+      platform: cliOptions.platform,
+      runnerProfile: cliOptions.runnerProfile,
+      harnessConfigPath: cliOptions.harnessConfigPath,
+      deviceId: cliOptions.deviceId,
+      ...selector,
+      dryRun: cliOptions.dryRun,
+    } satisfies TapElementInput);
+  }
+  if (tool === "wait_for_ui") {
+    return server.invoke("wait_for_ui", {
+      sessionId,
+      platform: cliOptions.platform,
+      runnerProfile: cliOptions.runnerProfile,
+      harnessConfigPath: cliOptions.harnessConfigPath,
+      deviceId: cliOptions.deviceId,
+      outputPath: cliOptions.outputPath,
+      ...selector,
+      timeoutMs: cliOptions.timeoutMs,
+      intervalMs: cliOptions.intervalMs,
+      waitUntil: cliOptions.waitUntil,
+      dryRun: cliOptions.dryRun,
+    } satisfies WaitForUiInput);
+  }
+  if (tool === "take_screenshot") {
+    return server.invoke("take_screenshot", {
+      sessionId,
+      platform: cliOptions.platform,
+      runnerProfile: cliOptions.runnerProfile,
+      harnessConfigPath: cliOptions.harnessConfigPath,
+      deviceId: cliOptions.deviceId,
+      outputPath: cliOptions.outputPath,
+      dryRun: cliOptions.dryRun,
+    } satisfies ScreenshotInput);
+  }
+  if (tool === "explain_last_failure") {
+    return server.invoke("explain_last_failure", { sessionId } satisfies ExplainLastFailureInput);
+  }
+  if (tool === "rank_failure_candidates") {
+    return server.invoke("rank_failure_candidates", { sessionId } satisfies RankFailureCandidatesInput);
+  }
+  return server.invoke("suggest_known_remediation", { sessionId, actionId: cliOptions.actionId } satisfies SuggestKnownRemediationInput);
+}
+
+async function executePreset(
+  server: ReturnType<typeof createServer>,
+  cliOptions: CliOptions,
+  presetName: PresetName,
+  resolvedContext?: ResolvedContextMeta,
+): Promise<ToolResult<{ presetName: PresetName; overallStatus: ToolResult["status"]; steps: PresetStepResult[]; resolvedContext?: ResolvedContextMeta }>> {
+  const preset = PRESETS[presetName];
+  if (!preset) {
+    return {
+      status: "failed",
+      reasonCode: REASON_CODES.configurationError,
+      sessionId: `preset-${Date.now()}`,
+      durationMs: 0,
+      attempts: 1,
+      artifacts: [],
+      data: { presetName, overallStatus: "failed", steps: [], resolvedContext },
+      nextSuggestions: ["Unknown preset-name. Use one of quick_debug_ios, quick_e2e_android, crash_triage_android."],
+    };
+  }
+
+  const includesStartSession = preset.steps.some((step) => step.tool === "start_session");
+  if (includesStartSession && cliOptions.sessionId) {
+    return {
+      status: "failed",
+      reasonCode: REASON_CODES.configurationError,
+      sessionId: cliOptions.sessionId,
+      durationMs: 0,
+      attempts: 1,
+      artifacts: [],
+      data: { presetName, overallStatus: "failed", steps: [], resolvedContext },
+      nextSuggestions: [
+        `Preset ${presetName} includes start_session and cannot reuse an explicit --session-id.`,
+        "Remove --session-id for this preset, or run atomic tools directly on the existing session.",
+      ],
+    };
+  }
+
+  if (cliOptions.sessionId) {
+    const repoRoot = resolveRepoPath();
+    const sessionRecord = await loadSessionRecord(repoRoot, cliOptions.sessionId);
+    if (sessionRecord && !sessionRecord.closed && sessionRecord.session.platform !== preset.platform) {
+      return {
+        status: "failed",
+        reasonCode: REASON_CODES.configurationError,
+        sessionId: cliOptions.sessionId,
+        durationMs: 0,
+        attempts: 1,
+        artifacts: [],
+        data: { presetName, overallStatus: "failed", steps: [], resolvedContext },
+        nextSuggestions: [
+          `Preset ${presetName} requires platform ${preset.platform}, but session '${cliOptions.sessionId}' is ${sessionRecord.session.platform}.`,
+          "Use a matching session/platform pair or omit --session-id so preset can initialize context.",
+        ],
+      };
+    }
+  }
+
+  if (!cliOptions.platformProvided) {
+    cliOptions.platform = preset.platform;
+  } else if (cliOptions.platform !== preset.platform) {
+    return {
+      status: "failed",
+      reasonCode: REASON_CODES.configurationError,
+      sessionId: cliOptions.sessionId ?? `preset-${Date.now()}`,
+      durationMs: 0,
+      attempts: 1,
+      artifacts: [],
+      data: { presetName, overallStatus: "failed", steps: [], resolvedContext },
+      nextSuggestions: [`Preset ${presetName} requires platform ${preset.platform}.`],
+    };
+  }
+
+  const startTime = Date.now();
+  let sessionId = cliOptions.sessionId ?? `${presetName}-${Date.now()}`;
+  const steps: PresetStepResult[] = [];
+  const artifacts: string[] = [];
+  let overallStatus: ToolResult["status"] = "success";
+  let firstFailureReasonCode: ToolResult["reasonCode"] = REASON_CODES.ok;
+  const nextSuggestions: string[] = [];
+
+  for (const step of preset.steps) {
+    const result = await invokePresetStep(server, step.tool, cliOptions, sessionId);
+    if (step.tool === "start_session" && result.status === "success") {
+      const sessionData = result.data as { sessionId?: string; deviceId?: string; appId?: string; profile?: RunnerProfile | null };
+      if (sessionData.sessionId) {
+        sessionId = sessionData.sessionId;
+        cliOptions.sessionId = sessionData.sessionId;
+      }
+      if (!cliOptions.deviceId && sessionData.deviceId) {
+        cliOptions.deviceId = sessionData.deviceId;
+      }
+      if (!cliOptions.appId && sessionData.appId) {
+        cliOptions.appId = sessionData.appId;
+      }
+      if (!cliOptions.runnerProfile && sessionData.profile) {
+        cliOptions.runnerProfile = sessionData.profile;
+      }
+    }
+
+    pushArtifacts(artifacts, result.artifacts);
+    if (result.nextSuggestions.length > 0) {
+      pushArtifacts(nextSuggestions, result.nextSuggestions);
+    }
+    steps.push({
+      tool: step.tool,
+      status: result.status,
+      reasonCode: result.reasonCode,
+      artifacts: result.artifacts,
+      nextSuggestions: result.nextSuggestions,
+    });
+
+    if (result.status === "failed") {
+      overallStatus = "failed";
+      if (firstFailureReasonCode === REASON_CODES.ok) {
+        firstFailureReasonCode = result.reasonCode;
+      }
+      if ((step.onFailure ?? (preset.stopOnFailure ? "stop" : "continue")) === "stop") {
+        break;
+      }
+    } else if (result.status === "partial" && overallStatus === "success") {
+      overallStatus = "partial";
+      if (firstFailureReasonCode === REASON_CODES.ok) {
+        firstFailureReasonCode = result.reasonCode;
+      }
+    }
+  }
+
+  return {
+    status: overallStatus,
+    reasonCode: firstFailureReasonCode,
+    sessionId,
+    durationMs: Date.now() - startTime,
+    attempts: 1,
+    artifacts,
+    data: {
+      presetName,
+      overallStatus,
+      steps,
+      resolvedContext,
+    },
+    nextSuggestions,
+  };
+}
+
 export function parseCliArgs(argv: string[]): CliOptions {
   let platform: Platform = "android";
+  let platformProvided = false;
+  let useContextAlias = true;
+  let presetName: CliOptions["presetName"];
   let captureJsConsoleLogs = false;
   let captureJsNetworkEvents = false;
   let compareAgainstBaseline = false;
@@ -197,7 +706,7 @@ export function parseCliArgs(argv: string[]): CliOptions {
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
     const nextValue = argv[index + 1];
-    if (arg === "--platform" && (nextValue === "android" || nextValue === "ios")) { platform = nextValue; index += 1; }
+    if (arg === "--platform" && (nextValue === "android" || nextValue === "ios")) { platform = nextValue; platformProvided = true; index += 1; }
     else if (arg === "--capture-js-console-logs") { captureJsConsoleLogs = true; }
     else if (arg === "--capture-js-network-events") { captureJsNetworkEvents = true; }
     else if (arg === "--compare-against-baseline") { compareAgainstBaseline = true; }
@@ -284,6 +793,8 @@ export function parseCliArgs(argv: string[]): CliOptions {
     else if (arg === "--max-swipes" && nextValue) { const parsed = Number(nextValue); if (Number.isFinite(parsed) && parsed >= 0) maxSwipes = Math.floor(parsed); index += 1; }
     else if (arg === "--swipe-direction" && isUiScrollDirection(nextValue)) { swipeDirection = nextValue; index += 1; }
     else if (arg === "--swipe-duration-ms" && nextValue) { const parsed = Number(nextValue); if (Number.isFinite(parsed) && parsed > 0) swipeDurationMs = Math.floor(parsed); index += 1; }
+    else if (arg === "--no-context-alias") { useContextAlias = false; }
+    else if (arg === "--preset-name" && nextValue && ["quick_debug_ios", "quick_e2e_android", "crash_triage_android"].includes(nextValue)) { presetName = nextValue as CliOptions["presetName"]; index += 1; }
   }
 
   return {
@@ -374,12 +885,31 @@ export function parseCliArgs(argv: string[]): CliOptions {
     maxSwipes,
     swipeDirection,
     swipeDurationMs,
+    platformProvided,
+    useContextAlias,
+    presetName,
   };
 }
 
 export async function main(): Promise<void> {
   const cliOptions = parseCliArgs(process.argv.slice(2));
   const server = createServer();
+
+  const aliasResult = await applyContextAlias(cliOptions);
+  if (!aliasResult.ok) {
+    console.log(JSON.stringify({ tools: server.listTools(), contextAliasResult: aliasResult.errorResult }, null, 2));
+    process.exitCode = 1;
+    return;
+  }
+
+  if (cliOptions.presetName) {
+    const presetResult = await executePreset(server, cliOptions, cliOptions.presetName, aliasResult.resolvedContext);
+    console.log(JSON.stringify({ tools: server.listTools(), presetResult }, null, 2));
+    if (presetResult.status === "failed") {
+      process.exitCode = 1;
+    }
+    return;
+  }
 
   if (cliOptions.captureJsConsoleLogs) {
     const captureJsConsoleLogsInput: CaptureJsConsoleLogsInput = {

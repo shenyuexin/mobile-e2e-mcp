@@ -308,6 +308,19 @@ test("parseCliArgs keeps text value for query_ui paths", () => {
   assert.equal(options.text, "Cart is empty");
 });
 
+test("parseCliArgs captures preset-name and context alias flags", () => {
+  const options = parseCliArgs([
+    "--preset-name", "quick_e2e_android",
+    "--no-context-alias",
+    "--platform", "android",
+    "--dry-run",
+  ]);
+
+  assert.equal(options.presetName, "quick_e2e_android");
+  assert.equal(options.useContextAlias, false);
+  assert.equal(options.platformProvided, true);
+});
+
 test("main dispatches query_ui Android dry-run through the CLI", async () => {
   const output = await runCli([
     "--query-ui",
@@ -495,6 +508,109 @@ test("main dispatches run_flow Android dry-run through the CLI default path", as
     assert.equal(output.endResult.status, "success");
   } finally {
     await cleanupSessionArtifact(sessionId);
+  }
+});
+
+test("main executes quick_e2e_android preset via CLI", async () => {
+  const output = await runCli([
+    "--preset-name", "quick_e2e_android",
+    "--platform", "android",
+    "--no-context-alias",
+    "--dry-run",
+  ]) as {
+    presetResult: {
+      status: string;
+      reasonCode: string;
+      data: { presetName: string; steps: Array<{ tool: string; status: string }> };
+    };
+  };
+
+  assert.equal(["success", "partial", "failed"].includes(output.presetResult.status), true);
+  assert.equal(output.presetResult.data.presetName, "quick_e2e_android");
+  assert.equal(output.presetResult.data.steps.length > 0, true);
+  assert.equal(output.presetResult.data.steps[0]?.tool, "start_session");
+});
+
+test("main executes quick_debug_ios preset via CLI", async () => {
+  const output = await runCli([
+    "--preset-name", "quick_debug_ios",
+    "--platform", "ios",
+    "--no-context-alias",
+    "--dry-run",
+  ]) as {
+    presetResult: {
+      status: string;
+      data: { presetName: string; steps: Array<{ tool: string }> };
+    };
+  };
+
+  assert.equal(output.presetResult.data.presetName, "quick_debug_ios");
+  assert.equal(output.presetResult.data.steps.length > 0, true);
+  assert.equal(output.presetResult.data.steps[0]?.tool, "start_session");
+});
+
+test("main preset rejects explicit session-id when preset includes start_session", async () => {
+  const output = await runCli([
+    "--preset-name", "quick_e2e_android",
+    "--session-id", "existing-session",
+    "--dry-run",
+  ]) as {
+    presetResult: { status: string; reasonCode: string; nextSuggestions: string[] };
+  };
+
+  assert.equal(output.presetResult.status, "failed");
+  assert.equal(output.presetResult.reasonCode, "CONFIGURATION_ERROR");
+  assert.equal(output.presetResult.nextSuggestions[0]?.includes("cannot reuse an explicit --session-id"), true);
+});
+
+test("main doctor output includes structured guidance", async () => {
+  const output = await runCli(["--doctor"]) as {
+    doctorResult: { status: string; data: { guidance: unknown[] } };
+  };
+
+  assert.equal(output.doctorResult.status === "success" || output.doctorResult.status === "partial" || output.doctorResult.status === "failed", true);
+  assert.equal(Array.isArray(output.doctorResult.data.guidance), true);
+});
+
+test("main preset reports context alias ambiguity when multiple active sessions match", async () => {
+  const server = createServer();
+  const sessionA = `preset-ambiguous-a-${Date.now()}`;
+  const sessionB = `preset-ambiguous-b-${Date.now()}`;
+  await cleanupSessionArtifact(sessionA);
+  await cleanupSessionArtifact(sessionB);
+
+  try {
+    const startA = await server.invoke("start_session", {
+      sessionId: sessionA,
+      platform: "android",
+      deviceId: buildTestDeviceId(sessionA),
+      profile: null,
+      policyProfile: "sample-harness-default",
+    });
+    const startB = await server.invoke("start_session", {
+      sessionId: sessionB,
+      platform: "android",
+      deviceId: buildTestDeviceId(sessionB),
+      profile: null,
+      policyProfile: "sample-harness-default",
+    });
+    assert.equal(startA.status, "success");
+    assert.equal(startB.status, "success");
+
+    const output = await runCli([
+      "--preset-name", "quick_e2e_android",
+      "--dry-run",
+    ]) as {
+      contextAliasResult: { reasonCode: string; nextSuggestions: string[] };
+    };
+
+    assert.equal(output.contextAliasResult.reasonCode, "CONFIGURATION_ERROR");
+    assert.equal(output.contextAliasResult.nextSuggestions[0]?.includes("Multiple active sessions"), true);
+  } finally {
+    await server.invoke("end_session", { sessionId: sessionA });
+    await server.invoke("end_session", { sessionId: sessionB });
+    await cleanupSessionArtifact(sessionA);
+    await cleanupSessionArtifact(sessionB);
   }
 });
 
