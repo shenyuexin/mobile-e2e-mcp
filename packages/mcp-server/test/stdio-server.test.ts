@@ -127,6 +127,342 @@ test("handleRequest supports tools/call alias for describe_capabilities", async 
   assert.equal(Array.isArray(typedResult.data.capabilities.ocrFallback?.configuredProviders), true);
 });
 
+test("handleRequest supports m2e_ prefixed tool alias", async () => {
+  const result = await handleRequest({
+    id: 701,
+    method: "tools/call",
+    params: {
+      name: "m2e_describe_capabilities",
+      arguments: {
+        platform: "android",
+        runnerProfile: "phase1",
+      },
+    },
+  });
+  const typedResult = result as {
+    status: string;
+    reasonCode: string;
+    data: { capabilities: { platform: string } };
+  };
+
+  assert.equal(typedResult.status, "success");
+  assert.equal(typedResult.reasonCode, "OK");
+  assert.equal(typedResult.data.capabilities.platform, "android");
+});
+
+test("handleRequest supports mobile-e2e-mcp_ prefixed tool alias", async () => {
+  const result = await handleRequest({
+    id: 702,
+    method: "tools/call",
+    params: {
+      name: "mobile-e2e-mcp_describe_capabilities",
+      arguments: {
+        platform: "ios",
+        runnerProfile: "phase1",
+      },
+    },
+  });
+  const typedResult = result as {
+    status: string;
+    reasonCode: string;
+    data: { capabilities: { platform: string } };
+  };
+
+  assert.equal(typedResult.status, "success");
+  assert.equal(typedResult.reasonCode, "OK");
+  assert.equal(typedResult.data.capabilities.platform, "ios");
+});
+
+test("handleRequest auto-resolves single active session when sessionId is omitted", async () => {
+  const sessionId = `stdio-auto-session-single-${Date.now()}`;
+  await cleanupSessionArtifact(sessionId);
+
+  try {
+    const started = await handleRequest({
+      id: 703,
+      method: "tools/call",
+      params: {
+        name: "start_session",
+        arguments: {
+          sessionId,
+          platform: "android",
+          deviceId: buildTestDeviceId(sessionId),
+          profile: "phase1",
+        },
+      },
+    }) as { status: string };
+    assert.equal(started.status, "success");
+
+    const result = await handleRequest({
+      id: 704,
+      method: "tools/call",
+      params: {
+        name: "get_screen_summary",
+        arguments: {
+          platform: "android",
+          deviceId: buildTestDeviceId(sessionId),
+          dryRun: true,
+          includeDebugSignals: true,
+        },
+      },
+    });
+    const typedResult = result as {
+      status: string;
+      reasonCode: string;
+    };
+
+    assert.ok(["success", "partial"].includes(typedResult.status));
+    assert.equal(typedResult.reasonCode === "OK" || typedResult.reasonCode === "UNSUPPORTED_OPERATION", true);
+  } finally {
+    await handleRequest({
+      id: 705,
+      method: "tools/call",
+      params: {
+        name: "end_session",
+        arguments: { sessionId },
+      },
+    });
+    await cleanupSessionArtifact(sessionId);
+  }
+});
+
+test("handleRequest returns ambiguity error when multiple active sessions exist and sessionId is omitted", async () => {
+  const sessionIdA = `stdio-auto-session-amb-a-${Date.now()}`;
+  const sessionIdB = `stdio-auto-session-amb-b-${Date.now()}`;
+  await cleanupSessionArtifact(sessionIdA);
+  await cleanupSessionArtifact(sessionIdB);
+
+  try {
+    const startedA = await handleRequest({
+      id: 706,
+      method: "tools/call",
+      params: {
+        name: "start_session",
+        arguments: {
+          sessionId: sessionIdA,
+          platform: "android",
+          deviceId: buildTestDeviceId(sessionIdA),
+          profile: "phase1",
+        },
+      },
+    }) as { status: string };
+    assert.equal(startedA.status, "success");
+
+    const startedB = await handleRequest({
+      id: 707,
+      method: "tools/call",
+      params: {
+        name: "start_session",
+        arguments: {
+          sessionId: sessionIdB,
+          platform: "ios",
+          deviceId: buildTestDeviceId(sessionIdB),
+          profile: "phase1",
+        },
+      },
+    }) as { status: string };
+    assert.equal(startedB.status, "success");
+
+    const result = await handleRequest({
+      id: 708,
+      method: "tools/call",
+      params: {
+        name: "get_screen_summary",
+        arguments: {
+          dryRun: true,
+          includeDebugSignals: true,
+        },
+      },
+    });
+    const typedResult = result as {
+      status: string;
+      reasonCode: string;
+      nextSuggestions: string[];
+    };
+
+    assert.equal(typedResult.status, "failed");
+    assert.equal(typedResult.reasonCode, "CONFIGURATION_ERROR");
+    assert.equal(typedResult.nextSuggestions.some((item) => item.includes("Multiple active sessions")), true);
+  } finally {
+    await handleRequest({
+      id: 709,
+      method: "tools/call",
+      params: {
+        name: "end_session",
+        arguments: { sessionId: sessionIdA },
+      },
+    });
+    await handleRequest({
+      id: 710,
+      method: "tools/call",
+      params: {
+        name: "end_session",
+        arguments: { sessionId: sessionIdB },
+      },
+    });
+    await cleanupSessionArtifact(sessionIdA);
+    await cleanupSessionArtifact(sessionIdB);
+  }
+});
+
+test("handleRequest returns ambiguity error for same-platform active sessions when only platform is provided", async () => {
+  const sessionIdA = `stdio-auto-session-plat-amb-a-${Date.now()}`;
+  const sessionIdB = `stdio-auto-session-plat-amb-b-${Date.now()}`;
+  await cleanupSessionArtifact(sessionIdA);
+  await cleanupSessionArtifact(sessionIdB);
+
+  try {
+    const startedA = await handleRequest({
+      id: 711,
+      method: "tools/call",
+      params: {
+        name: "start_session",
+        arguments: {
+          sessionId: sessionIdA,
+          platform: "android",
+          deviceId: buildTestDeviceId(sessionIdA),
+          profile: "phase1",
+        },
+      },
+    }) as { status: string };
+    assert.equal(startedA.status, "success");
+
+    const startedB = await handleRequest({
+      id: 712,
+      method: "tools/call",
+      params: {
+        name: "start_session",
+        arguments: {
+          sessionId: sessionIdB,
+          platform: "android",
+          deviceId: buildTestDeviceId(sessionIdB),
+          profile: "phase1",
+        },
+      },
+    }) as { status: string };
+    assert.equal(startedB.status, "success");
+
+    const result = await handleRequest({
+      id: 713,
+      method: "tools/call",
+      params: {
+        name: "get_screen_summary",
+        arguments: {
+          platform: "android",
+          dryRun: true,
+        },
+      },
+    });
+    const typedResult = result as {
+      status: string;
+      reasonCode: string;
+      nextSuggestions: string[];
+    };
+
+    assert.equal(typedResult.status, "failed");
+    assert.equal(typedResult.reasonCode, "CONFIGURATION_ERROR");
+    assert.equal(typedResult.nextSuggestions.some((item) => item.includes("Multiple active sessions")), true);
+  } finally {
+    await handleRequest({
+      id: 714,
+      method: "tools/call",
+      params: {
+        name: "end_session",
+        arguments: { sessionId: sessionIdA },
+      },
+    });
+    await handleRequest({
+      id: 715,
+      method: "tools/call",
+      params: {
+        name: "end_session",
+        arguments: { sessionId: sessionIdB },
+      },
+    });
+    await cleanupSessionArtifact(sessionIdA);
+    await cleanupSessionArtifact(sessionIdB);
+  }
+});
+
+test("handleRequest narrows implicit session resolution by deviceId when multiple sessions are active", async () => {
+  const sessionIdA = `stdio-auto-session-narrow-a-${Date.now()}`;
+  const sessionIdB = `stdio-auto-session-narrow-b-${Date.now()}`;
+  await cleanupSessionArtifact(sessionIdA);
+  await cleanupSessionArtifact(sessionIdB);
+
+  try {
+    const startedA = await handleRequest({
+      id: 716,
+      method: "tools/call",
+      params: {
+        name: "start_session",
+        arguments: {
+          sessionId: sessionIdA,
+          platform: "android",
+          deviceId: buildTestDeviceId(sessionIdA),
+          profile: "phase1",
+        },
+      },
+    }) as { status: string };
+    assert.equal(startedA.status, "success");
+
+    const startedB = await handleRequest({
+      id: 717,
+      method: "tools/call",
+      params: {
+        name: "start_session",
+        arguments: {
+          sessionId: sessionIdB,
+          platform: "android",
+          deviceId: buildTestDeviceId(sessionIdB),
+          profile: "phase1",
+        },
+      },
+    }) as { status: string };
+    assert.equal(startedB.status, "success");
+
+    const result = await handleRequest({
+      id: 718,
+      method: "tools/call",
+      params: {
+        name: "get_screen_summary",
+        arguments: {
+          platform: "android",
+          deviceId: buildTestDeviceId(sessionIdA),
+          dryRun: true,
+          includeDebugSignals: true,
+        },
+      },
+    });
+    const typedResult = result as {
+      status: string;
+      reasonCode: string;
+    };
+
+    assert.ok(["success", "partial"].includes(typedResult.status));
+    assert.equal(typedResult.reasonCode === "OK" || typedResult.reasonCode === "UNSUPPORTED_OPERATION", true);
+  } finally {
+    await handleRequest({
+      id: 719,
+      method: "tools/call",
+      params: {
+        name: "end_session",
+        arguments: { sessionId: sessionIdA },
+      },
+    });
+    await handleRequest({
+      id: 720,
+      method: "tools/call",
+      params: {
+        name: "end_session",
+        arguments: { sessionId: sessionIdB },
+      },
+    });
+    await cleanupSessionArtifact(sessionIdA);
+    await cleanupSessionArtifact(sessionIdB);
+  }
+});
+
 test("handleRequest supports tools/call alias for resolve_ui_target", async () => {
   const result = await handleRequest({
     id: 2,

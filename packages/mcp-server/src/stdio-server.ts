@@ -85,6 +85,16 @@ export function buildToolList() {
   ];
 }
 
+function normalizeInvokedToolName(rawToolName: string): string {
+  if (rawToolName.startsWith("mobile-e2e-mcp_")) {
+    return rawToolName.slice("mobile-e2e-mcp_".length);
+  }
+  if (rawToolName.startsWith("m2e_")) {
+    return rawToolName.slice("m2e_".length);
+  }
+  return rawToolName;
+}
+
 export async function handleRequest(request: StdioRequest): Promise<unknown> {
   const server = createServer();
 
@@ -107,7 +117,12 @@ export async function handleRequest(request: StdioRequest): Promise<unknown> {
     if (typeof toolName !== "string") {
       throw new Error("invoke requires a string tool/name field.");
     }
-    return server.invoke(toolName as never, (input ?? {}) as never);
+    const normalizedToolName = normalizeInvokedToolName(toolName);
+    const knownTools = new Set<string>(server.listTools());
+    if (!knownTools.has(normalizedToolName)) {
+      throw new Error(`Unknown tool: ${toolName}`);
+    }
+    return server.invoke(normalizedToolName as never, (input ?? {}) as never);
   }
   throw new Error(`Unsupported stdio method: ${request.method}`);
 }
