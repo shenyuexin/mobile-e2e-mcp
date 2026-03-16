@@ -40,6 +40,7 @@
 - OpenCode CLI MCP validation plan: docs/delivery/cli-mcp-tool-validation-plan.zh-CN.md
 - OpenCode CLI MCP validation execution (2026-03-16): docs/delivery/cli-mcp-validation-execution-2026-03-16.zh-CN.md
 - OpenCode CLI MCP full tool checklist (2026-03-16): docs/delivery/cli-mcp-tool-checklist-2026-03-16.zh-CN.md
+- MCP UX improvement implementation plan (doctor/context-alias/preset): docs/delivery/mcp-ux-improvement-implementation-plan.zh-CN.md
 - Pilot execution snapshot (2026-03-15): docs/delivery/pilot-execution-2026-03-15.zh-CN.md
 - Flakiness baseline: artifacts/phase1-ios/ and artifacts/phase1-android/
 - Security checklist report: TBD
