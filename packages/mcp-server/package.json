@@ -1,12 +1,12 @@
 {
-  "name": "@mobile-e2e-mcp/mcp-server",
+  "name": "@shenyuexin/mobile-e2e-mcp",
   "private": false,
-  "version": "0.1.0",
+  "version": "0.1.4",
   "type": "module",
-  "main": "./bundle/index.js",
+  "main": "./bundle/index.cjs",
   "types": "./dist/index.d.ts",
   "bin": {
-    "mobile-e2e-mcp": "./bundle/bin-stdio.js"
+    "mobile-e2e-mcp": "./bundle/bin-stdio.cjs"
   },
   "files": [
     "bundle",
@@ -15,7 +15,7 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "default": "./bundle/index.js"
+      "default": "./bundle/index.cjs"
     }
   },
   "dependencies": {

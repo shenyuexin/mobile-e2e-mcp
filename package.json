@@ -12,8 +12,8 @@
     "lint": "pnpm -r --if-present lint",
     "test:adapter": "pnpm --filter @mobile-e2e-mcp/adapter-vision test && pnpm --filter @mobile-e2e-mcp/adapter-maestro test",
     "test:ocr-smoke": "pnpm --filter @mobile-e2e-mcp/adapter-vision exec tsx --test test/ocr-smoke.test.ts",
-    "test:mcp-server": "pnpm --filter @mobile-e2e-mcp/mcp-server test",
-    "test:unit": "pnpm --filter @mobile-e2e-mcp/core test && pnpm --filter @mobile-e2e-mcp/adapter-vision test && pnpm --filter @mobile-e2e-mcp/adapter-maestro test && pnpm --filter @mobile-e2e-mcp/mcp-server test",
+    "test:mcp-server": "pnpm --filter @shenyuexin/mobile-e2e-mcp test",
+    "test:unit": "pnpm --filter @mobile-e2e-mcp/core test && pnpm --filter @mobile-e2e-mcp/adapter-vision test && pnpm --filter @mobile-e2e-mcp/adapter-maestro test && pnpm --filter @shenyuexin/mobile-e2e-mcp test",
     "test:smoke": "pnpm run validate:dry-run && pnpm run validate:phase3-samples && pnpm run validate:concurrent-smoke",
     "test:ci": "pnpm build && pnpm typecheck && pnpm test:unit && pnpm test:smoke",
     "test": "pnpm test:unit && pnpm run test:smoke",
@@ -25,11 +25,11 @@
     "validate:bounded-auto-remediation-real-run": "pnpm build && tsx scripts/validate-bounded-auto-remediation-real-run.ts",
     "fixtures:ocr:sync": "tsx scripts/sync-ocr-fixtures.ts",
     "fixtures:ocr:check": "tsx scripts/sync-ocr-fixtures.ts --check",
-    "mcp:dev": "pnpm build && pnpm --filter @mobile-e2e-mcp/mcp-server dev",
-    "mcp:stdio": "pnpm build && pnpm --filter @mobile-e2e-mcp/mcp-server stdio",
-    "release:mcp:publish": "pnpm --filter @mobile-e2e-mcp/mcp-server run release:publish",
-    "release:mcp:publish:dry-run": "pnpm --filter @mobile-e2e-mcp/mcp-server run release:publish:dry-run",
-    "release:mcp:patch": "pnpm --filter @mobile-e2e-mcp/mcp-server run release:patch"
+    "mcp:dev": "pnpm build && pnpm --filter @shenyuexin/mobile-e2e-mcp dev",
+    "mcp:stdio": "pnpm build && pnpm --filter @shenyuexin/mobile-e2e-mcp stdio",
+    "release:mcp:publish": "pnpm --filter @shenyuexin/mobile-e2e-mcp run release:publish",
+    "release:mcp:publish:dry-run": "pnpm --filter @shenyuexin/mobile-e2e-mcp run release:publish:dry-run",
+    "release:mcp:patch": "pnpm --filter @shenyuexin/mobile-e2e-mcp run release:patch"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
