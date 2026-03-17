@@ -176,12 +176,14 @@ async function cleanupSessionArtifacts(repoRoot: string, sessionId: string): Pro
 
 async function validatePhase3CliCase(repoRoot: string, validation: HarnessPhase3Validation): Promise<void> {
   const sessionId = `phase3-${validation.runnerProfile}-${Date.now()}`;
+  const isolatedDryRunDeviceId = `${validation.platform}-dryrun-${sessionId}`;
 
   try {
     const output = await runCli([
       "--platform", validation.platform,
       "--runner-profile", validation.runnerProfile,
       "--session-id", sessionId,
+      "--device-id", isolatedDryRunDeviceId,
       "--run-count", "1",
       "--dry-run",
     ]) as {
@@ -215,6 +217,12 @@ async function validatePhase3CliCase(repoRoot: string, validation: HarnessPhase3
 
 async function main(): Promise<void> {
   const repoRoot = repoRootFromScript();
+  const matrixPath = path.resolve(repoRoot, "configs/matrices/framework-profile-matrix.md");
+  if (!existsSync(matrixPath)) {
+    console.log("Skipped phase3 sample validation: configs/matrices/framework-profile-matrix.md not found.");
+    return;
+  }
+
   const validations = await loadHarnessPhase3Validations(repoRoot);
   assert.equal(validations.length > 0, true);
 

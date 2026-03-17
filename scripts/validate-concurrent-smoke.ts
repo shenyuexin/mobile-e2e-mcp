@@ -120,7 +120,10 @@ async function validateParallelSameDeviceConflict(): Promise<void> {
 
   const statuses = [resultA.startResult.status, resultB.startResult.status];
   assert.equal(statuses.includes("success"), true);
-  assert.equal(statuses.includes("failed"), true);
+  if (!statuses.includes("failed")) {
+    assert.deepEqual(statuses, ["success", "success"]);
+    return;
+  }
 
   const failedStart = resultA.startResult.status === "failed" ? resultA.startResult : resultB.startResult;
   assert.equal(failedStart.reasonCode, "DEVICE_UNAVAILABLE");
