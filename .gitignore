@@ -69,3 +69,22 @@ coverage/
 *.ips
 
 .sisyphus/
+
+# Optional open-source scope trimming (internal/phase artifacts)
+# NOTE: For already tracked files, run `git rm --cached <path>` to stop publishing.
+docs/phases/
+docs/product/
+docs/delivery/*execution*.md
+docs/delivery/review-log.md
+docs/delivery/cli-mcp-tool-checklist-*.md
+docs/delivery/cli-mcp-validation-execution-*.md
+docs/delivery/pilot-execution-*.md
+docs/delivery/mcp-context-downshift-*.md
+
+# Optional local-only demo package / fixtures
+examples/rn-login-demo/
+tests/fixtures/ocr/
+
+# Optional non-runtime config artifacts
+configs/harness/
+configs/matrices/
