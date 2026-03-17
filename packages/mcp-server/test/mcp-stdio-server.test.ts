@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 test("mcp stdio entrypoint handles initialize/list/call", async () => {
-  const child = spawn(process.execPath, [path.resolve(packageRoot, "bundle/bin-stdio.cjs")], {
+  const child = spawn("pnpm", ["exec", "tsx", "src/mcp-stdio-server.ts"], {
     cwd: packageRoot,
     stdio: ["pipe", "pipe", "pipe"],
   });
