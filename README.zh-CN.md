@@ -20,7 +20,7 @@
   "mcpServers": {
     "mobile-e2e-mcp": {
       "command": "npx",
-      "args": ["-y", "@mobile-e2e-mcp/mcp-server@latest"]
+      "args": ["-y", "@shenyuexin/mobile-e2e-mcp@latest"]
     }
   }
 }
