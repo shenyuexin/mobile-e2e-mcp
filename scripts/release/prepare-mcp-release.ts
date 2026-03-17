@@ -38,7 +38,7 @@ if (status.length > 0) {
   throw new Error('Working tree is not clean. Commit or stash changes before release.');
 }
 
-runWithOutput(`pnpm --filter ${pkgName} version ${levelArg} --no-git-tag-version`);
+runWithOutput(`pnpm --filter ${pkgName} exec npm version ${levelArg} --no-git-tag-version`);
 
 const pkgJson = JSON.parse(readFileSync(pkgJsonPath, 'utf8')) as { version: string };
 const version = pkgJson.version;
