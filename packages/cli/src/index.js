@@ -17,7 +17,7 @@ function printHelp() {
   console.log("  mobile-e2e-mcp --describe-capabilities --platform ios --runner-profile phase1");
   console.log("  mobile-e2e-mcp --perform-action-with-evidence --platform android --action-type tap_element --content-desc \"View products\" --dry-run");
   console.log("  mobile-e2e-mcp --run-count 1 --flow-path flows/samples/react-native/android-login-smoke.yaml --dry-run");
-  console.log("Pass-through: forwards all flags to @mobile-e2e-mcp/mcp-server dev CLI.");
+  console.log("Pass-through: forwards all flags to @shenyuexin/mobile-e2e-mcp dev CLI.");
 }
 
 export async function main(argv = process.argv.slice(2)) {
@@ -35,7 +35,7 @@ export async function main(argv = process.argv.slice(2)) {
   await new Promise((resolve, reject) => {
     const child = spawn(
       "pnpm",
-      ["--dir", repoRoot, "--filter", "@mobile-e2e-mcp/mcp-server", "dev", "--", ...argv],
+      ["--dir", repoRoot, "--filter", "@shenyuexin/mobile-e2e-mcp", "dev", "--", ...argv],
       { stdio: "inherit" },
     );
     child.on("error", reject);
