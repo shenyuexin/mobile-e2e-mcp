@@ -26,6 +26,25 @@ If you only remember one thing: this project is designed as a **mobile orchestra
 }
 ```
 
+## Build Locally (Fast Validation)
+
+Use this sequence to verify the repository is buildable end-to-end:
+
+```bash
+pnpm install
+pnpm build
+pnpm typecheck
+pnpm test:ci
+```
+
+If you only need the local MCP runtime:
+
+```bash
+pnpm mcp:dev
+# or
+pnpm mcp:stdio
+```
+
 ## AI Agent Start Here
 
 For AI/code-analysis workflows, use this order:
@@ -172,6 +191,23 @@ If you want to get productive quickly, read in this sequence:
 3. `docs/architecture/architecture.md` (control plane vs execution plane)
 4. `packages/mcp-server/src/server.ts` (actual tool registry and invocation surface)
 5. `tests/README.md` (what is truly validated today)
+
+## Open Source Collaboration
+
+- License: [MIT](LICENSE)
+- Contributing guide: [CONTRIBUTING.md](CONTRIBUTING.md)
+- Security policy: [SECURITY.md](SECURITY.md)
+- Code ownership: [.github/CODEOWNERS](.github/CODEOWNERS)
+- Code of conduct: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
+- Support guide: [SUPPORT.md](SUPPORT.md)
+- Changelog: [CHANGELOG.md](CHANGELOG.md)
+
+## Recommended GitHub Repository Topics
+
+To improve discoverability for developers and AI agents, set these topics in
+the repository settings:
+
+`mcp`, `mobile-testing`, `e2e-testing`, `android`, `ios`, `react-native`, `flutter`, `automation`, `ai-agent`
 
 ## Selected Docs
 
