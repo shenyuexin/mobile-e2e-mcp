@@ -62,7 +62,7 @@ async function runCli(cliArgs: string[]): Promise<unknown> {
   const repoRoot = repoRootFromScript();
   const commandArgs = [
     "--filter",
-    "@mobile-e2e-mcp/mcp-server",
+    "@shenyuexin/mobile-e2e-mcp",
     "exec",
     "tsx",
     "src/dev-cli.ts",
