@@ -2,6 +2,16 @@
   "name": "@shenyuexin/mobile-e2e-mcp",
   "private": false,
   "version": "0.1.4",
+  "description": "AI-first Mobile E2E MCP server for Android/iOS/React Native/Flutter",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shenyuexin/mobile-e2e.git",
+    "directory": "packages/mcp-server"
+  },
+  "homepage": "https://github.com/shenyuexin/mobile-e2e/tree/main/packages/mcp-server#readme",
+  "bugs": {
+    "url": "https://github.com/shenyuexin/mobile-e2e/issues"
+  },
   "type": "module",
   "main": "./bundle/index.cjs",
   "types": "./dist/index.d.ts",
@@ -36,6 +46,7 @@
     "stdio": "tsx src/mcp-stdio-server.ts",
     "stdio:minimal": "tsx src/stdio-server.ts",
     "release:publish": "pnpm run bundle && pnpm publish --access public",
+    "release:publish:ci": "pnpm run bundle && pnpm publish --access public --no-git-checks",
     "release:publish:dry-run": "pnpm run bundle && pnpm publish --access public --dry-run --no-git-checks",
     "release:patch": "pnpm version patch && pnpm run release:publish"
   }
