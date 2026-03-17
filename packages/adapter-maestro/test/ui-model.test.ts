@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { access, readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import test from "node:test";
@@ -30,6 +30,16 @@ import { buildCapabilityProfile, buildDiagnosisBriefing, buildLogSummary, buildS
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 const ocrFixtureRoot = path.join(repoRoot, "tests", "fixtures", "ocr");
+const ocrFixtureManifestPath = path.join(ocrFixtureRoot, "manifest.json");
+
+async function hasOcrFixtures(): Promise<boolean> {
+  try {
+    await access(ocrFixtureManifestPath);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 async function readFixture(relativePath: string): Promise<string> {
   return readFile(path.join(repoRoot, relativePath), "utf8");
@@ -1156,7 +1166,12 @@ test("queryUiNodes prefers deeper leaf nodes when other signals tie", () => {
   assert.equal(result.matches[0]?.node.resourceId, "leaf_cta");
 });
 
-test("performActionWithEvidenceWithMaestro uses screenshot fixture for OCR assert fallback success", async () => {
+test("performActionWithEvidenceWithMaestro uses screenshot fixture for OCR assert fallback success", async (t) => {
+  if (!(await hasOcrFixtures())) {
+    t.skip("OCR fixtures are not tracked in this repository profile.");
+    return;
+  }
+
   const fixture = await readJsonFixture<MacVisionExecutionResult>("tests/fixtures/ocr/signin-success.observations.json");
   setOcrFallbackTestHooksForTesting({
     now: () => new Date().toISOString(),
@@ -1200,7 +1215,12 @@ test("performActionWithEvidenceWithMaestro uses screenshot fixture for OCR asser
   assert.equal(result.data.outcome.ocrEvidence?.matchedText, "Sign In");
 });
 
-test("performActionWithEvidenceWithMaestro uses screenshot fixture for OCR tap success", async () => {
+test("performActionWithEvidenceWithMaestro uses screenshot fixture for OCR tap success", async (t) => {
+  if (!(await hasOcrFixtures())) {
+    t.skip("OCR fixtures are not tracked in this repository profile.");
+    return;
+  }
+
   const fixture = await readJsonFixture<MacVisionExecutionResult>("tests/fixtures/ocr/continue-success.observations.json");
   setOcrFallbackTestHooksForTesting({
     now: () => new Date().toISOString(),
@@ -1243,7 +1263,12 @@ test("performActionWithEvidenceWithMaestro uses screenshot fixture for OCR tap s
   assert.equal(result.data.outcome.ocrEvidence?.postVerificationResult, "passed");
 });
 
-test("performActionWithEvidenceWithMaestro fails safely on low-confidence screenshot fixtures", async () => {
+test("performActionWithEvidenceWithMaestro fails safely on low-confidence screenshot fixtures", async (t) => {
+  if (!(await hasOcrFixtures())) {
+    t.skip("OCR fixtures are not tracked in this repository profile.");
+    return;
+  }
+
   const fixture = await readJsonFixture<MacVisionExecutionResult>("tests/fixtures/ocr/continue-low-confidence.observations.json");
   setOcrFallbackTestHooksForTesting({
     now: () => new Date().toISOString(),
@@ -1281,7 +1306,12 @@ test("performActionWithEvidenceWithMaestro fails safely on low-confidence screen
   assert.equal(result.data.outcome.ocrEvidence?.fallbackReason, REASON_CODES.ocrLowConfidence);
 });
 
-test("performActionWithEvidenceWithMaestro fails safely on ambiguous screenshot fixtures", async () => {
+test("performActionWithEvidenceWithMaestro fails safely on ambiguous screenshot fixtures", async (t) => {
+  if (!(await hasOcrFixtures())) {
+    t.skip("OCR fixtures are not tracked in this repository profile.");
+    return;
+  }
+
   const fixture = await readJsonFixture<MacVisionExecutionResult>("tests/fixtures/ocr/continue-ambiguous.observations.json");
   setOcrFallbackTestHooksForTesting({
     now: () => new Date().toISOString(),
@@ -1319,7 +1349,12 @@ test("performActionWithEvidenceWithMaestro fails safely on ambiguous screenshot 
   assert.equal(result.data.outcome.ocrEvidence?.fallbackReason, REASON_CODES.ocrAmbiguousTarget);
 });
 
-test("adapter-maestro and OcrService agree on low-confidence fixture outcome", async () => {
+test("adapter-maestro and OcrService agree on low-confidence fixture outcome", async (t) => {
+  if (!(await hasOcrFixtures())) {
+    t.skip("OCR fixtures are not tracked in this repository profile.");
+    return;
+  }
+
   const [adapterResult, serviceResult] = await Promise.all([
     runAdapterFixtureFallback({
       sessionId: "ocr-low-confidence-parity",
@@ -1339,7 +1374,12 @@ test("adapter-maestro and OcrService agree on low-confidence fixture outcome", a
   assert.equal(adapterResult.data.outcome.ocrEvidence?.fallbackReason, REASON_CODES.ocrLowConfidence);
 });
 
-test("adapter-maestro and OcrService agree on ambiguous fixture outcome", async () => {
+test("adapter-maestro and OcrService agree on ambiguous fixture outcome", async (t) => {
+  if (!(await hasOcrFixtures())) {
+    t.skip("OCR fixtures are not tracked in this repository profile.");
+    return;
+  }
+
   const [adapterResult, serviceResult] = await Promise.all([
     runAdapterFixtureFallback({
       sessionId: "ocr-ambiguous-parity",
@@ -1359,7 +1399,12 @@ test("adapter-maestro and OcrService agree on ambiguous fixture outcome", async 
   assert.equal(adapterResult.data.outcome.ocrEvidence?.fallbackReason, REASON_CODES.ocrAmbiguousTarget);
 });
 
-test("adapter-maestro and OcrService agree on successful fixture outcome", async () => {
+test("adapter-maestro and OcrService agree on successful fixture outcome", async (t) => {
+  if (!(await hasOcrFixtures())) {
+    t.skip("OCR fixtures are not tracked in this repository profile.");
+    return;
+  }
+
   const fixture = await readJsonFixture<MacVisionExecutionResult>("tests/fixtures/ocr/continue-success.observations.json");
   const [adapterResult, serviceResult] = await Promise.all([
     (async () => {
