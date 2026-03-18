@@ -1,6 +1,9 @@
 export {
   appendSessionTimelineEvent,
   buildActionRecordRelativePath,
+  buildRecordEventsRelativePath,
+  buildRecordedStepsRelativePath,
+  buildRecordSessionRelativePath,
   buildSessionAuditRelativePath,
   buildSessionRecordRelativePath,
   listActionRecordsForSession,
@@ -10,12 +13,19 @@ export {
   loadSessionAuditRecord,
   loadLatestActionRecordForSession,
   loadSessionRecord,
+  loadRecordSession,
+  loadRecordedSteps,
+  listRawRecordedEvents,
   recordBaselineEntry,
   recordFailureSignature,
   persistActionRecord,
   persistEndedSession,
   persistInterruptionEvent,
+  persistRawRecordedEvents,
+  persistRecordSessionState,
+  persistRecordedSteps,
   persistSessionState,
+  persistStartedRecordSession,
   persistStartedSession,
   queryTimelineAroundAction,
 } from "./session-store.js";
@@ -65,7 +75,10 @@ export type { DeviceLease, DeviceLeaseConflict, DeviceLeaseState } from "./devic
 export type { AcquireLeaseInput, AcquireLeaseResult, MarkLeaseResult, RecoverStaleLeasesResult, ReleaseLeaseInput, ReleaseLeaseResult } from "./execution-coordinator.js";
 export type {
   AppendSessionTimelineEventResult,
+  AppendRawRecordedEventResult,
   PersistActionRecordResult,
+  PersistRecordSessionResult,
+  PersistRecordedStepsResult,
   PersistEndedSessionResult,
   PersistInterruptionEventResult,
   PersistSessionStateResult,
@@ -74,6 +87,7 @@ export type {
   PersistedBaselineIndexEntry,
   PersistedFailureIndexEntry,
   PersistedSessionRecord,
+  PersistedRecordSession,
   TimelineQueryResult,
 } from "./session-store.js";
 export type { RunExclusiveInput, RunExclusiveResult } from "./session-scheduler.js";

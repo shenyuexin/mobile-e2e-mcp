@@ -30,6 +30,10 @@ import { detectInterruption } from "./tools/detect-interruption.js";
 import { doctor } from "./tools/doctor.js";
 import { executeIntent } from "./tools/execute-intent.js";
 import { completeTask } from "./tools/complete-task.js";
+import { startRecordSession } from "./tools/start-record-session.js";
+import { getRecordSessionStatus } from "./tools/get-record-session-status.js";
+import { endRecordSession } from "./tools/end-record-session.js";
+import { cancelRecordSession } from "./tools/cancel-record-session.js";
 import { exportSessionFlow } from "./tools/export-session-flow.js";
 import { recordTaskFlow } from "./tools/record-task-flow.js";
 import { endSession } from "./tools/end-session.js";
@@ -416,6 +420,10 @@ export function createServer(): MobileE2EMcpServer {
 		withPolicy("complete_task", completeTask),
 		{ requireResolvedSessionContext: true },
 	);
+	const startRecordSessionHandler = withPolicy("start_record_session", startRecordSession);
+	const getRecordSessionStatusHandler = withPolicy("get_record_session_status", getRecordSessionStatus);
+	const endRecordSessionHandler = withPolicy("end_record_session", endRecordSession);
+	const cancelRecordSessionHandler = withPolicy("cancel_record_session", cancelRecordSession);
 	const exportSessionFlowHandler = withPolicy("export_session_flow", exportSessionFlow);
 	const recordTaskFlowHandler = withPolicy("record_task_flow", recordTaskFlow);
 	const detectInterruptionHandler = withSessionExecution(
@@ -621,6 +629,10 @@ export function createServer(): MobileE2EMcpServer {
 		doctor: doctorHandler,
 		execute_intent: executeIntentHandler,
 		complete_task: completeTaskHandler,
+		start_record_session: startRecordSessionHandler,
+		get_record_session_status: getRecordSessionStatusHandler,
+		end_record_session: endRecordSessionHandler,
+		cancel_record_session: cancelRecordSessionHandler,
 		export_session_flow: exportSessionFlowHandler,
 		record_task_flow: recordTaskFlowHandler,
 		detect_interruption: detectInterruptionHandler,

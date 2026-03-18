@@ -6,6 +6,14 @@ This folder contains reproducible, real-device demo evidence used by README.
 
 - `docs/showcase/failure-intelligence-demo.md`
 
+## Flow record/replay demo
+
+- `docs/showcase/flow-record-replay-demo.md`
+
+## Record-session demo
+
+- `docs/showcase/record-session-demo.md`
+
 ## Primary demo videos
 
 - Happy path (Android real device):

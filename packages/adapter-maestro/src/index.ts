@@ -312,6 +312,12 @@ export {
   selectPreferredJsDebugTarget,
   selectPreferredJsDebugTargetWithReason,
 };
+export {
+  cancelRecordSessionWithMaestro,
+  endRecordSessionWithMaestro,
+  getRecordSessionStatusWithMaestro,
+  startRecordSessionWithMaestro,
+} from "./recording-runtime.js";
 export { classifyInterruptionFromSignals } from "./interruption-classifier.js";
 export { detectInterruptionFromSummary } from "./interruption-detector.js";
 export { buildInterruptionEvent, decideInterruptionResolution } from "./interruption-resolver.js";

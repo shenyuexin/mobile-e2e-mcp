@@ -3,7 +3,7 @@ import { rm } from "node:fs/promises";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { buildActionRecordRelativePath, buildDeviceLeaseRecordRelativePath, buildSessionAuditRelativePath, buildSessionRecordRelativePath, persistActionRecord } from "@mobile-e2e-mcp/core";
+import { buildActionRecordRelativePath, buildDeviceLeaseRecordRelativePath, buildRecordEventsRelativePath, buildRecordedStepsRelativePath, buildRecordSessionRelativePath, buildSessionAuditRelativePath, buildSessionRecordRelativePath, persistActionRecord } from "@mobile-e2e-mcp/core";
 import { buildToolList, handleRequest } from "../src/stdio-server.ts";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
@@ -22,6 +22,12 @@ async function cleanupActionArtifact(actionId: string): Promise<void> {
   await rm(path.resolve(repoRoot, buildActionRecordRelativePath(actionId)), { force: true });
 }
 
+async function cleanupRecordSessionArtifacts(recordSessionId: string): Promise<void> {
+  await rm(path.resolve(repoRoot, buildRecordSessionRelativePath(recordSessionId)), { force: true });
+  await rm(path.resolve(repoRoot, buildRecordEventsRelativePath(recordSessionId)), { force: true });
+  await rm(path.resolve(repoRoot, buildRecordedStepsRelativePath(recordSessionId)), { force: true });
+}
+
 test("buildToolList includes the new UI tools", () => {
   const tools = buildToolList();
   const toolNames = tools.map((tool) => tool.name);
@@ -36,6 +42,10 @@ test("buildToolList includes the new UI tools", () => {
   assert.ok(toolNames.includes("describe_capabilities"));
   assert.ok(toolNames.includes("execute_intent"));
   assert.ok(toolNames.includes("complete_task"));
+  assert.ok(toolNames.includes("start_record_session"));
+  assert.ok(toolNames.includes("get_record_session_status"));
+  assert.ok(toolNames.includes("end_record_session"));
+  assert.ok(toolNames.includes("cancel_record_session"));
   assert.ok(toolNames.includes("export_session_flow"));
   assert.ok(toolNames.includes("record_task_flow"));
   assert.ok(toolNames.includes("compare_against_baseline"));
@@ -83,6 +93,10 @@ test("handleRequest returns stdio initialize payload", async () => {
   assert.ok(typedResult.tools.some((tool) => tool.name === "describe_capabilities"));
   assert.ok(typedResult.tools.some((tool) => tool.name === "execute_intent"));
   assert.ok(typedResult.tools.some((tool) => tool.name === "complete_task"));
+  assert.ok(typedResult.tools.some((tool) => tool.name === "start_record_session"));
+  assert.ok(typedResult.tools.some((tool) => tool.name === "get_record_session_status"));
+  assert.ok(typedResult.tools.some((tool) => tool.name === "end_record_session"));
+  assert.ok(typedResult.tools.some((tool) => tool.name === "cancel_record_session"));
   assert.ok(typedResult.tools.some((tool) => tool.name === "export_session_flow"));
   assert.ok(typedResult.tools.some((tool) => tool.name === "record_task_flow"));
   assert.ok(typedResult.tools.some((tool) => tool.name === "compare_against_baseline"));
@@ -644,6 +658,75 @@ test("handleRequest supports tools/call alias for complete_task", async () => {
 
   assert.equal(typedResult.data.totalSteps, 1);
   assert.equal(typedResult.data.outcomes.length, 1);
+});
+
+test("handleRequest supports tools/call aliases for record session lifecycle", async () => {
+  const start = await handleRequest({
+    id: 325,
+    method: "tools/call",
+    params: {
+      name: "start_record_session",
+      arguments: {
+        sessionId: "stdio-record-session",
+        platform: "android",
+        dryRun: true,
+        deviceId: "emulator-5554",
+        appId: "com.example.app",
+      },
+    },
+  }) as { status: string; data: { recordSessionId: string } };
+
+  const recordSessionId = start.data.recordSessionId;
+  let flowPath: string | undefined;
+  try {
+    const status = await handleRequest({
+      id: 326,
+      method: "tools/call",
+      params: {
+        name: "get_record_session_status",
+        arguments: { recordSessionId },
+      },
+    }) as { status: string; data: { recordSessionId: string } };
+    assert.equal(status.status, "success");
+    assert.equal(status.data.recordSessionId, recordSessionId);
+
+    const ended = await handleRequest({
+      id: 327,
+      method: "tools/call",
+      params: {
+        name: "end_record_session",
+        arguments: {
+          recordSessionId,
+          autoExport: true,
+          runReplayDryRun: true,
+          dryRun: true,
+        },
+      },
+    }) as { status: string; data: { status: string; report: { flowPath?: string; replayDryRun?: { status: string; reasonCode: string } } } };
+    assert.equal(ended.status, "success");
+    assert.equal(ended.data.status, "ended");
+    assert.equal(typeof ended.data.report.flowPath, "string");
+    assert.equal(ended.data.report.flowPath?.endsWith(".yaml"), true);
+    assert.equal(typeof ended.data.report.replayDryRun?.status, "string");
+    assert.equal(typeof ended.data.report.replayDryRun?.reasonCode, "string");
+    flowPath = ended.data.report.flowPath;
+
+    const cancelled = await handleRequest({
+      id: 328,
+      method: "tools/call",
+      params: {
+        name: "cancel_record_session",
+        arguments: { recordSessionId },
+      },
+    }) as { status: string; data: { cancelled: boolean } };
+    assert.equal(cancelled.status, "success");
+    assert.equal(cancelled.data.cancelled, true);
+  } finally {
+    await cleanupRecordSessionArtifacts(recordSessionId);
+    if (flowPath) {
+      await rm(path.resolve(repoRoot, flowPath), { force: true });
+    }
+  }
 });
 
 test("handleRequest supports tools/call alias for get_action_outcome", async () => {

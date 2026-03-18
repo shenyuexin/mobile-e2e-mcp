@@ -3,7 +3,7 @@ import { readFile, rm } from "node:fs/promises";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { buildActionRecordRelativePath, buildDeviceLeaseRecordRelativePath, buildSessionAuditRelativePath, buildSessionRecordRelativePath, persistActionRecord } from "@mobile-e2e-mcp/core";
+import { buildActionRecordRelativePath, buildDeviceLeaseRecordRelativePath, buildRecordEventsRelativePath, buildRecordedStepsRelativePath, buildRecordSessionRelativePath, buildSessionAuditRelativePath, buildSessionRecordRelativePath, persistActionRecord } from "@mobile-e2e-mcp/core";
 import { createServer } from "../src/index.ts";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
@@ -22,6 +22,12 @@ async function cleanupActionArtifact(actionId: string): Promise<void> {
   await rm(path.resolve(repoRoot, buildActionRecordRelativePath(actionId)), { force: true });
 }
 
+async function cleanupRecordSessionArtifacts(recordSessionId: string): Promise<void> {
+  await rm(path.resolve(repoRoot, buildRecordSessionRelativePath(recordSessionId)), { force: true });
+  await rm(path.resolve(repoRoot, buildRecordEventsRelativePath(recordSessionId)), { force: true });
+  await rm(path.resolve(repoRoot, buildRecordedStepsRelativePath(recordSessionId)), { force: true });
+}
+
 test("createServer lists newly added UI tools", () => {
   const server = createServer();
   const tools = server.listTools();
@@ -35,6 +41,10 @@ test("createServer lists newly added UI tools", () => {
   assert.ok(tools.includes("describe_capabilities"));
   assert.ok(tools.includes("execute_intent"));
   assert.ok(tools.includes("complete_task"));
+  assert.ok(tools.includes("start_record_session"));
+  assert.ok(tools.includes("get_record_session_status"));
+  assert.ok(tools.includes("end_record_session"));
+  assert.ok(tools.includes("cancel_record_session"));
   assert.ok(tools.includes("export_session_flow"));
   assert.ok(tools.includes("record_task_flow"));
   assert.ok(tools.includes("compare_against_baseline"));
@@ -208,6 +218,61 @@ test("server invoke supports complete_task Android dry-run", async () => {
   assert.equal(result.status, "partial");
   assert.equal(result.data.totalSteps, 1);
   assert.equal(result.data.outcomes.length, 1);
+});
+
+test("server invoke supports record session lifecycle in dry-run", async () => {
+  const server = createServer();
+  const sessionId = `server-record-session-${Date.now()}`;
+  const recordSessionIdHolder: { value?: string } = {};
+  const flowPathHolder: { value?: string } = {};
+  try {
+    const start = await server.invoke("start_record_session", {
+      sessionId,
+      platform: "android",
+      dryRun: true,
+      deviceId: "emulator-5554",
+      appId: "com.example.app",
+    });
+    recordSessionIdHolder.value = start.data.recordSessionId;
+
+    assert.equal(start.status, "success");
+    assert.equal(start.reasonCode, "OK");
+    assert.equal(start.data.status, "running");
+
+    const status = await server.invoke("get_record_session_status", {
+      recordSessionId: start.data.recordSessionId,
+    });
+    assert.equal(status.status, "success");
+    assert.equal(status.data.recordSessionId, start.data.recordSessionId);
+
+    const ended = await server.invoke("end_record_session", {
+      recordSessionId: start.data.recordSessionId,
+      autoExport: true,
+      runReplayDryRun: true,
+      dryRun: true,
+    });
+    assert.equal(ended.status, "success");
+    assert.equal(ended.data.status, "ended");
+    assert.equal(typeof ended.data.report.stepCount, "number");
+    assert.equal(typeof ended.data.report.flowPath, "string");
+    assert.equal(ended.data.report.flowPath?.endsWith(".yaml"), true);
+    assert.equal(typeof ended.data.report.replayDryRun?.status, "string");
+    assert.equal(typeof ended.data.report.replayDryRun?.reasonCode, "string");
+    flowPathHolder.value = ended.data.report.flowPath;
+
+    const cancelled = await server.invoke("cancel_record_session", {
+      recordSessionId: start.data.recordSessionId,
+    });
+    assert.equal(cancelled.status, "success");
+    assert.equal(cancelled.data.cancelled, true);
+  } finally {
+    if (recordSessionIdHolder.value) {
+      await cleanupRecordSessionArtifacts(recordSessionIdHolder.value);
+    }
+    if (flowPathHolder.value) {
+      await rm(path.resolve(repoRoot, flowPathHolder.value), { force: true });
+    }
+  }
 });
 
 test("server invoke returns bounded auto-remediation stop details for allowlist misses", async () => {

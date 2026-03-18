@@ -2,6 +2,10 @@
 
 This guide explains the record -> export -> replay closure for generated Maestro flows.
 
+For passive manual recording front-door usage, see:
+
+- `docs/guides/record-session-quickstart.md`
+
 ## 1) Preconditions
 
 - A session exists and has persisted action records (from `perform_action_with_evidence`).

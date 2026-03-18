@@ -26,6 +26,14 @@ import type {
   ExplainLastFailureInput,
   CompleteTaskData,
   CompleteTaskInput,
+  StartRecordSessionData,
+  StartRecordSessionInput,
+  GetRecordSessionStatusInput,
+  RecordSessionStatusData,
+  EndRecordSessionData,
+  EndRecordSessionInput,
+  CancelRecordSessionData,
+  CancelRecordSessionInput,
   ExportSessionFlowData,
   ExportSessionFlowInput,
   FindSimilarFailuresData,
@@ -106,6 +114,10 @@ export interface MobileE2EMcpToolRegistry {
   doctor: (input: DoctorInput) => Promise<ToolResult<DoctorData>>;
   execute_intent: (input: ExecuteIntentInput) => Promise<ToolResult<ExecuteIntentData>>;
   complete_task: (input: CompleteTaskInput) => Promise<ToolResult<CompleteTaskData>>;
+  start_record_session: (input: StartRecordSessionInput) => Promise<ToolResult<StartRecordSessionData>>;
+  get_record_session_status: (input: GetRecordSessionStatusInput) => Promise<ToolResult<RecordSessionStatusData>>;
+  end_record_session: (input: EndRecordSessionInput) => Promise<ToolResult<EndRecordSessionData>>;
+  cancel_record_session: (input: CancelRecordSessionInput) => Promise<ToolResult<CancelRecordSessionData>>;
   export_session_flow: (input: ExportSessionFlowInput) => Promise<ToolResult<ExportSessionFlowData>>;
   record_task_flow: (input: RecordTaskFlowInput) => Promise<ToolResult<RecordTaskFlowData>>;
   explain_last_failure: (input: ExplainLastFailureInput) => Promise<ToolResult<ExplainLastFailureData>>;
@@ -151,7 +163,7 @@ export class MobileE2EMcpServer {
   constructor(private readonly tools: MobileE2EMcpToolRegistry) {}
 
   listTools(): Array<keyof MobileE2EMcpToolRegistry> {
-    return ["capture_js_console_logs", "capture_js_network_events", "compare_against_baseline", "collect_debug_evidence", "collect_diagnostics", "detect_interruption", "classify_interruption", "describe_capabilities", "doctor", "execute_intent", "complete_task", "export_session_flow", "record_task_flow", "explain_last_failure", "find_similar_failures", "get_action_outcome", "get_crash_signals", "get_logs", "get_screen_summary", "get_session_state", "inspect_ui", "query_ui", "rank_failure_candidates", "record_screen", "recover_to_known_state", "resolve_interruption", "resume_interrupted_action", "replay_last_stable_path", "reset_app_state", "resolve_ui_target", "scroll_and_resolve_ui_target", "scroll_and_tap_element", "install_app", "list_js_debug_targets", "launch_app", "list_devices", "measure_android_performance", "measure_ios_performance", "perform_action_with_evidence", "start_session", "run_flow", "suggest_known_remediation", "take_screenshot", "tap", "tap_element", "terminate_app", "type_text", "type_into_element", "wait_for_ui", "end_session"];
+    return ["capture_js_console_logs", "capture_js_network_events", "compare_against_baseline", "collect_debug_evidence", "collect_diagnostics", "detect_interruption", "classify_interruption", "describe_capabilities", "doctor", "execute_intent", "complete_task", "start_record_session", "get_record_session_status", "end_record_session", "cancel_record_session", "export_session_flow", "record_task_flow", "explain_last_failure", "find_similar_failures", "get_action_outcome", "get_crash_signals", "get_logs", "get_screen_summary", "get_session_state", "inspect_ui", "query_ui", "rank_failure_candidates", "record_screen", "recover_to_known_state", "resolve_interruption", "resume_interrupted_action", "replay_last_stable_path", "reset_app_state", "resolve_ui_target", "scroll_and_resolve_ui_target", "scroll_and_tap_element", "install_app", "list_js_debug_targets", "launch_app", "list_devices", "measure_android_performance", "measure_ios_performance", "perform_action_with_evidence", "start_session", "run_flow", "suggest_known_remediation", "take_screenshot", "tap", "tap_element", "terminate_app", "type_text", "type_into_element", "wait_for_ui", "end_session"];
   }
 
   async invoke(toolName: "capture_js_console_logs", input: CaptureJsConsoleLogsInput): Promise<ToolResult<CaptureJsConsoleLogsData>>;
@@ -165,6 +177,10 @@ export class MobileE2EMcpServer {
   async invoke(toolName: "doctor", input: DoctorInput): Promise<ToolResult<DoctorData>>;
   async invoke(toolName: "execute_intent", input: ExecuteIntentInput): Promise<ToolResult<ExecuteIntentData>>;
   async invoke(toolName: "complete_task", input: CompleteTaskInput): Promise<ToolResult<CompleteTaskData>>;
+  async invoke(toolName: "start_record_session", input: StartRecordSessionInput): Promise<ToolResult<StartRecordSessionData>>;
+  async invoke(toolName: "get_record_session_status", input: GetRecordSessionStatusInput): Promise<ToolResult<RecordSessionStatusData>>;
+  async invoke(toolName: "end_record_session", input: EndRecordSessionInput): Promise<ToolResult<EndRecordSessionData>>;
+  async invoke(toolName: "cancel_record_session", input: CancelRecordSessionInput): Promise<ToolResult<CancelRecordSessionData>>;
   async invoke(toolName: "export_session_flow", input: ExportSessionFlowInput): Promise<ToolResult<ExportSessionFlowData>>;
   async invoke(toolName: "record_task_flow", input: RecordTaskFlowInput): Promise<ToolResult<RecordTaskFlowData>>;
   async invoke(toolName: "explain_last_failure", input: ExplainLastFailureInput): Promise<ToolResult<ExplainLastFailureData>>;
@@ -206,7 +222,7 @@ export class MobileE2EMcpServer {
   async invoke(toolName: "end_session", input: EndSessionInput): Promise<ToolResult<{ closed: boolean; endedAt: string }>>;
   async invoke(
     toolName: keyof MobileE2EMcpToolRegistry,
-    input: CaptureJsConsoleLogsInput | CaptureJsNetworkEventsInput | CompareAgainstBaselineInput | CollectDebugEvidenceInput | CollectDiagnosticsInput | DetectInterruptionInput | ClassifyInterruptionInput | DescribeCapabilitiesInput | DoctorInput | ExecuteIntentInput | CompleteTaskInput | ExportSessionFlowInput | RecordTaskFlowInput | ExplainLastFailureInput | FindSimilarFailuresInput | GetActionOutcomeInput | GetCrashSignalsInput | GetLogsInput | GetScreenSummaryInput | GetSessionStateInput | InspectUiInput | QueryUiInput | RankFailureCandidatesInput | RecordScreenInput | RecoverToKnownStateInput | ResolveInterruptionInput | ResumeInterruptedActionInput | ReplayLastStablePathInput | ResetAppStateInput | ResolveUiTargetInput | ScrollAndResolveUiTargetInput | ScrollAndTapElementInput | InstallAppInput | ListJsDebugTargetsInput | LaunchAppInput | ListDevicesInput | MeasureAndroidPerformanceInput | MeasureIosPerformanceInput | PerformActionWithEvidenceInput | StartSessionInput | RunFlowInput | ScreenshotInput | SuggestKnownRemediationInput | TapInput | TapElementInput | TerminateAppInput | TypeTextInput | TypeIntoElementInput | WaitForUiInput | EndSessionInput,
+    input: CaptureJsConsoleLogsInput | CaptureJsNetworkEventsInput | CompareAgainstBaselineInput | CollectDebugEvidenceInput | CollectDiagnosticsInput | DetectInterruptionInput | ClassifyInterruptionInput | DescribeCapabilitiesInput | DoctorInput | ExecuteIntentInput | CompleteTaskInput | StartRecordSessionInput | GetRecordSessionStatusInput | EndRecordSessionInput | CancelRecordSessionInput | ExportSessionFlowInput | RecordTaskFlowInput | ExplainLastFailureInput | FindSimilarFailuresInput | GetActionOutcomeInput | GetCrashSignalsInput | GetLogsInput | GetScreenSummaryInput | GetSessionStateInput | InspectUiInput | QueryUiInput | RankFailureCandidatesInput | RecordScreenInput | RecoverToKnownStateInput | ResolveInterruptionInput | ResumeInterruptedActionInput | ReplayLastStablePathInput | ResetAppStateInput | ResolveUiTargetInput | ScrollAndResolveUiTargetInput | ScrollAndTapElementInput | InstallAppInput | ListJsDebugTargetsInput | LaunchAppInput | ListDevicesInput | MeasureAndroidPerformanceInput | MeasureIosPerformanceInput | PerformActionWithEvidenceInput | StartSessionInput | RunFlowInput | ScreenshotInput | SuggestKnownRemediationInput | TapInput | TapElementInput | TerminateAppInput | TypeTextInput | TypeIntoElementInput | WaitForUiInput | EndSessionInput,
   ): Promise<
       | ToolResult<CaptureJsConsoleLogsData>
       | ToolResult<CaptureJsNetworkEventsData>
@@ -219,6 +235,10 @@ export class MobileE2EMcpServer {
       | ToolResult<DoctorData>
       | ToolResult<ExecuteIntentData>
       | ToolResult<CompleteTaskData>
+      | ToolResult<StartRecordSessionData>
+      | ToolResult<RecordSessionStatusData>
+      | ToolResult<EndRecordSessionData>
+      | ToolResult<CancelRecordSessionData>
       | ToolResult<ExportSessionFlowData>
       | ToolResult<RecordTaskFlowData>
       | ToolResult<ExplainLastFailureData>
@@ -263,6 +283,10 @@ export class MobileE2EMcpServer {
     if (toolName === "doctor") return this.tools.doctor(input as DoctorInput);
     if (toolName === "execute_intent") return this.tools.execute_intent(input as ExecuteIntentInput);
     if (toolName === "complete_task") return this.tools.complete_task(input as CompleteTaskInput);
+    if (toolName === "start_record_session") return this.tools.start_record_session(input as StartRecordSessionInput);
+    if (toolName === "get_record_session_status") return this.tools.get_record_session_status(input as GetRecordSessionStatusInput);
+    if (toolName === "end_record_session") return this.tools.end_record_session(input as EndRecordSessionInput);
+    if (toolName === "cancel_record_session") return this.tools.cancel_record_session(input as CancelRecordSessionInput);
     if (toolName === "export_session_flow") return this.tools.export_session_flow(input as ExportSessionFlowInput);
     if (toolName === "record_task_flow") return this.tools.record_task_flow(input as RecordTaskFlowInput);
     if (toolName === "explain_last_failure") return this.tools.explain_last_failure(input as ExplainLastFailureInput);

@@ -1160,6 +1160,111 @@ export interface RecordTaskFlowInput extends ExportSessionFlowInput {
 export interface RecordTaskFlowData extends ExportSessionFlowData {
   goal?: string;
 }
+export type RecordSessionStatus = "running" | "ended" | "cancelled";
+export type RecordedEventType = "tap" | "type" | "swipe" | "back" | "home" | "app_switch";
+export type RecordedStepConfidence = "high" | "medium" | "low";
+export interface RawRecordedEvent {
+  eventId: string;
+  recordSessionId: string;
+  timestamp: string;
+  eventType: RecordedEventType;
+  x?: number;
+  y?: number;
+  textDelta?: string;
+  foregroundApp?: string;
+  uiSnapshotRef?: string;
+  rawLine?: string;
+}
+export interface RecordedStep {
+  stepNumber: number;
+  eventId: string;
+  timestamp: string;
+  actionType: ActionIntent["actionType"] | "tap";
+  actionIntent?: ActionIntent;
+  x?: number;
+  y?: number;
+  confidence: RecordedStepConfidence;
+  reason: string;
+  warnings?: string[];
+}
+export interface StartRecordSessionInput {
+  sessionId: string;
+  platform?: Platform;
+  deviceId?: string;
+  appId?: string;
+  recordingProfile?: string;
+  dryRun?: boolean;
+}
+export interface StartRecordSessionData {
+  recordSessionId: string;
+  sessionId: string;
+  platform: Platform;
+  deviceId: string;
+  appId?: string;
+  recordingProfile: string;
+  status: RecordSessionStatus;
+  startedAt: string;
+  captureChannels: string[];
+  rawEventsPath: string;
+  pid?: number;
+}
+export interface GetRecordSessionStatusInput {
+  recordSessionId: string;
+}
+export interface RecordSessionStatusData {
+  recordSessionId: string;
+  sessionId: string;
+  platform: Platform;
+  deviceId: string;
+  appId?: string;
+  status: RecordSessionStatus;
+  startedAt: string;
+  endedAt?: string;
+  rawEventCount: number;
+  recordedStepCount: number;
+  rawEventsPath: string;
+  flowPath?: string;
+  warnings: string[];
+}
+export interface ReplayDryRunSummary {
+  status: ToolStatus;
+  reasonCode: ReasonCode;
+}
+export interface FlowGenerationReport {
+  flowPath?: string;
+  stepCount: number;
+  warnings: string[];
+  confidenceSummary: {
+    high: number;
+    medium: number;
+    low: number;
+  };
+  reviewRequired: boolean;
+  replayDryRun?: ReplayDryRunSummary;
+}
+export interface EndRecordSessionInput {
+  recordSessionId: string;
+  autoExport?: boolean;
+  outputPath?: string;
+  runReplayDryRun?: boolean;
+  includeLaunchStep?: boolean;
+  dryRun?: boolean;
+}
+export interface EndRecordSessionData {
+  recordSessionId: string;
+  status: RecordSessionStatus;
+  endedAt: string;
+  report: FlowGenerationReport;
+}
+export interface CancelRecordSessionInput {
+  recordSessionId: string;
+}
+export interface CancelRecordSessionData {
+  recordSessionId: string;
+  cancelled: boolean;
+  status: RecordSessionStatus;
+  endedAt?: string;
+}
 export interface InspectUiInput { sessionId: string; platform?: Platform; runnerProfile?: RunnerProfile; harnessConfigPath?: string; deviceId?: string; outputPath?: string; dryRun?: boolean; }
 export interface InspectUiQueryInput extends InspectUiInput, InspectUiQuery {}
 export interface QueryUiInput extends InspectUiQueryInput {}
