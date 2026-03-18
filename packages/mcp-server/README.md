@@ -35,6 +35,10 @@ npx -y @shenyuexin/mobile-e2e-mcp@latest
 - `tap_element`, `type_into_element`, `scroll_and_tap_element`
 - `get_logs`, `get_crash_signals`, `collect_debug_evidence`
 
+## Golden path guide
+
+- https://github.com/shenyuexin/mobile-e2e-mcp/blob/main/docs/guides/golden-path.md
+
 For full architecture and contribution docs, see:
 
 - Repository: https://github.com/shenyuexin/mobile-e2e
