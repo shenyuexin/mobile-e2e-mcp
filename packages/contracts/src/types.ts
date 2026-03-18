@@ -1071,6 +1071,95 @@ export interface SuggestKnownRemediationData {
   actionId?: string;
   remediation: string[];
 }
+export interface ExecuteIntentStepInput {
+  intent: string;
+  actionType?: SupportedActionType;
+  resourceId?: string;
+  contentDesc?: string;
+  text?: string;
+  className?: string;
+  clickable?: boolean;
+  limit?: number;
+  value?: string;
+  appId?: string;
+  launchUrl?: string;
+  timeoutMs?: number;
+  intervalMs?: number;
+  waitUntil?: WaitForUiMode;
+}
+export interface ExecuteIntentInput extends ExecuteIntentStepInput {
+  sessionId: string;
+  platform?: Platform;
+  runnerProfile?: RunnerProfile;
+  harnessConfigPath?: string;
+  deviceId?: string;
+  dryRun?: boolean;
+}
+export interface ExecuteIntentData {
+  intent: string;
+  selectedAction: ActionIntent;
+  decision: string;
+  candidateActionTypes: SupportedActionType[];
+  outcome: ActionOutcomeSummary;
+  preStateSummary?: StateSummary;
+  postStateSummary?: StateSummary;
+  retryRecommendationTier?: PerformActionWithEvidenceData["retryRecommendationTier"];
+  actionabilityReview?: string[];
+}
+export interface TaskStepPlan {
+  stepNumber: number;
+  intent: string;
+  selectedAction: ActionIntent;
+  decision: string;
+}
+export interface TaskStepOutcome {
+  stepNumber: number;
+  intent: string;
+  status: ToolStatus;
+  reasonCode: ReasonCode;
+  actionId?: string;
+  artifacts: string[];
+  decision: string;
+}
+export interface CompleteTaskInput {
+  sessionId: string;
+  goal: string;
+  steps?: ExecuteIntentStepInput[];
+  maxSteps?: number;
+  stopOnFailure?: boolean;
+  platform?: Platform;
+  runnerProfile?: RunnerProfile;
+  harnessConfigPath?: string;
+  deviceId?: string;
+  appId?: string;
+  dryRun?: boolean;
+}
+export interface CompleteTaskData {
+  goal: string;
+  plannedSteps: TaskStepPlan[];
+  outcomes: TaskStepOutcome[];
+  completed: boolean;
+  executedSteps: number;
+  totalSteps: number;
+}
+export interface ExportSessionFlowInput {
+  sessionId: string;
+  outputPath?: string;
+  includeLaunchStep?: boolean;
+}
+export interface ExportSessionFlowData {
+  outputPath: string;
+  stepCount: number;
+  skippedCount: number;
+  warnings: string[];
+  preview: string;
+}
+export interface RecordTaskFlowInput extends ExportSessionFlowInput {
+  goal?: string;
+}
+export interface RecordTaskFlowData extends ExportSessionFlowData {
+  goal?: string;
+}
 export interface InspectUiInput { sessionId: string; platform?: Platform; runnerProfile?: RunnerProfile; harnessConfigPath?: string; deviceId?: string; outputPath?: string; dryRun?: boolean; }
 export interface InspectUiQueryInput extends InspectUiInput, InspectUiQuery {}
 export interface QueryUiInput extends InspectUiQueryInput {}
