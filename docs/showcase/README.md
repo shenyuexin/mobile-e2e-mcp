@@ -17,6 +17,26 @@ This folder contains reproducible, real-device demo evidence used by README.
 - Interruption recording wrapper: `bash scripts/dev/record-demo-interruption-home-recovery-android.sh`
 - One-command publisher (record + curate + refresh assets): `bash scripts/dev/publish-showcase-assets-android.sh`
 
+## Prerequisites for clone-and-run
+
+- Android emulator/device online via `adb devices` (recommended Android 9 / API 28 or newer)
+- `adb` and `pnpm` installed and available in your `PATH`
+- `com.epam.mobitru` installed on the selected device
+- `ffmpeg` and `ffprobe` installed (required for `publish-showcase-assets-android.sh`)
+
+Optional fast install path from this repo before recording:
+
+```bash
+(cd examples/demo-android-app && ./gradlew assembleDebug)
+APK_PATH=examples/demo-android-app/app/build/outputs/apk/debug/app-debug.apk \
+  bash scripts/dev/record-demo-happy-path-android.sh
+```
+
+Notes:
+
+- If `DEVICE_ID` is unset, both recording wrappers and direct demo TS scripts auto-select the first online Android device.
+- `APK_PATH` is supported by both recording wrappers and by `publish-showcase-assets-android.sh`.
+
 ## Snapshot assets used by README
 
 - `docs/showcase/assets/happy-01-login.png`

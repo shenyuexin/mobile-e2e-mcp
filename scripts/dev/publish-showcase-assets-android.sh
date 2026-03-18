@@ -7,8 +7,9 @@ WORK_DIR="${WORK_DIR:-$ROOT/artifacts/screen-recordings}"
 SHOWCASE_VIDEOS_DIR="${SHOWCASE_VIDEOS_DIR:-$ROOT/docs/showcase/videos}"
 SHOWCASE_ASSETS_DIR="${SHOWCASE_ASSETS_DIR:-$ROOT/docs/showcase/assets}"
 
-DEVICE_ID="${DEVICE_ID:-10AEA40Z3Y000R5}"
+DEVICE_ID="${DEVICE_ID:-}"
 APP_ID="${APP_ID:-com.epam.mobitru}"
+APK_PATH="${APK_PATH:-${NATIVE_ANDROID_APK_PATH:-}}"
 
 HAPPY_DURATION_SECONDS="${HAPPY_DURATION_SECONDS:-40}"
 INTERRUPTION_DURATION_SECONDS="${INTERRUPTION_DURATION_SECONDS:-35}"
@@ -25,6 +26,27 @@ if ! command -v ffmpeg >/dev/null 2>&1; then
   printf "ffmpeg is required to publish showcase assets.\n" >&2
   exit 1
 fi
+
+if ! command -v ffprobe >/dev/null 2>&1; then
+  printf "ffprobe is required to publish showcase assets.\n" >&2
+  exit 1
+fi
+
+if [ -z "$DEVICE_ID" ]; then
+  if ! command -v adb >/dev/null 2>&1; then
+    printf "adb is required when DEVICE_ID is not provided.\n" >&2
+    exit 1
+  fi
+
+  DEVICE_ID="$(adb devices | awk 'NR > 1 && $2 == "device" { print $1; exit }')"
+  if [ -z "$DEVICE_ID" ]; then
+    printf "No Android device is ready. Start an emulator/device or set DEVICE_ID explicitly.\n" >&2
+    adb devices >&2 || true
+    exit 1
+  fi
+fi
+
+printf "[publish] Using DEVICE_ID=%s APP_ID=%s\n" "$DEVICE_ID" "$APP_ID"
 
 latest_recording_by_prefix() {
   local dir="$1"
@@ -83,11 +105,11 @@ extract_frame_safe() {
 }
 
 printf "[publish] Recording happy-path source video...\n"
-DEVICE_ID="$DEVICE_ID" APP_ID="$APP_ID" DURATION_SECONDS="$HAPPY_DURATION_SECONDS" OUT_DIR="$WORK_DIR" PREFIX="$HAPPY_PREFIX" \
+DEVICE_ID="$DEVICE_ID" APP_ID="$APP_ID" APK_PATH="$APK_PATH" DURATION_SECONDS="$HAPPY_DURATION_SECONDS" OUT_DIR="$WORK_DIR" PREFIX="$HAPPY_PREFIX" \
   bash "$ROOT/scripts/dev/record-demo-happy-path-android.sh"
 
 printf "[publish] Recording interruption-recovery source video...\n"
-DEVICE_ID="$DEVICE_ID" APP_ID="$APP_ID" DURATION_SECONDS="$INTERRUPTION_DURATION_SECONDS" OUT_DIR="$WORK_DIR" PREFIX="$INTERRUPTION_PREFIX" \
+DEVICE_ID="$DEVICE_ID" APP_ID="$APP_ID" APK_PATH="$APK_PATH" DURATION_SECONDS="$INTERRUPTION_DURATION_SECONDS" OUT_DIR="$WORK_DIR" PREFIX="$INTERRUPTION_PREFIX" \
   bash "$ROOT/scripts/dev/record-demo-interruption-home-recovery-android.sh"
 
 HAPPY_SOURCE="$(latest_recording_by_prefix "$WORK_DIR" "$HAPPY_PREFIX")"

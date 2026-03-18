@@ -39,8 +39,47 @@ async function sleep(ms: number): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function pickFirstOnlineAndroidDevice(adbDevicesOutput: string): string | undefined {
+  const lines = adbDevicesOutput.split(/\r?\n/);
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (trimmed.length === 0 || trimmed.startsWith("List of devices attached")) {
+      continue;
+    }
+
+    const [candidateDeviceId, state] = trimmed.split(/\s+/, 3);
+    if (candidateDeviceId && state === "device") {
+      return candidateDeviceId;
+    }
+  }
+  return undefined;
+}
+
+async function resolveDeviceId(): Promise<string> {
+  const explicitDeviceId = process.env.DEVICE_ID?.trim();
+  if (explicitDeviceId) {
+    return explicitDeviceId;
+  }
+
+  let adbDevicesOutput = "";
+  try {
+    const result = await execFileAsync("adb", ["devices"]);
+    adbDevicesOutput = result.stdout;
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`Failed to run 'adb devices': ${message}`);
+  }
+
+  const autoDetectedDeviceId = pickFirstOnlineAndroidDevice(adbDevicesOutput);
+  if (autoDetectedDeviceId) {
+    return autoDetectedDeviceId;
+  }
+
+  throw new Error("No Android device is online. Start an emulator/device or set DEVICE_ID explicitly.");
+}
+
 async function main(): Promise<void> {
-  const deviceId = process.env.DEVICE_ID ?? "10AEA40Z3Y000R5";
+  const deviceId = await resolveDeviceId();
   const appId = process.env.APP_ID ?? "com.epam.mobitru";
   const sessionId = process.env.SESSION_ID ?? `interruption-home-recovery-${Date.now()}`;
   const server = createServer();

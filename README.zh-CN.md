@@ -1,5 +1,8 @@
 # Mobile E2E MCP（中文版）
 
+[![CI（build + typecheck + unit + smoke）](https://github.com/shenyuexin/mobile-e2e-mcp/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/shenyuexin/mobile-e2e-mcp/actions/workflows/ci.yml)
+[![pnpm test:ci](https://github.com/shenyuexin/mobile-e2e-mcp/actions/workflows/test-ci.yml/badge.svg?branch=main)](https://github.com/shenyuexin/mobile-e2e-mcp/actions/workflows/test-ci.yml)
+
 > 面向 AI Agent 的移动端 E2E 编排层，覆盖 Android / iOS / React Native / Flutter，强调确定性优先、有边界视觉兜底与治理约束。
 
 本仓库是一个 pnpm monorepo，组合了 MCP 工具层、执行适配层与架构文档，用于构建可扩展的移动端 E2E 平台。

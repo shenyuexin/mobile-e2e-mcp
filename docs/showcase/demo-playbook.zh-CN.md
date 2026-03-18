@@ -50,9 +50,13 @@ bash scripts/dev/publish-showcase-assets-android.sh
 
 可选环境变量：
 
-- `DEVICE_ID`（默认 `10AEA40Z3Y000R5`）
+- `DEVICE_ID`（默认自动选择第一个在线 Android 设备）
 - `APP_ID`（默认 `com.epam.mobitru`）
 - `SESSION_ID`（默认自动生成）
+
+发布脚本补充前置（`publish-showcase-assets-android.sh`）：
+
+- 需要本机已安装 `ffmpeg` 与 `ffprobe`
 
 ### 对应录屏（更清晰版本）
 
