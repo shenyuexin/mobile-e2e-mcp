@@ -4,6 +4,73 @@
 
 This repository is a pnpm monorepo that combines MCP tooling, adapter execution, and architecture docs for a scalable mobile E2E platform.
 
+## 30-Second Proof 
+
+If you want to verify this project is runnable before reading architecture details, start here:
+
+- Happy path video (login -> scroll -> add to cart -> orders -> cart):
+  - `docs/showcase/videos/m2e-happy-path-scroll-pause-40s.mp4`
+- Visible interruption + recovery video (HOME interruption -> recover_to_known_state -> continue action):
+  - `docs/showcase/videos/m2e-interruption-home-recovery-35s.mp4`
+- Repro scripts:
+  - `bash scripts/dev/record-demo-happy-path-android.sh`
+  - `bash scripts/dev/record-demo-interruption-home-recovery-android.sh`
+  - `bash scripts/dev/publish-showcase-assets-android.sh` (record + curate videos + refresh snapshots/GIFs)
+- Demo playbook and evidence index:
+  - [docs/showcase/README.md](docs/showcase/README.md)
+  - [docs/showcase/demo-playbook.zh-CN.md](docs/showcase/demo-playbook.zh-CN.md)
+
+### Quick GIF Preview
+
+| Happy path GIF | Interruption recovery GIF |
+|---|---|
+| ![Happy path preview](docs/showcase/assets/happy-preview.gif) | ![Interruption recovery preview](docs/showcase/assets/interruption-preview.gif) |
+
+## Mobile E2E Harness Positioning 
+
+This project is an **AI mobile E2E harness**: a policy-aware, session-oriented, deterministic-first execution harness for real-device mobile automation.
+
+If you're searching for terms like **mobile test harness**, **real-device Android test harness**, **AI automation harness**, or **mobile CI harness**, this repository is built for that exact workflow.
+
+### Why teams use this harness
+
+- **Deterministic-first harness**: stable selectors and structured retries before OCR/CV fallback
+- **Failure-intelligence harness**: reason codes, evidence artifacts, and remediation suggestions
+- **Governance-aware harness**: policy profiles, auditable sessions, and controlled tool surfaces
+- **Real-device demo harness**: reproducible scripts + videos for happy path and interruption recovery
+
+## Appium / Maestro vs This Harness
+
+| Dimension | Appium / Maestro | Mobile E2E MCP Harness |
+|---|---|---|
+| Core role | Automation framework / flow runner | AI-facing orchestration harness |
+| Execution strategy | Action execution centric | Deterministic-first + policy/session governance |
+| Failure handling | Assertion/command failure outputs | Structured diagnostics + ranked causes + remediation hints |
+| AI integration | Possible but not primary abstraction | Primary design target (tools for AI agents) |
+| Evidence model | Varies by setup | Built-in evidence-first action outcomes |
+
+## FAQ 
+
+### What is a mobile E2E harness for AI agents?
+
+It is an execution layer that lets AI agents run mobile test actions safely and reproducibly. This harness adds session control, policy boundaries, deterministic action routing, and structured evidence beyond basic command execution.
+
+### Can this harness run on real Android devices?
+
+Yes. This repository includes real-device scripts and recordings under `scripts/dev/*` and `docs/showcase/*`, including happy-path and interruption-recovery demos.
+
+### How does interruption recovery work in this harness?
+
+It detects interruption signals, classifies likely interruption type, and applies bounded recovery actions (for example `recover_to_known_state`) before continuing the flow.
+
+### Is this a replacement for Appium or Maestro?
+
+Not necessarily. It is better understood as an orchestration harness that can coexist with existing execution ecosystems while adding AI-oriented governance and diagnostics.
+
+### Which scenarios are the best fit?
+
+Release-gate mobile regression, flaky-flow triage, AI-driven exploratory checks, and real-device CI workflows that require auditable, evidence-rich outcomes.
+
 ## What This Repository Actually Is
 
 This repo contains both:
@@ -246,6 +313,7 @@ the repository settings:
 - [docs/architecture/platform-implementation-matrix.zh-CN.md](docs/architecture/platform-implementation-matrix.zh-CN.md) — cross-platform support matrix
 - [docs/delivery/roadmap.md](docs/delivery/roadmap.md) — delivery phases
 - [docs/delivery/npm-release-and-git-tagging.zh-CN.md](docs/delivery/npm-release-and-git-tagging.zh-CN.md) — npm 发版与 Git tag 一体化规范（@shenyuexin/mobile-e2e-mcp）
+- [docs/showcase/README.md](docs/showcase/README.md) — real-device demo evidence and repro scripts
 - [tests/README.md](tests/README.md) — test layers and CI scope
 
 ## Roadmap Snapshot (Short)
@@ -266,9 +334,8 @@ If this project helps your team, you can support it by:
 
 1. Starring and sharing the repository
 2. Opening issues/PRs with reproducible evidence
-3. Sponsoring the project (donation channels are being prepared)
+3. Sponsoring the project
 
 Donation note:
 
-- To keep trust high, this README only shows live payment methods.
-- PayPal / Alipay links will be added after account setup and end-to-end verification.
+- [![Donate via PayPal](https://img.shields.io/badge/Donate-PayPal-00457C?logo=paypal&logoColor=white)](https://paypal.me/shenyuexin) [paypal.me/shenyuexin](https://paypal.me/shenyuexin)

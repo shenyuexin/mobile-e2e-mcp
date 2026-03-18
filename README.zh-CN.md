@@ -4,6 +4,74 @@
 
 本仓库是一个 pnpm monorepo，组合了 MCP 工具层、执行适配层与架构文档，用于构建可扩展的移动端 E2E 平台。
 
+## 30 秒可信度证明
+
+如果你想先确认“它真的能跑”，再看架构细节，先看这部分：
+
+- Happy Path 录屏（登录 -> 滚动 -> 加购 -> Orders -> Cart）：
+  - `docs/showcase/videos/m2e-happy-path-scroll-pause-40s.mp4`
+- 可见中断与恢复录屏（HOME 中断 -> recover_to_known_state -> 继续动作）：
+  - `docs/showcase/videos/m2e-interruption-home-recovery-35s.mp4`
+- 一键复现脚本：
+  - `bash scripts/dev/record-demo-happy-path-android.sh`
+  - `bash scripts/dev/record-demo-interruption-home-recovery-android.sh`
+  - `bash scripts/dev/publish-showcase-assets-android.sh`（录制 + 归档视频 + 刷新截图/GIF）
+- 演示说明与证据索引：
+  - [docs/showcase/README.md](docs/showcase/README.md)
+  - [docs/showcase/demo-playbook.zh-CN.md](docs/showcase/demo-playbook.zh-CN.md)
+
+### GIF 快速预览
+
+| Happy Path GIF | 中断恢复 GIF |
+|---|---|
+| ![Happy Path 预览](docs/showcase/assets/happy-preview.gif) | ![中断恢复预览](docs/showcase/assets/interruption-preview.gif) |
+
+## Mobile E2E Harness 定位
+
+这个项目可以理解为一个 **AI mobile E2E harness（面向 AI 的移动端执行编排层）**：
+它不是单纯执行动作，而是提供策略约束、会话治理、确定性优先执行路径与结构化证据输出。
+
+如果你在搜索这些关键词：**mobile test harness / Android test harness / AI automation harness / mobile CI harness**，本仓库就是为这类需求设计的。
+
+### 为什么团队会用这个 harness
+
+- **Deterministic-first harness**：优先稳定定位与可解释重试，再进入 OCR/CV 兜底
+- **Failure-intelligence harness**：失败有原因码、证据产物、候选根因与修复建议
+- **Governance-aware harness**：策略 profile、可审计 session、受控工具面
+- **Real-device demo harness**：有真实可复现脚本与录屏，不是纸面架构
+
+## Appium / Maestro 与本 Harness 的关系
+
+| 维度 | Appium / Maestro | Mobile E2E MCP Harness |
+|---|---|---|
+| 核心角色 | 自动化框架 / flow runner | 面向 AI 的编排 harness |
+| 执行策略 | 以动作执行为中心 | 确定性优先 + policy/session 治理 |
+| 失败处理 | 命令或断言失败信息 | 结构化诊断 + 候选根因排序 + 修复建议 |
+| AI 适配 | 可接入，但非一等抽象 | 原生面向 AI Agent 设计 |
+| 证据模型 | 依赖外部拼装 | 内建证据优先 action outcome |
+
+## FAQ
+
+### 什么是面向 AI Agent 的 mobile E2E harness？
+
+它是一个执行编排层，让 AI Agent 能在可控边界内稳定执行移动端动作，并拿到可机器消费的结果与证据，而不只是“命令成功/失败”。
+
+### 这个 harness 能跑 Android 真机吗？
+
+可以。仓库提供了真机脚本与演示资产，见 `scripts/dev/*` 与 `docs/showcase/*`（包含 happy path 与中断恢复）。
+
+### 这个 harness 怎么处理中断恢复？
+
+它会检测中断信号、分类中断类型，并执行有边界恢复动作（例如 `recover_to_known_state`），然后继续后续流程。
+
+### 它是要替代 Appium / Maestro 吗？
+
+不一定。更准确说法是：它是更上层的 orchestration harness，可与既有执行生态共存，同时补足 AI 场景下的治理与诊断能力。
+
+### 哪些场景最适合这个 harness？
+
+发布门禁回归（release-gate）、脆弱流程排障、AI 驱动探索式检查、以及需要审计证据的真机 CI 场景。
+
 ## 这个仓库“本质上”是什么
 
 本仓库同时包含两层内容：
@@ -199,6 +267,7 @@ pnpm test:ci
 - [docs/architecture/capability-map.md](docs/architecture/capability-map.md) — 能力域与成熟度
 - [docs/architecture/governance-security.md](docs/architecture/governance-security.md) — 治理与安全
 - [docs/delivery/roadmap.md](docs/delivery/roadmap.md) — 分阶段交付路线
+- [docs/showcase/README.md](docs/showcase/README.md) — 真机 Demo 证据与复现脚本
 - [tests/README.md](tests/README.md) — 测试层与 CI 范围
 
 ## 路线图快照（简版）
@@ -219,9 +288,8 @@ pnpm test:ci
 
 1. 给仓库点 Star 并分享
 2. 提交带证据的 Issue / PR
-3. 通过赞助支持项目持续维护（捐赠渠道筹备中）
+3. 通过赞助支持项目持续维护
 
 捐赠说明：
 
-- 为保证可信度，README 只展示可立即使用的支付方式。
-- PayPal / 支付宝会在账号开通并完成端到端验证后再公开。
+- [![Donate via PayPal](https://img.shields.io/badge/Donate-PayPal-00457C?logo=paypal&logoColor=white)](https://paypal.me/shenyuexin) [paypal.me/shenyuexin](https://paypal.me/shenyuexin)
