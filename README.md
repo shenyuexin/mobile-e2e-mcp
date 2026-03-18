@@ -113,16 +113,39 @@ Source-of-truth note:
 
 Tool registry and signatures live in `packages/mcp-server/src/server.ts` and `packages/mcp-server/src/tools/*`.
 
-Representative MCP tools currently implemented include:
+## Complete MCP Tool Catalog (Current)
 
-- Session/lifecycle: `start_session`, `end_session`, `run_flow`, `reset_app_state`
-- Device/app: `list_devices`, `install_app`, `launch_app`, `terminate_app`
-- UI actions: `tap`, `type_text`, `wait_for_ui`, `tap_element`, `type_into_element`
-- UI perception: `inspect_ui`, `query_ui`, `resolve_ui_target`, `scroll_and_resolve_ui_target`, `scroll_and_tap_element`
-- Observability: `take_screenshot`, `record_screen`, `get_logs`, `get_crash_signals`, `collect_diagnostics`
-- Intelligence/recovery: `perform_action_with_evidence`, `explain_last_failure`, `rank_failure_candidates`, `recover_to_known_state`, `replay_last_stable_path`, `suggest_known_remediation`
+The server currently exposes **46 tools**. For AI agents, this is the fastest way to understand what actions are available.
 
-For exact signatures and supported inputs/outputs, use `packages/mcp-server/src/server.ts`.
+### 1) Session & lifecycle
+
+`start_session`, `end_session`, `run_flow`, `reset_app_state`
+
+### 2) Device & app control
+
+`list_devices`, `install_app`, `launch_app`, `terminate_app`, `describe_capabilities`, `doctor`
+
+### 3) UI perception, targeting, and interaction
+
+`inspect_ui`, `query_ui`, `resolve_ui_target`, `scroll_and_resolve_ui_target`, `wait_for_ui`, `tap`, `tap_element`, `scroll_and_tap_element`, `type_text`, `type_into_element`
+
+### 4) Evidence, observability, and diagnostics
+
+`take_screenshot`, `record_screen`, `get_logs`, `get_crash_signals`, `collect_diagnostics`, `collect_debug_evidence`, `get_screen_summary`, `get_session_state`, `capture_js_console_logs`, `capture_js_network_events`, `list_js_debug_targets`
+
+### 5) Interruption handling
+
+`detect_interruption`, `classify_interruption`, `resolve_interruption`, `resume_interrupted_action`
+
+### 6) Failure analysis, recovery, and remediation
+
+`perform_action_with_evidence`, `get_action_outcome`, `explain_last_failure`, `rank_failure_candidates`, `find_similar_failures`, `compare_against_baseline`, `recover_to_known_state`, `replay_last_stable_path`, `suggest_known_remediation`
+
+### 7) Performance profiling
+
+`measure_android_performance`, `measure_ios_performance`
+
+For exact signatures and supported inputs/outputs, use `packages/mcp-server/src/server.ts` (the tool registry source of truth).
 
 ## Deterministic Ladder and Fallback Policy
 
@@ -236,3 +259,16 @@ Detailed public planning references are maintained in `docs/delivery/roadmap.md`
 ## Positioning
 
 This project is not another isolated test framework. It is a universal AI-facing orchestration layer that routes mobile E2E actions across multiple backends with deterministic-first behavior and strict governance boundaries.
+
+## Support This Project
+
+If this project helps your team, you can support it by:
+
+1. Starring and sharing the repository
+2. Opening issues/PRs with reproducible evidence
+3. Sponsoring the project (donation channels are being prepared)
+
+Donation note:
+
+- To keep trust high, this README only shows live payment methods.
+- PayPal / Alipay links will be added after account setup and end-to-end verification.

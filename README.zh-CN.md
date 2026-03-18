@@ -88,16 +88,39 @@
 
 工具注册与签名入口：`packages/mcp-server/src/server.ts` 与 `packages/mcp-server/src/tools/*`。
 
-当前已实现的代表性工具（示例）包括：
+## 完整 MCP 工具目录（当前）
 
-- 会话/生命周期：`start_session`、`end_session`、`run_flow`、`reset_app_state`
-- 设备/应用：`list_devices`、`install_app`、`launch_app`、`terminate_app`
-- UI 动作：`tap`、`type_text`、`wait_for_ui`、`tap_element`、`type_into_element`
-- UI 感知：`inspect_ui`、`query_ui`、`resolve_ui_target`、`scroll_and_resolve_ui_target`、`scroll_and_tap_element`
-- 可观测性：`take_screenshot`、`record_screen`、`get_logs`、`get_crash_signals`、`collect_diagnostics`
-- 智能恢复：`perform_action_with_evidence`、`explain_last_failure`、`rank_failure_candidates`、`recover_to_known_state`、`replay_last_stable_path`、`suggest_known_remediation`
+当前服务共暴露 **46 个工具**。对于 AI Agent，这是最快建立“可做什么”的入口。
 
-精确签名与输入输出以 `packages/mcp-server/src/server.ts` 为准。
+### 1）会话与生命周期
+
+`start_session`、`end_session`、`run_flow`、`reset_app_state`
+
+### 2）设备与应用控制
+
+`list_devices`、`install_app`、`launch_app`、`terminate_app`、`describe_capabilities`、`doctor`
+
+### 3）UI 感知、定位与交互
+
+`inspect_ui`、`query_ui`、`resolve_ui_target`、`scroll_and_resolve_ui_target`、`wait_for_ui`、`tap`、`tap_element`、`scroll_and_tap_element`、`type_text`、`type_into_element`
+
+### 4）证据、可观测与诊断
+
+`take_screenshot`、`record_screen`、`get_logs`、`get_crash_signals`、`collect_diagnostics`、`collect_debug_evidence`、`get_screen_summary`、`get_session_state`、`capture_js_console_logs`、`capture_js_network_events`、`list_js_debug_targets`
+
+### 5）中断处理
+
+`detect_interruption`、`classify_interruption`、`resolve_interruption`、`resume_interrupted_action`
+
+### 6）失败分析、恢复与修复建议
+
+`perform_action_with_evidence`、`get_action_outcome`、`explain_last_failure`、`rank_failure_candidates`、`find_similar_failures`、`compare_against_baseline`、`recover_to_known_state`、`replay_last_stable_path`、`suggest_known_remediation`
+
+### 7）性能分析
+
+`measure_android_performance`、`measure_ios_performance`
+
+精确签名与输入输出以 `packages/mcp-server/src/server.ts`（工具注册源）为准。
 
 ## 确定性阶梯与兜底策略
 
@@ -189,3 +212,16 @@ pnpm test:ci
 ## 项目定位
 
 这不是一个孤立的测试框架，而是一个面向 AI 的移动端编排层：在多后端间路由 E2E 动作，并以确定性优先与治理边界确保可控执行。
+
+## 支持这个项目
+
+如果这个项目对你有帮助，你可以通过以下方式支持：
+
+1. 给仓库点 Star 并分享
+2. 提交带证据的 Issue / PR
+3. 通过赞助支持项目持续维护（捐赠渠道筹备中）
+
+捐赠说明：
+
+- 为保证可信度，README 只展示可立即使用的支付方式。
+- PayPal / 支付宝会在账号开通并完成端到端验证后再公开。
