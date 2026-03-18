@@ -1,0 +1,10 @@
+appId: "com.example.app"
+---
+- launchApp:
+    appId: "com.example.app"
+    clearState: false
+- assertVisible:
+    id: "login_email"
+- tapOn:
+    id: "login_email"
+- inputText: "demo@example.com"

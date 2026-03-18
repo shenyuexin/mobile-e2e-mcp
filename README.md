@@ -25,6 +25,7 @@ If you want to verify this project is runnable before reading architecture detai
   - [docs/showcase/failure-intelligence-demo.md](docs/showcase/failure-intelligence-demo.md)
 - Golden path guide:
   - [docs/guides/golden-path.md](docs/guides/golden-path.md)
+  - [docs/guides/flow-generation.md](docs/guides/flow-generation.md)
 - CI evidence and boundary notes:
   - [docs/showcase/ci-evidence.md](docs/showcase/ci-evidence.md)
   - [Latest CI workflow runs](https://github.com/shenyuexin/mobile-e2e-mcp/actions/workflows/ci.yml)
