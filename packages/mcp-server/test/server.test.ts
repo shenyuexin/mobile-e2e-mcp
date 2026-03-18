@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
-import { rm } from "node:fs/promises";
+import { readFile, rm } from "node:fs/promises";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { buildDeviceLeaseRecordRelativePath, buildSessionAuditRelativePath, buildSessionRecordRelativePath, persistActionRecord } from "@mobile-e2e-mcp/core";
+import { buildActionRecordRelativePath, buildDeviceLeaseRecordRelativePath, buildSessionAuditRelativePath, buildSessionRecordRelativePath, persistActionRecord } from "@mobile-e2e-mcp/core";
 import { createServer } from "../src/index.ts";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
@@ -18,6 +18,10 @@ async function cleanupSessionArtifact(sessionId: string): Promise<void> {
   await rm(path.resolve(repoRoot, buildDeviceLeaseRecordRelativePath("android", buildTestDeviceId(sessionId))), { force: true });
 }
 
+async function cleanupActionArtifact(actionId: string): Promise<void> {
+  await rm(path.resolve(repoRoot, buildActionRecordRelativePath(actionId)), { force: true });
+}
+
 test("createServer lists newly added UI tools", () => {
   const server = createServer();
   const tools = server.listTools();
@@ -29,6 +33,10 @@ test("createServer lists newly added UI tools", () => {
   assert.ok(tools.includes("capture_js_network_events"));
   assert.ok(tools.includes("collect_diagnostics"));
   assert.ok(tools.includes("describe_capabilities"));
+  assert.ok(tools.includes("execute_intent"));
+  assert.ok(tools.includes("complete_task"));
+  assert.ok(tools.includes("export_session_flow"));
+  assert.ok(tools.includes("record_task_flow"));
   assert.ok(tools.includes("compare_against_baseline"));
   assert.ok(tools.includes("explain_last_failure"));
   assert.ok(tools.includes("find_similar_failures"));
@@ -162,6 +170,44 @@ test("server invoke supports perform_action_with_evidence Android dry-run", asyn
   assert.equal(Array.isArray(result.data.actionabilityReview), true);
   assert.equal(result.data.retryRecommendationTier, "inspect_only");
   assert.equal(result.nextSuggestions[0]?.includes("Inspect the returned pre/post state summaries"), true);
+});
+
+test("server invoke supports execute_intent Android dry-run", async () => {
+  const server = createServer();
+  const result = await server.invoke("execute_intent", {
+    sessionId: "server-execute-intent-dry-run",
+    platform: "android",
+    dryRun: true,
+    intent: "tap view products",
+    actionType: "tap_element",
+    contentDesc: "View products",
+  });
+
+  assert.equal(result.status, "partial");
+  assert.equal(result.reasonCode, "UNSUPPORTED_OPERATION");
+  assert.equal(result.data.selectedAction.actionType, "tap_element");
+  assert.equal(typeof result.data.decision, "string");
+});
+
+test("server invoke supports complete_task Android dry-run", async () => {
+  const server = createServer();
+  const result = await server.invoke("complete_task", {
+    sessionId: "server-complete-task-dry-run",
+    platform: "android",
+    dryRun: true,
+    goal: "run one wait step",
+    steps: [
+      {
+        intent: "wait for login email",
+        actionType: "wait_for_ui",
+        resourceId: "login_email",
+      },
+    ],
+  });
+
+  assert.equal(result.status, "partial");
+  assert.equal(result.data.totalSteps, 1);
+  assert.equal(result.data.outcomes.length, 1);
 });
 
 test("server invoke returns bounded auto-remediation stop details for allowlist misses", async () => {
@@ -498,6 +544,149 @@ test("server invoke supports run_flow Android dry-run", async () => {
   assert.equal(result.reasonCode, "OK");
   assert.equal(result.data.dryRun, true);
   assert.equal(result.data.runnerProfile, "phase1");
+});
+
+test("server invoke supports export_session_flow with persisted actions", async () => {
+  const server = createServer();
+  const sessionId = `server-export-flow-${Date.now()}`;
+  const actionId = `action-export-${Date.now()}`;
+  try {
+    await persistActionRecord(repoRoot, {
+      actionId,
+      sessionId,
+      intent: {
+        actionType: "tap_element",
+        contentDesc: "View products",
+      },
+      outcome: {
+        actionId,
+        actionType: "tap_element",
+        resolutionStrategy: "deterministic",
+        stateChanged: true,
+        fallbackUsed: false,
+        retryCount: 0,
+        outcome: "success",
+      },
+      evidenceDelta: {},
+      evidence: [],
+      lowLevelStatus: "success",
+      lowLevelReasonCode: "OK",
+      updatedAt: new Date().toISOString(),
+    });
+
+    const result = await server.invoke("export_session_flow", {
+      sessionId,
+      outputPath: `flows/samples/generated/${sessionId}.yaml`,
+    });
+
+    assert.equal(result.status, "success");
+    assert.equal(result.reasonCode, "OK");
+    assert.equal(result.data.stepCount >= 1, true);
+    const exported = await readFile(path.resolve(repoRoot, result.data.outputPath), "utf8");
+    assert.equal(exported.includes("appId:"), true);
+  } finally {
+    await cleanupActionArtifact(actionId);
+    await rm(path.resolve(repoRoot, `flows/samples/generated/${sessionId}.yaml`), { force: true });
+  }
+});
+
+test("server invoke supports record_task_flow", async () => {
+  const server = createServer();
+  const sessionId = `server-record-flow-${Date.now()}`;
+  const actionId = `action-record-${Date.now()}`;
+  try {
+    await persistActionRecord(repoRoot, {
+      actionId,
+      sessionId,
+      intent: {
+        actionType: "wait_for_ui",
+        resourceId: "login_email",
+        timeoutMs: 5000,
+      },
+      outcome: {
+        actionId,
+        actionType: "wait_for_ui",
+        resolutionStrategy: "deterministic",
+        stateChanged: true,
+        fallbackUsed: false,
+        retryCount: 0,
+        outcome: "success",
+      },
+      evidenceDelta: {},
+      evidence: [],
+      lowLevelStatus: "success",
+      lowLevelReasonCode: "OK",
+      updatedAt: new Date().toISOString(),
+    });
+
+    const result = await server.invoke("record_task_flow", {
+      sessionId,
+      goal: "Login smoke",
+      outputPath: `flows/samples/generated/${sessionId}.yaml`,
+    });
+
+    assert.equal(result.status, "success");
+    assert.equal(result.reasonCode, "OK");
+    assert.equal(result.data.goal, "Login smoke");
+    assert.equal(result.data.outputPath.endsWith(".yaml"), true);
+  } finally {
+    await cleanupActionArtifact(actionId);
+    await rm(path.resolve(repoRoot, `flows/samples/generated/${sessionId}.yaml`), { force: true });
+  }
+});
+
+test("server invoke supports export_session_flow to run_flow dry-run closure", async () => {
+  const server = createServer();
+  const sessionId = `server-export-replay-${Date.now()}`;
+  const actionId = `action-export-replay-${Date.now()}`;
+  try {
+    await persistActionRecord(repoRoot, {
+      actionId,
+      sessionId,
+      intent: {
+        actionType: "tap_element",
+        contentDesc: "View products",
+      },
+      outcome: {
+        actionId,
+        actionType: "tap_element",
+        resolutionStrategy: "deterministic",
+        stateChanged: true,
+        fallbackUsed: false,
+        retryCount: 0,
+        outcome: "success",
+      },
+      evidenceDelta: {},
+      evidence: [],
+      lowLevelStatus: "success",
+      lowLevelReasonCode: "OK",
+      updatedAt: new Date().toISOString(),
+    });
+
+    const exported = await server.invoke("export_session_flow", {
+      sessionId,
+      outputPath: `flows/samples/generated/${sessionId}.yaml`,
+    });
+
+    const replay = await server.invoke("run_flow", {
+      sessionId,
+      platform: "android",
+      flowPath: exported.data.outputPath,
+      dryRun: true,
+      runCount: 1,
+    });
+    const typedReplay = replay as {
+      status: string;
+      data: { flowPath: string };
+    };
+
+    assert.equal(exported.status, "success");
+    assert.ok(["success", "partial"].includes(typedReplay.status));
+    assert.equal(typeof typedReplay.data.flowPath, "string");
+  } finally {
+    await cleanupActionArtifact(actionId);
+    await rm(path.resolve(repoRoot, `flows/samples/generated/${sessionId}.yaml`), { force: true });
+  }
 });
 
 test("server invoke supports install_app Android dry-run when artifact path exists", async () => {

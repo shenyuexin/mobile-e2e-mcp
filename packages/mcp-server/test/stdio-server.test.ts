@@ -3,7 +3,7 @@ import { rm } from "node:fs/promises";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { buildDeviceLeaseRecordRelativePath, buildSessionAuditRelativePath, buildSessionRecordRelativePath } from "@mobile-e2e-mcp/core";
+import { buildActionRecordRelativePath, buildDeviceLeaseRecordRelativePath, buildSessionAuditRelativePath, buildSessionRecordRelativePath, persistActionRecord } from "@mobile-e2e-mcp/core";
 import { buildToolList, handleRequest } from "../src/stdio-server.ts";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
@@ -18,6 +18,10 @@ async function cleanupSessionArtifact(sessionId: string): Promise<void> {
   await rm(path.resolve(repoRoot, buildDeviceLeaseRecordRelativePath("android", buildTestDeviceId(sessionId))), { force: true });
 }
 
+async function cleanupActionArtifact(actionId: string): Promise<void> {
+  await rm(path.resolve(repoRoot, buildActionRecordRelativePath(actionId)), { force: true });
+}
+
 test("buildToolList includes the new UI tools", () => {
   const tools = buildToolList();
   const toolNames = tools.map((tool) => tool.name);
@@ -30,6 +34,10 @@ test("buildToolList includes the new UI tools", () => {
   assert.ok(toolNames.includes("classify_interruption"));
   assert.ok(toolNames.includes("list_js_debug_targets"));
   assert.ok(toolNames.includes("describe_capabilities"));
+  assert.ok(toolNames.includes("execute_intent"));
+  assert.ok(toolNames.includes("complete_task"));
+  assert.ok(toolNames.includes("export_session_flow"));
+  assert.ok(toolNames.includes("record_task_flow"));
   assert.ok(toolNames.includes("compare_against_baseline"));
   assert.ok(toolNames.includes("explain_last_failure"));
   assert.ok(toolNames.includes("find_similar_failures"));
@@ -73,6 +81,10 @@ test("handleRequest returns stdio initialize payload", async () => {
   assert.ok(typedResult.tools.some((tool) => tool.name === "list_js_debug_targets"));
   assert.ok(typedResult.tools.some((tool) => tool.name === "get_crash_signals"));
   assert.ok(typedResult.tools.some((tool) => tool.name === "describe_capabilities"));
+  assert.ok(typedResult.tools.some((tool) => tool.name === "execute_intent"));
+  assert.ok(typedResult.tools.some((tool) => tool.name === "complete_task"));
+  assert.ok(typedResult.tools.some((tool) => tool.name === "export_session_flow"));
+  assert.ok(typedResult.tools.some((tool) => tool.name === "record_task_flow"));
   assert.ok(typedResult.tools.some((tool) => tool.name === "compare_against_baseline"));
   assert.ok(typedResult.tools.some((tool) => tool.name === "explain_last_failure"));
   assert.ok(typedResult.tools.some((tool) => tool.name === "find_similar_failures"));
@@ -576,6 +588,64 @@ test("handleRequest supports tools/call alias for perform_action_with_evidence",
   assert.equal(typeof typedResult.data.autoRemediation?.stopReason, "string");
 });
 
+test("handleRequest supports tools/call alias for execute_intent", async () => {
+  const result = await handleRequest({
+    id: 321,
+    method: "tools/call",
+    params: {
+      name: "execute_intent",
+      arguments: {
+        sessionId: "stdio-execute-intent-dry-run",
+        platform: "android",
+        dryRun: true,
+        intent: "tap view products",
+        actionType: "tap_element",
+        contentDesc: "View products",
+      },
+    },
+  });
+  const typedResult = result as {
+    status: string;
+    reasonCode: string;
+    data: { selectedAction: { actionType: string }; decision: string };
+  };
+
+  assert.equal(typedResult.status, "partial");
+  assert.equal(typedResult.reasonCode, "UNSUPPORTED_OPERATION");
+  assert.equal(typedResult.data.selectedAction.actionType, "tap_element");
+  assert.equal(typeof typedResult.data.decision, "string");
+});
+
+test("handleRequest supports tools/call alias for complete_task", async () => {
+  const result = await handleRequest({
+    id: 322,
+    method: "tools/call",
+    params: {
+      name: "complete_task",
+      arguments: {
+        sessionId: "stdio-complete-task-dry-run",
+        platform: "android",
+        dryRun: true,
+        goal: "wait login input",
+        steps: [
+          {
+            intent: "wait for login input",
+            actionType: "wait_for_ui",
+            resourceId: "login_email",
+          },
+        ],
+      },
+    },
+  });
+  const typedResult = result as {
+    status: string;
+    data: { totalSteps: number; outcomes: Array<{ status: string }> };
+  };
+
+  assert.equal(typedResult.data.totalSteps, 1);
+  assert.equal(typedResult.data.outcomes.length, 1);
+});
+
 test("handleRequest supports tools/call alias for get_action_outcome", async () => {
   const actionResult = await handleRequest({
     id: 33,
@@ -882,6 +952,115 @@ test("handleRequest supports tools/call alias for run_flow dry-run", async () =>
   assert.equal(typedResult.reasonCode, "OK");
   assert.equal(typedResult.data.dryRun, true);
   assert.equal(typedResult.data.runnerProfile, "phase1");
+});
+
+test("handleRequest supports tools/call alias for export_session_flow", async () => {
+  const sessionId = `stdio-export-flow-${Date.now()}`;
+  const actionId = `stdio-export-action-${Date.now()}`;
+  try {
+    await persistActionRecord(repoRoot, {
+      actionId,
+      sessionId,
+      intent: {
+        actionType: "tap_element",
+        contentDesc: "View products",
+      },
+      outcome: {
+        actionId,
+        actionType: "tap_element",
+        resolutionStrategy: "deterministic",
+        stateChanged: true,
+        fallbackUsed: false,
+        retryCount: 0,
+        outcome: "success",
+      },
+      evidenceDelta: {},
+      evidence: [],
+      lowLevelStatus: "success",
+      lowLevelReasonCode: "OK",
+      updatedAt: new Date().toISOString(),
+    });
+
+    const result = await handleRequest({
+      id: 323,
+      method: "tools/call",
+      params: {
+        name: "export_session_flow",
+        arguments: {
+          sessionId,
+          outputPath: `flows/samples/generated/${sessionId}.yaml`,
+        },
+      },
+    });
+    const typedResult = result as {
+      status: string;
+      reasonCode: string;
+      data: { outputPath: string; stepCount: number };
+    };
+
+    assert.equal(typedResult.status, "success");
+    assert.equal(typedResult.reasonCode, "OK");
+    assert.equal(typedResult.data.outputPath.endsWith(".yaml"), true);
+    assert.equal(typedResult.data.stepCount >= 1, true);
+  } finally {
+    await cleanupActionArtifact(actionId);
+    await rm(path.resolve(repoRoot, `flows/samples/generated/${sessionId}.yaml`), { force: true });
+  }
+});
+
+test("handleRequest supports tools/call alias for record_task_flow", async () => {
+  const sessionId = `stdio-record-flow-${Date.now()}`;
+  const actionId = `stdio-record-action-${Date.now()}`;
+  try {
+    await persistActionRecord(repoRoot, {
+      actionId,
+      sessionId,
+      intent: {
+        actionType: "wait_for_ui",
+        resourceId: "login_email",
+      },
+      outcome: {
+        actionId,
+        actionType: "wait_for_ui",
+        resolutionStrategy: "deterministic",
+        stateChanged: true,
+        fallbackUsed: false,
+        retryCount: 0,
+        outcome: "success",
+      },
+      evidenceDelta: {},
+      evidence: [],
+      lowLevelStatus: "success",
+      lowLevelReasonCode: "OK",
+      updatedAt: new Date().toISOString(),
+    });
+
+    const result = await handleRequest({
+      id: 324,
+      method: "tools/call",
+      params: {
+        name: "record_task_flow",
+        arguments: {
+          sessionId,
+          goal: "Login smoke",
+          outputPath: `flows/samples/generated/${sessionId}.yaml`,
+        },
+      },
+    });
+    const typedResult = result as {
+      status: string;
+      reasonCode: string;
+      data: { outputPath: string; goal?: string };
+    };
+
+    assert.equal(typedResult.status, "success");
+    assert.equal(typedResult.reasonCode, "OK");
+    assert.equal(typedResult.data.goal, "Login smoke");
+    assert.equal(typedResult.data.outputPath.endsWith(".yaml"), true);
+  } finally {
+    await cleanupActionArtifact(actionId);
+    await rm(path.resolve(repoRoot, `flows/samples/generated/${sessionId}.yaml`), { force: true });
+  }
 });
 
 test("handleRequest supports tools/call alias for measure_android_performance dry-run", async () => {
