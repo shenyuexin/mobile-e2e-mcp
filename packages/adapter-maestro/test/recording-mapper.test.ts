@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { RawRecordedEvent } from "@mobile-e2e-mcp/contracts";
-import { mapRawEventsToRecordedSteps } from "../src/recording-mapper.ts";
+import { mapRawEventsToRecordedSteps, renderRecordedStepsAsFlow } from "../src/recording-mapper.ts";
 
 function buildEvent(overrides: Partial<RawRecordedEvent>): RawRecordedEvent {
-  return {
+  const base: RawRecordedEvent = {
     eventId: overrides.eventId ?? "event-1",
     recordSessionId: overrides.recordSessionId ?? "rec-1",
     timestamp: overrides.timestamp ?? new Date().toISOString(),
@@ -16,11 +16,22 @@ function buildEvent(overrides: Partial<RawRecordedEvent>): RawRecordedEvent {
     uiSnapshotRef: overrides.uiSnapshotRef,
     rawLine: overrides.rawLine,
   };
+  (base as RawRecordedEvent & { eventMonotonicMs?: number }).eventMonotonicMs = (overrides as RawRecordedEvent & { eventMonotonicMs?: number }).eventMonotonicMs;
+  (base as RawRecordedEvent & { normalizedPoint?: { x: number; y: number } }).normalizedPoint = (overrides as RawRecordedEvent & { normalizedPoint?: { x: number; y: number } }).normalizedPoint;
+  (base as RawRecordedEvent & { gesture?: { kind: "tap" | "swipe"; start?: { x: number; y: number }; end?: { x: number; y: number }; durationMs?: number } }).gesture = (overrides as RawRecordedEvent & { gesture?: { kind: "tap" | "swipe"; start?: { x: number; y: number }; end?: { x: number; y: number }; durationMs?: number } }).gesture;
+  (base as RawRecordedEvent & { resolvedSelector?: { resourceId?: string; text?: string; contentDesc?: string; className?: string } }).resolvedSelector = (overrides as RawRecordedEvent & { resolvedSelector?: { resourceId?: string; text?: string; contentDesc?: string; className?: string } }).resolvedSelector;
+  return base;
 }
 
-test("mapRawEventsToRecordedSteps maps tap to tap_element with auto wait", () => {
+test("mapRawEventsToRecordedSteps maps tap to tap_element with resolved selector and auto wait", () => {
   const result = mapRawEventsToRecordedSteps("rec-1", [
-    buildEvent({ eventId: "tap-1", eventType: "tap", x: 100, y: 200, uiSnapshotRef: "Login" }),
+    buildEvent({
+      eventId: "tap-1",
+      eventType: "tap",
+      x: 100,
+      y: 200,
+      resolvedSelector: { resourceId: "com.epam.mobitru:id/login_email" },
+    } as Partial<RawRecordedEvent>),
   ]);
 
   assert.equal(result.steps[0]?.actionType, "tap_element");
@@ -36,6 +47,129 @@ test("mapRawEventsToRecordedSteps maps type to type_into_element", () => {
   assert.equal(result.steps.length, 1);
   assert.equal(result.steps[0]?.actionType, "type_into_element");
   assert.equal(result.steps[0]?.actionIntent?.value, "demo@example.com");
+});
+
+test("mapRawEventsToRecordedSteps rejects snapshot-path selector and falls back to coordinate tap", () => {
+  const result = mapRawEventsToRecordedSteps("rec-selector-reject", [
+    buildEvent({
+      eventId: "tap-bad-selector",
+      eventType: "tap",
+      x: 120,
+      y: 220,
+      resolvedSelector: { text: "artifacts/record-snapshots/rec-1-end.xml" },
+    } as Partial<RawRecordedEvent>),
+  ], { includeAutoWaitStep: false });
+
+  assert.equal(result.steps.length, 1);
+  assert.equal(result.steps[0]?.actionType, "tap");
+});
+
+test("renderRecordedStepsAsFlow never emits snapshot-path selectors", () => {
+  const rendered = renderRecordedStepsAsFlow({
+    appId: "com.example.app",
+    includeLaunchStep: false,
+    steps: [
+      {
+        stepNumber: 1,
+        eventId: "bad-selector-step",
+        timestamp: new Date().toISOString(),
+        actionType: "tap_element",
+        actionIntent: {
+          actionType: "tap_element",
+          text: "artifacts/record-snapshots/rec-1-end.xml",
+        },
+        confidence: "low",
+        reason: "invalid selector test",
+      },
+    ],
+  });
+
+  assert.equal(rendered.yaml.includes("artifacts/record-snapshots/"), false);
+  assert.equal(rendered.warnings.length > 0, true);
+});
+
+test("mapRawEventsToRecordedSteps maps swipe event", () => {
+  const result = mapRawEventsToRecordedSteps("rec-swipe", [
+    buildEvent({
+      eventId: "swipe-1",
+      eventType: "swipe",
+      x: 540,
+      y: 1800,
+      gesture: {
+        kind: "swipe",
+        start: { x: 540, y: 1800 },
+        end: { x: 540, y: 600 },
+        durationMs: 300,
+      },
+    } as Partial<RawRecordedEvent>),
+  ], { includeAutoWaitStep: false });
+
+  assert.equal(result.steps.length, 1);
+  assert.equal(result.steps[0]?.actionType, "swipe");
+});
+
+test("mapRawEventsToRecordedSteps does not auto-insert wait_for_ui for coordinate fallback tap", () => {
+  const result = mapRawEventsToRecordedSteps("rec-fallback-tap", [
+    buildEvent({
+      eventId: "tap-fallback",
+      eventType: "tap",
+      x: 88,
+      y: 166,
+    }),
+  ]);
+
+  assert.equal(result.steps.length, 1);
+  assert.equal(result.steps[0]?.actionType, "tap");
+});
+
+test("mapRawEventsToRecordedSteps does not auto-insert wait_for_ui for swipe", () => {
+  const result = mapRawEventsToRecordedSteps("rec-swipe-no-autowait", [
+    buildEvent({
+      eventId: "swipe-no-autowait",
+      eventType: "swipe",
+      x: 520,
+      y: 1700,
+      gesture: {
+        kind: "swipe",
+        start: { x: 520, y: 1700 },
+        end: { x: 520, y: 900 },
+        durationMs: 280,
+      },
+    } as Partial<RawRecordedEvent>),
+  ]);
+
+  assert.equal(result.steps.length, 1);
+  assert.equal(result.steps[0]?.actionType, "swipe");
+});
+
+test("renderRecordedStepsAsFlow exports swipe with start/end/duration", () => {
+  const rendered = renderRecordedStepsAsFlow({
+    appId: "com.example.app",
+    includeLaunchStep: false,
+    steps: [
+      {
+        stepNumber: 1,
+        eventId: "swipe-flow-1",
+        timestamp: new Date().toISOString(),
+        actionType: "swipe",
+        actionIntent: {
+          actionType: "swipe",
+          startX: 540,
+          startY: 1800,
+          endX: 540,
+          endY: 600,
+          durationMs: 300,
+        },
+        confidence: "medium",
+        reason: "swipe export format",
+      },
+    ],
+  });
+
+  assert.equal(rendered.yaml.includes("- swipe:"), true);
+  assert.equal(rendered.yaml.includes("start: \"540,1800\""), true);
+  assert.equal(rendered.yaml.includes("end: \"540,600\""), true);
+  assert.equal(rendered.yaml.includes("duration: 300"), true);
 });
 
 test("mapRawEventsToRecordedSteps maps app switch to launch_app", () => {

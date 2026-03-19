@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { rm } from "node:fs/promises";
+import { readFile, rm } from "node:fs/promises";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
@@ -710,6 +710,10 @@ test("handleRequest supports tools/call aliases for record session lifecycle", a
     assert.equal(typeof ended.data.report.replayDryRun?.status, "string");
     assert.equal(typeof ended.data.report.replayDryRun?.reasonCode, "string");
     flowPath = ended.data.report.flowPath;
+    if (flowPath) {
+      const exportedFlow = await readFile(path.resolve(repoRoot, flowPath), "utf8");
+      assert.equal(exportedFlow.includes("artifacts/record-snapshots/"), false);
+    }
 
     const cancelled = await handleRequest({
       id: 328,

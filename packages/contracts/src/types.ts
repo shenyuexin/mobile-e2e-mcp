@@ -11,7 +11,7 @@ export type TimelineEventLayer = "session" | "ui" | "state" | "action" | "log" |
 export type EvidenceCompletenessLevel = "complete" | "partial" | "minimal" | "missing";
 export type ActionResolutionStrategy = "deterministic" | "semantic" | "ocr" | "cv";
 export type ActionOutcomeStatus = "success" | "failed" | "partial" | "unknown";
-export type SupportedActionType = "tap_element" | "type_into_element" | "wait_for_ui" | "launch_app" | "terminate_app";
+export type SupportedActionType = "tap_element" | "type_into_element" | "wait_for_ui" | "launch_app" | "terminate_app" | "swipe";
 export type AffectedLayer = "ui_locator" | "ui_state" | "interruption" | "network" | "backend" | "runtime" | "crash" | "performance" | "environment" | "test_logic" | "unknown";
 export type RecoveryStrategy = "none" | "wait_until_ready" | "relaunch_app" | "replay_last_successful_action";
 export type OcrAllowedAction = "tap" | "assertText" | "longPress";
@@ -247,6 +247,11 @@ export interface ActionIntent {
   timeoutMs?: number;
   intervalMs?: number;
   waitUntil?: WaitForUiMode;
+  startX?: number;
+  startY?: number;
+  endX?: number;
+  endY?: number;
+  durationMs?: number;
 }
 export interface EvidenceDeltaSummary {
   uiDiffSummary?: string;
@@ -1167,9 +1172,26 @@ export interface RawRecordedEvent {
   eventId: string;
   recordSessionId: string;
   timestamp: string;
+  eventMonotonicMs?: number;
   eventType: RecordedEventType;
   x?: number;
   y?: number;
+  normalizedPoint?: {
+    x: number;
+    y: number;
+  };
+  gesture?: {
+    kind: "tap" | "swipe";
+    start?: { x: number; y: number };
+    end?: { x: number; y: number };
+    durationMs?: number;
+  };
+  resolvedSelector?: {
+    resourceId?: string;
+    text?: string;
+    contentDesc?: string;
+    className?: string;
+  };
   textDelta?: string;
   foregroundApp?: string;
   uiSnapshotRef?: string;

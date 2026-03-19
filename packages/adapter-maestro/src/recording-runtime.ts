@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { spawn } from "node:child_process";
+import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import {
   buildRecordEventsRelativePath,
@@ -13,6 +14,7 @@ import {
   persistRecordSessionState,
   persistStartedRecordSession,
 } from "@mobile-e2e-mcp/core";
+import type { PersistedRecordSession } from "@mobile-e2e-mcp/core";
 import {
   REASON_CODES,
   type CancelRecordSessionData,
@@ -28,14 +30,44 @@ import {
 } from "@mobile-e2e-mcp/contracts";
 import { buildDefaultAppId, buildDefaultDeviceId, resolveRepoPath } from "./harness-config.js";
 import { mapRawEventsToRecordedSteps, renderRecordedStepsAsFlow } from "./recording-mapper.js";
+import { parseAndroidUiHierarchyNodes, parseUiBounds } from "./ui-model.js";
 import { executeRunner, shellEscape } from "./runtime-shared.js";
 
 interface ParsedRawEvent {
-  type: "tap" | "type" | "back" | "home" | "app_switch";
+  type: "tap" | "type" | "swipe" | "back" | "home" | "app_switch";
+  eventMonotonicMs: number;
   x?: number;
   y?: number;
+  endX?: number;
+  endY?: number;
+  gesture?: {
+    kind: "tap" | "swipe";
+    start?: { x: number; y: number };
+    end?: { x: number; y: number };
+    durationMs?: number;
+  };
   textDelta?: string;
   rawLine: string;
+}
+
+const SWIPE_DISTANCE_THRESHOLD_PX = 24;
+const SWIPE_DURATION_THRESHOLD_MS = 1200;
+
+interface ExtendedRawRecordedEvent extends RawRecordedEvent {
+  eventMonotonicMs?: number;
+  normalizedPoint?: { x: number; y: number };
+  gesture?: {
+    kind: "tap" | "swipe";
+    start?: { x: number; y: number };
+    end?: { x: number; y: number };
+    durationMs?: number;
+  };
+  resolvedSelector?: {
+    resourceId?: string;
+    text?: string;
+    contentDesc?: string;
+    className?: string;
+  };
 }
 
 function mapAndroidKeyTokenToText(token: string): string | undefined {
@@ -67,10 +99,12 @@ async function captureAndroidContextSnapshot(params: {
   repoRoot: string;
   recordSessionId: string;
   deviceId: string;
+  bucketId?: string;
   dryRun?: boolean;
 }): Promise<{ uiSnapshotRef?: string; foregroundApp?: string; warnings: string[] }> {
   const warnings: string[] = [];
-  const snapshotRelativePath = path.posix.join("artifacts", "record-snapshots", `${params.recordSessionId}-end.xml`);
+  const bucketId = params.bucketId ?? "end";
+  const snapshotRelativePath = path.posix.join("artifacts", "record-snapshots", params.recordSessionId, `${params.recordSessionId}-${bucketId}.xml`);
   const snapshotAbsolutePath = path.resolve(params.repoRoot, snapshotRelativePath);
 
   if (params.dryRun) {
@@ -82,7 +116,7 @@ async function captureAndroidContextSnapshot(params: {
   }
 
   await mkdir(path.dirname(snapshotAbsolutePath), { recursive: true });
-  const remoteDumpPath = `/sdcard/${params.recordSessionId}-end.xml`;
+  const remoteDumpPath = `/sdcard/${params.recordSessionId}-${bucketId}.xml`;
 
   const dumpResult = await executeRunner(
     ["adb", "-s", params.deviceId, "shell", "uiautomator", "dump", remoteDumpPath],
@@ -131,13 +165,48 @@ function parseHexMaybe(value: string): number | undefined {
   return Number.isFinite(parsed) ? parsed : undefined;
 }
 
+function extractEventMonotonicMs(line: string): number {
+  const match = line.match(/^\[\s*(\d+)\.(\d+)\]/);
+  if (!match) {
+    return 0;
+  }
+  const seconds = Number.parseInt(match[1], 10);
+  const microseconds = Number.parseInt(match[2], 10);
+  if (!Number.isFinite(seconds) || !Number.isFinite(microseconds)) {
+    return 0;
+  }
+  return (seconds * 1000) + Math.round(microseconds / 1000);
+}
+
+function distance(x1: number, y1: number, x2: number, y2: number): number {
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  return Math.sqrt((dx * dx) + (dy * dy));
+}
+
+function spawnDetachedShell(command: string, repoRoot: string, env: NodeJS.ProcessEnv): number | undefined {
+  const child = spawn("bash", ["-lc", command], {
+    cwd: repoRoot,
+    env,
+    detached: true,
+    stdio: "ignore",
+  });
+  child.unref();
+  return Number.isFinite(child.pid) ? child.pid : undefined;
+}
+
 function parseRawInputEvents(rawContent: string): ParsedRawEvent[] {
   const lines = rawContent.split(/\r?\n/).filter((line) => line.trim().length > 0);
   let currentX: number | undefined;
   let currentY: number | undefined;
   const events: ParsedRawEvent[] = [];
+  let touchStartX: number | undefined;
+  let touchStartY: number | undefined;
+  let touchStartTime: number | undefined;
+  let touchActive = false;
 
   for (const line of lines) {
+    const eventMonotonicMs = extractEventMonotonicMs(line);
     const positionX = line.match(/(?:ABS_MT_POSITION_X|ABS_X)\s+([0-9a-fA-F]+)/);
     if (positionX) {
       currentX = parseHexMaybe(positionX[1]);
@@ -148,19 +217,75 @@ function parseRawInputEvents(rawContent: string): ParsedRawEvent[] {
     }
 
     if (/BTN_TOUCH\s+DOWN/.test(line)) {
-      events.push({ type: "tap", x: currentX, y: currentY, rawLine: line });
+      touchActive = true;
+      touchStartX = currentX;
+      touchStartY = currentY;
+      touchStartTime = eventMonotonicMs;
+      continue;
+    }
+    if (/BTN_TOUCH\s+UP/.test(line)) {
+      if (!touchActive) {
+        continue;
+      }
+      const startX = touchStartX ?? currentX;
+      const startY = touchStartY ?? currentY;
+      const endX = currentX;
+      const endY = currentY;
+      const durationMs = touchStartTime !== undefined && eventMonotonicMs > 0
+        ? Math.max(0, eventMonotonicMs - touchStartTime)
+        : undefined;
+      if (startX !== undefined && startY !== undefined && endX !== undefined && endY !== undefined) {
+        const movement = distance(startX, startY, endX, endY);
+        if (movement >= SWIPE_DISTANCE_THRESHOLD_PX && (durationMs ?? 0) <= SWIPE_DURATION_THRESHOLD_MS) {
+          events.push({
+            type: "swipe",
+            eventMonotonicMs,
+            x: startX,
+            y: startY,
+            endX,
+            endY,
+            gesture: {
+              kind: "swipe",
+              start: { x: startX, y: startY },
+              end: { x: endX, y: endY },
+              durationMs,
+            },
+            rawLine: line,
+          });
+        } else {
+          events.push({
+            type: "tap",
+            eventMonotonicMs,
+            x: endX,
+            y: endY,
+            gesture: {
+              kind: "tap",
+              start: { x: startX, y: startY },
+              end: { x: endX, y: endY },
+              durationMs,
+            },
+            rawLine: line,
+          });
+        }
+      } else {
+        events.push({ type: "tap", eventMonotonicMs, x: currentX, y: currentY, rawLine: line });
+      }
+      touchActive = false;
+      touchStartX = undefined;
+      touchStartY = undefined;
+      touchStartTime = undefined;
       continue;
     }
     if (/KEY_BACK\s+DOWN/.test(line)) {
-      events.push({ type: "back", rawLine: line });
+      events.push({ type: "back", eventMonotonicMs, rawLine: line });
       continue;
     }
     if (/KEY_HOME\s+DOWN/.test(line)) {
-      events.push({ type: "home", rawLine: line });
+      events.push({ type: "home", eventMonotonicMs, rawLine: line });
       continue;
     }
     if (/KEY_APPSELECT\s+DOWN/.test(line)) {
-      events.push({ type: "app_switch", rawLine: line });
+      events.push({ type: "app_switch", eventMonotonicMs, rawLine: line });
       continue;
     }
 
@@ -172,12 +297,153 @@ function parseRawInputEvents(rawContent: string): ParsedRawEvent[] {
       }
       const mapped = mapAndroidKeyTokenToText(token);
       if (mapped !== undefined) {
-        events.push({ type: "type", textDelta: mapped, rawLine: line });
+        events.push({ type: "type", eventMonotonicMs, textDelta: mapped, rawLine: line });
       }
     }
   }
 
   return events;
+}
+
+async function listSnapshotRefsForSession(repoRoot: string, recordSessionId: string): Promise<string[]> {
+  const relativeDir = path.posix.join("artifacts", "record-snapshots", recordSessionId);
+  const absoluteDir = path.resolve(repoRoot, relativeDir);
+  try {
+    const entries = await readdir(absoluteDir, { withFileTypes: true });
+    const files = entries
+      .filter((entry) => entry.isFile() && entry.name.endsWith(".xml"))
+      .map((entry) => path.posix.join(relativeDir, entry.name))
+      .sort();
+    return files;
+  } catch {
+    return [];
+  }
+}
+
+interface ResolvedSelector {
+  resourceId?: string;
+  text?: string;
+  contentDesc?: string;
+  className?: string;
+}
+
+interface SnapshotCandidate {
+  ref: string;
+  capturedAtMs: number;
+}
+
+function parseSnapshotCapturedAtMs(ref: string): number | undefined {
+  const match = ref.match(/-(\d{13})\.xml$/);
+  if (!match) {
+    return undefined;
+  }
+  const parsed = Number.parseInt(match[1], 10);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function chooseNearestSnapshotRef(eventTimestampIso: string, snapshots: SnapshotCandidate[]): string | undefined {
+  if (snapshots.length === 0) {
+    return undefined;
+  }
+  const eventTimestampMs = Date.parse(eventTimestampIso);
+  if (!Number.isFinite(eventTimestampMs)) {
+    return snapshots[0]?.ref;
+  }
+
+  let closestBefore: SnapshotCandidate | undefined;
+  for (const snapshot of snapshots) {
+    if (snapshot.capturedAtMs <= eventTimestampMs) {
+      closestBefore = snapshot;
+      continue;
+    }
+    break;
+  }
+  if (closestBefore) {
+    return closestBefore.ref;
+  }
+  return snapshots[0]?.ref;
+}
+
+function resolveSelectorAtPoint(xml: string, x?: number, y?: number): ResolvedSelector | undefined {
+  if (x === undefined || y === undefined) {
+    return undefined;
+  }
+  const nodes = parseAndroidUiHierarchyNodes(xml);
+  let best: { area: number; selector: ResolvedSelector } | undefined;
+  for (const node of nodes) {
+    const bounds = parseUiBounds(node.bounds);
+    if (!bounds) {
+      continue;
+    }
+    if (x < bounds.left || x > bounds.right || y < bounds.top || y > bounds.bottom) {
+      continue;
+    }
+    const selector: ResolvedSelector = {
+      resourceId: node.resourceId,
+      text: node.text,
+      contentDesc: node.contentDesc,
+      className: node.className,
+    };
+    if (!selector.resourceId && !selector.text && !selector.contentDesc) {
+      continue;
+    }
+    const area = bounds.width * bounds.height;
+    if (!best || area < best.area) {
+      best = { area, selector };
+    }
+  }
+  return best?.selector;
+}
+
+function mapMonotonicToIso(startedAt: string, eventMonotonicMs: number | undefined, anchorMonotonicMs: number | undefined): string {
+  if (!eventMonotonicMs || !anchorMonotonicMs) {
+    return new Date().toISOString();
+  }
+  const delta = Math.max(0, eventMonotonicMs - anchorMonotonicMs);
+  return new Date(Date.parse(startedAt) + delta).toISOString();
+}
+
+async function readAndroidMonotonicMs(repoRoot: string, deviceId: string, dryRun?: boolean): Promise<number | undefined> {
+  if (dryRun) {
+    return undefined;
+  }
+  const uptime = await executeRunner(["adb", "-s", deviceId, "shell", "cat", "/proc/uptime"], repoRoot, process.env);
+  if (uptime.exitCode !== 0) {
+    return undefined;
+  }
+  const firstToken = uptime.stdout.trim().split(/\s+/)[0];
+  if (!firstToken) {
+    return undefined;
+  }
+  const seconds = Number.parseFloat(firstToken);
+  if (!Number.isFinite(seconds)) {
+    return undefined;
+  }
+  return Math.round(seconds * 1000);
+}
+
+async function enrichEventsWithSelectors(repoRoot: string, events: ExtendedRawRecordedEvent[]): Promise<ExtendedRawRecordedEvent[]> {
+  const snapshotCache = new Map<string, string>();
+  const enriched: ExtendedRawRecordedEvent[] = [];
+  for (const event of events) {
+    if (event.resolvedSelector || !event.uiSnapshotRef || event.x === undefined || event.y === undefined) {
+      enriched.push(event);
+      continue;
+    }
+    const snapshotAbsolutePath = path.resolve(repoRoot, event.uiSnapshotRef);
+    let snapshotXml = snapshotCache.get(snapshotAbsolutePath);
+    if (snapshotXml === undefined) {
+      snapshotXml = await readFile(snapshotAbsolutePath, "utf8").catch(() => "");
+      snapshotCache.set(snapshotAbsolutePath, snapshotXml);
+    }
+    const selector = snapshotXml.length > 0 ? resolveSelectorAtPoint(snapshotXml, event.x, event.y) : undefined;
+    enriched.push({
+      ...event,
+      resolvedSelector: selector,
+      normalizedPoint: event.x !== undefined && event.y !== undefined ? { x: event.x, y: event.y } : event.normalizedPoint,
+    });
+  }
+  return enriched;
 }
 
 export async function startRecordSessionWithMaestro(input: StartRecordSessionInput): Promise<ToolResult<StartRecordSessionData>> {
@@ -215,12 +481,14 @@ export async function startRecordSessionWithMaestro(input: StartRecordSessionInp
   const rawEventsRelativePath = buildRecordEventsRelativePath(recordSessionId);
   const rawEventsAbsolutePath = path.resolve(repoRoot, rawEventsRelativePath);
   await mkdir(path.dirname(rawEventsAbsolutePath), { recursive: true });
+  const captureStartMonotonicMs = await readAndroidMonotonicMs(repoRoot, deviceId, input.dryRun);
 
   let pid: number | undefined;
+  let snapshotPid: number | undefined;
   if (!input.dryRun) {
-    const shellCommand = `adb -s ${shellEscape(deviceId)} shell getevent -lt > ${shellEscape(rawEventsAbsolutePath)} 2>&1 & echo $!`;
-    const execution = await executeRunner(["bash", "-lc", shellCommand], repoRoot, process.env);
-    if (execution.exitCode !== 0) {
+    const shellCommand = `adb -s ${shellEscape(deviceId)} shell getevent -lt > ${shellEscape(rawEventsAbsolutePath)} 2>&1`;
+    pid = spawnDetachedShell(shellCommand, repoRoot, process.env);
+    if (!pid) {
       return {
         status: "failed",
         reasonCode: REASON_CODES.configurationError,
@@ -243,10 +511,12 @@ export async function startRecordSessionWithMaestro(input: StartRecordSessionInp
         nextSuggestions: ["Failed to start adb getevent capture. Verify adb/device connectivity and retry."],
       };
     }
-    const parsedPid = Number.parseInt(execution.stdout.trim(), 10);
-    if (Number.isFinite(parsedPid)) {
-      pid = parsedPid;
-    }
+
+    const snapshotDirRelativePath = path.posix.join("artifacts", "record-snapshots", recordSessionId);
+    const snapshotDirAbsolutePath = path.resolve(repoRoot, snapshotDirRelativePath);
+    await mkdir(snapshotDirAbsolutePath, { recursive: true });
+    const snapshotLoop = `while true; do ts=$(date +%s%3N); remote=/sdcard/${recordSessionId}-$ts.xml; local_path=${snapshotDirAbsolutePath}/${recordSessionId}-$ts.xml; adb -s ${deviceId} shell uiautomator dump $remote >/dev/null 2>&1; adb -s ${deviceId} pull $remote $local_path >/dev/null 2>&1; adb -s ${deviceId} shell rm $remote >/dev/null 2>&1; sleep 0.7; done`;
+    snapshotPid = spawnDetachedShell(snapshotLoop, repoRoot, process.env);
   }
 
   const persisted = await persistStartedRecordSession(repoRoot, {
@@ -260,6 +530,8 @@ export async function startRecordSessionWithMaestro(input: StartRecordSessionInp
     captureChannels: ["input_events", "ui_snapshots", "app_context"],
     rawEventsPath: rawEventsRelativePath,
     pid,
+    ...(captureStartMonotonicMs !== undefined ? { captureStartMonotonicMs } : {}),
+    ...(snapshotPid ? { snapshotPid } : {}),
   });
 
   return {
@@ -384,33 +656,68 @@ export async function endRecordSessionWithMaestro(input: EndRecordSessionInput):
     }
   }
 
-  let capturedEvents = await listRawRecordedEvents(repoRoot, input.recordSessionId);
+  const snapshotProcessId = (recordSession as PersistedRecordSession & { snapshotPid?: number }).snapshotPid;
+  if (snapshotProcessId && !input.dryRun) {
+    try {
+      process.kill(snapshotProcessId, "SIGTERM");
+    } catch (error) {
+      void error;
+    }
+  }
+
+  
+
+  let capturedEvents = await listRawRecordedEvents(repoRoot, input.recordSessionId) as ExtendedRawRecordedEvent[];
   const contextSnapshot = await captureAndroidContextSnapshot({
     repoRoot,
     recordSessionId: input.recordSessionId,
     deviceId: recordSession.deviceId,
+    bucketId: "end",
     dryRun: input.dryRun,
   });
   if (!input.dryRun && capturedEvents.length === 0) {
     const absolutePath = path.resolve(repoRoot, recordSession.rawEventsPath);
     const rawContent = await readFile(absolutePath, "utf8").catch(() => "");
     const parsed = parseRawInputEvents(rawContent);
-    const normalized: RawRecordedEvent[] = parsed.map((event, index) => ({
+    const snapshotRefs = await listSnapshotRefsForSession(repoRoot, input.recordSessionId);
+    const fallbackSnapshotRefs = contextSnapshot.uiSnapshotRef ? [contextSnapshot.uiSnapshotRef] : [];
+    const resolvedSnapshotRefs = snapshotRefs.length > 0 ? snapshotRefs : fallbackSnapshotRefs;
+    const snapshotCandidates: SnapshotCandidate[] = resolvedSnapshotRefs
+      .map((ref) => {
+        const capturedAtMs = parseSnapshotCapturedAtMs(ref);
+        return capturedAtMs !== undefined ? { ref, capturedAtMs } : undefined;
+      })
+      .filter((candidate): candidate is SnapshotCandidate => candidate !== undefined)
+      .sort((left, right) => left.capturedAtMs - right.capturedAtMs);
+    const anchorMonotonicMs = (recordSession as PersistedRecordSession & { captureStartMonotonicMs?: number }).captureStartMonotonicMs
+      ?? parsed.find((event) => event.eventMonotonicMs > 0)?.eventMonotonicMs;
+    const normalized: ExtendedRawRecordedEvent[] = parsed.map((event, index) => {
+      const mappedTimestamp = mapMonotonicToIso(recordSession.startedAt, event.eventMonotonicMs, anchorMonotonicMs);
+      const snapshotRef = chooseNearestSnapshotRef(mappedTimestamp, snapshotCandidates)
+        ?? resolvedSnapshotRefs[Math.min(index, Math.max(0, resolvedSnapshotRefs.length - 1))];
+      return {
       eventId: `${input.recordSessionId}-${index + 1}`,
       recordSessionId: input.recordSessionId,
-      timestamp: new Date().toISOString(),
+      timestamp: mappedTimestamp,
+      eventMonotonicMs: event.eventMonotonicMs,
       eventType: event.type,
       x: event.x,
       y: event.y,
+      gesture: event.gesture,
+      normalizedPoint: event.x !== undefined && event.y !== undefined ? { x: event.x, y: event.y } : undefined,
       textDelta: event.textDelta,
       rawLine: event.rawLine,
       foregroundApp: contextSnapshot.foregroundApp ?? recordSession.appId,
-      uiSnapshotRef: contextSnapshot.uiSnapshotRef,
-    }));
+      uiSnapshotRef: snapshotRef,
+      };
+    });
+    const enrichedNormalized = await enrichEventsWithSelectors(repoRoot, normalized);
     if (normalized.length > 0) {
-      await persistRawRecordedEvents(repoRoot, input.recordSessionId, normalized);
-      capturedEvents = normalized;
+      await persistRawRecordedEvents(repoRoot, input.recordSessionId, enrichedNormalized as RawRecordedEvent[]);
+      capturedEvents = enrichedNormalized;
     }
+  } else {
+    capturedEvents = await enrichEventsWithSelectors(repoRoot, capturedEvents);
   }
 
   const mapped = mapRawEventsToRecordedSteps(input.recordSessionId, capturedEvents, {
@@ -552,3 +859,9 @@ export async function cancelRecordSessionWithMaestro(input: CancelRecordSessionI
     nextSuggestions: ["Start a new record session when you are ready to capture another flow."],
   };
 }
+
+export const recordingRuntimeInternals = {
+  parseSnapshotCapturedAtMs,
+  chooseNearestSnapshotRef,
+  mapMonotonicToIso,
+};

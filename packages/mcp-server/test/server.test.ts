@@ -259,6 +259,10 @@ test("server invoke supports record session lifecycle in dry-run", async () => {
     assert.equal(typeof ended.data.report.replayDryRun?.status, "string");
     assert.equal(typeof ended.data.report.replayDryRun?.reasonCode, "string");
     flowPathHolder.value = ended.data.report.flowPath;
+    if (flowPathHolder.value) {
+      const exportedFlow = await readFile(path.resolve(repoRoot, flowPathHolder.value), "utf8");
+      assert.equal(exportedFlow.includes("artifacts/record-snapshots/"), false);
+    }
 
     const cancelled = await server.invoke("cancel_record_session", {
       recordSessionId: start.data.recordSessionId,

@@ -88,6 +88,9 @@ export interface PersistedRecordSession {
   rawEventsPath: string;
   flowPath?: string;
   pid?: number;
+  snapshotPid?: number;
+  captureStartMonotonicMs?: number;
+  snapshotDir?: string;
   warnings: string[];
   updatedAt: string;
 }

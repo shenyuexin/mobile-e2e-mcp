@@ -1,0 +1,5 @@
+appId: "host.exp.exponent"
+---
+- launchApp:
+    appId: "host.exp.exponent"
+    clearState: false

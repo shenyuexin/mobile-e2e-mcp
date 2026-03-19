@@ -1,19 +1,73 @@
 # Flow Generation Guide
 
-This guide explains the record -> export -> replay closure for generated Maestro flows.
+This document is the flow export/replay operation guide. It covers two valid paths:
 
-For passive manual recording front-door usage, see:
+1. Action-record path: `perform_action_with_evidence -> export_session_flow -> run_flow`
+2. Passive recording path: `start_record_session -> end_record_session -> run_flow`
 
-- `docs/guides/record-session-quickstart.md`
+## 1) Passive recording path (MCP front door)
 
-## 1) Preconditions
+Use this path when you want to manually operate device/emulator and generate a replayable flow.
 
-- A session exists and has persisted action records (from `perform_action_with_evidence`).
-- Session ID is known.
+Start recording:
 
-## 2) Export flow from a session
+```json
+{
+  "method": "tools/call",
+  "params": {
+    "name": "start_record_session",
+    "arguments": {
+      "sessionId": "record-login-001",
+      "platform": "android",
+      "deviceId": "emulator-5554",
+      "appId": "com.example.app",
+      "dryRun": false
+    }
+  }
+}
+```
 
-Call `export_session_flow`:
+Manually operate the app, then end recording:
+
+```json
+{
+  "method": "tools/call",
+  "params": {
+    "name": "end_record_session",
+    "arguments": {
+      "recordSessionId": "<recordSessionId-from-start>",
+      "autoExport": true,
+      "runReplayDryRun": true,
+      "dryRun": false
+    }
+  }
+}
+```
+
+Read `result.data.report.flowPath`, then replay:
+
+```json
+{
+  "method": "tools/call",
+  "params": {
+    "name": "run_flow",
+    "arguments": {
+      "sessionId": "record-login-001",
+      "platform": "android",
+      "flowPath": "flows/samples/generated/<generated>.yaml",
+      "dryRun": true
+    }
+  }
+}
+```
+
+For a compact quickstart version, also see `docs/guides/record-session-quickstart.md`.
+
+## 2) Action-record export path
+
+Use this path when session action records already exist (from `perform_action_with_evidence`).
+
+Export:
 
 ```json
 {
@@ -24,16 +78,7 @@ Call `export_session_flow`:
 }
 ```
 
-Typical output fields:
-
-- `data.outputPath`
-- `data.stepCount`
-- `data.skippedCount`
-- `data.warnings`
-
-## 3) Optional task-oriented export
-
-Call `record_task_flow`:
+Optional task-oriented export:
 
 ```json
 {
@@ -45,31 +90,8 @@ Call `record_task_flow`:
 }
 ```
 
-## 4) Replay exported flow
+Replay exported flow with `run_flow` and returned `data.outputPath`.
 
-Use `run_flow` with returned `data.outputPath` value:
+## 3) Mapping coverage and current limit
 
-```json
-{
-  "name": "run_flow",
-  "arguments": {
-    "sessionId": "demo-record-android-01",
-    "platform": "android",
-    "flowPath": "flows/samples/generated/demo-record-android-01-<timestamp>.yaml",
-    "dryRun": true
-  }
-}
-```
-
-## 5) Mapping coverage and limits
-
-Current export mapping covers:
-
-- `launch_app`
-- `tap_element`
-- `type_into_element`
-- `wait_for_ui`
-
-Known limit:
-
-- `terminate_app` is skipped during export and reported in `warnings`.
+Current mapping covers `launch_app`, `tap_element`, `type_into_element`, and `wait_for_ui`. `terminate_app` is skipped and reported in warnings.

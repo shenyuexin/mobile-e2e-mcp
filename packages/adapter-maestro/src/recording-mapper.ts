@@ -34,9 +34,38 @@ function resolveTargetFromIntent(intent: ActionIntent | undefined): { id?: strin
     return undefined;
   }
   if (intent.resourceId) return { id: intent.resourceId };
-  if (intent.text) return { text: intent.text };
-  if (intent.contentDesc) return { text: intent.contentDesc };
+  if (intent.text && !isSnapshotPath(intent.text)) return { text: intent.text };
+  if (intent.contentDesc && !isSnapshotPath(intent.contentDesc)) return { text: intent.contentDesc };
   return undefined;
+}
+
+function isSnapshotPath(value: string | undefined): boolean {
+  if (!value) {
+    return false;
+  }
+  return value.includes("artifacts/record-snapshots/") || value.endsWith(".xml");
+}
+
+function buildIntentFromEventSelector(event: RawRecordedEvent, actionType: ActionIntent["actionType"]): ActionIntent | undefined {
+  const selector = (event as RawRecordedEvent & {
+    resolvedSelector?: { resourceId?: string; text?: string; contentDesc?: string; className?: string };
+  }).resolvedSelector;
+  if (!selector) {
+    return undefined;
+  }
+  if (isSnapshotPath(selector.text) || isSnapshotPath(selector.contentDesc)) {
+    return undefined;
+  }
+  if (!selector.resourceId && !selector.text && !selector.contentDesc) {
+    return undefined;
+  }
+  return {
+    actionType,
+    resourceId: selector.resourceId,
+    text: selector.text,
+    contentDesc: selector.contentDesc,
+    className: selector.className,
+  };
 }
 
 function escapeYaml(value: string): string {
@@ -44,7 +73,8 @@ function escapeYaml(value: string): string {
 }
 
 function shouldAutoInsertWaitStep(actionType: RecordedStep["actionType"]): boolean {
-  return actionType === "tap_element" || actionType === "type_into_element" || actionType === "launch_app" || actionType === "tap";
+  const typeName = actionType as string;
+  return typeName === "tap_element" || typeName === "type_into_element";
 }
 
 function toStep(
@@ -81,8 +111,10 @@ export function mapRawEventsToRecordedSteps(
   const steps: RecordedStep[] = [];
   let stepNumber = 0;
   let lastTap: { x?: number; y?: number; timestampMs: number } | undefined;
+  let lastInputIntent: ActionIntent | undefined;
 
-  for (const event of sorted) {
+  for (let index = 0; index < sorted.length; index += 1) {
+    const event = sorted[index];
     let mappedStep: RecordedStep | undefined;
 
     if (event.eventType === "tap") {
@@ -103,35 +135,73 @@ export function mapRawEventsToRecordedSteps(
       stepNumber += 1;
       if (event.x === undefined || event.y === undefined) {
         mappedStep = toStep(stepNumber, event, "tap", "low", "Tap recorded without stable coordinates; degraded to coordinate tap fallback.");
-      } else if (event.uiSnapshotRef) {
+      } else {
+        const tapIntent = buildIntentFromEventSelector(event, "tap_element");
+        if (tapIntent) {
         mappedStep = toStep(
           stepNumber,
           event,
           "tap_element",
-          "medium",
-          "Tap mapped to tap_element using snapshot reference.",
-          { actionType: "tap_element", text: event.uiSnapshotRef },
+          tapIntent.resourceId ? "high" : "medium",
+          "Tap mapped to tap_element from resolved selector context.",
+          tapIntent,
         );
-      } else {
+          lastInputIntent = tapIntent;
+        } else {
         mappedStep = toStep(stepNumber, event, "tap", "medium", "Tap mapped as coordinate fallback due to missing selector context.");
+        }
       }
     } else if (event.eventType === "type") {
       if (!event.textDelta || event.textDelta.trim().length === 0) {
         warnings.push(`Type event '${event.eventId}' skipped due to empty textDelta.`);
         continue;
       }
+      let value = event.textDelta;
+      let lookahead = index + 1;
+      while (lookahead < sorted.length && sorted[lookahead]?.eventType === "type" && sorted[lookahead]?.textDelta) {
+        value += sorted[lookahead]?.textDelta;
+        lookahead += 1;
+      }
+      index = lookahead - 1;
+      const typeIntent = buildIntentFromEventSelector(event, "type_into_element") ?? lastInputIntent;
       stepNumber += 1;
       mappedStep = toStep(
         stepNumber,
         event,
         "type_into_element",
-        event.uiSnapshotRef ? "medium" : "low",
-        "Input event mapped to type_into_element from textDelta.",
+        typeIntent?.resourceId ? "high" : typeIntent ? "medium" : "low",
+        "Input event mapped to type_into_element from aggregated text chunks.",
         {
+          ...(typeIntent ?? { actionType: "type_into_element" }),
           actionType: "type_into_element",
-          text: event.uiSnapshotRef,
-          value: event.textDelta,
+          value,
         },
+      );
+    } else if (event.eventType === "swipe") {
+      const gesture = (event as RawRecordedEvent & { gesture?: { start?: { x: number; y: number }; end?: { x: number; y: number }; durationMs?: number } }).gesture;
+      const startX = gesture?.start?.x ?? event.x;
+      const startY = gesture?.start?.y ?? event.y;
+      const endX = gesture?.end?.x;
+      const endY = gesture?.end?.y;
+      if (startX === undefined || startY === undefined || endX === undefined || endY === undefined) {
+        warnings.push(`Swipe event '${event.eventId}' skipped due to incomplete coordinates.`);
+        continue;
+      }
+      stepNumber += 1;
+      mappedStep = toStep(
+        stepNumber,
+        event,
+        "swipe" as RecordedStep["actionType"],
+        "medium",
+        "Swipe mapped from touch trajectory.",
+        ({
+          actionType: "swipe" as ActionIntent["actionType"],
+          startX,
+          startY,
+          endX,
+          endY,
+          durationMs: gesture?.durationMs ?? 250,
+        } as ActionIntent),
       );
     } else if (event.eventType === "app_switch" || event.eventType === "home") {
       stepNumber += 1;
@@ -149,17 +219,16 @@ export function mapRawEventsToRecordedSteps(
       );
     } else if (event.eventType === "back") {
       stepNumber += 1;
+      const waitIntent = buildIntentFromEventSelector(event, "wait_for_ui");
       mappedStep = toStep(
         stepNumber,
         event,
         "wait_for_ui",
-        "low",
+        waitIntent ? "medium" : "low",
         "Back key event mapped to wait_for_ui stabilization step.",
-        {
-          actionType: "wait_for_ui",
-          text: event.uiSnapshotRef,
-          timeoutMs: 3000,
-        },
+        waitIntent
+          ? { ...waitIntent, actionType: "wait_for_ui", timeoutMs: 3000 }
+          : { actionType: "wait_for_ui", timeoutMs: 3000 },
       );
     } else {
       warnings.push(`Event '${event.eventId}' with type '${event.eventType}' is not mapped in MVP.`);
@@ -167,7 +236,8 @@ export function mapRawEventsToRecordedSteps(
     }
 
     steps.push(mappedStep);
-    if (includeAutoWaitStep && shouldAutoInsertWaitStep(mappedStep.actionType)) {
+    const autoWaitTarget = resolveTargetFromIntent(mappedStep.actionIntent);
+    if (includeAutoWaitStep && shouldAutoInsertWaitStep(mappedStep.actionType) && autoWaitTarget) {
       stepNumber += 1;
       steps.push({
         stepNumber,
@@ -177,7 +247,8 @@ export function mapRawEventsToRecordedSteps(
         actionIntent: {
           actionType: "wait_for_ui",
           timeoutMs: 3000,
-          text: mappedStep.actionIntent?.text,
+          text: autoWaitTarget.text,
+          resourceId: autoWaitTarget.id,
         },
         confidence: "medium",
         reason: "Auto-inserted wait_for_ui after actionable step to stabilize replay.",
@@ -251,6 +322,30 @@ export function renderRecordedStepsAsFlow(params: {
         if (target.text) lines.push(`    text: "${escapeYaml(target.text)}"`);
       }
       lines.push(`- inputText: "${escapeYaml(value)}"`);
+      continue;
+    }
+
+    if ((step.actionType as string) === "swipe") {
+      const swipeIntent = step.actionIntent as (ActionIntent & {
+        startX?: number;
+        startY?: number;
+        endX?: number;
+        endY?: number;
+        durationMs?: number;
+      }) | undefined;
+      const startX = swipeIntent?.startX;
+      const startY = swipeIntent?.startY;
+      const endX = swipeIntent?.endX;
+      const endY = swipeIntent?.endY;
+      const duration = swipeIntent?.durationMs ?? 250;
+      if (startX === undefined || startY === undefined || endX === undefined || endY === undefined) {
+        warnings.push(`Step ${String(step.stepNumber)} swipe skipped due to missing trajectory coordinates.`);
+        continue;
+      }
+      lines.push("- swipe:");
+      lines.push(`    start: "${String(startX)},${String(startY)}"`);
+      lines.push(`    end: "${String(endX)},${String(endY)}"`);
+      lines.push(`    duration: ${String(duration)}`);
       continue;
     }
 
