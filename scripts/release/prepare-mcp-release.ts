@@ -67,11 +67,14 @@ writeFileSync(pkgJsonPath, `${JSON.stringify(pkgJson, null, 2)}\n`, 'utf8');
 
 const tagName = `mcp-server-v${version}`;
 
+runWithOutput(`pnpm tsx scripts/release/sync-mcp-release-changelog.ts --version ${version}`);
+runWithOutput(`pnpm tsx scripts/release/validate-mcp-release.ts --version ${version} --tag ${tagName}`);
+
 runWithOutput('pnpm build');
 runWithOutput('pnpm typecheck');
 runWithOutput('pnpm test:mcp-server');
 
-runWithOutput('git add packages/mcp-server/package.json pnpm-lock.yaml');
+runWithOutput('git add packages/mcp-server/package.json pnpm-lock.yaml CHANGELOG.md');
 runWithOutput(`git commit -m "release(mcp-server): v${version}"`);
 
 const localTagExists = run(`git tag -l "${tagName}"`);
