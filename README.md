@@ -313,6 +313,7 @@ the repository settings:
 
 - [README.zh-CN.md](README.zh-CN.md) — Chinese overview
 - [docs/README.md](docs/README.md) — public documentation index and publication policy
+- [docs/engineering/ai-first-capability-expansion-guideline.md](docs/engineering/ai-first-capability-expansion-guideline.md) — feature expansion rules for AI-first harness capabilities
 - [docs/architecture/overview.md](docs/architecture/overview.md) — goals/scope/principles
 - [docs/architecture/architecture.md](docs/architecture/architecture.md) — reference architecture
 - [docs/architecture/capability-map.md](docs/architecture/capability-map.md) — capability taxonomy/maturity

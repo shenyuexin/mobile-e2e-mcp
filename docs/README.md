@@ -4,6 +4,7 @@ This directory now keeps only public-facing architecture and delivery references
 
 ## Public sections
 
+- `engineering/` — durable implementation-facing guidance for contributors extending the harness
 - `architecture/` — reference architecture, capability model, platform/adapter design, governance/security
 - `delivery/roadmap.md` — public roadmap and phase-level delivery direction
 - `delivery/npm-release-and-git-tagging.zh-CN.md` — release/tagging operational guide
@@ -22,3 +23,8 @@ The following document classes are intentionally not kept in public docs:
 - In-flight phase/program tracking files tied to mutable internal ownership
 
 If a delivery process becomes stable and reusable, promote it into `architecture/` or a durable `delivery/` document.
+
+## Recommended engineering guides
+
+- `engineering/type-export-sequencing-guideline.md` — avoid cross-package type export sequencing mistakes
+- `engineering/ai-first-capability-expansion-guideline.md` — keep new features aligned with AI-first, deterministic-first, policy-aware harness design

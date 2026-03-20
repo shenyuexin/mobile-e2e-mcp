@@ -58,6 +58,33 @@ bash scripts/dev/run-phase1-android.sh 1
 - helper 已存在时走 `--no-reinstall-driver`，避免重复安装授权弹窗；
 - 若 helper 缺失会前置失败，不会在回放中途弹安装框。
 
+### 3.3 用 `run_flow` 显式配置（推荐给 MCP 调用方）
+
+现在 `run_flow` 已支持显式 Android 回放配置：
+
+```json
+{
+  "sessionId": "your-session-id",
+  "platform": "android",
+  "deviceId": "<DEVICE_ID>",
+  "flowPath": "flows/samples/native/mobitru-android-login.yaml",
+  "androidReplayOptions": {
+    "userId": "0",
+    "textInputStrategy": "oem_fallback",
+    "expectedAppPhase": "detail"
+  }
+}
+```
+
+字段含义：
+
+- `userId`: 强制 user 域（vivo/oppo 多用户场景推荐 `0`）
+- `textInputStrategy`:
+  - `auto`: 自动判断
+  - `maestro`: 强制走 Maestro 原始文本输入
+  - `oem_fallback`: 强制走 OEM 文本输入 fallback
+- `expectedAppPhase`: 回放后强校验页面阶段（例如登录后首页可用 `detail`）
+
 ---
 
 ## 4) 当前已验证结果（vivo 真机）
