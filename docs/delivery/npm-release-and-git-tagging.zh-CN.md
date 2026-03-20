@@ -2,11 +2,12 @@
 
 ## 目标
 
-确保每一次 NPM 发版都具备可追溯的 GitHub Tag 与 Release，实现：
+确保每一次 NPM 发版都具备可追溯的 GitHub Tag、Release 与 CHANGELOG，实现：
 
 1. NPM 版本 ↔ Git Tag 一一对应
 2. 发版过程可审计、可回放
 3. 降低人工漏打 tag/错打 tag 风险
+4. 让 CHANGELOG 按 tag diff 自动补齐，减少手工维护
 
 ## 统一约定
 
@@ -41,9 +42,12 @@
 
 1. 安装依赖
 2. 校验 tag 与 `packages/mcp-server/package.json` 版本完全一致
-3. 构建打包
-4. 发布到 npm（使用 `NPM_TOKEN`）
-5. 创建 GitHub Release
+3. 根据“上一个 MCP tag -> 当前 tag”的 commit diff 自动生成/更新 `CHANGELOG.md` 中该版本节
+4. 再次校验 tag / package version / changelog 三者一致
+5. 将同步后的 `CHANGELOG.md` 回写到默认分支
+6. 构建打包
+7. 发布到 npm（使用 `NPM_TOKEN`）
+8. 创建 GitHub Release
 
 ## 标准操作流程（推荐）
 
@@ -58,10 +62,55 @@ pnpm release:mcp:prepare-tag patch
 
 1. 检查工作区必须干净
 2. 更新 `@shenyuexin/mobile-e2e-mcp` 版本（不自动打默认 v tag）
-3. 运行 `pnpm build`、`pnpm typecheck`、`pnpm test:mcp-server`
-4. 提交版本变更
-5. 创建并推送规范 tag：`mcp-server-v<version>`
-6. 推送分支与 tag，触发 GitHub Actions 自动发包
+3. 根据“上一个 MCP tag -> 当前待发版版本”的 commit diff 自动生成/更新 `CHANGELOG.md`
+4. 校验 changelog / package version / tag 三者一致
+5. 运行 `pnpm build`、`pnpm typecheck`、`pnpm test:mcp-server`
+6. 提交版本变更（含 `CHANGELOG.md`）
+7. 创建并推送规范 tag：`mcp-server-v<version>`
+8. 推送分支与 tag，触发 GitHub Actions 自动发包
+
+## 现在的推荐流程（你只需要关心 tag）
+
+### 方案 A：本地标准发版（推荐）
+
+```bash
+pnpm release:mcp:prepare-tag patch
+```
+
+特点：
+
+- 自动更新版本号
+- 自动生成该版本 changelog
+- 自动提交并推 tag
+
+### 方案 B：你只负责发 tag（机制补 changelog）
+
+如果你已经手动创建并推送了 `mcp-server-v<version>`：
+
+- GitHub Actions 会自动：
+  1. 按“上一个 tag -> 当前 tag”生成该版本 changelog
+  2. 把 `CHANGELOG.md` 回写到默认分支
+  3. 再继续 npm publish
+
+也就是说，**以后不要求你手工先写 `CHANGELOG.md`**。
+
+### 单独校验/同步发版元数据
+
+在需要时，也可以单独执行：
+
+```bash
+pnpm release:mcp:check
+pnpm release:mcp:sync-changelog -- --tag mcp-server-v0.1.5
+```
+
+它们分别会：
+
+1. `release:mcp:check`
+   - 校验 `packages/mcp-server/package.json` 版本存在
+   - 校验 `CHANGELOG.md` 中存在对应版本节
+   - 校验该版本节不是空的
+2. `release:mcp:sync-changelog`
+   - 根据 tag diff 自动生成/刷新该版本 changelog
 
 ## 仓库管理员一次性配置
 

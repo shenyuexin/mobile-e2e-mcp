@@ -7,10 +7,17 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [0.1.5] - 2026-03-20
+
 ### Added
-- OSS governance baseline files: `LICENSE`, `CONTRIBUTING.md`, `SECURITY.md`, `.github/CODEOWNERS`
-- Collaboration docs: `CODE_OF_CONDUCT.md`, `SUPPORT.md`, `.github/PULL_REQUEST_TEMPLATE.md`
-- README section for fast local build verification and OSS collaboration entry points
+- Introduced the first public AI-first mobile E2E MCP server with session lifecycle, app control, UI inspection, interaction, diagnostics, interruption handling, and failure-analysis tools.
+- Established deterministic-first execution adapters plus bounded OCR/vision fallback for Android, iOS, React Native, and Flutter automation workflows.
+- Published runnable sample flows, showcase demos, and real-device/simulator validation assets for login, recovery, and harness onboarding scenarios.
 
 ### Changed
-- Hardened `.gitignore` with additional security, cache, IDE, and mobile artifact patterns
+- Reorganized the repository into a pnpm monorepo with explicit contracts, core orchestration, adapters, and MCP server package boundaries.
+- Added stdio/dev CLI entrypoints, package metadata, governance baselines, and release automation needed for public npm distribution.
+
+### Fixed
+- Hardened doctor checks, dry-run behavior, selector resolution, and session or lease stability during the initial release cycle.
+
