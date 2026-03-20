@@ -1,7 +1,8 @@
 import { execFile } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import { promisify } from "node:util";
-import { createServer } from "../../packages/mcp-server/src/index.ts";
+import { buildStateSummaryFromSignals } from "../../packages/adapter-maestro/src/index.ts";
+import { buildInspectUiSummary, parseAndroidUiHierarchyNodes, queryUiNodes } from "../../packages/adapter-maestro/src/ui-model.ts";
 
 const execFileAsync = promisify(execFile);
 
@@ -17,31 +18,6 @@ type FlowCommand =
   | { kind: "inputText"; text: string }
   | { kind: "setClipboard"; text: string }
   | { kind: "pasteText" };
-
-interface QueryUiResult {
-  status: string;
-  reasonCode?: string;
-  nextSuggestions?: string[];
-  data?: {
-    result?: {
-      matches?: Array<{
-        node?: {
-          bounds?: string;
-        };
-      }>;
-    };
-    screenSummary?: {
-      appPhase?: string;
-      topVisibleTexts?: string[];
-    };
-  };
-}
-
-function ensureSuccess(step: string, result: QueryUiResult): void {
-  if (result.status !== "success") {
-    throw new Error(`${step} failed: ${result.status}${result.reasonCode ? ` (${result.reasonCode})` : ""}${result.nextSuggestions?.length ? `; ${result.nextSuggestions.join(" | ")}` : ""}`);
-  }
-}
 
 function parseBoundsCenter(bounds: string): { x: number; y: number } {
   const match = bounds.match(/\[(\d+),(\d+)\]\[(\d+),(\d+)\]/);
@@ -63,6 +39,12 @@ async function sleep(ms: number): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+async function captureUiXml(deviceId: string): Promise<string> {
+  await adb(deviceId, ["shell", "uiautomator", "dump", "/sdcard/view.xml"]);
+  const { stdout } = await execFileAsync("adb", ["-s", deviceId, "shell", "cat", "/sdcard/view.xml"]);
+  return stdout;
+}
+
 function normalizeResourceId(appId: string, rawId: string | undefined): string | undefined {
   if (!rawId) {
     return undefined;
@@ -76,16 +58,14 @@ function normalizeResourceId(appId: string, rawId: string | undefined): string |
   return `${appId}:id/${rawId}`;
 }
 
-async function resolveBounds(server: ReturnType<typeof createServer>, sessionId: string, deviceId: string, appId: string, selector: SelectorMap, stepLabel: string): Promise<string> {
-  const queryResult = await server.invoke("query_ui", {
-    sessionId,
-    platform: "android",
-    deviceId,
+async function resolveBounds(deviceId: string, appId: string, selector: SelectorMap, stepLabel: string): Promise<string> {
+  const xml = await captureUiXml(deviceId);
+  const nodes = parseAndroidUiHierarchyNodes(xml);
+  const result = queryUiNodes(nodes, {
     ...(selector.id ? { resourceId: normalizeResourceId(appId, selector.id) } : {}),
     ...(selector.text ? { text: selector.text } : {}),
-  }) as QueryUiResult;
-  ensureSuccess(stepLabel, queryResult);
-  const bounds = queryResult.data?.result?.matches?.[0]?.node?.bounds;
+  });
+  const bounds = result.matches[0]?.node?.bounds;
   if (!bounds) {
     throw new Error(`${stepLabel} did not return a target bounds.`);
   }
@@ -190,87 +170,68 @@ async function main(): Promise<void> {
 
   const flowText = await readFile(flowPath, "utf8");
   const commands = parseCommands(flowText);
-
-  const sessionId = `android-oem-text-fallback-${Date.now()}`;
-  const server = createServer();
   let clipboardValue = "";
-  let sessionStarted = false;
-  try {
-    await adb(deviceId, ["shell", "am", "switch-user", androidUserId]);
-    const session = await server.invoke("start_session", {
-      sessionId,
-      platform: "android",
-      deviceId,
-      profile: "native_android",
-      policyProfile: "sample-harness-default",
-    }) as QueryUiResult;
-    ensureSuccess("start_session", session);
-    sessionStarted = true;
+  await adb(deviceId, ["shell", "am", "switch-user", androidUserId]);
 
-    for (let index = 0; index < commands.length; index += 1) {
-      const command = commands[index]!;
-      if (command.kind === "launchApp") {
-        await adb(deviceId, ["shell", "am", "force-stop", appId]);
-        await adb(deviceId, ["shell", "monkey", "-p", appId, "-c", "android.intent.category.LAUNCHER", "1"]);
-        await sleep(3000);
-        continue;
-      }
-
-      if (command.kind === "assertVisible") {
-        await resolveBounds(server, sessionId, deviceId, appId, command.selector, `assertVisible[${index}]`);
-        continue;
-      }
-
-      if (command.kind === "tapOn") {
-        const bounds = await resolveBounds(server, sessionId, deviceId, appId, command.selector, `tapOn[${index}]`);
-        const center = parseBoundsCenter(bounds);
-        await adb(deviceId, ["shell", "input", "tap", String(center.x), String(center.y)]);
-        await sleep(700);
-        continue;
-      }
-
-      if (command.kind === "setClipboard") {
-        clipboardValue = command.text;
-        continue;
-      }
-
-      if (command.kind === "inputText") {
-        await injectAndroidText(deviceId, command.text);
-        await sleep(800);
-        continue;
-      }
-
-      if (command.kind === "pasteText") {
-        await injectAndroidText(deviceId, clipboardValue);
-        await sleep(800);
-      }
+  for (let index = 0; index < commands.length; index += 1) {
+    const command = commands[index]!;
+    if (command.kind === "launchApp") {
+      await adb(deviceId, ["shell", "am", "force-stop", appId]);
+      await adb(deviceId, ["shell", "monkey", "-p", appId, "-c", "android.intent.category.LAUNCHER", "1"]);
+      await sleep(3000);
+      continue;
     }
 
-    const summary = await server.invoke("get_screen_summary", {
-      sessionId,
-      platform: "android",
-      deviceId,
-    }) as QueryUiResult;
-    ensureSuccess("get_screen_summary", summary);
-
-    if (expectedAppPhase && summary.data?.screenSummary?.appPhase !== expectedAppPhase) {
-      throw new Error(`Expected appPhase=${expectedAppPhase}, got ${summary.data?.screenSummary?.appPhase ?? "unknown"}`);
+    if (command.kind === "assertVisible") {
+      await resolveBounds(deviceId, appId, command.selector, `assertVisible[${index}]`);
+      continue;
     }
 
-    console.log(JSON.stringify({
-      status: "success",
-      sessionId,
-      deviceId,
-      appId,
-      flowPath,
-      appPhase: summary.data?.screenSummary?.appPhase,
-      topVisibleTexts: summary.data?.screenSummary?.topVisibleTexts?.slice(0, 10) ?? [],
-    }, null, 2));
-  } finally {
-    if (sessionStarted) {
-      await server.invoke("end_session", { sessionId }).catch(() => undefined);
+    if (command.kind === "tapOn") {
+      const bounds = await resolveBounds(deviceId, appId, command.selector, `tapOn[${index}]`);
+      const center = parseBoundsCenter(bounds);
+      await adb(deviceId, ["shell", "input", "tap", String(center.x), String(center.y)]);
+      await sleep(700);
+      continue;
+    }
+
+    if (command.kind === "setClipboard") {
+      clipboardValue = command.text;
+      continue;
+    }
+
+    if (command.kind === "inputText") {
+      await injectAndroidText(deviceId, command.text);
+      await sleep(800);
+      continue;
+    }
+
+    if (command.kind === "pasteText") {
+      await injectAndroidText(deviceId, clipboardValue);
+      await sleep(800);
     }
   }
+
+  const finalXml = await captureUiXml(deviceId);
+  const finalNodes = parseAndroidUiHierarchyNodes(finalXml);
+  const finalUiSummary = buildInspectUiSummary(finalNodes);
+  const visibleTexts = finalNodes.map((node) => node.text).filter((text): text is string => typeof text === "string" && text.length > 0).slice(0, 40);
+  const screenSummary = buildStateSummaryFromSignals({
+    uiSummary: finalUiSummary,
+  });
+
+  if (expectedAppPhase && screenSummary.appPhase !== expectedAppPhase) {
+    throw new Error(`Expected appPhase=${expectedAppPhase}, got ${screenSummary.appPhase}`);
+  }
+
+  console.log(JSON.stringify({
+    status: "success",
+    deviceId,
+    appId,
+    flowPath,
+    appPhase: screenSummary.appPhase,
+    topVisibleTexts: screenSummary.topVisibleTexts?.slice(0, 10) ?? visibleTexts.slice(0, 10),
+  }, null, 2));
 }
 
 main().catch((error: unknown) => {

@@ -4083,7 +4083,26 @@ export async function runFlowWithMaestro(input: RunFlowInput): Promise<ToolResul
     OUT_DIR: artifactsDir.absolutePath,
     APP_ID: input.appId ?? selection.appId,
     FLOW: path.resolve(repoRoot, effectiveFlowPath),
+    SESSION_ID: input.sessionId,
   };
+
+  if (input.platform === "android" && input.androidReplayOptions) {
+    if (input.androidReplayOptions.userId) {
+      env.ANDROID_USER_ID = input.androidReplayOptions.userId;
+    }
+    if (input.androidReplayOptions.expectedAppPhase) {
+      env.EXPECTED_APP_PHASE = input.androidReplayOptions.expectedAppPhase;
+    }
+    if (input.androidReplayOptions.textInputStrategy) {
+      if (input.androidReplayOptions.textInputStrategy === "oem_fallback") {
+        env.ANDROID_OEM_TEXT_FALLBACK = "1";
+      } else if (input.androidReplayOptions.textInputStrategy === "maestro") {
+        env.ANDROID_OEM_TEXT_FALLBACK = "0";
+      } else {
+        env.ANDROID_OEM_TEXT_FALLBACK = "auto";
+      }
+    }
+  }
 
   if (input.platform === "android") {
     env.DEVICE_ID = input.deviceId ?? selection.deviceId ?? DEFAULT_ANDROID_DEVICE_ID;
@@ -4108,7 +4127,12 @@ export async function runFlowWithMaestro(input: RunFlowInput): Promise<ToolResul
     const manufacturer = manufacturerExecution.stdout.trim().toLowerCase();
     const flowContent = await readFile(path.resolve(repoRoot, effectiveFlowPath), "utf8").catch(() => "");
     const hasTextCommands = /(^|\n)- (inputText|pasteText|setClipboard):?|(^|\n)- inputText:|(^|\n)- pasteText|(^|\n)- setClipboard:/m.test(flowContent);
-    const allowsOemTextFallback = (manufacturer === "vivo" || manufacturer === "oppo") && needsUserScopedReplay && hasTextCommands;
+    const requestedTextStrategy = input.androidReplayOptions?.textInputStrategy ?? "auto";
+    const allowsOemTextFallback = requestedTextStrategy === "oem_fallback"
+      ? hasTextCommands
+      : requestedTextStrategy === "maestro"
+        ? false
+        : (manufacturer === "vivo" || manufacturer === "oppo") && needsUserScopedReplay && hasTextCommands;
     if (needsUserScopedReplay && forceUserZero) {
       env.ANDROID_USER_ID = env.ANDROID_USER_ID ?? "0";
     }
