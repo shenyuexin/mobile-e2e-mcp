@@ -1,4 +1,4 @@
-import type { ActionIntent, AndroidPerformancePreset, CaptureJsConsoleLogsInput, CaptureJsNetworkEventsInput, CollectDebugEvidenceInput, CollectDiagnosticsInput, CompareAgainstBaselineInput, DescribeCapabilitiesInput, DoctorInput, ExplainLastFailureInput, FindSimilarFailuresInput, GetActionOutcomeInput, GetCrashSignalsInput, GetLogsInput, GetScreenSummaryInput, GetSessionStateInput, InspectUiInput, InstallAppInput, IosPerformanceTemplate, LaunchAppInput, ListDevicesInput, ListJsDebugTargetsInput, MeasureAndroidPerformanceInput, MeasureIosPerformanceInput, PerformActionWithEvidenceInput, Platform, QueryUiInput, RankFailureCandidatesInput, RecordScreenInput, RecoverToKnownStateInput, ReplayLastStablePathInput, ResetAppStateInput, ResetAppStateStrategy, ResolveUiTargetInput, RunFlowInput, RunnerProfile, ScreenshotInput, ScrollAndResolveUiTargetInput, ScrollAndTapElementInput, StartSessionInput, SuggestKnownRemediationInput, TapElementInput, TapInput, TerminateAppInput, ToolResult, TypeTextInput, TypeIntoElementInput, UiScrollDirection, WaitForUiInput, WaitForUiMode } from "@mobile-e2e-mcp/contracts";
+import type { ActionIntent, AndroidPerformancePreset, AndroidReplayOptions, CaptureJsConsoleLogsInput, CaptureJsNetworkEventsInput, CollectDebugEvidenceInput, CollectDiagnosticsInput, CompareAgainstBaselineInput, DescribeCapabilitiesInput, DoctorInput, ExplainLastFailureInput, FindSimilarFailuresInput, GetActionOutcomeInput, GetCrashSignalsInput, GetLogsInput, GetScreenSummaryInput, GetSessionStateInput, InspectUiInput, InstallAppInput, IosPerformanceTemplate, LaunchAppInput, ListDevicesInput, ListJsDebugTargetsInput, MeasureAndroidPerformanceInput, MeasureIosPerformanceInput, PerformActionWithEvidenceInput, Platform, QueryUiInput, RankFailureCandidatesInput, RecordScreenInput, RecoverToKnownStateInput, ReplayLastStablePathInput, ResetAppStateInput, ResetAppStateStrategy, ResolveUiTargetInput, RunFlowInput, RunnerProfile, ScreenshotInput, ScrollAndResolveUiTargetInput, ScrollAndTapElementInput, StartSessionInput, SuggestKnownRemediationInput, TapElementInput, TapInput, TerminateAppInput, ToolResult, TypeTextInput, TypeIntoElementInput, UiScrollDirection, WaitForUiInput, WaitForUiMode } from "@mobile-e2e-mcp/contracts";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 import { applyContextAlias } from "./cli/context-resolver.js";
@@ -94,6 +94,9 @@ export function parseCliArgs(argv: string[]): CliOptions {
   let policyProfile: string | undefined;
   let flowPath: string | undefined;
   let harnessConfigPath: string | undefined;
+  let androidReplayUserId: string | undefined;
+  let androidTextInputStrategy: AndroidReplayOptions["textInputStrategy"] | undefined;
+  let expectedAppPhase: AndroidReplayOptions["expectedAppPhase"] | undefined;
   let sessionId: string | undefined;
   let metroBaseUrl: string | undefined;
   let targetId: string | undefined;
@@ -185,6 +188,9 @@ export function parseCliArgs(argv: string[]): CliOptions {
     else if (arg === "--policy-profile" && nextValue) { policyProfile = nextValue; index += 1; }
     else if (arg === "--flow-path" && nextValue) { flowPath = nextValue; index += 1; }
     else if (arg === "--harness-config-path" && nextValue) { harnessConfigPath = nextValue; index += 1; }
+    else if (arg === "--android-user-id" && nextValue) { androidReplayUserId = nextValue; index += 1; }
+    else if (arg === "--android-text-input-strategy" && nextValue && ["auto", "maestro", "oem_fallback"].includes(nextValue)) { androidTextInputStrategy = nextValue as AndroidReplayOptions["textInputStrategy"]; index += 1; }
+    else if (arg === "--expected-app-phase" && nextValue && ["launching", "ready", "loading", "blocked", "backgrounded", "crashed", "authentication", "detail", "catalog", "empty", "unknown"].includes(nextValue)) { expectedAppPhase = nextValue as AndroidReplayOptions["expectedAppPhase"]; index += 1; }
     else if (arg === "--session-id" && nextValue) { sessionId = nextValue; index += 1; }
     else if (arg === "--metro-base-url" && nextValue) { metroBaseUrl = nextValue; index += 1; }
     else if (arg === "--target-id" && nextValue) { targetId = nextValue; index += 1; }
@@ -277,6 +283,13 @@ export function parseCliArgs(argv: string[]): CliOptions {
     policyProfile,
     flowPath,
     harnessConfigPath,
+    androidReplayOptions: androidReplayUserId || androidTextInputStrategy || expectedAppPhase
+      ? {
+        ...(androidReplayUserId ? { userId: androidReplayUserId } : {}),
+        ...(androidTextInputStrategy ? { textInputStrategy: androidTextInputStrategy } : {}),
+        ...(expectedAppPhase ? { expectedAppPhase } : {}),
+      }
+      : undefined,
     sessionId,
     metroBaseUrl,
     targetId,
@@ -900,7 +913,16 @@ export async function main(): Promise<void> {
     process.exitCode = 1;
     return;
   }
-  const runInput: RunFlowInput = { sessionId: startResult.data.sessionId, platform: cliOptions.platform, runnerProfile: cliOptions.runnerProfile, runCount: cliOptions.runCount, dryRun: cliOptions.dryRun, flowPath: cliOptions.flowPath, harnessConfigPath: cliOptions.harnessConfigPath };
+  const runInput: RunFlowInput = {
+    sessionId: startResult.data.sessionId,
+    platform: cliOptions.platform,
+    runnerProfile: cliOptions.runnerProfile,
+    runCount: cliOptions.runCount,
+    dryRun: cliOptions.dryRun,
+    flowPath: cliOptions.flowPath,
+    harnessConfigPath: cliOptions.harnessConfigPath,
+    androidReplayOptions: cliOptions.androidReplayOptions,
+  };
   const runResult = await server.invoke("run_flow", runInput);
   const endResult = await server.invoke("end_session", { sessionId: startResult.data.sessionId, artifacts: runResult.artifacts });
   console.log(JSON.stringify({ tools: server.listTools(), startResult, runResult, endResult }, null, 2));

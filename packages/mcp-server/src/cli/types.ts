@@ -1,5 +1,6 @@
 import type {
   ActionIntent,
+  AndroidReplayOptions,
   AndroidPerformancePreset,
   IosPerformanceTemplate,
   Platform,
@@ -82,6 +83,7 @@ export interface CliOptions {
   policyProfile?: string;
   flowPath?: string;
   harnessConfigPath?: string;
+  androidReplayOptions?: AndroidReplayOptions;
   sessionId?: string;
   metroBaseUrl?: string;
   targetId?: string;
