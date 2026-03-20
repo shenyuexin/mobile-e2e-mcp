@@ -108,6 +108,40 @@ test("mapRawEventsToRecordedSteps maps swipe event", () => {
   assert.equal(result.steps[0]?.actionType, "swipe");
 });
 
+test("mapRawEventsToRecordedSteps degrades text-only tap selector to coordinate tap", () => {
+  const result = mapRawEventsToRecordedSteps("rec-text-only-tap", [
+    buildEvent({
+      eventId: "text-only",
+      eventType: "tap",
+      x: 320,
+      y: 640,
+      resolvedSelector: {
+        text: "Mobitru",
+      },
+    }),
+  ]);
+
+  assert.equal(result.steps.length, 1);
+  assert.equal(result.steps[0]?.actionType, "tap");
+});
+
+test("mapRawEventsToRecordedSteps degrades container tap selector to coordinate tap", () => {
+  const result = mapRawEventsToRecordedSteps("rec-container-tap", [
+    buildEvent({
+      eventId: "container-tap",
+      eventType: "tap",
+      x: 320,
+      y: 640,
+      resolvedSelector: {
+        resourceId: "android:id/content",
+      },
+    }),
+  ]);
+
+  assert.equal(result.steps.length, 1);
+  assert.equal(result.steps[0]?.actionType, "tap");
+});
+
 test("mapRawEventsToRecordedSteps does not auto-insert wait_for_ui for coordinate fallback tap", () => {
   const result = mapRawEventsToRecordedSteps("rec-fallback-tap", [
     buildEvent({
@@ -199,4 +233,45 @@ test("mapRawEventsToRecordedSteps maps back to wait_for_ui", () => {
 
   assert.equal(result.steps.length, 1);
   assert.equal(result.steps[0]?.actionType, "wait_for_ui");
+});
+
+test("mapRawEventsToRecordedSteps splits keyboard chunks on tab delimiter", () => {
+  const result = mapRawEventsToRecordedSteps("rec-keyboard-tab", [
+    buildEvent({ eventId: "type-1", timestamp: "2026-03-19T10:00:00.000Z", eventType: "type", textDelta: "a" }),
+    buildEvent({ eventId: "type-2", timestamp: "2026-03-19T10:00:00.100Z", eventType: "type", textDelta: "b" }),
+    buildEvent({ eventId: "type-tab", timestamp: "2026-03-19T10:00:00.200Z", eventType: "type", textDelta: "\t" }),
+    buildEvent({ eventId: "type-3", timestamp: "2026-03-19T10:00:00.300Z", eventType: "type", textDelta: "c" }),
+  ], { includeAutoWaitStep: false });
+
+  assert.equal(result.steps.length, 2);
+  assert.equal(result.steps[0]?.actionType, "type_into_element");
+  assert.equal(result.steps[0]?.actionIntent?.value, "ab");
+  assert.equal(result.steps[1]?.actionType, "type_into_element");
+  assert.equal(result.steps[1]?.actionIntent?.value, "c");
+});
+
+test("mapRawEventsToRecordedSteps splits keyboard chunks on enter delimiter", () => {
+  const result = mapRawEventsToRecordedSteps("rec-keyboard-enter", [
+    buildEvent({ eventId: "type-1", timestamp: "2026-03-19T10:00:00.000Z", eventType: "type", textDelta: "p" }),
+    buildEvent({ eventId: "type-2", timestamp: "2026-03-19T10:00:00.100Z", eventType: "type", textDelta: "w" }),
+    buildEvent({ eventId: "type-enter", timestamp: "2026-03-19T10:00:00.200Z", eventType: "type", textDelta: "\n" }),
+    buildEvent({ eventId: "type-3", timestamp: "2026-03-19T10:00:00.300Z", eventType: "type", textDelta: "x" }),
+  ], { includeAutoWaitStep: false });
+
+  assert.equal(result.steps.length, 2);
+  assert.equal(result.steps[0]?.actionIntent?.value, "pw");
+  assert.equal(result.steps[1]?.actionIntent?.value, "x");
+});
+
+test("mapRawEventsToRecordedSteps splits keyboard chunks by timestamp gap", () => {
+  const result = mapRawEventsToRecordedSteps("rec-keyboard-gap", [
+    buildEvent({ eventId: "type-1", timestamp: "2026-03-19T10:00:00.000Z", eventType: "type", textDelta: "a" }),
+    buildEvent({ eventId: "type-2", timestamp: "2026-03-19T10:00:00.200Z", eventType: "type", textDelta: "b" }),
+    buildEvent({ eventId: "type-3", timestamp: "2026-03-19T10:00:02.500Z", eventType: "type", textDelta: "c" }),
+    buildEvent({ eventId: "type-4", timestamp: "2026-03-19T10:00:02.700Z", eventType: "type", textDelta: "d" }),
+  ], { includeAutoWaitStep: false, typeChunkGapMs: 1200 });
+
+  assert.equal(result.steps.length, 2);
+  assert.equal(result.steps[0]?.actionIntent?.value, "ab");
+  assert.equal(result.steps[1]?.actionIntent?.value, "cd");
 });

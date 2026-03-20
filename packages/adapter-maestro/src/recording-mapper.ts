@@ -4,6 +4,7 @@ export interface RecordingMappingOptions {
   defaultAppId?: string;
   includeAutoWaitStep?: boolean;
   dedupeTapWindowMs?: number;
+  typeChunkGapMs?: number;
 }
 
 export interface RecordingMappingResult {
@@ -77,6 +78,23 @@ function shouldAutoInsertWaitStep(actionType: RecordedStep["actionType"]): boole
   return typeName === "tap_element" || typeName === "type_into_element";
 }
 
+function isWeakTapIntent(intent: ActionIntent): boolean {
+  const resourceId = intent.resourceId;
+  if (!resourceId && !intent.contentDesc) {
+    return true;
+  }
+  if (!resourceId) {
+    return false;
+  }
+  if (resourceId === "android:id/content" || resourceId === "android:id/navigationBarBackground") {
+    return true;
+  }
+  if (resourceId.endsWith(":id/nav_host_fragment_content_main")) {
+    return true;
+  }
+  return false;
+}
+
 function toStep(
   stepNumber: number,
   event: RawRecordedEvent,
@@ -106,6 +124,7 @@ export function mapRawEventsToRecordedSteps(
 ): RecordingMappingResult {
   const includeAutoWaitStep = options.includeAutoWaitStep ?? true;
   const dedupeTapWindowMs = options.dedupeTapWindowMs ?? 300;
+  const typeChunkGapMs = options.typeChunkGapMs ?? 1200;
   const warnings: string[] = [];
   const sorted = events.slice().sort((left, right) => left.timestamp.localeCompare(right.timestamp));
   const steps: RecordedStep[] = [];
@@ -137,7 +156,7 @@ export function mapRawEventsToRecordedSteps(
         mappedStep = toStep(stepNumber, event, "tap", "low", "Tap recorded without stable coordinates; degraded to coordinate tap fallback.");
       } else {
         const tapIntent = buildIntentFromEventSelector(event, "tap_element");
-        if (tapIntent) {
+        if (tapIntent && !isWeakTapIntent(tapIntent)) {
         mappedStep = toStep(
           stepNumber,
           event,
@@ -148,7 +167,7 @@ export function mapRawEventsToRecordedSteps(
         );
           lastInputIntent = tapIntent;
         } else {
-        mappedStep = toStep(stepNumber, event, "tap", "medium", "Tap mapped as coordinate fallback due to missing selector context.");
+        mappedStep = toStep(stepNumber, event, "tap", "medium", "Tap mapped as coordinate fallback due to weak or missing selector context.");
         }
       }
     } else if (event.eventType === "type") {
@@ -158,11 +177,26 @@ export function mapRawEventsToRecordedSteps(
       }
       let value = event.textDelta;
       let lookahead = index + 1;
+      let previousTimestampMs = parseTimestampMillis(event.timestamp);
       while (lookahead < sorted.length && sorted[lookahead]?.eventType === "type" && sorted[lookahead]?.textDelta) {
-        value += sorted[lookahead]?.textDelta;
+        const nextTimestampMs = parseTimestampMillis(sorted[lookahead]?.timestamp);
+        if (nextTimestampMs > 0 && previousTimestampMs > 0 && (nextTimestampMs - previousTimestampMs) > typeChunkGapMs) {
+          break;
+        }
+        const delta = sorted[lookahead]?.textDelta ?? "";
+        if (delta === "\t" || delta === "\n") {
+          lookahead += 1;
+          break;
+        }
+        value += delta;
+        previousTimestampMs = nextTimestampMs;
         lookahead += 1;
       }
       index = lookahead - 1;
+      if (value.trim().length === 0) {
+        warnings.push(`Type event '${event.eventId}' resolved to delimiter-only chunk and was skipped.`);
+        continue;
+      }
       const typeIntent = buildIntentFromEventSelector(event, "type_into_element") ?? lastInputIntent;
       stepNumber += 1;
       mappedStep = toStep(
