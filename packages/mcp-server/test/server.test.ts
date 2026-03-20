@@ -279,6 +279,65 @@ test("server invoke supports record session lifecycle in dry-run", async () => {
   }
 });
 
+test("server invoke supports iOS record session lifecycle in dry-run", async () => {
+  const server = createServer();
+  const sessionId = `server-record-session-ios-${Date.now()}`;
+  const recordSessionIdHolder: { value?: string } = {};
+  const flowPathHolder: { value?: string } = {};
+  try {
+    const start = await server.invoke("start_record_session", {
+      sessionId,
+      platform: "ios",
+      dryRun: true,
+      deviceId: "00000000-0000-0000-0000-000000000000",
+      appId: "com.example.ios",
+    });
+    recordSessionIdHolder.value = start.data.recordSessionId;
+
+    assert.equal(start.status, "success");
+    assert.equal(start.reasonCode, "OK");
+    assert.equal(start.data.platform, "ios");
+    assert.equal(start.data.status, "running");
+
+    const status = await server.invoke("get_record_session_status", {
+      recordSessionId: start.data.recordSessionId,
+    });
+    assert.equal(status.status, "success");
+    assert.equal(status.data.platform, "ios");
+
+    const ended = await server.invoke("end_record_session", {
+      recordSessionId: start.data.recordSessionId,
+      autoExport: true,
+      runReplayDryRun: true,
+      dryRun: true,
+    });
+    assert.equal(ended.status, "success");
+    assert.equal(ended.data.status, "ended");
+    assert.equal(typeof ended.data.report.flowPath, "string");
+    assert.equal(ended.data.report.flowPath?.endsWith(".yaml"), true);
+    flowPathHolder.value = ended.data.report.flowPath;
+    if (flowPathHolder.value) {
+      const exportedFlow = await readFile(path.resolve(repoRoot, flowPathHolder.value), "utf8");
+      assert.equal(exportedFlow.includes("- tapOn:"), true);
+      assert.equal(exportedFlow.includes("- inputText:"), true);
+      assert.equal(exportedFlow.includes("artifacts/record-snapshots/"), false);
+    }
+
+    const cancelled = await server.invoke("cancel_record_session", {
+      recordSessionId: start.data.recordSessionId,
+    });
+    assert.equal(cancelled.status, "success");
+    assert.equal(cancelled.data.cancelled, true);
+  } finally {
+    if (recordSessionIdHolder.value) {
+      await cleanupRecordSessionArtifacts(recordSessionIdHolder.value);
+    }
+    if (flowPathHolder.value) {
+      await rm(path.resolve(repoRoot, flowPathHolder.value), { force: true });
+    }
+  }
+});
+
 test("server invoke returns bounded auto-remediation stop details for allowlist misses", async () => {
   const server = createServer();
   const sessionId = `server-auto-remediation-stop-${Date.now()}`;

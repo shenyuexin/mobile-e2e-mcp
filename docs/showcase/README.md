@@ -14,6 +14,10 @@ This folder contains reproducible, real-device demo evidence used by README.
 
 - `docs/showcase/record-session-demo.md`
 
+## iOS recording showcase
+
+- `docs/showcase/ios-recording-showcase.md`
+
 ## Primary demo videos
 
 - Happy path (Android real device):

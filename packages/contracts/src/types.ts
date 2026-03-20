@@ -235,6 +235,7 @@ export interface EvidenceCompleteness {
 }
 export interface ActionIntent {
   actionType: SupportedActionType;
+  identifier?: string;
   resourceId?: string;
   contentDesc?: string;
   text?: string;
@@ -1187,8 +1188,10 @@ export interface RawRecordedEvent {
     durationMs?: number;
   };
   resolvedSelector?: {
+    identifier?: string;
     resourceId?: string;
     text?: string;
+    value?: string;
     contentDesc?: string;
     className?: string;
   };

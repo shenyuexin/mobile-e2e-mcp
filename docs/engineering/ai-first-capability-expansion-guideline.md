@@ -319,6 +319,37 @@ Step 8: run verification across affected layers
 
 说明边界已经错了，应先拆层再实现。
 
+### 规则 7.2：平台值可以是受控枚举，平台行为必须走策略模块
+
+`"android" | "ios"` 这类 platform 字段本身可以保留为受控枚举（contracts 层 type-safe source of truth），
+但**平台行为**不应散落在一个 orchestrator 文件的多处 `if/else` 分支里。
+
+推荐模式：
+
+- 在 runtime 层建立 `PlatformHooks` / `PlatformAdapter` 接口
+- Android 与 iOS 分别放在独立模块（例如 `*-android.ts` / `*-ios.ts`）
+- 入口编排层只负责：
+  - 选择 adapter（registry / map）
+  - 组织 shared pipeline（session/persist/evidence/report）
+  - 不重复承载平台命令细节
+
+最低要求：
+
+- 平台枚举集中定义在 contracts（避免魔法字符串漂移）
+- 平台特化能力（device resolve、capture、snapshot、event parse）各自封装
+- 新增平台时应以“新增模块 + registry 注册”为主，而不是“继续扩 if/else”
+
+反例：
+
+- 同一 orchestrator 中到处出现 `if (platform === "android") ... else ...`
+- 一个文件同时承载：平台命令执行 + 语义映射 + policy 判断 + result shaping
+
+正例：
+
+- `recording-runtime.ts` 作为薄编排层
+- `recording-runtime-android.ts` / `recording-runtime-ios.ts` 负责各自平台执行细节
+- `recording-runtime-platform.ts` 统一平台策略注册与分发
+
 ---
 
 ## 规则 7.5：平台扩展要连带检查 profile/config 边界

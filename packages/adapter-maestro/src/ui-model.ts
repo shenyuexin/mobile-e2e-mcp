@@ -142,10 +142,22 @@ function toIosInspectNode(node: Record<string, unknown>, depth: number): Inspect
   const bounds = frame ? `[${String(frameX)},${String(frameY)}][${String(frameX + frameWidth)},${String(frameY + frameHeight)}]` : undefined;
   const type = readNonEmptyString(node, "type") ?? undefined;
 
+  const identifier = readNonEmptyString(node, "identifier")
+    ?? readNonEmptyString(node, "AXIdentifier")
+    ?? readNonEmptyString(node, "name")
+    ?? readNonEmptyString(node, "id")
+    ?? undefined;
+  const title = readNonEmptyString(node, "title") ?? undefined;
+  const valueText = readNonEmptyString(node, "value")
+    ?? readNonEmptyString(node, "AXValue")
+    ?? undefined;
+
   return {
     depth,
-    text: readNonEmptyString(node, "title") ?? undefined,
-    resourceId: readNonEmptyString(node, "AXUniqueId") ?? undefined,
+    text: title ?? valueText,
+    resourceId: identifier
+      ?? readNonEmptyString(node, "AXUniqueId")
+      ?? undefined,
     className: type,
     packageName: readNonEmptyString(node, "bundleIdentifier")
       ?? readNonEmptyString(node, "bundleId")

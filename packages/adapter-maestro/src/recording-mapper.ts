@@ -22,6 +22,8 @@ export interface RenderedRecordedFlow {
   };
 }
 
+type ExtendedActionIntent = ActionIntent & { identifier?: string };
+
 function parseTimestampMillis(value: string | undefined): number {
   if (!value) {
     return 0;
@@ -30,10 +32,12 @@ function parseTimestampMillis(value: string | undefined): number {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-function resolveTargetFromIntent(intent: ActionIntent | undefined): { id?: string; text?: string } | undefined {
+function resolveTargetFromIntent(intent: ActionIntent | undefined): { identifier?: string; id?: string; text?: string } | undefined {
   if (!intent) {
     return undefined;
   }
+  const extendedIntent = intent as ExtendedActionIntent;
+  if (extendedIntent.identifier) return { identifier: extendedIntent.identifier };
   if (intent.resourceId) return { id: intent.resourceId };
   if (intent.text && !isSnapshotPath(intent.text)) return { text: intent.text };
   if (intent.contentDesc && !isSnapshotPath(intent.contentDesc)) return { text: intent.contentDesc };
@@ -44,12 +48,12 @@ function isSnapshotPath(value: string | undefined): boolean {
   if (!value) {
     return false;
   }
-  return value.includes("artifacts/record-snapshots/") || value.endsWith(".xml");
+  return value.includes("artifacts/record-snapshots/") || value.endsWith(".xml") || value.endsWith(".json");
 }
 
 function buildIntentFromEventSelector(event: RawRecordedEvent, actionType: ActionIntent["actionType"]): ActionIntent | undefined {
   const selector = (event as RawRecordedEvent & {
-    resolvedSelector?: { resourceId?: string; text?: string; contentDesc?: string; className?: string };
+    resolvedSelector?: { identifier?: string; resourceId?: string; text?: string; value?: string; contentDesc?: string; className?: string };
   }).resolvedSelector;
   if (!selector) {
     return undefined;
@@ -57,20 +61,37 @@ function buildIntentFromEventSelector(event: RawRecordedEvent, actionType: Actio
   if (isSnapshotPath(selector.text) || isSnapshotPath(selector.contentDesc)) {
     return undefined;
   }
-  if (!selector.resourceId && !selector.text && !selector.contentDesc) {
+  if (!selector.identifier && !selector.resourceId && !selector.text && !selector.value && !selector.contentDesc) {
     return undefined;
   }
   return {
     actionType,
+    ...(selector.identifier ? { identifier: selector.identifier } : {}),
     resourceId: selector.resourceId,
-    text: selector.text,
+    text: selector.text ?? selector.value,
     contentDesc: selector.contentDesc,
     className: selector.className,
   };
 }
 
 function escapeYaml(value: string): string {
-  return value.replaceAll('"', '\\"');
+  return value
+    .replaceAll("\\", "\\\\")
+    .replaceAll('"', '\\"')
+    .replaceAll("\r", "\\r")
+    .replaceAll("\n", "\\n")
+    .replaceAll("\t", "\\t");
+}
+
+function isLikelySystemKeyboardDescriptor(value: string): boolean {
+  const normalized = value.trim().toLowerCase();
+  if (!normalized.startsWith("<bkshidkeyboarddevice:")) {
+    return false;
+  }
+  return normalized.includes("senderid:")
+    && normalized.includes("transport:")
+    && normalized.includes("layout:")
+    && normalized.includes("standardtype:");
 }
 
 function shouldAutoInsertWaitStep(actionType: RecordedStep["actionType"]): boolean {
@@ -79,6 +100,14 @@ function shouldAutoInsertWaitStep(actionType: RecordedStep["actionType"]): boole
 }
 
 function isWeakTapIntent(intent: ActionIntent): boolean {
+  const extendedIntent = intent as ExtendedActionIntent;
+  if (extendedIntent.identifier) {
+    const normalized = extendedIntent.identifier.toLowerCase();
+    if (normalized.includes("window") || normalized.includes("application")) {
+      return true;
+    }
+    return false;
+  }
   const resourceId = intent.resourceId;
   if (!resourceId && !intent.contentDesc) {
     return true;
@@ -161,7 +190,7 @@ export function mapRawEventsToRecordedSteps(
           stepNumber,
           event,
           "tap_element",
-          tapIntent.resourceId ? "high" : "medium",
+          (tapIntent as ExtendedActionIntent).identifier || tapIntent.resourceId ? "high" : "medium",
           "Tap mapped to tap_element from resolved selector context.",
           tapIntent,
         );
@@ -203,7 +232,7 @@ export function mapRawEventsToRecordedSteps(
         stepNumber,
         event,
         "type_into_element",
-        typeIntent?.resourceId ? "high" : typeIntent ? "medium" : "low",
+        ((typeIntent as ExtendedActionIntent | undefined)?.identifier || typeIntent?.resourceId) ? "high" : typeIntent ? "medium" : "low",
         "Input event mapped to type_into_element from aggregated text chunks.",
         {
           ...(typeIntent ?? { actionType: "type_into_element" }),
@@ -321,8 +350,9 @@ export function renderRecordedStepsAsFlow(params: {
 
     if (step.actionType === "tap_element") {
       const target = resolveTargetFromIntent(step.actionIntent);
-      if (target?.id || target?.text) {
+      if (target?.identifier || target?.id || target?.text) {
         lines.push("- tapOn:");
+        if (target.identifier) lines.push(`    identifier: "${escapeYaml(target.identifier)}"`);
         if (target.id) lines.push(`    id: "${escapeYaml(target.id)}"`);
         if (target.text) lines.push(`    text: "${escapeYaml(target.text)}"`);
         continue;
@@ -350,10 +380,15 @@ export function renderRecordedStepsAsFlow(params: {
     if (step.actionType === "type_into_element") {
       const value = step.actionIntent?.value ?? "";
       const target = resolveTargetFromIntent(step.actionIntent);
-      if (target?.id || target?.text) {
+      if (target?.identifier || target?.id || target?.text) {
         lines.push("- tapOn:");
+        if (target.identifier) lines.push(`    identifier: "${escapeYaml(target.identifier)}"`);
         if (target.id) lines.push(`    id: "${escapeYaml(target.id)}"`);
         if (target.text) lines.push(`    text: "${escapeYaml(target.text)}"`);
+      }
+      if (isLikelySystemKeyboardDescriptor(value)) {
+        warnings.push(`Step ${String(step.stepNumber)} type_into_element dropped non-user keyboard descriptor payload.`);
+        continue;
       }
       lines.push(`- inputText: "${escapeYaml(value)}"`);
       continue;
@@ -385,11 +420,12 @@ export function renderRecordedStepsAsFlow(params: {
 
     if (step.actionType === "wait_for_ui") {
       const target = resolveTargetFromIntent(step.actionIntent);
-      if (!target?.id && !target?.text) {
+      if (!target?.identifier && !target?.id && !target?.text) {
         warnings.push(`Step ${String(step.stepNumber)} wait_for_ui has no target and was skipped.`);
         continue;
       }
       lines.push("- assertVisible:");
+      if (target.identifier) lines.push(`    identifier: "${escapeYaml(target.identifier)}"`);
       if (target.id) lines.push(`    id: "${escapeYaml(target.id)}"`);
       if (target.text) lines.push(`    text: "${escapeYaml(target.text)}"`);
       continue;

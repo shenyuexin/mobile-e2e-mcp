@@ -29,7 +29,7 @@ const GUIDANCE_RULES: DoctorGuidanceRule[] = [
     matches: (check) => check.name.toLowerCase() === "idb",
     installCommands: ["pipx install fb-idb", "pip3 install --user fb-idb"],
     verifyCommands: ["which idb", "idb list-targets"],
-    envHints: ["Set IDB_CLI_PATH when idb is installed in a non-standard location."],
+    envHints: ["Set IDB_CLI_PATH when idb is installed in a non-standard location.", "Required for iOS start_record_session snapshot capture."],
   },
   {
     dependency: "idb_companion",
@@ -37,7 +37,7 @@ const GUIDANCE_RULES: DoctorGuidanceRule[] = [
     matches: (check) => check.name.toLowerCase() === "idb companion",
     installCommands: ["brew install idb-companion"],
     verifyCommands: ["which idb_companion", "idb list-targets"],
-    envHints: ["Set IDB_COMPANION_PATH when idb_companion is installed in a non-standard location."],
+    envHints: ["Set IDB_COMPANION_PATH when idb_companion is installed in a non-standard location.", "Required for iOS start_record_session snapshot capture."],
   },
   {
     dependency: "adb",
@@ -53,7 +53,7 @@ const GUIDANCE_RULES: DoctorGuidanceRule[] = [
     matches: (check) => check.name.toLowerCase() === "xcrun simctl",
     installCommands: ["xcode-select --install", "sudo xcode-select -s /Applications/Xcode.app/Contents/Developer"],
     verifyCommands: ["xcrun simctl help", "xcrun simctl list devices"],
-    envHints: ["Accept Xcode license: sudo xcodebuild -license accept."],
+    envHints: ["Accept Xcode license: sudo xcodebuild -license accept.", "Required for iOS simulator log-stream capture used by start_record_session."],
   },
   {
     dependency: "xcrun-xctrace",

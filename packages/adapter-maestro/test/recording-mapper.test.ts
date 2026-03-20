@@ -19,7 +19,7 @@ function buildEvent(overrides: Partial<RawRecordedEvent>): RawRecordedEvent {
   (base as RawRecordedEvent & { eventMonotonicMs?: number }).eventMonotonicMs = (overrides as RawRecordedEvent & { eventMonotonicMs?: number }).eventMonotonicMs;
   (base as RawRecordedEvent & { normalizedPoint?: { x: number; y: number } }).normalizedPoint = (overrides as RawRecordedEvent & { normalizedPoint?: { x: number; y: number } }).normalizedPoint;
   (base as RawRecordedEvent & { gesture?: { kind: "tap" | "swipe"; start?: { x: number; y: number }; end?: { x: number; y: number }; durationMs?: number } }).gesture = (overrides as RawRecordedEvent & { gesture?: { kind: "tap" | "swipe"; start?: { x: number; y: number }; end?: { x: number; y: number }; durationMs?: number } }).gesture;
-  (base as RawRecordedEvent & { resolvedSelector?: { resourceId?: string; text?: string; contentDesc?: string; className?: string } }).resolvedSelector = (overrides as RawRecordedEvent & { resolvedSelector?: { resourceId?: string; text?: string; contentDesc?: string; className?: string } }).resolvedSelector;
+  (base as RawRecordedEvent & { resolvedSelector?: { identifier?: string; resourceId?: string; text?: string; value?: string; contentDesc?: string; className?: string } }).resolvedSelector = (overrides as RawRecordedEvent & { resolvedSelector?: { identifier?: string; resourceId?: string; text?: string; value?: string; contentDesc?: string; className?: string } }).resolvedSelector;
   return base;
 }
 
@@ -47,6 +47,28 @@ test("mapRawEventsToRecordedSteps maps type to type_into_element", () => {
   assert.equal(result.steps.length, 1);
   assert.equal(result.steps[0]?.actionType, "type_into_element");
   assert.equal(result.steps[0]?.actionIntent?.value, "demo@example.com");
+});
+
+test("renderRecordedStepsAsFlow exports iOS identifier selectors", () => {
+  const mapped = mapRawEventsToRecordedSteps("rec-ios-identifier", [
+    buildEvent({
+      eventId: "tap-ios-1",
+      eventType: "tap",
+      x: 120,
+      y: 300,
+      resolvedSelector: {
+        identifier: "login-email-input",
+      },
+    }),
+  ], { includeAutoWaitStep: false });
+
+  const rendered = renderRecordedStepsAsFlow({
+    appId: "com.example.ios",
+    includeLaunchStep: false,
+    steps: mapped.steps,
+  });
+
+  assert.equal(rendered.yaml.includes("identifier: \"login-email-input\""), true);
 });
 
 test("mapRawEventsToRecordedSteps rejects snapshot-path selector and falls back to coordinate tap", () => {
@@ -274,4 +296,80 @@ test("mapRawEventsToRecordedSteps splits keyboard chunks by timestamp gap", () =
   assert.equal(result.steps.length, 2);
   assert.equal(result.steps[0]?.actionIntent?.value, "ab");
   assert.equal(result.steps[1]?.actionIntent?.value, "cd");
+});
+
+test("renderRecordedStepsAsFlow escapes backslash content in inputText", () => {
+  const rendered = renderRecordedStepsAsFlow({
+    appId: "com.example.app",
+    includeLaunchStep: false,
+    steps: [
+      {
+        stepNumber: 1,
+        eventId: "type-escape-1",
+        timestamp: new Date().toISOString(),
+        actionType: "type_into_element",
+        actionIntent: {
+          actionType: "type_into_element",
+          value: "a\\134n\"b",
+          identifier: "email-input",
+        },
+        confidence: "medium",
+        reason: "escape coverage",
+      },
+    ],
+  });
+
+  assert.equal(rendered.yaml.includes('identifier: "email-input"'), true);
+  assert.equal(rendered.yaml.includes('- inputText: "a\\\\134n\\"b"'), true);
+});
+
+test("renderRecordedStepsAsFlow skips system keyboard descriptor payloads", () => {
+  const rendered = renderRecordedStepsAsFlow({
+    appId: "com.example.app",
+    includeLaunchStep: false,
+    steps: [
+      {
+        stepNumber: 1,
+        eventId: "type-system-descriptor-1",
+        timestamp: new Date().toISOString(),
+        actionType: "type_into_element",
+        actionIntent: {
+          actionType: "type_into_element",
+          value: "<BKSHIDKeyboardDevice: 0x60000056b5a0> {\\134n    senderID: 0xACEFADE00000003;\\134n    transport: <nil>;\\134n    layout: US;\\134n    standardType: 4294967295;\\134n}",
+          identifier: "password-input",
+        },
+        confidence: "low",
+        reason: "filter system payload",
+      },
+    ],
+  });
+
+  assert.equal(rendered.yaml.includes("inputText:"), false);
+  assert.equal(rendered.yaml.includes('identifier: "password-input"'), true);
+  assert.equal(rendered.warnings.some((warning) => warning.includes("dropped non-user keyboard descriptor payload")), true);
+});
+
+test("renderRecordedStepsAsFlow keeps normal text containing sender keywords", () => {
+  const rendered = renderRecordedStepsAsFlow({
+    appId: "com.example.app",
+    includeLaunchStep: false,
+    steps: [
+      {
+        stepNumber: 1,
+        eventId: "type-normal-keywords-1",
+        timestamp: new Date().toISOString(),
+        actionType: "type_into_element",
+        actionIntent: {
+          actionType: "type_into_element",
+          value: "senderID: test transport: custom payload",
+          identifier: "notes-input",
+        },
+        confidence: "medium",
+        reason: "avoid over-filtering",
+      },
+    ],
+  });
+
+  assert.equal(rendered.yaml.includes('identifier: "notes-input"'), true);
+  assert.equal(rendered.yaml.includes('inputText: "senderID: test transport: custom payload"'), true);
 });

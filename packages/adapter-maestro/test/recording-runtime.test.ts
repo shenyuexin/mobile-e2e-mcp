@@ -178,3 +178,43 @@ test("parseRawInputEvents maps ABS_MT_TRACKING_ID touch sequence to tap", () => 
   assert.equal(parsed[0]?.x, 0x400);
   assert.equal(parsed[0]?.y, 0x800);
 });
+
+test("parseSimctlDeviceEntries parses simctl devices json", () => {
+  const parsed = recordingRuntimeInternals.parseSimctlDeviceEntries(JSON.stringify({
+    devices: {
+      "com.apple.CoreSimulator.SimRuntime.iOS-17-5": [
+        { udid: "A", state: "Shutdown", isAvailable: true },
+        { udid: "B", state: "Booted", isAvailable: true },
+      ],
+    },
+  }));
+
+  assert.deepEqual(parsed, [
+    { udid: "A", state: "Shutdown", isAvailable: true },
+    { udid: "B", state: "Booted", isAvailable: true },
+  ]);
+});
+
+test("choosePreferredIosDeviceId prefers requested then booted", () => {
+  const entries = [
+    { udid: "A", state: "Shutdown", isAvailable: true },
+    { udid: "B", state: "Booted", isAvailable: true },
+  ];
+  assert.equal(recordingRuntimeInternals.choosePreferredIosDeviceId(entries, "A"), "A");
+  assert.equal(recordingRuntimeInternals.choosePreferredIosDeviceId(entries), "B");
+});
+
+test("parseIosRawInputEvents extracts tap, type, and swipe", () => {
+  const raw = [
+    "2026-03-20 10:00:00.000 touch at (120, 300)",
+    "2026-03-20 10:00:00.050 keyboard insert='hello@example.com'",
+    "2026-03-20 10:00:00.090 swipe from (120,300) to (120,120)",
+  ].join("\n");
+
+  const parsed = recordingRuntimeInternals.parseIosRawInputEvents(raw);
+  assert.equal(parsed.length, 3);
+  assert.equal(parsed[0]?.type, "tap");
+  assert.equal(parsed[1]?.type, "type");
+  assert.equal(parsed[1]?.textDelta, "hello@example.com");
+  assert.equal(parsed[2]?.type, "swipe");
+});

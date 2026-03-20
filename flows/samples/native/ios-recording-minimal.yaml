@@ -1,0 +1,13 @@
+appId: com.example.ios
+---
+- launchApp
+- tapOn:
+    identifier: "login-email-input"
+- inputText: "demo@example.com"
+- tapOn:
+    identifier: "login-password-input"
+- inputText: "P@ssw0rd123"
+- tapOn:
+    text: "Login"
+- assertVisible:
+    text: "Catalog"

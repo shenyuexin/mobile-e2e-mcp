@@ -1,5 +1,5 @@
-import type { CapabilityGroup, CapabilityProfile, CapabilitySupportLevel, Platform, RunnerProfile, ToolCapability } from "@mobile-e2e-mcp/contracts";
 import { DEFAULT_OCR_FALLBACK_POLICY } from "@mobile-e2e-mcp/adapter-vision";
+import type { CapabilityGroup, CapabilityProfile, CapabilitySupportLevel, Platform, RunnerProfile, ToolCapability } from "@mobile-e2e-mcp/contracts";
 
 const FULL: CapabilitySupportLevel = "full";
 const PARTIAL: CapabilitySupportLevel = "partial";
@@ -28,6 +28,10 @@ function buildAndroidToolCapabilities(): ToolCapability[] {
     buildToolCapability("install_app", FULL, "Android app installation is supported."),
     buildToolCapability("launch_app", FULL, "Android app launch is supported."),
     buildToolCapability("reset_app_state", FULL, "Android app state reset is supported via clear_data and uninstall_reinstall strategies."),
+    buildToolCapability("start_record_session", FULL, "Android passive recording supports getevent-based capture with UI snapshots and flow export."),
+    buildToolCapability("get_record_session_status", FULL, "Android passive recording status reporting is fully supported."),
+    buildToolCapability("end_record_session", FULL, "Android passive recording supports event mapping and flow export."),
+    buildToolCapability("cancel_record_session", FULL, "Android passive recording cancellation is fully supported."),
     buildToolCapability("list_devices", FULL, "Android device discovery is supported.", false),
     buildToolCapability("start_session", FULL, "Android session initialization is supported.", false),
     buildToolCapability("run_flow", FULL, "Android flow execution is supported."),
@@ -62,6 +66,10 @@ function buildIosToolCapabilities(): ToolCapability[] {
     buildToolCapability("install_app", FULL, "iOS simulator app installation is supported."),
     buildToolCapability("launch_app", FULL, "iOS simulator app launch is supported."),
     buildToolCapability("reset_app_state", PARTIAL, "iOS simulator app reset is supported with strategy-specific caveats (simctl uninstall/reinstall and keychain reset)."),
+    buildToolCapability("start_record_session", PARTIAL, "iOS simulator recording supports bounded simulator-log capture plus idb snapshot association (tap/type-first)."),
+    buildToolCapability("get_record_session_status", PARTIAL, "iOS recording status reporting is available with platform-specific guidance when capture remains sparse."),
+    buildToolCapability("end_record_session", PARTIAL, "iOS recording supports bounded semantic mapping and flow export with confidence warnings."),
+    buildToolCapability("cancel_record_session", PARTIAL, "iOS recording cancellation is supported for simulator log and snapshot capture workers."),
     buildToolCapability("list_devices", FULL, "iOS simulator discovery is supported.", false),
     buildToolCapability("start_session", FULL, "iOS session initialization is supported.", false),
     buildToolCapability("run_flow", FULL, "iOS flow execution is supported, subject to current runner-profile constraints."),
@@ -105,6 +113,7 @@ export function buildCapabilityProfile(platform: Platform, runnerProfile: Runner
     },
     groups: [
       summarizeGroup(toolCapabilities, "session_management", ["describe_capabilities", "start_session", "run_flow", "end_session"], "Session lifecycle and capability discovery layer."),
+      summarizeGroup(toolCapabilities, "recording_and_replay", ["start_record_session", "get_record_session_status", "end_record_session", "cancel_record_session", "run_flow"], "Passive record-session lifecycle and replay closure capabilities."),
       summarizeGroup(toolCapabilities, "app_lifecycle", ["install_app", "launch_app", "terminate_app", "reset_app_state"], "Install, launch, terminate, and reset application workflows."),
       summarizeGroup(toolCapabilities, "artifacts_and_diagnostics", ["take_screenshot", "record_screen", "get_logs", "get_crash_signals", "collect_debug_evidence", "collect_diagnostics", "measure_android_performance", "measure_ios_performance"], "Evidence capture, diagnostics collection, and lightweight performance analysis tools."),
       summarizeGroup(toolCapabilities, "ui_inspection", ["inspect_ui", "query_ui", "resolve_ui_target", "wait_for_ui", "scroll_and_resolve_ui_target"], "Hierarchy capture, querying, target resolution, and wait logic."),
