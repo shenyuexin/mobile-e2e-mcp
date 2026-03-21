@@ -79,6 +79,15 @@ pnpm mcp:stdio
   - Title: `type(scope): short summary`
   - Body: 1-2 short paragraphs or bullets covering why the change was made, what boundary or workflow it affects, and any important rollout/review context.
 
+## 6.6) Release Doc-Sync Guardrail (README is not always required)
+
+Use a layered **doc-sync** check for releases: PR gate first, pre-tag drift-check second, and tag-workflow warning fallback.
+Do not hard-block tag publishing solely because README was not edited.
+
+Canonical policy, trigger paths, and exemptions are maintained in:
+
+- `docs/delivery/npm-release-and-git-tagging.zh-CN.md`
+
 ## 7) Where to Go Deeper
 
 - `docs/engineering/ai-first-capability-expansion-guideline.md`

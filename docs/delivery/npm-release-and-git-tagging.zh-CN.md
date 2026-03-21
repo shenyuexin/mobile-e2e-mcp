@@ -51,6 +51,37 @@
 8. 发布到 npm（使用 `NPM_TOKEN`）
 9. 创建 GitHub Release
 
+### 3) Public Docs 漂移检查（非阻塞）
+
+原则：**不是每个 tag 都必须更新 README，但每个对外可见能力变更都必须有公共文档落点**。
+
+建议按三层执行：
+
+1. **PR 阶段（主关口）**
+   - 对外可见变化（能力边界、工具目录、命令入口、支持平台、发布流程）应在 PR 内同步文档。
+   - 推荐至少更新其一：`README.md` / `README.zh-CN.md` / `docs/README.md` 或对应专题文档。
+2. **`release:mcp:prepare-tag` 阶段（二次确认）**
+   - 在发版前做一次“自上个 MCP tag 以来的对外变化”清单核对，确认是否存在 public docs 漂移。
+3. **Tag workflow 阶段（兜底提醒）**
+   - 建议做 warning/notice，不建议因为 README 未更新直接阻断 npm publish。
+
+建议触发条件（命中任一目录时，优先检查文档是否需要同步；这些是高概率触发器，不代表“命中就必须改文档”）：
+
+- `packages/mcp-server/src/server.ts`（工具暴露面）
+- `packages/contracts/**`（契约/Schema 变更）
+- `configs/profiles/**`、`configs/policies/**`（支持边界/治理策略）
+- `docs/architecture/**`（对外架构叙事变化）
+- `.github/workflows/release-mcp.yml`、`scripts/release/**`（发版自动化流程变化）
+- `packages/mcp-server/package.json` 中影响安装/发布/仓库关联的元数据字段
+
+常见可豁免场景：
+
+- 纯内部重构（无行为变化）
+- 测试/脚手架调整且不影响外部用法
+- 仅修复拼写、格式、注释
+
+> 实践建议：将“public docs 是否需要更新”作为 release checklist 固定项，而不是把它设计成强制失败门禁。
+
 ## 标准操作流程（推荐）
 
 ### 一条命令完成准备 + 推送 tag

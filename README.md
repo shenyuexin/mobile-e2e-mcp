@@ -198,33 +198,37 @@ Tool registry/signature dispatch live in `packages/mcp-server/src/server.ts`, wh
 
 ## Complete MCP Tool Catalog (Current)
 
-The server currently exposes **46 tools**. For AI agents, this is the fastest way to understand what actions are available.
+The server currently exposes **54 tools**. For AI agents, this is the fastest way to understand what actions are available.
 
 ### 1) Session & lifecycle
 
 `start_session`, `end_session`, `run_flow`, `reset_app_state`
 
-### 2) Device & app control
+### 2) Task orchestration & flow capture
+
+`execute_intent`, `complete_task`, `start_record_session`, `get_record_session_status`, `end_record_session`, `cancel_record_session`, `export_session_flow`, `record_task_flow`
+
+### 3) Device & app control
 
 `list_devices`, `install_app`, `launch_app`, `terminate_app`, `describe_capabilities`, `doctor`
 
-### 3) UI perception, targeting, and interaction
+### 4) UI perception, targeting, and interaction
 
 `inspect_ui`, `query_ui`, `resolve_ui_target`, `scroll_and_resolve_ui_target`, `wait_for_ui`, `tap`, `tap_element`, `scroll_and_tap_element`, `type_text`, `type_into_element`
 
-### 4) Evidence, observability, and diagnostics
+### 5) Evidence, observability, and diagnostics
 
 `take_screenshot`, `record_screen`, `get_logs`, `get_crash_signals`, `collect_diagnostics`, `collect_debug_evidence`, `get_screen_summary`, `get_session_state`, `capture_js_console_logs`, `capture_js_network_events`, `list_js_debug_targets`
 
-### 5) Interruption handling
+### 6) Interruption handling
 
 `detect_interruption`, `classify_interruption`, `resolve_interruption`, `resume_interrupted_action`
 
-### 6) Failure analysis, recovery, and remediation
+### 7) Failure analysis, recovery, and remediation
 
 `perform_action_with_evidence`, `get_action_outcome`, `explain_last_failure`, `rank_failure_candidates`, `find_similar_failures`, `compare_against_baseline`, `recover_to_known_state`, `replay_last_stable_path`, `suggest_known_remediation`
 
-### 7) Performance profiling
+### 8) Performance profiling
 
 `measure_android_performance`, `measure_ios_performance`
 
@@ -329,7 +333,7 @@ the repository settings:
 - [docs/architecture/policy-engine-runtime-architecture.zh-CN.md](docs/architecture/policy-engine-runtime-architecture.zh-CN.md) — policy runtime/guard/scope mapping
 - [docs/architecture/platform-implementation-matrix.zh-CN.md](docs/architecture/platform-implementation-matrix.zh-CN.md) — cross-platform support matrix
 - [docs/delivery/roadmap.md](docs/delivery/roadmap.md) — delivery phases
-- [docs/delivery/npm-release-and-git-tagging.zh-CN.md](docs/delivery/npm-release-and-git-tagging.zh-CN.md) — npm 发版与 Git tag 一体化规范（@shenyuexin/mobile-e2e-mcp）
+- [docs/delivery/npm-release-and-git-tagging.zh-CN.md](docs/delivery/npm-release-and-git-tagging.zh-CN.md) — npm 发版与 Git tag 一体化规范（含 PR/pre-tag/tag 分层 doc-sync 规则）
 - [docs/showcase/README.md](docs/showcase/README.md) — real-device demo evidence and repro scripts
 - [tests/README.md](tests/README.md) — test layers and CI scope
 
