@@ -1,38 +1,51 @@
 import { existsSync } from "node:fs";
-import { mkdir, readFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
-import type { CollectDiagnosticsInput, DeviceInfo, DoctorCheck, GetCrashSignalsInput, GetLogsInput, Platform, ReasonCode, RunnerProfile } from "@mobile-e2e-mcp/contracts";
+import type {
+  CollectDiagnosticsData,
+  CollectDiagnosticsInput,
+  DeviceInfo,
+  DebugSignalSummary,
+  DoctorCheck,
+  GetCrashSignalsData,
+  GetCrashSignalsInput,
+  GetLogsData,
+  GetLogsInput,
+  Platform,
+  LogSummary,
+  ReasonCode,
+  RecordScreenData,
+  RecordScreenInput,
+  RunnerProfile,
+  ScreenshotData,
+  ScreenshotInput,
+  TerminateAppData,
+  TerminateAppInput,
+  ToolResult,
+} from "@mobile-e2e-mcp/contracts";
 import { REASON_CODES } from "@mobile-e2e-mcp/contracts";
 import { buildCapabilityProfile } from "./capability-model.js";
-import { buildDefaultDeviceId, DEFAULT_FLOWS, DEFAULT_HARNESS_CONFIG_PATH, isRecord, parseHarnessConfig, readNonEmptyString, readStringArray } from "./harness-config.js";
-import { executeRunner, normalizePositiveInteger, shellEscape } from "./runtime-shared.js";
+import { buildDefaultDeviceId, DEFAULT_FLOWS, DEFAULT_HARNESS_CONFIG_PATH, DEFAULT_RUNNER_PROFILE, isRecord, loadHarnessSelection, parseHarnessConfig, readNonEmptyString, readStringArray, resolveRepoPath } from "./harness-config.js";
+import {
+  type CollectDiagnosticsCapturePlan,
+  type GetCrashSignalsCapturePlan,
+  type GetLogsCapturePlan,
+  resolveDeviceRuntimePlatformHooks,
+} from "./device-runtime-platform.js";
+import {
+  buildExecutionEvidence,
+  buildFailureReason,
+  countNonEmptyLines,
+  executeRunner,
+  normalizePositiveInteger,
+  toRelativePath,
+} from "./runtime-shared.js";
+import { classifyDebugSignal } from "./js-debug.js";
+import { spawn } from "node:child_process";
 
-export interface GetLogsCapture {
-  relativeOutputPath: string;
-  absoluteOutputPath: string;
-  command: string[];
-  supportLevel: "full" | "partial";
-  linesRequested?: number;
-  sinceSeconds: number;
-  appId?: string;
-  appFilterApplied: boolean;
-}
-
-export interface GetCrashSignalsCapture {
-  relativeOutputPath: string;
-  absoluteOutputPath: string;
-  commands: string[][];
-  supportLevel: "full" | "partial";
-  linesRequested: number;
-}
-
-export interface CollectDiagnosticsCapture {
-  relativeOutputPath: string;
-  absoluteOutputPath: string;
-  commandOutputPath?: string;
-  commands: string[][];
-  supportLevel: "full" | "partial";
-}
+export type GetLogsCapture = GetLogsCapturePlan;
+export type GetCrashSignalsCapture = GetCrashSignalsCapturePlan;
+export type CollectDiagnosticsCapture = CollectDiagnosticsCapturePlan;
 
 export interface InstallArtifactSpec {
   kind: "file" | "directory";
@@ -44,6 +57,77 @@ const DEFAULT_GET_LOGS_LINES = 200;
 const DEFAULT_GET_LOGS_SINCE_SECONDS = 60;
 const DEFAULT_GET_CRASH_LINES = 120;
 const DEFAULT_DEVICE_COMMAND_TIMEOUT_MS = 5000;
+const DEFAULT_RECORD_SCREEN_DURATION_MS = 15_000;
+const MAX_ANDROID_SCREENRECORD_DURATION_MS = 180_000;
+
+function normalizeRecordDurationMs(value: number | undefined, platform: Platform): number {
+  const normalized = normalizePositiveInteger(value, DEFAULT_RECORD_SCREEN_DURATION_MS);
+  if (platform === "android") {
+    return Math.min(MAX_ANDROID_SCREENRECORD_DURATION_MS, normalized);
+  }
+  return normalized;
+}
+
+function normalizeRecordBitrateMbps(value: number | undefined): number | undefined {
+  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
+    return undefined;
+  }
+  return Number(value.toFixed(2));
+}
+
+function isInterestingDebugLine(line: string): boolean {
+  const normalized = line.toLowerCase();
+  if (
+    line.startsWith("#")
+    || normalized.includes("<no crash entries found>")
+    || normalized.includes("<no crash snippets collected>")
+    || normalized.includes("/library/logs/crashreporter")
+    || normalized.endsWith("crashreporter")
+  ) {
+    return false;
+  }
+  return normalized.includes("fatal")
+    || normalized.includes("exception")
+    || normalized.includes("error")
+    || normalized.includes("crash")
+    || normalized.includes("anr")
+    || normalized.includes("timeout")
+    || normalized.includes("failed")
+    || normalized.includes("unable to");
+}
+
+function buildLogSummary(content: string, query?: string): LogSummary {
+  const lines = content.replaceAll(String.fromCharCode(13), "").split(String.fromCharCode(10)).map((line) => line.trim()).filter(Boolean);
+  const queryText = query?.trim();
+  const queryLower = queryText?.toLowerCase();
+  const matchedLines = queryLower ? lines.filter((line) => line.toLowerCase().includes(queryLower)) : lines;
+  const interestingLines = matchedLines.filter(isInterestingDebugLine);
+  const bucket = new Map<string, DebugSignalSummary>();
+
+  for (const line of interestingLines) {
+    const category = classifyDebugSignal(line);
+    const key = `${category}:${line}`;
+    const current = bucket.get(key);
+    if (current) {
+      current.count += 1;
+    } else {
+      bucket.set(key, { category, count: 1, sample: line });
+    }
+  }
+
+  const topSignals = [...bucket.values()]
+    .sort((left, right) => right.count - left.count || left.category.localeCompare(right.category))
+    .slice(0, 8);
+  const sampleLines = interestingLines.slice(0, 8);
+
+  return {
+    totalLines: lines.length,
+    matchedLines: matchedLines.length,
+    query: queryText,
+    topSignals,
+    sampleLines,
+  };
+}
 
 export function getInstallArtifactSpec(runnerProfile: RunnerProfile): InstallArtifactSpec | undefined {
   if (runnerProfile === "native_android") return { kind: "file", envVar: "NATIVE_ANDROID_APK_PATH", relativePath: "examples/demo-android-app/app/build/outputs/apk/debug/app-debug.apk" };
@@ -135,34 +219,46 @@ export async function resolveAndroidAppPid(repoRoot: string, deviceId: string, a
 }
 
 export function buildGetLogsCapture(repoRoot: string, input: GetLogsInput, runnerProfile: RunnerProfile, deviceId: string, appId?: string, appFilterApplied = false): GetLogsCapture {
+  const platform = input.platform ?? "android";
   const sinceSeconds = normalizePositiveInteger(input.sinceSeconds, DEFAULT_GET_LOGS_SINCE_SECONDS);
-  const linesRequested = input.platform === "android" ? normalizePositiveInteger(input.lines, DEFAULT_GET_LOGS_LINES) : undefined;
-  const extension = input.platform === "android" ? "logcat.txt" : "simulator.log";
-  const relativeOutputPath = input.outputPath ?? path.posix.join("artifacts", "logs", input.sessionId, `${input.platform}-${runnerProfile}.${extension}`);
-  const absoluteOutputPath = path.resolve(repoRoot, relativeOutputPath);
-  if (input.platform === "android") return { relativeOutputPath, absoluteOutputPath, command: ["adb", "-s", deviceId, "logcat", "-d", "-t", String(linesRequested ?? DEFAULT_GET_LOGS_LINES)], supportLevel: "full", linesRequested, sinceSeconds, appId, appFilterApplied };
-  return { relativeOutputPath, absoluteOutputPath, command: ["xcrun", "simctl", "spawn", deviceId, "log", "show", "--style", "compact", "--last", `${String(sinceSeconds)}s`], supportLevel: "full", linesRequested, sinceSeconds, appId, appFilterApplied };
+  const linesRequested = platform === "android" ? normalizePositiveInteger(input.lines, DEFAULT_GET_LOGS_LINES) : undefined;
+  const hooks = resolveDeviceRuntimePlatformHooks(platform);
+  return hooks.buildGetLogsCapturePlan({
+    repoRoot,
+    sessionId: input.sessionId,
+    outputPath: input.outputPath,
+    runnerProfile,
+    deviceId,
+    sinceSeconds,
+    linesRequested,
+    appId,
+    appFilterApplied,
+  });
 }
 
 export function buildGetCrashSignalsCapture(repoRoot: string, input: GetCrashSignalsInput, runnerProfile: RunnerProfile, deviceId: string): GetCrashSignalsCapture {
+  const platform = input.platform ?? "android";
   const linesRequested = normalizePositiveInteger(input.lines, DEFAULT_GET_CRASH_LINES);
-  const extension = input.platform === "android" ? "crash.txt" : "crash-manifest.txt";
-  const relativeOutputPath = input.outputPath ?? path.posix.join("artifacts", "crash-signals", input.sessionId, `${input.platform}-${runnerProfile}.${extension}`);
-  const absoluteOutputPath = path.resolve(repoRoot, relativeOutputPath);
-  if (input.platform === "android") return { relativeOutputPath, absoluteOutputPath, commands: [["adb", "-s", deviceId, "logcat", "-d", "-b", "crash", "-t", String(linesRequested)], ["adb", "-s", deviceId, "shell", "ls", "-1", "/data/anr"]], supportLevel: "full", linesRequested };
-  return { relativeOutputPath, absoluteOutputPath, commands: [["xcrun", "simctl", "getenv", deviceId, "HOME"]], supportLevel: "full", linesRequested };
+  const hooks = resolveDeviceRuntimePlatformHooks(platform);
+  return hooks.buildGetCrashSignalsCapturePlan({
+    repoRoot,
+    sessionId: input.sessionId,
+    outputPath: input.outputPath,
+    runnerProfile,
+    deviceId,
+    linesRequested,
+  });
 }
 
 export function buildCollectDiagnosticsCapture(repoRoot: string, input: CollectDiagnosticsInput, runnerProfile: RunnerProfile, deviceId: string): CollectDiagnosticsCapture {
-  if (input.platform === "android") {
-    const relativeOutputPath = input.outputPath ?? path.posix.join("artifacts", "diagnostics", input.sessionId, `${input.platform}-${runnerProfile}.zip`);
-    const absoluteOutputPath = path.resolve(repoRoot, relativeOutputPath);
-    const commandOutputPath = absoluteOutputPath.endsWith(".zip") ? absoluteOutputPath.slice(0, -4) : absoluteOutputPath;
-    return { relativeOutputPath, absoluteOutputPath, commandOutputPath, commands: [["adb", "-s", deviceId, "bugreport", commandOutputPath]], supportLevel: "full" };
-  }
-  const relativeOutputPath = input.outputPath ?? path.posix.join("artifacts", "diagnostics", input.sessionId, `${input.platform}-${runnerProfile}`);
-  const absoluteOutputPath = path.resolve(repoRoot, relativeOutputPath);
-  return { relativeOutputPath, absoluteOutputPath, commands: [["sh", "-lc", `printf '\n' | xcrun simctl diagnose -b --no-archive --output=${shellEscape(absoluteOutputPath)} --udid=${shellEscape(deviceId)}`]], supportLevel: "full" };
+  const hooks = resolveDeviceRuntimePlatformHooks(input.platform ?? "android");
+  return hooks.buildCollectDiagnosticsCapturePlan({
+    repoRoot,
+    sessionId: input.sessionId,
+    outputPath: input.outputPath,
+    runnerProfile,
+    deviceId,
+  });
 }
 
 export function summarizeInfoCheck(name: string, status: DoctorCheck["status"], detail: string): DoctorCheck {
@@ -242,4 +338,561 @@ export async function collectHarnessChecks(repoRoot: string): Promise<DoctorChec
     }
   }
   return checks;
+}
+
+export async function terminateAppWithRuntime(input: TerminateAppInput): Promise<ToolResult<TerminateAppData>> {
+  const startTime = Date.now();
+  if (!input.platform) {
+    return {
+      status: "failed",
+      reasonCode: REASON_CODES.configurationError,
+      sessionId: input.sessionId,
+      durationMs: Date.now() - startTime,
+      attempts: 1,
+      artifacts: [],
+      data: { dryRun: Boolean(input.dryRun), runnerProfile: input.runnerProfile ?? DEFAULT_RUNNER_PROFILE, appId: input.appId ?? "", command: [], exitCode: null },
+      nextSuggestions: ["Provide platform explicitly, or call terminate_app with an active sessionId so MCP can resolve platform from session context."],
+    };
+  }
+  const repoRoot = resolveRepoPath();
+  const platform = input.platform;
+  const runnerProfile = input.runnerProfile ?? DEFAULT_RUNNER_PROFILE;
+  const selection = await loadHarnessSelection(repoRoot, platform, runnerProfile, input.harnessConfigPath ?? DEFAULT_HARNESS_CONFIG_PATH);
+  const deviceId = input.deviceId ?? selection.deviceId ?? buildDefaultDeviceId(platform);
+  const appId = input.appId ?? selection.appId;
+  const command = resolveDeviceRuntimePlatformHooks(platform).buildTerminateCommand(deviceId, appId);
+
+  if (input.dryRun) {
+    return { status: "success", reasonCode: REASON_CODES.ok, sessionId: input.sessionId, durationMs: Date.now() - startTime, attempts: 1, artifacts: [], data: { dryRun: true, runnerProfile, appId, command, exitCode: 0 }, nextSuggestions: ["Run terminate_app without dryRun to stop the target app."] };
+  }
+
+  const execution = await executeRunner(command, repoRoot, process.env);
+  return {
+    status: execution.exitCode === 0 ? "success" : "failed",
+    reasonCode: execution.exitCode === 0 ? REASON_CODES.ok : buildFailureReason(execution.stderr, execution.exitCode),
+    sessionId: input.sessionId,
+    durationMs: Date.now() - startTime,
+    attempts: 1,
+    artifacts: [],
+    data: { dryRun: false, runnerProfile, appId, command, exitCode: execution.exitCode },
+    nextSuggestions: execution.exitCode === 0 ? [] : ["Check device state and appId before retrying terminate_app."],
+  };
+}
+
+export async function takeScreenshotWithRuntime(input: ScreenshotInput): Promise<ToolResult<ScreenshotData>> {
+  const startTime = Date.now();
+  if (!input.platform) {
+    return {
+      status: "failed",
+      reasonCode: REASON_CODES.configurationError,
+      sessionId: input.sessionId,
+      durationMs: Date.now() - startTime,
+      attempts: 1,
+      artifacts: [],
+      data: {
+        dryRun: Boolean(input.dryRun),
+        runnerProfile: input.runnerProfile ?? DEFAULT_RUNNER_PROFILE,
+        outputPath: input.outputPath ?? path.posix.join("artifacts", "screenshots", input.sessionId, "unknown.png"),
+        command: [],
+        exitCode: null,
+      },
+      nextSuggestions: ["Provide platform explicitly, or call take_screenshot with an active sessionId so MCP can resolve platform from session context."],
+    };
+  }
+
+  const repoRoot = resolveRepoPath();
+  const runnerProfile = input.runnerProfile ?? DEFAULT_RUNNER_PROFILE;
+  const hooks = resolveDeviceRuntimePlatformHooks(input.platform);
+  const selection = await loadHarnessSelection(repoRoot, input.platform, runnerProfile, input.harnessConfigPath ?? DEFAULT_HARNESS_CONFIG_PATH);
+  const deviceId = input.deviceId ?? selection.deviceId ?? buildDefaultDeviceId(input.platform);
+  const relativeOutputPath = input.outputPath ?? path.posix.join("artifacts", "screenshots", input.sessionId, `${input.platform}-${runnerProfile}.png`);
+  const absoluteOutputPath = path.resolve(repoRoot, relativeOutputPath);
+  const command = hooks.buildScreenshotCommand(deviceId, absoluteOutputPath);
+
+  await mkdir(path.dirname(absoluteOutputPath), { recursive: true });
+
+  if (input.dryRun) {
+    return {
+      status: "success",
+      reasonCode: REASON_CODES.ok,
+      sessionId: input.sessionId,
+      durationMs: Date.now() - startTime,
+      attempts: 1,
+      artifacts: [],
+      data: { dryRun: true, runnerProfile, outputPath: relativeOutputPath, command, exitCode: 0, evidence: [buildExecutionEvidence("screenshot", relativeOutputPath, hooks.screenshotSupportLevel, "Planned screenshot artifact path.")] },
+      nextSuggestions: [hooks.screenshotDryRunSuggestion],
+    };
+  }
+
+  if (hooks.screenshotUsesStdoutCapture) {
+    const execution = await new Promise<{ exitCode: number | null; stderr: string }>((resolve, reject) => {
+      const child = spawn(command[0], command.slice(1), { cwd: repoRoot, env: process.env, stdio: ["ignore", "pipe", "pipe"] });
+      const stdoutChunks: Buffer[] = [];
+      let stderr = "";
+      child.stdout.on("data", (chunk: Buffer) => stdoutChunks.push(chunk));
+      child.stderr.on("data", (chunk: Buffer | string) => { stderr += chunk.toString(); });
+      child.on("error", reject);
+      child.on("close", async (exitCode) => {
+        await writeFile(absoluteOutputPath, Buffer.concat(stdoutChunks));
+        resolve({ exitCode, stderr });
+      });
+    });
+    return {
+      status: execution.exitCode === 0 ? "success" : "failed",
+      reasonCode: execution.exitCode === 0 ? REASON_CODES.ok : buildFailureReason(execution.stderr, execution.exitCode),
+      sessionId: input.sessionId,
+      durationMs: Date.now() - startTime,
+      attempts: 1,
+      artifacts: [toRelativePath(repoRoot, absoluteOutputPath)],
+      data: { dryRun: false, runnerProfile, outputPath: relativeOutputPath, command, exitCode: execution.exitCode, evidence: [buildExecutionEvidence("screenshot", relativeOutputPath, hooks.screenshotSupportLevel, "Captured Android screenshot artifact.")] },
+      nextSuggestions: execution.exitCode === 0 ? [] : [hooks.screenshotFailureSuggestion],
+    };
+  }
+
+  const execution = await executeRunner(command, repoRoot, process.env);
+  return {
+    status: execution.exitCode === 0 ? "success" : "failed",
+    reasonCode: execution.exitCode === 0 ? REASON_CODES.ok : buildFailureReason(execution.stderr, execution.exitCode),
+    sessionId: input.sessionId,
+    durationMs: Date.now() - startTime,
+    attempts: 1,
+    artifacts: execution.exitCode === 0 ? [toRelativePath(repoRoot, absoluteOutputPath)] : [],
+    data: { dryRun: false, runnerProfile, outputPath: relativeOutputPath, command, exitCode: execution.exitCode, evidence: execution.exitCode === 0 ? [buildExecutionEvidence("screenshot", relativeOutputPath, hooks.screenshotSupportLevel, "Captured iOS screenshot artifact.")] : undefined },
+    nextSuggestions: execution.exitCode === 0 ? [] : [hooks.screenshotFailureSuggestion],
+  };
+}
+
+export async function recordScreenWithRuntime(input: RecordScreenInput): Promise<ToolResult<RecordScreenData>> {
+  const startTime = Date.now();
+  if (!input.platform) {
+    return {
+      status: "failed",
+      reasonCode: REASON_CODES.configurationError,
+      sessionId: input.sessionId,
+      durationMs: Date.now() - startTime,
+      attempts: 1,
+      artifacts: [],
+      data: {
+        dryRun: Boolean(input.dryRun),
+        runnerProfile: input.runnerProfile ?? DEFAULT_RUNNER_PROFILE,
+        outputPath: input.outputPath ?? path.posix.join("artifacts", "screen-recordings", input.sessionId, "unknown.mp4"),
+        durationMs: normalizeRecordDurationMs(input.durationMs, "android"),
+        bitrateMbps: normalizeRecordBitrateMbps(input.bitrateMbps),
+        commandLabels: [],
+        commands: [],
+        exitCode: null,
+        supportLevel: "partial",
+      },
+      nextSuggestions: ["Provide platform explicitly, or call record_screen with an active sessionId so MCP can resolve platform from session context."],
+    };
+  }
+
+  const repoRoot = resolveRepoPath();
+  const runnerProfile = input.runnerProfile ?? DEFAULT_RUNNER_PROFILE;
+  const hooks = resolveDeviceRuntimePlatformHooks(input.platform);
+  const selection = await loadHarnessSelection(repoRoot, input.platform, runnerProfile, input.harnessConfigPath ?? DEFAULT_HARNESS_CONFIG_PATH);
+  const deviceId = input.deviceId ?? selection.deviceId ?? buildDefaultDeviceId(input.platform);
+  const durationMs = normalizeRecordDurationMs(input.durationMs, input.platform);
+  const bitrateMbps = normalizeRecordBitrateMbps(input.bitrateMbps);
+  const relativeOutputPath = input.outputPath ?? path.posix.join("artifacts", "screen-recordings", input.sessionId, `${input.platform}-${runnerProfile}.mp4`);
+  const absoluteOutputPath = path.resolve(repoRoot, relativeOutputPath);
+  await mkdir(path.dirname(absoluteOutputPath), { recursive: true });
+
+  const plan = hooks.buildRecordScreenPlan({
+    sessionId: input.sessionId,
+    deviceId,
+    durationMs,
+    bitrateMbps,
+    absoluteOutputPath,
+  });
+
+  if (input.dryRun) {
+    return {
+      status: "success",
+      reasonCode: REASON_CODES.ok,
+      sessionId: input.sessionId,
+      durationMs: Date.now() - startTime,
+      attempts: 1,
+      artifacts: [],
+      data: {
+        dryRun: true,
+        runnerProfile,
+        outputPath: relativeOutputPath,
+        durationMs,
+        bitrateMbps,
+        commandLabels: plan.commandLabels,
+        commands: plan.commands,
+        exitCode: 0,
+        supportLevel: plan.supportLevel,
+        evidence: [buildExecutionEvidence("screen_recording", relativeOutputPath, plan.supportLevel, `Planned ${input.platform === "android" ? "Android" : "iOS simulator"} screen recording artifact path.`)],
+      },
+      nextSuggestions: [plan.dryRunSuggestion],
+    };
+  }
+
+  const [recordCommand, pullCommand, cleanupCommand] = plan.commands;
+  const recordExecution = await executeRunner(recordCommand, repoRoot, process.env);
+  if (recordExecution.exitCode !== 0) {
+    if (cleanupCommand) {
+      await executeRunner(cleanupCommand, repoRoot, process.env).catch(() => undefined);
+    }
+    return {
+      status: "failed",
+      reasonCode: buildFailureReason(recordExecution.stderr, recordExecution.exitCode),
+      sessionId: input.sessionId,
+      durationMs: Date.now() - startTime,
+      attempts: 1,
+      artifacts: [],
+      data: {
+        dryRun: false,
+        runnerProfile,
+        outputPath: relativeOutputPath,
+        durationMs,
+        bitrateMbps,
+        commandLabels: plan.commandLabels,
+        commands: plan.commands,
+        exitCode: recordExecution.exitCode,
+        supportLevel: plan.supportLevel,
+      },
+      nextSuggestions: [plan.failureSuggestion],
+    };
+  }
+
+  const finalizeExecution = pullCommand ? await executeRunner(pullCommand, repoRoot, process.env) : recordExecution;
+  if (cleanupCommand) {
+    await executeRunner(cleanupCommand, repoRoot, process.env).catch(() => undefined);
+  }
+
+  return {
+    status: finalizeExecution.exitCode === 0 ? "success" : "failed",
+    reasonCode: finalizeExecution.exitCode === 0 ? REASON_CODES.ok : buildFailureReason(finalizeExecution.stderr, finalizeExecution.exitCode),
+    sessionId: input.sessionId,
+    durationMs: Date.now() - startTime,
+    attempts: 1,
+    artifacts: finalizeExecution.exitCode === 0 ? [relativeOutputPath] : [],
+    data: {
+      dryRun: false,
+      runnerProfile,
+      outputPath: relativeOutputPath,
+      durationMs,
+      bitrateMbps,
+      commandLabels: plan.commandLabels,
+      commands: plan.commands,
+      exitCode: finalizeExecution.exitCode,
+      supportLevel: plan.supportLevel,
+      evidence: finalizeExecution.exitCode === 0 ? [buildExecutionEvidence("screen_recording", relativeOutputPath, plan.supportLevel, `Captured ${input.platform === "android" ? "Android" : "iOS simulator"} screen recording artifact.`)] : undefined,
+    },
+    nextSuggestions: finalizeExecution.exitCode === 0 ? [] : [input.platform === "android"
+      ? "Android recording completed but artifact pull failed. Check adb device connectivity and storage path."
+      : plan.failureSuggestion],
+  };
+}
+
+export async function getLogsWithRuntime(input: GetLogsInput): Promise<ToolResult<GetLogsData>> {
+  const startTime = Date.now();
+  if (!input.platform) {
+    return {
+      status: "failed",
+      reasonCode: REASON_CODES.configurationError,
+      sessionId: input.sessionId,
+      durationMs: Date.now() - startTime,
+      attempts: 1,
+      artifacts: [],
+      data: {
+        dryRun: Boolean(input.dryRun),
+        runnerProfile: input.runnerProfile ?? DEFAULT_RUNNER_PROFILE,
+        outputPath: input.outputPath ?? path.posix.join("artifacts", "logs", input.sessionId, "unknown.log"),
+        command: [],
+        exitCode: null,
+        supportLevel: "partial",
+        lineCount: 0,
+        linesRequested: input.lines,
+        sinceSeconds: input.sinceSeconds ?? 0,
+        appId: input.appId,
+        appFilterApplied: false,
+        query: input.query,
+      },
+      nextSuggestions: ["Provide platform explicitly, or call get_logs with an active sessionId so MCP can resolve platform from session context."],
+    };
+  }
+  const repoRoot = resolveRepoPath();
+  const runnerProfile = input.runnerProfile ?? DEFAULT_RUNNER_PROFILE;
+  const hooks = resolveDeviceRuntimePlatformHooks(input.platform);
+  const selection = await loadHarnessSelection(repoRoot, input.platform, runnerProfile, input.harnessConfigPath ?? DEFAULT_HARNESS_CONFIG_PATH);
+  const deviceId = input.deviceId ?? selection.deviceId ?? buildDefaultDeviceId(input.platform);
+  const appId = input.appId ?? selection.appId;
+  let capture = buildGetLogsCapture(repoRoot, input, runnerProfile, deviceId, appId, false);
+
+  if (appId && hooks.applyGetLogsAppFilter) {
+    capture = await hooks.applyGetLogsAppFilter({ repoRoot, capture, deviceId, appId, dryRun: input.dryRun });
+  }
+
+  await mkdir(path.dirname(capture.absoluteOutputPath), { recursive: true });
+
+  if (input.dryRun) {
+    return {
+      status: "success",
+      reasonCode: REASON_CODES.ok,
+      sessionId: input.sessionId,
+      durationMs: Date.now() - startTime,
+      attempts: 1,
+      artifacts: [],
+      data: {
+        dryRun: true,
+        runnerProfile,
+        outputPath: capture.relativeOutputPath,
+        command: capture.command,
+        exitCode: 0,
+        supportLevel: capture.supportLevel,
+        lineCount: 0,
+        linesRequested: capture.linesRequested,
+        sinceSeconds: capture.sinceSeconds,
+        appId,
+        appFilterApplied: capture.appFilterApplied,
+        evidence: [buildExecutionEvidence("log", capture.relativeOutputPath, capture.supportLevel, "Planned log capture artifact path.")],
+        query: input.query,
+        summary: buildLogSummary("", input.query),
+      },
+      nextSuggestions: ["Run get_logs without dryRun to capture live device or simulator logs."],
+    };
+  }
+
+  const execution = await executeRunner(capture.command, repoRoot, process.env, { timeoutMs: DEFAULT_DEVICE_COMMAND_TIMEOUT_MS });
+  if (execution.exitCode === 0) {
+    await writeFile(capture.absoluteOutputPath, execution.stdout, "utf8");
+  }
+
+  return {
+    status: execution.exitCode === 0 ? "success" : "failed",
+    reasonCode: execution.exitCode === 0 ? REASON_CODES.ok : buildFailureReason(execution.stderr, execution.exitCode),
+    sessionId: input.sessionId,
+    durationMs: Date.now() - startTime,
+    attempts: 1,
+    artifacts: execution.exitCode === 0 ? [toRelativePath(repoRoot, capture.absoluteOutputPath)] : [],
+    data: {
+      dryRun: false,
+      runnerProfile,
+      outputPath: capture.relativeOutputPath,
+      command: capture.command,
+      exitCode: execution.exitCode,
+      supportLevel: capture.supportLevel,
+      lineCount: execution.exitCode === 0 ? countNonEmptyLines(execution.stdout) : 0,
+      linesRequested: capture.linesRequested,
+      sinceSeconds: capture.sinceSeconds,
+      appId,
+      appFilterApplied: capture.appFilterApplied,
+      evidence: execution.exitCode === 0 ? [buildExecutionEvidence("log", capture.relativeOutputPath, capture.supportLevel, "Captured log artifact.")] : undefined,
+      query: input.query,
+      content: execution.exitCode === 0 ? execution.stdout : undefined,
+      summary: execution.exitCode === 0 ? buildLogSummary(execution.stdout, input.query) : undefined,
+    },
+    nextSuggestions: execution.exitCode === 0
+      ? []
+      : [input.platform === "android"
+        ? "Check adb connectivity and the selected Android device before retrying get_logs."
+        : "Check simulator boot state and log access permissions before retrying get_logs."],
+  };
+}
+
+export async function getCrashSignalsWithRuntime(input: GetCrashSignalsInput): Promise<ToolResult<GetCrashSignalsData>> {
+  const startTime = Date.now();
+  if (!input.platform) {
+    return {
+      status: "failed",
+      reasonCode: REASON_CODES.configurationError,
+      sessionId: input.sessionId,
+      durationMs: Date.now() - startTime,
+      attempts: 1,
+      artifacts: [],
+      data: {
+        dryRun: Boolean(input.dryRun),
+        runnerProfile: input.runnerProfile ?? DEFAULT_RUNNER_PROFILE,
+        outputPath: input.outputPath ?? path.posix.join("artifacts", "crash-signals", input.sessionId, "unknown.log"),
+        commands: [],
+        exitCode: null,
+        supportLevel: "partial",
+        signalCount: 0,
+        linesRequested: input.lines,
+        appId: input.appId,
+        entries: [],
+      },
+      nextSuggestions: ["Provide platform explicitly, or call get_crash_signals with an active sessionId so MCP can resolve platform from session context."],
+    };
+  }
+  const repoRoot = resolveRepoPath();
+  const runnerProfile = input.runnerProfile ?? DEFAULT_RUNNER_PROFILE;
+  const hooks = resolveDeviceRuntimePlatformHooks(input.platform);
+  const selection = await loadHarnessSelection(repoRoot, input.platform, runnerProfile, input.harnessConfigPath ?? DEFAULT_HARNESS_CONFIG_PATH);
+  const deviceId = input.deviceId ?? selection.deviceId ?? buildDefaultDeviceId(input.platform);
+  const appId = input.appId ?? selection.appId;
+  const capture = buildGetCrashSignalsCapture(repoRoot, input, runnerProfile, deviceId);
+
+  await mkdir(path.dirname(capture.absoluteOutputPath), { recursive: true });
+
+  if (input.dryRun) {
+    return {
+      status: "success",
+      reasonCode: REASON_CODES.ok,
+      sessionId: input.sessionId,
+      durationMs: Date.now() - startTime,
+      attempts: 1,
+      artifacts: [],
+      data: {
+        dryRun: true,
+        runnerProfile,
+        outputPath: capture.relativeOutputPath,
+        commands: capture.commands,
+        exitCode: 0,
+        supportLevel: capture.supportLevel,
+        signalCount: 0,
+        linesRequested: capture.linesRequested,
+        appId,
+        entries: [],
+        evidence: [buildExecutionEvidence("crash_signal", capture.relativeOutputPath, capture.supportLevel, "Planned crash-signal artifact path.")],
+        summary: buildLogSummary(""),
+      },
+      nextSuggestions: ["Run get_crash_signals without dryRun to capture live crash and ANR evidence."],
+    };
+  }
+
+  const execution = await hooks.executeCrashSignalsCapture({ repoRoot, capture, deviceId, appId });
+  return {
+    status: execution.exitCode === 0 ? "success" : "failed",
+    reasonCode: execution.exitCode === 0 ? REASON_CODES.ok : buildFailureReason(execution.stderr, execution.exitCode),
+    sessionId: input.sessionId,
+    durationMs: Date.now() - startTime,
+    attempts: 1,
+    artifacts: execution.exitCode === 0 ? [toRelativePath(repoRoot, capture.absoluteOutputPath)] : [],
+    data: {
+      dryRun: false,
+      runnerProfile,
+      outputPath: capture.relativeOutputPath,
+      commands: execution.commands,
+      exitCode: execution.exitCode,
+      supportLevel: capture.supportLevel,
+      signalCount: execution.signalCount,
+      linesRequested: capture.linesRequested,
+      appId,
+      entries: execution.entries,
+      evidence: execution.exitCode === 0 ? [buildExecutionEvidence("crash_signal", capture.relativeOutputPath, capture.supportLevel, "Captured crash-signal artifact.")] : undefined,
+      content: execution.content,
+      summary: execution.exitCode === 0 ? buildLogSummary(execution.content ?? "") : undefined,
+    },
+    nextSuggestions: execution.exitCode === 0
+      ? (input.platform === "ios" && execution.signalCount === 0
+        ? ["No simulator crash reporter files were found for the current scope. Re-run after reproducing a crash or broaden the app filter."]
+        : [])
+      : [input.platform === "android"
+        ? "Check adb connectivity and the selected Android device before retrying get_crash_signals."
+        : "Check simulator boot state before retrying get_crash_signals."],
+  };
+}
+
+export async function collectDiagnosticsWithRuntime(input: CollectDiagnosticsInput): Promise<ToolResult<CollectDiagnosticsData>> {
+  const startTime = Date.now();
+  if (!input.platform) {
+    return {
+      status: "failed",
+      reasonCode: REASON_CODES.configurationError,
+      sessionId: input.sessionId,
+      durationMs: Date.now() - startTime,
+      attempts: 1,
+      artifacts: [],
+      data: {
+        dryRun: Boolean(input.dryRun),
+        runnerProfile: input.runnerProfile ?? DEFAULT_RUNNER_PROFILE,
+        outputPath: input.outputPath ?? path.posix.join("artifacts", "diagnostics", input.sessionId, "unknown"),
+        commands: [],
+        exitCode: null,
+        supportLevel: "partial",
+        artifactCount: 0,
+        artifacts: [],
+      },
+      nextSuggestions: ["Provide platform explicitly, or call collect_diagnostics with an active sessionId so MCP can resolve platform from session context."],
+    };
+  }
+  const repoRoot = resolveRepoPath();
+  const runnerProfile = input.runnerProfile ?? DEFAULT_RUNNER_PROFILE;
+  const hooks = resolveDeviceRuntimePlatformHooks(input.platform);
+  const selection = await loadHarnessSelection(repoRoot, input.platform, runnerProfile, input.harnessConfigPath ?? DEFAULT_HARNESS_CONFIG_PATH);
+  const deviceId = input.deviceId ?? selection.deviceId ?? buildDefaultDeviceId(input.platform);
+  const capture = buildCollectDiagnosticsCapture(repoRoot, input, runnerProfile, deviceId);
+
+  await mkdir(path.dirname(capture.absoluteOutputPath), { recursive: true });
+  if (hooks.prepareDiagnosticsOutputPath) {
+    await hooks.prepareDiagnosticsOutputPath(capture.absoluteOutputPath);
+  }
+
+  if (input.dryRun) {
+    return {
+      status: "success",
+      reasonCode: REASON_CODES.ok,
+      sessionId: input.sessionId,
+      durationMs: Date.now() - startTime,
+      attempts: 1,
+      artifacts: [],
+      data: {
+        dryRun: true,
+        runnerProfile,
+        outputPath: capture.relativeOutputPath,
+        commands: capture.commands,
+        exitCode: 0,
+        supportLevel: capture.supportLevel,
+        artifactCount: 0,
+        artifacts: [],
+        evidence: [buildExecutionEvidence("diagnostics_bundle", capture.relativeOutputPath, capture.supportLevel, "Planned diagnostics bundle output path.")],
+      },
+      nextSuggestions: ["Run collect_diagnostics without dryRun to capture a real Android bugreport or iOS simulator diagnostics bundle."],
+    };
+  }
+
+  const execution = await executeRunner(capture.commands[0], repoRoot, process.env);
+  if (execution.exitCode !== 0) {
+    return {
+      status: "failed",
+      reasonCode: buildFailureReason(execution.stderr, execution.exitCode),
+      sessionId: input.sessionId,
+      durationMs: Date.now() - startTime,
+      attempts: 1,
+      artifacts: [],
+      data: {
+        dryRun: false,
+        runnerProfile,
+        outputPath: capture.relativeOutputPath,
+        commands: capture.commands,
+        exitCode: execution.exitCode,
+        supportLevel: capture.supportLevel,
+        artifactCount: 0,
+        artifacts: [],
+        evidence: undefined,
+      },
+      nextSuggestions: [input.platform === "android"
+        ? "Check adb connectivity and available device storage before retrying collect_diagnostics."
+        : "Check simulator boot state before retrying collect_diagnostics."],
+    };
+  }
+
+  const collectedArtifacts = await hooks.collectDiagnosticsArtifacts({ repoRoot, capture });
+  const artifacts = [capture.relativeOutputPath];
+
+  return {
+    status: "success",
+    reasonCode: REASON_CODES.ok,
+    sessionId: input.sessionId,
+    durationMs: Date.now() - startTime,
+    attempts: 1,
+    artifacts,
+    data: {
+      dryRun: false,
+      runnerProfile,
+      outputPath: capture.relativeOutputPath,
+      commands: capture.commands,
+      exitCode: execution.exitCode,
+      supportLevel: capture.supportLevel,
+      artifactCount: collectedArtifacts.length,
+      artifacts,
+      evidence: artifacts.map((artifactPath) => buildExecutionEvidence("diagnostics_bundle", artifactPath, capture.supportLevel, "Captured diagnostics bundle or diagnostics root artifact.")),
+    },
+    nextSuggestions: [],
+  };
 }
