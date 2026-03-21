@@ -1,4 +1,3 @@
-import { existsSync } from "node:fs";
 import type {
   AndroidPerformancePreset,
   IosPerformanceTemplate,
@@ -9,53 +8,9 @@ import type {
 } from "@mobile-e2e-mcp/contracts";
 import path from "node:path";
 import { normalizePositiveInteger, shellEscape } from "./runtime-shared.js";
+import { resolveTraceProcessorPath } from "./toolchain-runtime.js";
 
-function resolveExecutableFromPath(executableName: string): string | undefined {
-  const pathValue = process.env.PATH;
-  if (!pathValue) {
-    return undefined;
-  }
-  for (const entry of pathValue.split(path.delimiter)) {
-    if (!entry) {
-      continue;
-    }
-    const candidate = path.join(entry, executableName);
-    if (existsSync(candidate)) {
-      return candidate;
-    }
-  }
-  return undefined;
-}
-
-const TRACE_PROCESSOR_FALLBACK_PATHS = [
-  path.join(process.env.HOME ?? "", ".local", "bin", "trace_processor"),
-  "/opt/homebrew/bin/trace_processor",
-  "/usr/local/bin/trace_processor",
-];
-
-export function resolveTraceProcessorPath(): string | undefined {
-  const configuredValue = process.env.TRACE_PROCESSOR_PATH;
-  if (configuredValue) {
-    if (configuredValue.includes(path.sep)) {
-      if (!existsSync(configuredValue)) {
-        throw new Error(`Configured trace_processor path does not exist: ${configuredValue}`);
-      }
-      return configuredValue;
-    }
-    const resolvedConfiguredValue = resolveExecutableFromPath(configuredValue);
-    if (!resolvedConfiguredValue) {
-      throw new Error(`Configured trace_processor executable was not found on PATH: ${configuredValue}`);
-    }
-    return resolvedConfiguredValue;
-  }
-
-  const fromPath = resolveExecutableFromPath("trace_processor");
-  if (fromPath) {
-    return fromPath;
-  }
-
-  return TRACE_PROCESSOR_FALLBACK_PATHS.find((candidate) => candidate && existsSync(candidate));
-}
+export { resolveTraceProcessorPath };
 
 export interface PerformanceCommandStep {
   label: string;

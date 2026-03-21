@@ -1,10 +1,12 @@
-import { existsSync } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { InspectUiNode, InspectUiSummary, QueryUiInput, QueryUiMatch, ReasonCode } from "@mobile-e2e-mcp/contracts";
 import { REASON_CODES } from "@mobile-e2e-mcp/contracts";
 import { buildInspectUiSummary, parseAndroidUiHierarchyNodes, parseIosInspectNodes, queryUiNodes } from "./ui-model.js";
+import { resolveIdbCliPath, resolveIdbCompanionPath } from "./toolchain-runtime.js";
 import { executeRunner, type CommandExecution, buildFailureReason } from "./runtime-shared.js";
+
+export { resolveIdbCliPath, resolveIdbCompanionPath };
 
 export interface AndroidUiSnapshot {
   command: string[];
@@ -41,75 +43,6 @@ export interface IosUiSnapshotFailure {
   outputPath: string;
   command: string[];
   message: string;
-}
-
-function resolveExecutableFromPath(executableName: string): string | undefined {
-  const pathValue = process.env.PATH;
-  if (!pathValue) {
-    return undefined;
-  }
-  for (const entry of pathValue.split(path.delimiter)) {
-    if (!entry) continue;
-    const candidate = path.join(entry, executableName);
-    if (existsSync(candidate)) {
-      return candidate;
-    }
-  }
-  return undefined;
-}
-
-function resolveConfiguredExecutable(configuredValue: string | undefined, fallbackExecutableName: string): string | undefined {
-  if (configuredValue) {
-    if (configuredValue.includes(path.sep)) {
-      if (!existsSync(configuredValue)) {
-        throw new Error(`Configured executable path does not exist: ${configuredValue}`);
-      }
-      return configuredValue;
-    }
-    const resolvedConfiguredValue = resolveExecutableFromPath(configuredValue);
-    if (!resolvedConfiguredValue) {
-      throw new Error(`Configured executable was not found on PATH: ${configuredValue}`);
-    }
-    return resolvedConfiguredValue;
-  }
-  return resolveExecutableFromPath(fallbackExecutableName);
-}
-
-export function resolveIdbCliPath(): string | undefined {
-  if (process.env.IDB_CLI_PATH) {
-    return resolveConfiguredExecutable(process.env.IDB_CLI_PATH, "idb");
-  }
-
-  const preferredCliPaths = [
-    path.join(process.env.HOME ?? "", "Library", "Python", "3.9", "bin", "idb"),
-    "/opt/homebrew/bin/idb",
-    "/usr/local/bin/idb",
-  ];
-  for (const candidate of preferredCliPaths) {
-    if (candidate && existsSync(candidate)) {
-      return candidate;
-    }
-  }
-
-  return resolveConfiguredExecutable(undefined, "idb");
-}
-
-export function resolveIdbCompanionPath(): string | undefined {
-  if (process.env.IDB_COMPANION_PATH) {
-    return resolveConfiguredExecutable(process.env.IDB_COMPANION_PATH, "idb_companion");
-  }
-
-  const preferredCompanionPaths = [
-    "/opt/homebrew/bin/idb_companion",
-    "/usr/local/bin/idb_companion",
-  ];
-  for (const candidate of preferredCompanionPaths) {
-    if (existsSync(candidate)) {
-      return candidate;
-    }
-  }
-
-  return resolveConfiguredExecutable(undefined, "idb_companion");
 }
 
 export function buildIdbCommand(baseArgs: string[]): string[] {

@@ -1,5 +1,6 @@
 import { DEFAULT_OCR_FALLBACK_POLICY } from "@mobile-e2e-mcp/adapter-vision";
 import type { CapabilityGroup, CapabilityProfile, CapabilitySupportLevel, Platform, RunnerProfile, ToolCapability } from "@mobile-e2e-mcp/contracts";
+import { buildOcrHostSupportSummary } from "./toolchain-runtime.js";
 
 const FULL: CapabilitySupportLevel = "full";
 const PARTIAL: CapabilitySupportLevel = "partial";
@@ -93,17 +94,18 @@ function summarizeGroup(toolCapabilities: ToolCapability[], groupName: string, t
 
 export function buildCapabilityProfile(platform: Platform, runnerProfile: RunnerProfile | null = null): CapabilityProfile {
   const toolCapabilities = platform === "android" ? buildAndroidToolCapabilities() : buildIosToolCapabilities();
+  const ocrHostSupport = buildOcrHostSupportSummary();
 
   return {
     platform,
     runnerProfile,
     toolCapabilities,
     ocrFallback: {
-      supported: process.platform === "darwin",
+      supported: ocrHostSupport.supported,
       deterministicFirst: true,
       hostRequirement: "darwin",
-      defaultProvider: process.platform === "darwin" ? "mac-vision" : undefined,
-      configuredProviders: process.platform === "darwin" ? ["mac-vision"] : [],
+      defaultProvider: ocrHostSupport.defaultProvider,
+      configuredProviders: ocrHostSupport.configuredProviders,
       allowedActions: ["tap", "assertText"],
       blockedActions: ["delete", "purchase", "confirmPayment"],
       minConfidenceForAssert: DEFAULT_OCR_FALLBACK_POLICY.minConfidenceForAssert,

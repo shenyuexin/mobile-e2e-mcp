@@ -1,4 +1,5 @@
 import type { DoctorCheck } from "@mobile-e2e-mcp/contracts";
+import { isDarwinHost } from "./host-runtime.js";
 
 export interface DoctorGuidanceItem {
   dependency: string;
@@ -97,6 +98,7 @@ export function buildDoctorGuidance(checks: DoctorCheck[]): { guidance: DoctorGu
   const nextSuggestions = checks
     .filter((check) => check.status !== "pass")
     .map((check) => buildResolveSuggestion(check));
+  const darwinHost = isDarwinHost();
 
   for (const check of checks) {
     if (check.status === "pass") {
@@ -116,6 +118,9 @@ export function buildDoctorGuidance(checks: DoctorCheck[]): { guidance: DoctorGu
       }
       for (const hint of item.envHints) {
         nextSuggestions.push(hint);
+      }
+      if (!darwinHost && item.platformScope === "ios") {
+        nextSuggestions.push("Current host is not darwin; iOS simulator and idb-based capabilities require a macOS host runtime.");
       }
     }
   }
