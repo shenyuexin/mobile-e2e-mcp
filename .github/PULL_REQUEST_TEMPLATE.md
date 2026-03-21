@@ -16,6 +16,7 @@
 - Key implementation changes:
 - Contract / policy / session / evidence changes:
 - Deterministic path and fallback behavior:
+- AI-first capability guideline consulted: yes / no (if no, why not applicable)
 - Compatibility, migration, or rollout notes:
 
 ## Validation
@@ -41,6 +42,7 @@
 
 - [ ] No secrets, credentials, or local artifacts committed
 - [ ] Docs updated when behavior or support boundary changed
+- [ ] `docs/engineering/ai-first-capability-expansion-guideline.md` was reviewed for any capability-surface change (or explicitly marked not applicable)
 - [ ] Contracts/exports updated before downstream consumption when applicable
 - [ ] Policy / session / evidence impact reviewed when capability behavior changed
 - [ ] Deterministic-first behavior preserved, with explicit fallback semantics when used

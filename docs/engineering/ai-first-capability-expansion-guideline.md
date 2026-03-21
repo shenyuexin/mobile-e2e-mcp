@@ -15,6 +15,36 @@
 
 ---
 
+## 默认执行要求：让 AI coding CLI 每次都先落到正确入口
+
+如果你在使用 OpenCode、Codex CLI 或类似 AI coding agent，**不要把本文件当成“有需要再看”的深层参考资料**。
+
+为了降低架构劣化风险，仓库级默认入口应该遵守下面的顺序：
+
+1. `AGENTS.md`：声明强制阅读顺序与任务分类
+2. `README.md`：在 `AI Agent Start Here` 中重复 capability guardrail
+3. 本文件：作为 capability expansion 的具体执行约束
+4. PR template / review checklist：把“是否遵守本文件”变成显式审查项
+
+### 实操原则
+
+- **同一条规则至少出现在两个入口层**：一个高频入口（`AGENTS.md` / `README.md`），一个执行/评审入口（PR template / reviewer checklist）
+- **高频入口只放短规则**：告诉 agent “什么时候必须读本文件”
+- **本文件保留长规则**：负责解释 why / how / anti-patterns / review questions
+- **不要指望 agent 记住上一次 session 看过的内容**：每次 capability-surface 变更都应在当前 session 重新读取
+
+### 什么时候可以不重新读取本文件
+
+仅限以下情况：
+
+- 单文件、局部、低风险修复
+- 不改变 tool surface / contracts / policy / session / evidence / docs capability claims
+- 不改变平台支持边界、fallback 行为或模块放置策略
+
+只要超出这个范围，就应视为需要重新读取本文件。
+
+---
+
 ## 核心判断：你是在加“能力”，还是只是在加“代码”
 
 在这个仓库里，一个合格的新功能不只是“命令能跑通”。
