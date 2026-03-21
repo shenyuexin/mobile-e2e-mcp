@@ -501,6 +501,7 @@ Step 8: run verification across affected layers
 - [ ] 平台差异通过 support level / caveat 表达，而不是被隐藏
 - [ ] 至少有一层 package test 和一层 tool/server 级验证覆盖改动
 - [ ] README / architecture / engineering docs 中该更新的地方已同步
+- [ ] `packages/adapter-maestro/src/index.ts` 仍保持 facade 职责（仅导出/薄组装/薄协调），未引入低层 helper 回流（平台命令、selector 算法、policy 判定、YAML 解析）
 
 ---
 

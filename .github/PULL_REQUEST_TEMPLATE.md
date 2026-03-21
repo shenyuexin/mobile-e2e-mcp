@@ -48,6 +48,7 @@
 - [ ] Contracts/exports updated before downstream consumption when applicable
 - [ ] Policy / session / evidence impact reviewed when capability behavior changed
 - [ ] Deterministic-first behavior preserved, with explicit fallback semantics when used
-- [ ] No new platform command builder / selector-query / policy logic added to `packages/adapter-maestro/src/index.ts`
+- [ ] `packages/adapter-maestro/src/index.ts` remains a thin facade only (exports + thin composition/coordinator), with no new runtime/platform/selector/policy logic added
+- [ ] No low-level helper backflow into `index.ts` and no reverse import that breaks intended module direction
 - [ ] If touching `adapter-maestro` hotspots (`index.ts`/`ui-tools.ts`/`device-runtime.ts`/`recording-runtime.ts`), include line-count delta + boundary justification in PR notes
 - [ ] Scope is focused and reviewable

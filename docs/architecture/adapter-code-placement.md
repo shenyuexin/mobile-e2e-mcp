@@ -379,6 +379,7 @@ When adding a new adapter feature, update all relevant layers together:
 4. stdio/CLI exposure if relevant
 5. tests across adapter/server/CLI/stdio/root validation as appropriate
 6. architecture or adapter docs when placement or support boundaries changed
+7. `index.ts` facade check: verify no new low-level helpers (platform command builders, selector algorithms, policy mapping, YAML parsing) were added, and dependency direction remains one-way
 
 ## 7. Near-Term Refactor Order
 
