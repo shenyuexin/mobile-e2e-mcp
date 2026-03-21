@@ -6,12 +6,14 @@ Primary notes:
 
 - Start with `repomix-output.xml` for global context, then verify conclusions against live repository files.
 - README files are high-information quick references (architecture, capabilities, execution model, constraints); deeper exhaustive material remains under `docs/`.
+- For capability-surface changes (tools/contracts/adapters/policy/session/evidence/support-boundary docs), re-read `docs/engineering/ai-first-capability-expansion-guideline.md` in the current session instead of relying on memory.
 
 ## Core Entry
 
 - [README.md](README.md): English entry, quick start, monorepo map, architecture/capability overview.
 - [README.zh-CN.md](README.zh-CN.md): Chinese entry with mirrored structure.
 - [AGENTS.md](AGENTS.md): AI contributor navigation, invariants, and working order.
+- [docs/engineering/ai-first-capability-expansion-guideline.md](docs/engineering/ai-first-capability-expansion-guideline.md): mandatory guardrails for capability expansion, layering, policy/session/evidence integration, and support-boundary honesty.
 
 ## Architecture
 
