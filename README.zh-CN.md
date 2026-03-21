@@ -1,7 +1,8 @@
 # Mobile E2E MCP（中文版）
 
 [![CI（build + typecheck + unit + smoke）](https://github.com/shenyuexin/mobile-e2e-mcp/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/shenyuexin/mobile-e2e-mcp/actions/workflows/ci.yml)
-[![pnpm test:ci](https://github.com/shenyuexin/mobile-e2e-mcp/actions/workflows/test-ci.yml/badge.svg?branch=main)](https://github.com/shenyuexin/mobile-e2e-mcp/actions/workflows/test-ci.yml)
+[![Platform Smoke（iOS 模拟器 + Android 模拟器）](https://github.com/shenyuexin/mobile-e2e-mcp/actions/workflows/platform-smoke.yml/badge.svg?branch=main)](https://github.com/shenyuexin/mobile-e2e-mcp/actions/workflows/platform-smoke.yml)
+[![Real Device Acceptance](https://github.com/shenyuexin/mobile-e2e-mcp/actions/workflows/real-device-acceptance.yml/badge.svg?branch=main)](https://github.com/shenyuexin/mobile-e2e-mcp/actions/workflows/real-device-acceptance.yml)
 
 > 面向 AI Agent 的移动端 E2E 编排层，覆盖 Android / iOS / React Native / Flutter，强调确定性优先、有边界视觉兜底与治理约束。
 
@@ -24,7 +25,9 @@
   - [docs/showcase/demo-playbook.zh-CN.md](docs/showcase/demo-playbook.zh-CN.md)
 - CI 证据与边界说明：
   - [docs/showcase/ci-evidence.md](docs/showcase/ci-evidence.md)
-  - [最新 CI 运行记录](https://github.com/shenyuexin/mobile-e2e-mcp/actions/workflows/ci.yml)
+  - [CI 工作流运行记录](https://github.com/shenyuexin/mobile-e2e-mcp/actions/workflows/ci.yml)
+  - [Platform Smoke 工作流运行记录](https://github.com/shenyuexin/mobile-e2e-mcp/actions/workflows/platform-smoke.yml)
+  - [Real Device Acceptance 工作流运行记录](https://github.com/shenyuexin/mobile-e2e-mcp/actions/workflows/real-device-acceptance.yml)
 
 ### GIF 快速预览
 

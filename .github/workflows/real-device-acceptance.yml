@@ -1,0 +1,263 @@
+name: Real Device Acceptance
+run-name: Real-device acceptance by @${{ github.actor }}
+
+on:
+  schedule:
+    - cron: "0 2 * * *"
+  workflow_dispatch:
+    inputs:
+      run_flutter_android:
+        description: Run Flutter Android validation
+        required: false
+        default: true
+        type: boolean
+      run_native_android:
+        description: Run native Android validation
+        required: false
+        default: true
+        type: boolean
+      run_native_ios:
+        description: Run native iOS validation
+        required: false
+        default: true
+        type: boolean
+      phase1_ios_runs:
+        description: Phase 1 iOS run count
+        required: false
+        default: "1"
+        type: string
+      phase1_android_runs:
+        description: Phase 1 Android run count
+        required: false
+        default: "1"
+        type: string
+      phase3_flutter_runs:
+        description: Phase 3 Flutter Android run count
+        required: false
+        default: "1"
+        type: string
+      phase3_native_android_runs:
+        description: Phase 3 native Android run count
+        required: false
+        default: "1"
+        type: string
+      phase3_native_ios_runs:
+        description: Phase 3 native iOS run count
+        required: false
+        default: "1"
+        type: string
+
+concurrency:
+  group: real-device-acceptance-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  dry-run-baseline:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.30.3
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run validate:phase3-samples
+
+  real-run-matrix:
+    needs: dry-run-baseline
+    runs-on: [self-hosted, macOS]
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          clean: true
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.30.3
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Preflight runner cleanup
+        run: |
+          xcrun simctl shutdown all || true
+          xcrun simctl erase all || true
+          adb kill-server || true
+      - name: Generate run metadata
+        run: |
+          mkdir -p reports
+          cat > reports/self-hosted-run-metadata.json <<'EOF'
+          {
+            "run_id": "${{ github.run_id }}",
+            "run_attempt": "${{ github.run_attempt }}",
+            "actor": "${{ github.actor }}",
+            "sha": "${{ github.sha }}",
+            "event": "${{ github.event_name }}",
+            "timestamp": "$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+          }
+          EOF
+      - run: pnpm install --frozen-lockfile
+      - name: Resolve matrix inputs
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            RAW_RUN_FLUTTER_ANDROID="${{ inputs.run_flutter_android }}"
+            RAW_RUN_NATIVE_ANDROID="${{ inputs.run_native_android }}"
+            RAW_RUN_NATIVE_IOS="${{ inputs.run_native_ios }}"
+            RAW_PHASE1_IOS_RUNS="${{ inputs.phase1_ios_runs }}"
+            RAW_PHASE1_ANDROID_RUNS="${{ inputs.phase1_android_runs }}"
+            RAW_PHASE3_FLUTTER_RUNS="${{ inputs.phase3_flutter_runs }}"
+            RAW_PHASE3_NATIVE_ANDROID_RUNS="${{ inputs.phase3_native_android_runs }}"
+            RAW_PHASE3_NATIVE_IOS_RUNS="${{ inputs.phase3_native_ios_runs }}"
+          else
+            RAW_RUN_FLUTTER_ANDROID="true"
+            RAW_RUN_NATIVE_ANDROID="true"
+            RAW_RUN_NATIVE_IOS="true"
+            RAW_PHASE1_IOS_RUNS="1"
+            RAW_PHASE1_ANDROID_RUNS="1"
+            RAW_PHASE3_FLUTTER_RUNS="1"
+            RAW_PHASE3_NATIVE_ANDROID_RUNS="1"
+            RAW_PHASE3_NATIVE_IOS_RUNS="1"
+          fi
+
+          bool_to_flag() {
+            if [ "$1" = "true" ]; then
+              printf '1'
+            else
+              printf '0'
+            fi
+          }
+
+          echo "RUN_FLUTTER_ANDROID=$(bool_to_flag "$RAW_RUN_FLUTTER_ANDROID")" >> "$GITHUB_ENV"
+          echo "RUN_NATIVE_ANDROID=$(bool_to_flag "$RAW_RUN_NATIVE_ANDROID")" >> "$GITHUB_ENV"
+          echo "RUN_NATIVE_IOS=$(bool_to_flag "$RAW_RUN_NATIVE_IOS")" >> "$GITHUB_ENV"
+          echo "PHASE1_IOS_RUNS=$RAW_PHASE1_IOS_RUNS" >> "$GITHUB_ENV"
+          echo "PHASE1_ANDROID_RUNS=$RAW_PHASE1_ANDROID_RUNS" >> "$GITHUB_ENV"
+          echo "PHASE3_FLUTTER_RUNS=$RAW_PHASE3_FLUTTER_RUNS" >> "$GITHUB_ENV"
+          echo "PHASE3_NATIVE_ANDROID_RUNS=$RAW_PHASE3_NATIVE_ANDROID_RUNS" >> "$GITHUB_ENV"
+          echo "PHASE3_NATIVE_IOS_RUNS=$RAW_PHASE3_NATIVE_IOS_RUNS" >> "$GITHUB_ENV"
+
+          require_positive_int() {
+            local key="$1"
+            local value="$2"
+            if ! [[ "$value" =~ ^[1-9][0-9]*$ ]]; then
+              echo "Invalid value for $key: '$value' (expected positive integer)" >&2
+              exit 1
+            fi
+          }
+
+          require_positive_int "phase1_ios_runs" "$RAW_PHASE1_IOS_RUNS"
+          require_positive_int "phase1_android_runs" "$RAW_PHASE1_ANDROID_RUNS"
+          require_positive_int "phase3_flutter_runs" "$RAW_PHASE3_FLUTTER_RUNS"
+          require_positive_int "phase3_native_android_runs" "$RAW_PHASE3_NATIVE_ANDROID_RUNS"
+          require_positive_int "phase3_native_ios_runs" "$RAW_PHASE3_NATIVE_IOS_RUNS"
+
+          {
+            echo "## Real-device acceptance matrix configuration"
+            echo "- Event: \`${{ github.event_name }}\`"
+            echo "- run_flutter_android: \`$RAW_RUN_FLUTTER_ANDROID\`"
+            echo "- run_native_android: \`$RAW_RUN_NATIVE_ANDROID\`"
+            echo "- run_native_ios: \`$RAW_RUN_NATIVE_IOS\`"
+            echo "- phase1_ios_runs: \`$RAW_PHASE1_IOS_RUNS\`"
+            echo "- phase1_android_runs: \`$RAW_PHASE1_ANDROID_RUNS\`"
+            echo "- phase3_flutter_runs: \`$RAW_PHASE3_FLUTTER_RUNS\`"
+            echo "- phase3_native_android_runs: \`$RAW_PHASE3_NATIVE_ANDROID_RUNS\`"
+            echo "- phase3_native_ios_runs: \`$RAW_PHASE3_NATIVE_IOS_RUNS\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Run real-device acceptance matrix
+        run: pnpm run validate:phase3-real-run
+      - name: Enforce real-run quality gate
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import pathlib
+          import sys
+
+          report_path = pathlib.Path("reports/phase-sample-report.json")
+          if not report_path.exists():
+            print("reports/phase-sample-report.json not found")
+            sys.exit(1)
+
+          report = json.loads(report_path.read_text())
+          platforms = report.get("platforms", [])
+          platform_status = {}
+          for platform in platforms:
+            name = str(platform.get("platform", "unknown"))
+            platform_status[name] = platform
+
+          expected_platforms = {
+            "react-native-ios",
+            "react-native-android",
+          }
+          if os.environ.get("RUN_FLUTTER_ANDROID") == "1":
+            expected_platforms.add("flutter-android")
+          if os.environ.get("RUN_NATIVE_ANDROID") == "1":
+            expected_platforms.add("native-android")
+          if os.environ.get("RUN_NATIVE_IOS") == "1":
+            expected_platforms.add("native-ios")
+
+          no_go_entries = []
+          no_data_expected_entries = []
+          missing_platform_entries = []
+          for name in sorted(expected_platforms):
+            entry = platform_status.get(name)
+            if entry is None:
+              missing_platform_entries.append(name)
+              continue
+            status = str(entry.get("status", "UNKNOWN"))
+            pass_rate = entry.get("pass_rate", "n/a")
+            if status == "NO_GO":
+              no_go_entries.append(f"{name} (pass_rate={pass_rate})")
+            elif status == "NO_DATA":
+              no_data_expected_entries.append(name)
+
+          if missing_platform_entries:
+            print("Expected platforms missing from report:")
+            for item in missing_platform_entries:
+              print(f"- {item}")
+            sys.exit(1)
+
+          if no_data_expected_entries:
+            print("Expected platforms returned NO_DATA:")
+            for item in no_data_expected_entries:
+              print(f"- {item}")
+            sys.exit(1)
+
+          if no_go_entries:
+            print("NO_GO platforms detected:")
+            for item in no_go_entries:
+              print(f"- {item}")
+            sys.exit(1)
+
+          print("Real-device acceptance quality gate passed: expected lanes are present with data and no platform is NO_GO.")
+          PY
+      - name: Append acceptance boundary summary
+        if: always()
+        run: |
+          {
+            echo "## Real-device acceptance boundary"
+            echo "- Status: **${{ job.status }}**"
+            echo "- Scope: self-hosted acceptance matrix (Phase 1 + Phase 3 sample paths)"
+            echo "- Gate: fail when expected lanes are \`NO_DATA\`/missing or any lane is \`NO_GO\` in \`reports/phase-sample-report.json\`"
+            echo "- Artifact bundle: \`real-device-acceptance-report-${{ github.run_id }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload acceptance report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: real-device-acceptance-report-${{ github.run_id }}
+          retention-days: 7
+          path: |
+            reports/self-hosted-run-metadata.json
+            reports/phase-sample-report.json
+            reports/phase-sample-report.md
+            reports/acceptance-evidence.json
+            reports/acceptance-evidence.md
+            artifacts/audit/*.json
+            artifacts/phase1-ios/**
+            artifacts/phase1-android/**
+            artifacts/phase3-flutter-android/**
+            artifacts/phase3-native-android/**
+            artifacts/phase3-native-ios/**

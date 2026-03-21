@@ -33,6 +33,14 @@ This folder contains reproducible, real-device demo evidence used by README.
 - Interruption recording wrapper: `bash scripts/dev/record-demo-interruption-home-recovery-android.sh`
 - One-command publisher (record + curate + refresh assets): `bash scripts/dev/publish-showcase-assets-android.sh`
 
+## CI platform smoke baseline flows
+
+- iOS simulator baseline flow: `flows/samples/ci/ios-settings-smoke.yaml`
+- Android emulator baseline flow: `flows/samples/ci/android-settings-smoke.yaml`
+
+These flows are used by `.github/workflows/platform-smoke.yml` to keep simulator/emulator wiring visible in CI.
+They intentionally validate baseline toolchain execution only, and do not replace real-device acceptance evidence.
+
 ## Prerequisites for clone-and-run
 
 - Android emulator/device online via `adb devices` (recommended Android 9 / API 28 or newer)

@@ -1,7 +1,8 @@
 # Mobile E2E MCP (2026)
 
 [![CI (build + typecheck + unit + smoke)](https://github.com/shenyuexin/mobile-e2e-mcp/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/shenyuexin/mobile-e2e-mcp/actions/workflows/ci.yml)
-[![pnpm test:ci](https://github.com/shenyuexin/mobile-e2e-mcp/actions/workflows/test-ci.yml/badge.svg?branch=main)](https://github.com/shenyuexin/mobile-e2e-mcp/actions/workflows/test-ci.yml)
+[![Platform Smoke (iOS sim + Android emulator)](https://github.com/shenyuexin/mobile-e2e-mcp/actions/workflows/platform-smoke.yml/badge.svg?branch=main)](https://github.com/shenyuexin/mobile-e2e-mcp/actions/workflows/platform-smoke.yml)
+[![Real Device Acceptance](https://github.com/shenyuexin/mobile-e2e-mcp/actions/workflows/real-device-acceptance.yml/badge.svg?branch=main)](https://github.com/shenyuexin/mobile-e2e-mcp/actions/workflows/real-device-acceptance.yml)
 
 > AI-first mobile E2E orchestration for Android/iOS/React Native/Flutter, with deterministic-first execution, bounded visual fallback, and governance-aware automation.
 
@@ -28,7 +29,9 @@ If you want a quick hands-on tour before diving into architecture details, start
   - [docs/guides/flow-generation.md](docs/guides/flow-generation.md)
 - CI evidence and boundary notes:
   - [docs/showcase/ci-evidence.md](docs/showcase/ci-evidence.md)
-  - [Latest CI workflow runs](https://github.com/shenyuexin/mobile-e2e-mcp/actions/workflows/ci.yml)
+  - [CI workflow runs](https://github.com/shenyuexin/mobile-e2e-mcp/actions/workflows/ci.yml)
+  - [Platform smoke workflow runs](https://github.com/shenyuexin/mobile-e2e-mcp/actions/workflows/platform-smoke.yml)
+  - [Real-device acceptance workflow runs](https://github.com/shenyuexin/mobile-e2e-mcp/actions/workflows/real-device-acceptance.yml)
 
 ### Quick GIF Preview
 

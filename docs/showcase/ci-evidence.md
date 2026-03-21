@@ -5,7 +5,8 @@ This page is the fixed entry for CI execution evidence referenced by `README.md`
 ## Where to view the latest CI runs
 
 - CI workflow page: https://github.com/shenyuexin/mobile-e2e-mcp/actions/workflows/ci.yml
-- test:ci workflow page: https://github.com/shenyuexin/mobile-e2e-mcp/actions/workflows/test-ci.yml
+- Platform smoke workflow page: https://github.com/shenyuexin/mobile-e2e-mcp/actions/workflows/platform-smoke.yml
+- Real-device acceptance workflow page: https://github.com/shenyuexin/mobile-e2e-mcp/actions/workflows/real-device-acceptance.yml
 
 ## What evidence CI provides
 
@@ -21,16 +22,32 @@ For each run of `CI` (`.github/workflows/ci.yml`):
    - artifact names
    - boundary reminder
 
+For each run of `Platform Smoke` (`.github/workflows/platform-smoke.yml`):
+
+1. iOS simulator Maestro baseline lane (`flows/samples/ci/ios-settings-smoke.yaml`)
+2. Android emulator Maestro baseline lane (`flows/samples/ci/android-settings-smoke.yaml`)
+3. Uploaded debug artifacts for each lane under `artifacts/platform-smoke/**`
+4. Job summaries that explicitly describe baseline scope vs real-device acceptance scope
+
+For each run of `Real Device Acceptance` (`.github/workflows/real-device-acceptance.yml`):
+
+1. Dry-run baseline (`validate:phase3-samples`) on Ubuntu
+2. Self-hosted macOS real-run matrix + acceptance evidence artifacts
+3. Quality gate: workflow fails when any expected lane is missing/`NO_DATA`, or any lane status is `NO_GO` in `reports/phase-sample-report.json`
+
 ## CI boundary (important)
 
 - Ubuntu CI validates **buildability, type-safety, and smoke-level tool behavior**.
-- Ubuntu CI does **not** prove real-device execution fidelity.
+- Platform smoke validates simulator/emulator toolchain baseline only.
+- Ubuntu CI and platform smoke do **not** fully prove real-device execution fidelity.
 - Real-device confidence should be validated through showcase scripts and artifacts under:
   - `docs/showcase/README.md`
   - `docs/showcase/demo-playbook.zh-CN.md`
+  - `real-device-acceptance` workflow artifacts and summaries
 
 ## Quick review checklist for maintainers
 
 - CI run is green on `main` and target PR branch.
-- Step summaries mention both metadata artifacts.
-- Boundary statement remains visible in this document and workflow summary.
+- Platform smoke run is green and both lane summaries are present.
+- If real-device acceptance ran, no platform should show `NO_GO` in `phase-sample-report.json`.
+- Boundary statements remain visible in this document and workflow summaries.
