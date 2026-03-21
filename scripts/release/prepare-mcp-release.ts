@@ -16,6 +16,7 @@ const thisDir = fileURLToPath(new URL('.', import.meta.url));
 const repoRoot = resolve(thisDir, '..', '..');
 const pkgName = '@shenyuexin/mobile-e2e-mcp';
 const pkgJsonPath = resolve(repoRoot, 'packages/mcp-server/package.json');
+const repomixOutputPath = 'repomix-output.xml';
 
 function bumpSemver(version: string, level: ReleaseLevel): string {
   const match = version.match(/^(\d+)\.(\d+)\.(\d+)$/);
@@ -69,12 +70,13 @@ const tagName = `mcp-server-v${version}`;
 
 runWithOutput(`pnpm tsx scripts/release/sync-mcp-release-changelog.ts --version ${version}`);
 runWithOutput(`pnpm tsx scripts/release/validate-mcp-release.ts --version ${version} --tag ${tagName}`);
+runWithOutput(`npx repomix@latest --output ${repomixOutputPath} --quiet --compress`);
 
 runWithOutput('pnpm build');
 runWithOutput('pnpm typecheck');
 runWithOutput('pnpm test:mcp-server');
 
-runWithOutput('git add packages/mcp-server/package.json pnpm-lock.yaml CHANGELOG.md');
+runWithOutput(`git add packages/mcp-server/package.json pnpm-lock.yaml CHANGELOG.md ${repomixOutputPath}`);
 runWithOutput(`git commit -m "release(mcp-server): v${version}"`);
 
 const localTagExists = run(`git tag -l "${tagName}"`);
@@ -97,6 +99,7 @@ process.stdout.write(
     '',
     `✅ Prepared and pushed ${pkgName} ${version}`,
     `✅ Created and pushed tag: ${tagName}`,
+    `✅ Refreshed ${repomixOutputPath} for this release commit`,
     'ℹ️ GitHub Actions will publish to npm on this tag.'
   ].join('\n')
 );

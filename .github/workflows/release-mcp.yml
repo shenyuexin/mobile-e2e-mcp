@@ -52,17 +52,18 @@ jobs:
         env:
           DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         run: |
-          if git diff --quiet -- CHANGELOG.md; then
-            echo "CHANGELOG.md already up to date"
-            exit 0
-          fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git fetch origin "${DEFAULT_BRANCH}"
           git checkout "${DEFAULT_BRANCH}"
           pnpm tsx scripts/release/sync-mcp-release-changelog.ts --tag "${GITHUB_REF_NAME}"
-          git add CHANGELOG.md
-          git commit -m "docs(changelog): sync MCP release notes for ${GITHUB_REF_NAME#mcp-server-v}"
+          npx repomix@latest --output repomix-output.xml --quiet --compress
+          if git diff --quiet -- CHANGELOG.md repomix-output.xml; then
+            echo "CHANGELOG.md and repomix-output.xml already up to date"
+            exit 0
+          fi
+          git add CHANGELOG.md repomix-output.xml
+          git commit -m "docs(release): sync MCP notes and repomix for ${GITHUB_REF_NAME#mcp-server-v}"
           git push origin "${DEFAULT_BRANCH}"
 
       - name: Restore tagged revision for publish
