@@ -188,7 +188,7 @@ Source-of-truth note:
 - **Diagnostics & evidence** — logs, crash signals, performance, screenshot/timeline artifacts
 - **Reliability & remediation** — reason-coded failures, bounded retries, remediation helpers
 
-Tool registry and signatures live in `packages/mcp-server/src/server.ts` and `packages/mcp-server/src/tools/*`.
+Tool registry/signature dispatch live in `packages/mcp-server/src/server.ts`, while descriptor metadata and wrapper composition live in `packages/mcp-server/src/index.ts`.
 
 ## Complete MCP Tool Catalog (Current)
 

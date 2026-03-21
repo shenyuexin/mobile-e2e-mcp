@@ -224,7 +224,7 @@ Typical new features:
 
 ### C. UI Runtime
 
-Recommended future file:
+Primary home:
 
 - `packages/adapter-maestro/src/ui-runtime.ts`
 
@@ -248,7 +248,7 @@ Why split this out:
 
 ### D. UI Tool Orchestration
 
-Recommended future file:
+Primary home:
 
 - `packages/adapter-maestro/src/ui-tools.ts`
 
@@ -267,9 +267,12 @@ This layer should call `ui-model.ts` and `ui-runtime.ts`, but avoid reimplementi
 
 ### E. Device/App Runtime
 
-Recommended future file:
+Primary home:
 
 - `packages/adapter-maestro/src/device-runtime.ts`
+- `packages/adapter-maestro/src/device-runtime-platform.ts`
+- `packages/adapter-maestro/src/device-runtime-android.ts`
+- `packages/adapter-maestro/src/device-runtime-ios.ts`
 
 Should own:
 
@@ -334,7 +337,7 @@ Do not duplicate inside `adapter-maestro`:
 | New UI wait/retry behavior | `packages/adapter-maestro/src/ui-tools.ts` plus `ui-model.ts` | Split orchestration from pure evaluation |
 | New Metro inspector helper | `packages/adapter-maestro/src/js-debug.ts` | Do not add more to generic UI files |
 | New policy scope or profile rule | `packages/core/src/policy-engine.ts` | Enforcement stays in `packages/mcp-server` |
-| New MCP tool description about support levels | `packages/adapter-maestro/src/capability-model.ts` and `packages/mcp-server/src/stdio-server.ts` | Keep advertised support consistent |
+| New MCP tool description about support levels | `packages/adapter-maestro/src/capability-model.ts` and `packages/mcp-server/src/index.ts` descriptor metadata | Keep advertised support consistent |
 
 ## 6. Update Checklist For New Features
 
@@ -349,14 +352,9 @@ When adding a new adapter feature, update all relevant layers together:
 
 ## 7. Near-Term Refactor Order
 
-If continuing the split from the current repo state, the highest-value extraction order is:
+Current baseline already applies the highest-value split for UI and device capability families (`ui-tools.ts`, `ui-runtime.ts`, and `device-runtime-*` hooks).
 
-1. `ui-runtime.ts`
-2. `device-runtime.ts`
-3. `ui-tools.ts`
-4. `doctor.ts`
-
-This order reduces `index.ts` quickly while keeping behavior changes bounded.
+Near-term extraction priority should focus on remaining orchestration hot spots that are still in `index.ts`, rather than re-opening these completed boundaries.
 
 ## 8. Decision Rule
 
