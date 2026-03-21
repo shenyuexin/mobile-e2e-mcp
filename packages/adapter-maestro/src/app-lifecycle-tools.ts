@@ -1,4 +1,13 @@
-import type { InstallAppData, InstallAppInput, LaunchAppData, LaunchAppInput, ToolResult } from "@mobile-e2e-mcp/contracts";
+import type {
+  InstallAppData,
+  InstallAppInput,
+  LaunchAppData,
+  LaunchAppInput,
+  ResetAppStateData,
+  ResetAppStateInput,
+  ResetAppStateStrategy,
+  ToolResult,
+} from "@mobile-e2e-mcp/contracts";
 import { REASON_CODES } from "@mobile-e2e-mcp/contracts";
 import { existsSync } from "node:fs";
 import {
@@ -9,6 +18,7 @@ import {
   resolveRepoPath,
 } from "./harness-config.js";
 import {
+  buildResetPlanWithRuntime,
   buildInstallCommandWithRuntime,
   buildLaunchCommandWithRuntime,
   getInstallArtifactSpec,
@@ -199,5 +209,190 @@ export async function installAppWithRuntime(input: InstallAppInput): Promise<Too
       exitCode: execution.exitCode,
     },
     nextSuggestions,
+  };
+}
+
+export async function resetAppStateWithRuntime(input: ResetAppStateInput): Promise<ToolResult<ResetAppStateData>> {
+  const startTime = Date.now();
+  if (!input.platform) {
+    return {
+      status: "failed",
+      reasonCode: REASON_CODES.configurationError,
+      sessionId: input.sessionId,
+      durationMs: Date.now() - startTime,
+      attempts: 1,
+      artifacts: [],
+      data: {
+        dryRun: Boolean(input.dryRun),
+        runnerProfile: input.runnerProfile ?? DEFAULT_RUNNER_PROFILE,
+        strategy: input.strategy ?? "clear_data",
+        appId: input.appId,
+        artifactPath: input.artifactPath,
+        commandLabels: [],
+        commands: [],
+        exitCode: null,
+        supportLevel: "full",
+      },
+      nextSuggestions: ["Provide platform explicitly, or call reset_app_state with an active sessionId so MCP can resolve platform from session context."],
+    };
+  }
+  const repoRoot = resolveRepoPath();
+  const platform = input.platform;
+  const runnerProfile = input.runnerProfile ?? DEFAULT_RUNNER_PROFILE;
+  const selection = await loadHarnessSelection(repoRoot, platform, runnerProfile, input.harnessConfigPath ?? DEFAULT_HARNESS_CONFIG_PATH);
+  const deviceId = input.deviceId ?? selection.deviceId ?? buildDefaultDeviceId(platform);
+  const appId = input.appId ?? selection.appId;
+  const strategy: ResetAppStateStrategy = input.strategy ?? "clear_data";
+  const artifactPath = resolveInstallArtifactPath(repoRoot, runnerProfile, input.artifactPath);
+  const targetAppId = appId ?? "";
+  const resetPlan = buildResetPlanWithRuntime(platform, {
+    strategy,
+    deviceId,
+    appId: targetAppId,
+    artifactPath,
+  });
+  const commandLabels = [...resetPlan.commandLabels];
+  const commands = [...resetPlan.commands];
+
+  if (resetPlan.unsupportedReason) {
+    return {
+      status: "partial",
+      reasonCode: REASON_CODES.unsupportedOperation,
+      sessionId: input.sessionId,
+      durationMs: Date.now() - startTime,
+      attempts: 1,
+      artifacts: [],
+      data: {
+        dryRun: Boolean(input.dryRun),
+        runnerProfile,
+        strategy,
+        appId,
+        artifactPath,
+        commandLabels,
+        commands,
+        exitCode: null,
+        supportLevel: resetPlan.supportLevel,
+      },
+      nextSuggestions: [resetPlan.unsupportedReason],
+    };
+  }
+
+  if (!appId && strategy !== "keychain_reset") {
+    return {
+      status: "failed",
+      reasonCode: REASON_CODES.configurationError,
+      sessionId: input.sessionId,
+      durationMs: Date.now() - startTime,
+      attempts: 1,
+      artifacts: [],
+      data: {
+        dryRun: Boolean(input.dryRun),
+        runnerProfile,
+        strategy,
+        appId,
+        artifactPath,
+        commandLabels,
+        commands,
+        exitCode: null,
+        supportLevel: "full",
+      },
+      nextSuggestions: ["Provide appId or configure app_id in harness config before calling reset_app_state."],
+    };
+  }
+  if (strategy === "uninstall_reinstall") {
+    if (!artifactPath || !existsSync(artifactPath)) {
+      return {
+        status: "failed",
+        reasonCode: REASON_CODES.configurationError,
+        sessionId: input.sessionId,
+        durationMs: Date.now() - startTime,
+        attempts: 1,
+        artifacts: [],
+        data: {
+          dryRun: Boolean(input.dryRun),
+          runnerProfile,
+          strategy,
+          appId,
+          artifactPath,
+          commandLabels,
+          commands,
+          exitCode: null,
+          supportLevel: "full",
+        },
+        nextSuggestions: ["Provide a valid artifactPath or set runner-specific artifact environment variable before uninstall_reinstall."],
+      };
+    }
+  }
+
+  const supportLevel: "full" | "partial" = resetPlan.supportLevel;
+
+  if (input.dryRun) {
+    return {
+      status: "success",
+      reasonCode: REASON_CODES.ok,
+      sessionId: input.sessionId,
+      durationMs: Date.now() - startTime,
+      attempts: 1,
+      artifacts: [],
+      data: {
+        dryRun: true,
+        runnerProfile,
+        strategy,
+        appId,
+        artifactPath,
+        commandLabels,
+        commands,
+        exitCode: 0,
+        supportLevel,
+      },
+      nextSuggestions: ["Run reset_app_state without dryRun to execute the reset strategy on the target device/simulator."],
+    };
+  }
+
+  for (const command of commands) {
+    const execution = await executeRunner(command, repoRoot, process.env);
+    if (execution.exitCode !== 0) {
+      return {
+        status: "failed",
+        reasonCode: buildFailureReason(execution.stderr, execution.exitCode),
+        sessionId: input.sessionId,
+        durationMs: Date.now() - startTime,
+        attempts: 1,
+        artifacts: [],
+        data: {
+          dryRun: false,
+          runnerProfile,
+          strategy,
+          appId,
+          artifactPath,
+          commandLabels,
+          commands,
+          exitCode: execution.exitCode,
+          supportLevel,
+        },
+        nextSuggestions: ["Reset command failed. Verify device availability, appId/artifactPath, and simulator/device state before retrying reset_app_state."],
+      };
+    }
+  }
+
+  return {
+    status: "success",
+    reasonCode: REASON_CODES.ok,
+    sessionId: input.sessionId,
+    durationMs: Date.now() - startTime,
+    attempts: 1,
+    artifacts: [],
+    data: {
+      dryRun: false,
+      runnerProfile,
+      strategy,
+      appId,
+      artifactPath,
+      commandLabels,
+      commands,
+      exitCode: 0,
+      supportLevel,
+    },
+    nextSuggestions: [],
   };
 }

@@ -1,0 +1,482 @@
+import type {
+  CollectDebugEvidenceData,
+  CollectDebugEvidenceInput,
+  DebugSignalSummary,
+  JsConsoleLogEntry,
+  JsConsoleLogSummary,
+  JsNetworkFailureSummary,
+  LogSummary,
+  PerformActionWithEvidenceData,
+  ReasonCode,
+  ToolResult,
+} from "@mobile-e2e-mcp/contracts";
+import { REASON_CODES } from "@mobile-e2e-mcp/contracts";
+import { mkdir, writeFile } from "node:fs/promises";
+import path from "node:path";
+import {
+  DEFAULT_HARNESS_CONFIG_PATH,
+  DEFAULT_RUNNER_PROFILE,
+  loadHarnessSelection,
+  resolveRepoPath,
+} from "./harness-config.js";
+import {
+  captureJsConsoleLogsWithMaestro,
+  captureJsNetworkEventsWithMaestro,
+  buildJsDebugTargetSelectionNarrativeLine,
+  buildJsNetworkSuspectSentences,
+  formatJsConsoleEntry,
+  listJsDebugTargetsWithMaestro,
+  normalizeMetroBaseUrl,
+  selectPreferredJsDebugTargetWithReason,
+} from "./js-debug.js";
+import {
+  collectDiagnosticsWithRuntime,
+  getCrashSignalsWithRuntime,
+  getLogsWithRuntime,
+} from "./device-runtime.js";
+import { buildExecutionEvidence, normalizePositiveInteger } from "./runtime-shared.js";
+
+const DEFAULT_DEBUG_PACKET_JS_TIMEOUT_MS = 1000;
+
+function mergeSignalSummaries(...summaries: Array<LogSummary | undefined>): DebugSignalSummary[] {
+  const merged = new Map<string, DebugSignalSummary>();
+
+  for (const summary of summaries) {
+    if (!summary) continue;
+    for (const signal of summary.topSignals) {
+      const key = `${signal.category}:${signal.sample}`;
+      const current = merged.get(key);
+      if (current) {
+        current.count += signal.count;
+      } else {
+        merged.set(key, { ...signal });
+      }
+    }
+  }
+
+  return [...merged.values()].sort((left, right) => right.count - left.count).slice(0, 10);
+}
+
+function buildDebugNarrative(params: {
+  appId?: string;
+  appFilterApplied: boolean;
+  logSummary?: LogSummary;
+  crashSummary?: LogSummary;
+  jsNetworkSummary?: JsNetworkFailureSummary;
+  includeDiagnostics: boolean;
+  diagnosticsArtifacts: number;
+}): string[] {
+  const narrative: string[] = [];
+
+  if (params.appId) {
+    narrative.push(params.appFilterApplied
+      ? `Evidence capture is scoped to app ${params.appId}.`
+      : `Evidence capture is not app-scoped yet for ${params.appId}; results may include device-wide noise.`);
+  }
+
+  if (params.crashSummary && params.crashSummary.topSignals.length > 0) {
+    const topCrash = params.crashSummary.topSignals[0];
+    narrative.push(`Crash evidence is present: ${topCrash.category} appears ${String(topCrash.count)} time(s).`);
+  } else {
+    narrative.push("No high-confidence crash signals were detected in the captured crash evidence.");
+  }
+
+  if (params.logSummary) {
+    narrative.push(`Log capture scanned ${String(params.logSummary.totalLines)} lines and flagged ${String(params.logSummary.sampleLines.length)} interesting lines for AI review.`);
+  }
+
+  if (params.jsNetworkSummary && params.jsNetworkSummary.failedRequestCount > 0) {
+    narrative.push(...buildJsNetworkSuspectSentences(params.jsNetworkSummary));
+  }
+
+  if (params.includeDiagnostics) {
+    narrative.push(`Diagnostics bundle capture is included with ${String(params.diagnosticsArtifacts)} artifact path(s). Use it only if logs and crash summaries are insufficient.`);
+  }
+
+  return narrative;
+}
+
+function buildSuspectAreas(params: {
+  crashSummary?: LogSummary;
+  logSummary?: LogSummary;
+  jsConsoleSummary?: JsConsoleLogSummary;
+  jsNetworkSummary?: JsNetworkFailureSummary;
+  jsConsoleLogs?: JsConsoleLogEntry[];
+  environmentIssue?: string;
+}): string[] {
+  const suspects: string[] = [];
+
+  if (params.environmentIssue) {
+    suspects.push(`Environment suspect: ${params.environmentIssue}`);
+  }
+
+  const topCrash = params.crashSummary?.topSignals[0];
+  if (topCrash) {
+    suspects.push(`Crash suspect: ${topCrash.sample}`);
+  }
+
+  const topLog = params.logSummary?.topSignals[0];
+  if (topLog && (!topCrash || topLog.sample !== topCrash.sample)) {
+    suspects.push(`Runtime log suspect: ${topLog.sample}`);
+  }
+
+  if ((params.jsConsoleSummary?.exceptionCount ?? 0) > 0) {
+    const firstException = params.jsConsoleLogs?.find((entry) => entry.level === "exception");
+    suspects.push(firstException
+      ? `JS exception suspect: ${firstException.exceptionType ?? "Exception"} at ${firstException.sourceUrl ?? "<unknown>"}:${String(firstException.lineNumber ?? 0)}:${String(firstException.columnNumber ?? 0)}.`
+      : `JS exception suspect: ${String(params.jsConsoleSummary?.exceptionCount ?? 0)} inspector exception event(s) captured.`);
+  }
+
+  const topNetworkStatus = params.jsNetworkSummary?.statusGroups[0];
+  if (params.jsNetworkSummary && (topNetworkStatus || params.jsNetworkSummary.errorGroups[0])) {
+    suspects.push(...buildJsNetworkSuspectSentences(params.jsNetworkSummary));
+  }
+
+  return suspects.slice(0, 5);
+}
+
+export function buildDiagnosisBriefing(params: {
+  status: ToolResult["status"];
+  reasonCode: ReasonCode;
+  appId?: string;
+  suspectAreas: string[];
+  jsDebugTargetId?: string;
+  jsConsoleLogCount?: number;
+  jsNetworkEventCount?: number;
+  retryRecommendationTier?: PerformActionWithEvidenceData["retryRecommendationTier"];
+  retryRecommendation?: PerformActionWithEvidenceData["retryRecommendation"];
+}): string[] {
+  const briefing: string[] = [];
+
+  if (params.appId) {
+    briefing.push(`Target app: ${params.appId}.`);
+  }
+
+  if (params.suspectAreas.length > 0) {
+    briefing.push(...params.suspectAreas.slice(0, 3));
+  }
+
+  if (params.jsDebugTargetId) {
+    briefing.push(`JS inspector target: ${params.jsDebugTargetId}.`);
+  }
+
+  if ((params.jsConsoleLogCount ?? 0) > 0 || (params.jsNetworkEventCount ?? 0) > 0) {
+    briefing.push(`JS evidence captured: ${String(params.jsConsoleLogCount ?? 0)} console event(s), ${String(params.jsNetworkEventCount ?? 0)} network event(s).`);
+  }
+
+  if (params.retryRecommendationTier && params.retryRecommendationTier !== "none") {
+    briefing.push(`Recommended next-action tier: ${params.retryRecommendationTier}.`);
+  }
+  if (params.retryRecommendation) {
+    briefing.push(`Recommended follow-up: ${params.retryRecommendation.suggestedAction}`);
+  }
+
+  if (params.status !== "success") {
+    briefing.push(`Current packet status is ${params.status} (${params.reasonCode}).`);
+  }
+
+  return briefing.slice(0, 5);
+}
+
+function buildDebugNextSuggestions(params: {
+  reasonCode: ReasonCode;
+  suspectAreas: string[];
+  includeDiagnostics: boolean;
+  jsDebugTargetId?: string;
+  jsConsoleLogCount?: number;
+  jsNetworkEventCount?: number;
+}): string[] {
+  const suggestions: string[] = [];
+
+  if (params.reasonCode === REASON_CODES.deviceUnavailable) {
+    suggestions.push("Restore device or simulator connectivity first, then re-run collect_debug_evidence.");
+  }
+  if (params.reasonCode === REASON_CODES.configurationError && !params.jsDebugTargetId) {
+    suggestions.push("Start Metro or Expo dev server, then re-run collect_debug_evidence to include JS inspector evidence.");
+  }
+  if (params.suspectAreas.some((item) => item.toLowerCase().includes("network suspect"))) {
+    suggestions.push("Inspect the failing API host and response path first; network evidence is the strongest current clue.");
+  }
+  if (params.suspectAreas.some((item) => item.toLowerCase().includes("js exception suspect"))) {
+    suggestions.push("Inspect the reported JS exception source and top stack frame before reading the full raw logs.");
+  }
+  if (params.suspectAreas.some((item) => item.toLowerCase().includes("crash suspect"))) {
+    suggestions.push("Inspect the top crash suspect in the crash artifact before escalating to heavier diagnostics.");
+  }
+  if (params.includeDiagnostics) {
+    suggestions.push("Diagnostics capture is already enabled; use the bundle only after exhausting the summarized clues.");
+  } else if ((params.jsConsoleLogCount ?? 0) === 0 && (params.jsNetworkEventCount ?? 0) === 0) {
+    suggestions.push("Use the debug evidence summary first; escalate to collect_diagnostics only when the summarized native clues are still inconclusive.");
+  }
+
+  return [...new Set(suggestions)].slice(0, 5);
+}
+
+export async function collectDebugEvidenceWithRuntime(input: CollectDebugEvidenceInput): Promise<ToolResult<CollectDebugEvidenceData>> {
+  const startTime = Date.now();
+  if (!input.platform) {
+    return {
+      status: "failed",
+      reasonCode: REASON_CODES.configurationError,
+      sessionId: input.sessionId,
+      durationMs: Date.now() - startTime,
+      attempts: 1,
+      artifacts: [],
+      data: {
+        dryRun: Boolean(input.dryRun),
+        runnerProfile: input.runnerProfile ?? DEFAULT_RUNNER_PROFILE,
+        outputPath: input.outputPath ?? path.posix.join("artifacts", "debug-evidence", input.sessionId, "unknown.md"),
+        supportLevel: "partial",
+        appId: input.appId,
+        diagnosisBriefing: ["Missing platform context"],
+        suspectAreas: ["configuration"],
+        interestingSignals: [],
+        evidencePaths: [],
+        evidenceCount: 0,
+        narrative: ["Platform was not provided and could not be inferred from session context."],
+      },
+      nextSuggestions: ["Provide platform explicitly, or call collect_debug_evidence with an active sessionId so MCP can resolve platform from session context."],
+    };
+  }
+  const repoRoot = resolveRepoPath();
+  const runnerProfile = input.runnerProfile ?? DEFAULT_RUNNER_PROFILE;
+  const selection = await loadHarnessSelection(repoRoot, input.platform, runnerProfile, input.harnessConfigPath ?? DEFAULT_HARNESS_CONFIG_PATH);
+  const relativeOutputPath = input.outputPath ?? path.posix.join("artifacts", "debug-evidence", input.sessionId, `${input.platform}-${runnerProfile}.md`);
+  const absoluteOutputPath = path.resolve(repoRoot, relativeOutputPath);
+  const logOutputPath = path.posix.join("artifacts", "debug-evidence", input.sessionId, `${input.platform}-${runnerProfile}.logs.txt`);
+  const crashOutputPath = path.posix.join("artifacts", "debug-evidence", input.sessionId, `${input.platform}-${runnerProfile}.crash.txt`);
+  const diagnosticsOutputPath = input.platform === "android"
+    ? path.posix.join("artifacts", "debug-evidence", input.sessionId, `${input.platform}-${runnerProfile}.diagnostics.zip`)
+    : path.posix.join("artifacts", "debug-evidence", input.sessionId, `${input.platform}-${runnerProfile}.diagnostics`);
+  const effectiveAppId = input.appId ?? selection.appId;
+  const includeJsInspector = input.includeJsInspector ?? true;
+  const jsInspectorTimeoutMs = normalizePositiveInteger(input.jsInspectorTimeoutMs, DEFAULT_DEBUG_PACKET_JS_TIMEOUT_MS);
+  const effectiveMetroBaseUrl = normalizeMetroBaseUrl(input.metroBaseUrl);
+  const discoveredTargetsResult = includeJsInspector && !input.targetId && !input.webSocketDebuggerUrl
+    ? await listJsDebugTargetsWithMaestro({ sessionId: input.sessionId, metroBaseUrl: input.metroBaseUrl, timeoutMs: jsInspectorTimeoutMs, dryRun: input.dryRun })
+    : undefined;
+  const discoveredSelection = discoveredTargetsResult?.status === "success"
+    ? selectPreferredJsDebugTargetWithReason(discoveredTargetsResult.data.targets)
+    : undefined;
+  const discoveredTarget = discoveredSelection?.target;
+  const effectiveTargetId = input.targetId ?? discoveredTarget?.id;
+  const effectiveWebSocketDebuggerUrl = input.webSocketDebuggerUrl ?? discoveredTarget?.webSocketDebuggerUrl;
+
+  const logsResult = await getLogsWithRuntime({
+    sessionId: input.sessionId,
+    platform: input.platform,
+    runnerProfile,
+    harnessConfigPath: input.harnessConfigPath,
+    deviceId: input.deviceId,
+    appId: effectiveAppId,
+    outputPath: logOutputPath,
+    lines: input.logLines,
+    sinceSeconds: input.sinceSeconds,
+    query: input.query,
+    dryRun: input.dryRun,
+  });
+  const crashResult = await getCrashSignalsWithRuntime({
+    sessionId: input.sessionId,
+    platform: input.platform,
+    runnerProfile,
+    harnessConfigPath: input.harnessConfigPath,
+    deviceId: input.deviceId,
+    appId: effectiveAppId,
+    outputPath: crashOutputPath,
+    lines: input.logLines,
+    dryRun: input.dryRun,
+  });
+  const diagnosticsResult = input.includeDiagnostics
+    ? await collectDiagnosticsWithRuntime({
+      sessionId: input.sessionId,
+      platform: input.platform,
+      runnerProfile,
+      harnessConfigPath: input.harnessConfigPath,
+      deviceId: input.deviceId,
+      outputPath: diagnosticsOutputPath,
+      dryRun: input.dryRun,
+    })
+    : undefined;
+  const jsConsoleResult = includeJsInspector
+    ? await captureJsConsoleLogsWithMaestro({
+      sessionId: input.sessionId,
+      metroBaseUrl: undefined,
+      targetId: effectiveTargetId,
+      webSocketDebuggerUrl: effectiveWebSocketDebuggerUrl,
+      maxLogs: input.logLines,
+      timeoutMs: jsInspectorTimeoutMs,
+      dryRun: input.dryRun,
+    })
+    : undefined;
+  const jsNetworkResult = includeJsInspector
+    ? await captureJsNetworkEventsWithMaestro({
+      sessionId: input.sessionId,
+      metroBaseUrl: undefined,
+      targetId: effectiveTargetId,
+      webSocketDebuggerUrl: effectiveWebSocketDebuggerUrl,
+      maxEvents: input.logLines,
+      timeoutMs: jsInspectorTimeoutMs,
+      failuresOnly: true,
+      dryRun: input.dryRun,
+    })
+    : undefined;
+
+  const evidencePaths = [
+    ...logsResult.artifacts,
+    ...crashResult.artifacts,
+    ...(diagnosticsResult?.artifacts ?? []),
+  ];
+  const environmentIssue = logsResult.reasonCode === REASON_CODES.deviceUnavailable || crashResult.reasonCode === REASON_CODES.deviceUnavailable
+    ? "device or simulator connectivity prevented native evidence capture"
+    : jsConsoleResult?.reasonCode === REASON_CODES.configurationError || jsNetworkResult?.reasonCode === REASON_CODES.configurationError
+      ? "Metro inspector was unavailable for JS evidence capture"
+      : undefined;
+  const interestingSignals = mergeSignalSummaries(logsResult.data.summary, crashResult.data.summary);
+  const suspectAreas = buildSuspectAreas({
+    crashSummary: crashResult.data.summary,
+    logSummary: logsResult.data.summary,
+    jsConsoleSummary: jsConsoleResult?.data.summary,
+    jsNetworkSummary: jsNetworkResult?.data.summary,
+    jsConsoleLogs: jsConsoleResult?.data.logs,
+    environmentIssue,
+  });
+  const narrative = buildDebugNarrative({
+    appId: effectiveAppId,
+    appFilterApplied: logsResult.data.appFilterApplied,
+    logSummary: logsResult.data.summary,
+    crashSummary: crashResult.data.summary,
+    jsNetworkSummary: jsNetworkResult?.data.summary,
+    includeDiagnostics: Boolean(input.includeDiagnostics),
+    diagnosticsArtifacts: diagnosticsResult?.data.artifactCount ?? 0,
+  });
+  if (jsConsoleResult) {
+    narrative.push(jsConsoleResult.status === "success"
+      ? `JS console snapshot collected ${String(jsConsoleResult.data.collectedCount)} event(s).`
+      : "JS console snapshot was unavailable; check Metro inspector availability.");
+  }
+  if (jsNetworkResult) {
+    narrative.push(jsNetworkResult.status === "success"
+      ? `JS network snapshot collected ${String(jsNetworkResult.data.collectedCount)} event(s).`
+      : "JS network snapshot was unavailable; check Metro inspector availability.");
+  }
+  if (includeJsInspector && discoveredTargetsResult) {
+    narrative.push(buildJsDebugTargetSelectionNarrativeLine(discoveredTarget, discoveredSelection?.reason));
+  }
+
+  const jsConsoleOk = !jsConsoleResult || jsConsoleResult.status === "success";
+  const jsNetworkOk = !jsNetworkResult || jsNetworkResult.status === "success";
+  const allSucceeded = logsResult.status === "success" && crashResult.status === "success" && (!diagnosticsResult || diagnosticsResult.status === "success") && jsConsoleOk && jsNetworkOk;
+  const anySucceeded = logsResult.status === "success" || crashResult.status === "success" || diagnosticsResult?.status === "success" || jsConsoleResult?.status === "success" || jsNetworkResult?.status === "success";
+  const status = allSucceeded ? "success" : anySucceeded ? "partial" : "failed";
+  const reasonCode = allSucceeded
+    ? REASON_CODES.ok
+    : logsResult.reasonCode !== REASON_CODES.ok
+      ? logsResult.reasonCode
+      : crashResult.reasonCode !== REASON_CODES.ok
+        ? crashResult.reasonCode
+        : diagnosticsResult?.reasonCode ?? jsConsoleResult?.reasonCode ?? jsNetworkResult?.reasonCode ?? REASON_CODES.adapterError;
+  if (suspectAreas.length === 0) {
+    if (reasonCode === REASON_CODES.deviceUnavailable) {
+      suspectAreas.push("Environment suspect: device or simulator connectivity prevented evidence capture.");
+    } else if (reasonCode === REASON_CODES.configurationError) {
+      suspectAreas.push("Environment suspect: Metro inspector or local debug configuration prevented JS evidence capture.");
+    }
+  }
+  const diagnosisBriefing = buildDiagnosisBriefing({
+    status,
+    reasonCode,
+    appId: effectiveAppId,
+    suspectAreas,
+    jsDebugTargetId: effectiveTargetId,
+    jsConsoleLogCount: jsConsoleResult?.data.collectedCount,
+    jsNetworkEventCount: jsNetworkResult?.data.collectedCount,
+  });
+  const nextSuggestions = buildDebugNextSuggestions({
+    reasonCode,
+    suspectAreas,
+    includeDiagnostics: Boolean(input.includeDiagnostics),
+    jsDebugTargetId: effectiveTargetId,
+    jsConsoleLogCount: jsConsoleResult?.data.collectedCount,
+    jsNetworkEventCount: jsNetworkResult?.data.collectedCount,
+  });
+  await mkdir(path.dirname(absoluteOutputPath), { recursive: true });
+
+  if (!input.dryRun) {
+    const report = [
+      "# Debug Evidence Summary",
+      `- Platform: ${input.platform}`,
+      `- Runner profile: ${runnerProfile}`,
+      `- App: ${effectiveAppId ?? "<unknown>"}`,
+      `- Query: ${input.query ?? "<none>"}`,
+      `- JS inspector enabled: ${includeJsInspector ? "yes" : "no"}`,
+      `- JS target: ${effectiveTargetId ?? "<none>"}`,
+      "",
+      "## Diagnosis Briefing",
+      ...(diagnosisBriefing.length > 0 ? diagnosisBriefing.map((line) => `- ${line}`) : ["- <no briefing available>"]),
+      "",
+      "## Narrative",
+      ...narrative.map((line) => `- ${line}`),
+      "",
+      "## JS Console Events",
+      ...(jsConsoleResult?.data.logs?.length ? jsConsoleResult.data.logs.map(formatJsConsoleEntry) : ["- <no JS console events captured>"]),
+      "",
+      "## JS Network Events",
+      ...(jsNetworkResult?.data.events?.length ? jsNetworkResult.data.events.map((entry) => `- [${entry.status ?? "pending"}] ${entry.method ?? "GET"} ${entry.url ?? "<unknown>"}${entry.errorText ? ` :: ${entry.errorText}` : ""}`) : ["- <no JS network events captured>"]),
+      "",
+      "## Top Signals",
+      ...(interestingSignals.length > 0 ? interestingSignals.map((signal) => `- [${signal.category}] x${String(signal.count)} ${signal.sample}`) : ["- <no interesting signals detected>"]),
+      "",
+      "## Suspect Areas",
+      ...(suspectAreas.length > 0 ? suspectAreas.map((item) => `- ${item}`) : ["- <no prioritized suspects yet>"]),
+      "",
+      "## Evidence Paths",
+      ...(evidencePaths.length > 0 ? evidencePaths.map((item) => `- ${item}`) : ["- <no evidence paths recorded>"]),
+    ].join(String.fromCharCode(10)) + String.fromCharCode(10);
+    await writeFile(absoluteOutputPath, report, "utf8");
+  }
+
+  const summaryArtifactPath = input.dryRun ? [] : [relativeOutputPath];
+
+  return {
+    status,
+    reasonCode,
+    sessionId: input.sessionId,
+    durationMs: Date.now() - startTime,
+    attempts: 1,
+    artifacts: [...summaryArtifactPath, ...evidencePaths],
+    data: {
+      dryRun: Boolean(input.dryRun),
+      runnerProfile,
+      outputPath: relativeOutputPath,
+      supportLevel: "full",
+      appId: effectiveAppId,
+      jsDebugMetroBaseUrl: includeJsInspector ? effectiveMetroBaseUrl : undefined,
+      jsDebugTargetEndpoint: discoveredTargetsResult?.data.endpoint,
+      jsDebugTargetCandidateCount: discoveredTargetsResult?.data.targetCount,
+      jsDebugTargetId: effectiveTargetId,
+      jsDebugTargetTitle: discoveredTarget?.title,
+      jsDebugTargetSelectionReason: discoveredSelection?.reason,
+      logSummary: logsResult.data.summary,
+      crashSummary: crashResult.data.summary,
+      jsConsoleLogCount: jsConsoleResult?.data.collectedCount,
+      jsNetworkEventCount: jsNetworkResult?.data.collectedCount,
+      jsConsoleSummary: jsConsoleResult?.data.summary,
+      jsNetworkSummary: jsNetworkResult?.data.summary,
+      diagnosisBriefing,
+      suspectAreas,
+      interestingSignals,
+      evidencePaths: [...summaryArtifactPath, ...evidencePaths],
+      evidenceCount: summaryArtifactPath.length + evidencePaths.length,
+      evidence: [
+        ...summaryArtifactPath.map((artifactPath) => buildExecutionEvidence("debug_summary", artifactPath, "full", "Generated summarized debug evidence report.")),
+        ...(logsResult.data.evidence ?? []),
+        ...(crashResult.data.evidence ?? []),
+        ...(diagnosticsResult?.data.evidence ?? []),
+        ...(jsConsoleResult?.data.logs?.length ? [buildExecutionEvidence("log", "metro://console-snapshot", "partial", "Captured JS console snapshot from Metro inspector.")] : []),
+        ...(jsNetworkResult?.data.events?.length ? [buildExecutionEvidence("log", "metro://network-snapshot", "partial", "Captured JS network snapshot from Metro inspector.")] : []),
+      ],
+      narrative,
+    },
+    nextSuggestions: status === "success" ? [] : nextSuggestions,
+  };
+}
