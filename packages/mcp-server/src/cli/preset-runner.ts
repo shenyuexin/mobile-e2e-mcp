@@ -117,7 +117,7 @@ async function invokePresetStep(
   tool: PresetStepTool,
   cliOptions: CliOptions,
   sessionId: string,
-): Promise<ToolResult> {
+): Promise<ToolResult<unknown>> {
   const selector = defaultSelector(cliOptions);
   if (tool === "start_session") {
     return server.invoke("start_session", {

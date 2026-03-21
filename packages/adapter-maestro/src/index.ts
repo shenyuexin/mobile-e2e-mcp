@@ -51,7 +51,9 @@ import {
   type InspectUiNode,
   type InspectUiSummary,
   type InstallAppInput,
+  type InstallAppData,
   type LaunchAppInput,
+  type LaunchAppData,
   type ListJsDebugTargetsData,
   type ListJsDebugTargetsInput,
   type JsDebugTarget,
@@ -87,10 +89,12 @@ import {
   type ReplayLastStablePathInput,
   type ReasonCode,
   type RunFlowInput,
+  type RunFlowData,
   type RunnerProfile,
   type SessionTimelineEvent,
   type SupportedActionType,
   type ScreenshotInput,
+  type ScreenshotData,
   type ScrollAndTapElementData,
   type ScrollAndTapElementInput,
   type ScrollAndResolveUiTargetData,
@@ -100,9 +104,12 @@ import {
   type InterruptionPolicyRuleV2,
   type TapElementData,
   type TapElementInput,
+  type TapData,
   type TapInput,
   type TerminateAppInput,
+  type TerminateAppData,
   type ToolResult,
+  type TypeTextData,
   type TypeTextInput,
   type ClassifyInterruptionData,
   type ClassifyInterruptionInput,
@@ -339,57 +346,6 @@ const DEFAULT_WAIT_MAX_CONSECUTIVE_CAPTURE_FAILURES = 2;
 const DEFAULT_RECORD_SCREEN_DURATION_MS = 15_000;
 const MAX_ANDROID_SCREENRECORD_DURATION_MS = 180_000;
 
-interface TypeTextData {
-  dryRun: boolean;
-  runnerProfile: RunnerProfile;
-  text: string;
-  command: string[];
-  exitCode: number | null;
-}
-
-interface TapData {
-  dryRun: boolean;
-  runnerProfile: RunnerProfile;
-  x: number;
-  y: number;
-  command: string[];
-  exitCode: number | null;
-}
-
-interface ScreenshotData {
-  dryRun: boolean;
-  runnerProfile: RunnerProfile;
-  outputPath: string;
-  command: string[];
-  exitCode: number | null;
-  evidence?: ExecutionEvidence[];
-}
-
-interface TerminateAppData {
-  dryRun: boolean;
-  runnerProfile: RunnerProfile;
-  appId: string;
-  command: string[];
-  exitCode: number | null;
-}
-
-interface LaunchAppData {
-  dryRun: boolean;
-  runnerProfile: RunnerProfile;
-  appId: string;
-  launchUrl?: string;
-  launchCommand: string[];
-  exitCode: number | null;
-}
-
-interface InstallAppData {
-  dryRun: boolean;
-  runnerProfile: RunnerProfile;
-  artifactPath?: string;
-  installCommand: string[];
-  exitCode: number | null;
-}
-
 function sanitizeArtifactSegment(value: string): string {
   const normalized = value.replace(/[^a-zA-Z0-9_-]+/g, "-").replace(/^-+|-+$/g, "");
   return normalized.length > 0 ? normalized : "session";
@@ -409,24 +365,6 @@ function normalizeRecordBitrateMbps(value: number | undefined): number | undefin
   }
   return Number(value.toFixed(2));
 }
-
-interface BasicRunData {
-  dryRun: boolean;
-  harnessConfigPath: string;
-  runnerProfile: RunnerProfile;
-  runnerScript: string;
-  flowPath: string;
-  requestedFlowPath?: string;
-  configuredFlows: string[];
-  artifactsDir: string;
-  totalRuns: number;
-  passedRuns: number;
-  failedRuns: number;
-  command: string[];
-  exitCode: number | null;
-  summaryLine?: string;
-}
-
 
 function isInterestingDebugLine(line: string): boolean {
   const normalized = line.toLowerCase();
@@ -3944,11 +3882,11 @@ export async function collectBasicRunResult(params: {
   dryRun: boolean;
   execution?: CommandExecution;
   unsupportedCustomFlow?: boolean;
-}): Promise<ToolResult<BasicRunData>> {
+}): Promise<ToolResult<RunFlowData>> {
   const { totalRuns, passedRuns, failedRuns } = await readRunCounts(params.artifactsDir.absolutePath);
   const artifacts = await listArtifacts(params.artifactsDir.absolutePath, params.repoRoot);
 
-  let status: ToolResult<BasicRunData>["status"] = "success";
+  let status: ToolResult<RunFlowData>["status"] = "success";
   let reasonCode: ReasonCode = REASON_CODES.ok;
   const nextSuggestions: string[] = [];
 
@@ -4006,7 +3944,7 @@ export async function collectBasicRunResult(params: {
   };
 }
 
-export async function runFlowWithMaestro(input: RunFlowInput): Promise<ToolResult<BasicRunData>> {
+export async function runFlowWithMaestro(input: RunFlowInput): Promise<ToolResult<RunFlowData>> {
   const startTime = Date.now();
   if (!input.platform) {
     return {

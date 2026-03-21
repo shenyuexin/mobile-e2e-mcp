@@ -48,9 +48,12 @@ import type {
   GetCrashSignalsInput,
   GetLogsData,
   GetLogsInput,
+  InspectUiData,
   InspectUiInput,
   InstallAppInput,
+  InstallAppData,
   LaunchAppInput,
+  LaunchAppData,
   ListJsDebugTargetsData,
   ListJsDebugTargetsInput,
   ListDevicesInput,
@@ -81,7 +84,9 @@ import type {
   ResolveUiTargetData,
   ResolveUiTargetInput,
   RunFlowInput,
+  RunFlowData,
   ScreenshotInput,
+  ScreenshotData,
   SuggestKnownRemediationData,
   SuggestKnownRemediationInput,
   ScrollAndTapElementData,
@@ -92,9 +97,12 @@ import type {
   StartSessionInput,
   TapElementData,
   TapElementInput,
+  TapData,
   TapInput,
   TerminateAppInput,
+  TerminateAppData,
   ToolResult,
+  TypeTextData,
   TypeTextInput,
   TypeIntoElementData,
   TypeIntoElementInput,
@@ -127,7 +135,7 @@ export interface MobileE2EMcpToolRegistry {
   get_logs: (input: GetLogsInput) => Promise<ToolResult<GetLogsData>>;
   get_screen_summary: (input: GetScreenSummaryInput) => Promise<ToolResult<GetScreenSummaryData>>;
   get_session_state: (input: GetSessionStateInput) => Promise<ToolResult<GetSessionStateData>>;
-  inspect_ui: (input: InspectUiInput) => Promise<ToolResult>;
+  inspect_ui: (input: InspectUiInput) => Promise<ToolResult<InspectUiData>>;
   query_ui: (input: QueryUiInput) => Promise<ToolResult<QueryUiData>>;
   recover_to_known_state: (input: RecoverToKnownStateInput) => Promise<ToolResult<RecoverToKnownStateData>>;
   resolve_interruption: (input: ResolveInterruptionInput) => Promise<ToolResult<ResolveInterruptionData>>;
@@ -136,9 +144,9 @@ export interface MobileE2EMcpToolRegistry {
   replay_last_stable_path: (input: ReplayLastStablePathInput) => Promise<ToolResult<ReplayLastStablePathData>>;
   scroll_and_resolve_ui_target: (input: ScrollAndResolveUiTargetInput) => Promise<ToolResult<ScrollAndResolveUiTargetData>>;
   scroll_and_tap_element: (input: ScrollAndTapElementInput) => Promise<ToolResult<ScrollAndTapElementData>>;
-  install_app: (input: InstallAppInput) => Promise<ToolResult>;
+  install_app: (input: InstallAppInput) => Promise<ToolResult<InstallAppData>>;
   list_js_debug_targets: (input: ListJsDebugTargetsInput) => Promise<ToolResult<ListJsDebugTargetsData>>;
-  launch_app: (input: LaunchAppInput) => Promise<ToolResult>;
+  launch_app: (input: LaunchAppInput) => Promise<ToolResult<LaunchAppData>>;
   list_devices: (input: ListDevicesInput) => Promise<ToolResult<{ android: DeviceInfo[]; ios: DeviceInfo[] }>>;
   measure_android_performance: (input: MeasureAndroidPerformanceInput) => Promise<ToolResult<MeasureAndroidPerformanceData>>;
   measure_ios_performance: (input: MeasureIosPerformanceInput) => Promise<ToolResult<MeasureIosPerformanceData>>;
@@ -147,13 +155,13 @@ export interface MobileE2EMcpToolRegistry {
   record_screen: (input: RecordScreenInput) => Promise<ToolResult<RecordScreenData>>;
   reset_app_state: (input: ResetAppStateInput) => Promise<ToolResult<ResetAppStateData>>;
   start_session: (input: StartSessionInput) => Promise<ToolResult<Session>>;
-  run_flow: (input: RunFlowInput) => Promise<ToolResult>;
-  take_screenshot: (input: ScreenshotInput) => Promise<ToolResult>;
+  run_flow: (input: RunFlowInput) => Promise<ToolResult<RunFlowData>>;
+  take_screenshot: (input: ScreenshotInput) => Promise<ToolResult<ScreenshotData>>;
   suggest_known_remediation: (input: SuggestKnownRemediationInput) => Promise<ToolResult<SuggestKnownRemediationData>>;
-  tap: (input: TapInput) => Promise<ToolResult>;
+  tap: (input: TapInput) => Promise<ToolResult<TapData>>;
   tap_element: (input: TapElementInput) => Promise<ToolResult<TapElementData>>;
-  terminate_app: (input: TerminateAppInput) => Promise<ToolResult>;
-  type_text: (input: TypeTextInput) => Promise<ToolResult>;
+  terminate_app: (input: TerminateAppInput) => Promise<ToolResult<TerminateAppData>>;
+  type_text: (input: TypeTextInput) => Promise<ToolResult<TypeTextData>>;
   type_into_element: (input: TypeIntoElementInput) => Promise<ToolResult<TypeIntoElementData>>;
   wait_for_ui: (input: WaitForUiInput) => Promise<ToolResult<WaitForUiData>>;
   end_session: (input: EndSessionInput) => Promise<ToolResult<{ closed: boolean; endedAt: string }>>;
@@ -190,7 +198,7 @@ export class MobileE2EMcpServer {
   async invoke(toolName: "get_logs", input: GetLogsInput): Promise<ToolResult<GetLogsData>>;
   async invoke(toolName: "get_screen_summary", input: GetScreenSummaryInput): Promise<ToolResult<GetScreenSummaryData>>;
   async invoke(toolName: "get_session_state", input: GetSessionStateInput): Promise<ToolResult<GetSessionStateData>>;
-  async invoke(toolName: "inspect_ui", input: InspectUiInput): Promise<ToolResult>;
+  async invoke(toolName: "inspect_ui", input: InspectUiInput): Promise<ToolResult<InspectUiData>>;
   async invoke(toolName: "query_ui", input: QueryUiInput): Promise<ToolResult<QueryUiData>>;
   async invoke(toolName: "recover_to_known_state", input: RecoverToKnownStateInput): Promise<ToolResult<RecoverToKnownStateData>>;
   async invoke(toolName: "resolve_interruption", input: ResolveInterruptionInput): Promise<ToolResult<ResolveInterruptionData>>;
@@ -199,9 +207,9 @@ export class MobileE2EMcpServer {
   async invoke(toolName: "replay_last_stable_path", input: ReplayLastStablePathInput): Promise<ToolResult<ReplayLastStablePathData>>;
   async invoke(toolName: "scroll_and_resolve_ui_target", input: ScrollAndResolveUiTargetInput): Promise<ToolResult<ScrollAndResolveUiTargetData>>;
   async invoke(toolName: "scroll_and_tap_element", input: ScrollAndTapElementInput): Promise<ToolResult<ScrollAndTapElementData>>;
-  async invoke(toolName: "install_app", input: InstallAppInput): Promise<ToolResult>;
+  async invoke(toolName: "install_app", input: InstallAppInput): Promise<ToolResult<InstallAppData>>;
   async invoke(toolName: "list_js_debug_targets", input: ListJsDebugTargetsInput): Promise<ToolResult<ListJsDebugTargetsData>>;
-  async invoke(toolName: "launch_app", input: LaunchAppInput): Promise<ToolResult>;
+  async invoke(toolName: "launch_app", input: LaunchAppInput): Promise<ToolResult<LaunchAppData>>;
   async invoke(toolName: "list_devices", input: ListDevicesInput): Promise<ToolResult<{ android: DeviceInfo[]; ios: DeviceInfo[] }>>;
   async invoke(toolName: "measure_android_performance", input: MeasureAndroidPerformanceInput): Promise<ToolResult<MeasureAndroidPerformanceData>>;
   async invoke(toolName: "measure_ios_performance", input: MeasureIosPerformanceInput): Promise<ToolResult<MeasureIosPerformanceData>>;
@@ -210,13 +218,13 @@ export class MobileE2EMcpServer {
   async invoke(toolName: "record_screen", input: RecordScreenInput): Promise<ToolResult<RecordScreenData>>;
   async invoke(toolName: "start_session", input: StartSessionInput): Promise<ToolResult<Session>>;
   async invoke(toolName: "reset_app_state", input: ResetAppStateInput): Promise<ToolResult<ResetAppStateData>>;
-  async invoke(toolName: "run_flow", input: RunFlowInput): Promise<ToolResult>;
+  async invoke(toolName: "run_flow", input: RunFlowInput): Promise<ToolResult<RunFlowData>>;
   async invoke(toolName: "suggest_known_remediation", input: SuggestKnownRemediationInput): Promise<ToolResult<SuggestKnownRemediationData>>;
-  async invoke(toolName: "take_screenshot", input: ScreenshotInput): Promise<ToolResult>;
-  async invoke(toolName: "tap", input: TapInput): Promise<ToolResult>;
+  async invoke(toolName: "take_screenshot", input: ScreenshotInput): Promise<ToolResult<ScreenshotData>>;
+  async invoke(toolName: "tap", input: TapInput): Promise<ToolResult<TapData>>;
   async invoke(toolName: "tap_element", input: TapElementInput): Promise<ToolResult<TapElementData>>;
-  async invoke(toolName: "terminate_app", input: TerminateAppInput): Promise<ToolResult>;
-  async invoke(toolName: "type_text", input: TypeTextInput): Promise<ToolResult>;
+  async invoke(toolName: "terminate_app", input: TerminateAppInput): Promise<ToolResult<TerminateAppData>>;
+  async invoke(toolName: "type_text", input: TypeTextInput): Promise<ToolResult<TypeTextData>>;
   async invoke(toolName: "type_into_element", input: TypeIntoElementInput): Promise<ToolResult<TypeIntoElementData>>;
   async invoke(toolName: "wait_for_ui", input: WaitForUiInput): Promise<ToolResult<WaitForUiData>>;
   async invoke(toolName: "end_session", input: EndSessionInput): Promise<ToolResult<{ closed: boolean; endedAt: string }>>;
@@ -269,7 +277,14 @@ export class MobileE2EMcpServer {
     | ToolResult<TapElementData>
     | ToolResult<TypeIntoElementData>
     | ToolResult<WaitForUiData>
-    | ToolResult
+    | ToolResult<InspectUiData>
+    | ToolResult<InstallAppData>
+    | ToolResult<LaunchAppData>
+    | ToolResult<RunFlowData>
+    | ToolResult<ScreenshotData>
+    | ToolResult<TapData>
+    | ToolResult<TerminateAppData>
+    | ToolResult<TypeTextData>
     | ToolResult<{ closed: boolean; endedAt: string }>
   > {
     if (toolName === "capture_js_console_logs") return this.tools.capture_js_console_logs(input as CaptureJsConsoleLogsInput);

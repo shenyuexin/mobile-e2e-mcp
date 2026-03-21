@@ -1,6 +1,6 @@
-import type { TerminateAppInput, ToolResult } from "@mobile-e2e-mcp/contracts";
+import type { TerminateAppData, TerminateAppInput, ToolResult } from "@mobile-e2e-mcp/contracts";
 import { terminateAppWithMaestro } from "@mobile-e2e-mcp/adapter-maestro";
 
-export async function terminateApp(input: TerminateAppInput): Promise<ToolResult> {
+export async function terminateApp(input: TerminateAppInput): Promise<ToolResult<TerminateAppData>> {
   return terminateAppWithMaestro(input);
 }
