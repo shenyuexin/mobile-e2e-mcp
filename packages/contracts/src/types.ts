@@ -1294,9 +1294,32 @@ export interface InspectUiInput { sessionId: string; platform?: Platform; runner
 export interface InspectUiQueryInput extends InspectUiInput, InspectUiQuery {}
 export interface QueryUiInput extends InspectUiQueryInput {}
 export interface InstallAppInput { sessionId: string; platform?: Platform; runnerProfile?: RunnerProfile; harnessConfigPath?: string; artifactPath?: string; deviceId?: string; dryRun?: boolean; }
+export interface InstallAppData {
+  dryRun: boolean;
+  runnerProfile: RunnerProfile;
+  artifactPath?: string;
+  installCommand: string[];
+  exitCode: number | null;
+}
 export interface LaunchAppInput { sessionId: string; platform?: Platform; runnerProfile?: RunnerProfile; harnessConfigPath?: string; deviceId?: string; appId?: string; launchUrl?: string; dryRun?: boolean; }
+export interface LaunchAppData {
+  dryRun: boolean;
+  runnerProfile: RunnerProfile;
+  appId: string;
+  launchUrl?: string;
+  launchCommand: string[];
+  exitCode: number | null;
+}
 export interface ListDevicesInput { includeUnavailable?: boolean; }
 export interface ScreenshotInput { sessionId: string; platform?: Platform; runnerProfile?: RunnerProfile; harnessConfigPath?: string; deviceId?: string; outputPath?: string; dryRun?: boolean; }
+export interface ScreenshotData {
+  dryRun: boolean;
+  runnerProfile: RunnerProfile;
+  outputPath: string;
+  command: string[];
+  exitCode: number | null;
+  evidence?: ExecutionEvidence[];
+}
 export type ResetAppStateStrategy = "clear_data" | "uninstall_reinstall" | "keychain_reset";
 export interface ResetAppStateInput {
   sessionId: string;
@@ -1344,8 +1367,30 @@ export interface RecordScreenData {
   evidence?: ExecutionEvidence[];
 }
 export interface TapInput { sessionId: string; platform?: Platform; runnerProfile?: RunnerProfile; harnessConfigPath?: string; deviceId?: string; x: number; y: number; dryRun?: boolean; }
+export interface TapData {
+  dryRun: boolean;
+  runnerProfile: RunnerProfile;
+  x: number;
+  y: number;
+  command: string[];
+  exitCode: number | null;
+}
 export interface TerminateAppInput { sessionId: string; platform?: Platform; runnerProfile?: RunnerProfile; harnessConfigPath?: string; deviceId?: string; appId?: string; dryRun?: boolean; }
+export interface TerminateAppData {
+  dryRun: boolean;
+  runnerProfile: RunnerProfile;
+  appId: string;
+  command: string[];
+  exitCode: number | null;
+}
 export interface TypeTextInput { sessionId: string; platform?: Platform; runnerProfile?: RunnerProfile; harnessConfigPath?: string; deviceId?: string; text: string; dryRun?: boolean; }
+export interface TypeTextData {
+  dryRun: boolean;
+  runnerProfile: RunnerProfile;
+  text: string;
+  command: string[];
+  exitCode: number | null;
+}
 export interface TapElementInput extends InspectUiQuery {
   sessionId: string;
   platform?: Platform;
@@ -1496,6 +1541,22 @@ export interface RunFlowInput {
   launchUrl?: string;
   env?: Record<string, string>;
   androidReplayOptions?: AndroidReplayOptions;
+}
+export interface RunFlowData {
+  dryRun: boolean;
+  harnessConfigPath: string;
+  runnerProfile: RunnerProfile;
+  runnerScript: string;
+  flowPath: string;
+  requestedFlowPath?: string;
+  configuredFlows: string[];
+  artifactsDir: string;
+  totalRuns: number;
+  passedRuns: number;
+  failedRuns: number;
+  command: string[];
+  exitCode: number | null;
+  summaryLine?: string;
 }
 export interface StartSessionInput { platform: Platform; sessionId?: string; deviceId?: string; appId?: string; policyProfile?: string; phase?: string | null; profile?: RunnerProfile | null; sampleName?: string | null; artifactsRoot?: string; harnessConfigPath?: string; }
 export interface EndSessionInput { sessionId: string; artifacts?: string[]; }

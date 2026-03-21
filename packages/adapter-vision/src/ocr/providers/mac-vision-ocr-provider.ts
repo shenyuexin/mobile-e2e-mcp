@@ -89,6 +89,7 @@ export function normalizeMacVisionOutput(
     model: options?.model ?? result.model,
     durationMs: Math.max(0, Math.round(result.durationMs ?? 0)),
     screenshotPath: input.screenshotPath,
+    capturedAt: new Date().toISOString(),
     blocks: applyCrop(blocks, input.crop),
   };
 }
