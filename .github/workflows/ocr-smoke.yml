@@ -52,7 +52,7 @@ jobs:
           if [ -f tests/fixtures/ocr/manifest.json ]; then cp tests/fixtures/ocr/manifest.json ocr-smoke-artifacts/manifest.json; fi
       - name: Upload OCR smoke diagnostics
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ocr-smoke-diagnostics
           path: ocr-smoke-artifacts
