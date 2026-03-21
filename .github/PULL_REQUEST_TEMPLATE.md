@@ -45,4 +45,5 @@
 - [ ] Policy / session / evidence impact reviewed when capability behavior changed
 - [ ] Deterministic-first behavior preserved, with explicit fallback semantics when used
 - [ ] No new platform command builder / selector-query / policy logic added to `packages/adapter-maestro/src/index.ts`
+- [ ] If touching `adapter-maestro` hotspots (`index.ts`/`ui-tools.ts`/`device-runtime.ts`/`recording-runtime.ts`), include line-count delta + boundary justification in PR notes
 - [ ] Scope is focused and reviewable

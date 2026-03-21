@@ -66,6 +66,32 @@ Every extraction should preserve behavior and update the surrounding layers toge
 
 Do not merge a split that only moves code without keeping the verification chain green.
 
+## 2.5 Anti-Degradation Gates (Mandatory)
+
+When a PR touches any of these files:
+
+- `packages/adapter-maestro/src/index.ts`
+- `packages/adapter-maestro/src/ui-tools.ts`
+- `packages/adapter-maestro/src/device-runtime.ts`
+- `packages/adapter-maestro/src/recording-runtime.ts`
+
+the PR description must include:
+
+1. **Line-count delta** for the touched hotspot files (before/after).
+2. **Boundary statement** explaining why new logic is placed in the chosen module.
+3. **Dependency-direction check** confirming no reverse import into higher-layer modules.
+
+### Hard constraints
+
+1. Do not add new platform command builders or selector algorithms to `index.ts`.
+2. Do not add policy decision logic in adapter tool orchestration.
+3. If a hotspot file grows, the PR must include a same-PR extraction that offsets growth or an explicit follow-up extraction plan linked in the PR.
+
+This gate is execution-oriented and complements the repository-level principle in:
+
+- `docs/engineering/ai-first-capability-expansion-guideline.md`
+- `docs/engineering/adapter-maestro-index-decomposition-implementation-playbook.zh-CN.md`
+
 ## 3. Current Module Map
 
 ### `packages/adapter-maestro/src/index.ts`

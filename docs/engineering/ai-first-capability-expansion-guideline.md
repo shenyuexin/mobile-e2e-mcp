@@ -367,6 +367,30 @@ Step 8: run verification across affected layers
 
 ---
 
+## 规则 7.8：巨型 orchestrator 防劣化必须双层落地
+
+为了避免能力扩展后重新长出“巨型入口文件”，规则必须同时落在两层文档中：
+
+1. **仓库级规则（本文件）**：定义通用原则与反模式。
+2. **包级规则（placement 文档）**：定义某个模块（例如 `adapter-maestro`）的具体落点、依赖方向与评审门禁。
+
+以 `adapter-maestro` 为例：
+
+- 仓库级原则保留在本文件（为什么要保持薄入口、为什么不能混层）。
+- 包级执行细则放在 `docs/architecture/adapter-code-placement.md`（放哪里、怎么拆、怎么验）。
+
+### 最低执行门槛
+
+当 PR 涉及 `packages/adapter-maestro/src/index.ts`、`ui-tools.ts`、`device-runtime.ts`、`recording-runtime.ts` 任一文件时，至少补齐：
+
+- 本次改动是否引入低层逻辑回流到 `index.ts` 的说明
+- 相关文件体量变化（增长/下降）说明
+- 本次拆分/迁移后依赖方向是否仍单向
+
+如果只能给出“能跑通”，但不能回答上述问题，该变更不应视为 capability-quality 变更完成。
+
+---
+
 ## 规则 8：新增功能必须补齐“扩展链路”而不是单点修改
 
 对这个仓库来说，一个 capability 的完成，通常至少横跨这些层：
