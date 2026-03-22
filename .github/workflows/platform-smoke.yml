@@ -34,7 +34,15 @@ jobs:
           xcrun simctl boot "${{ steps.resolve-sim.outputs.sim_udid }}" || true
           xcrun simctl bootstatus "${{ steps.resolve-sim.outputs.sim_udid }}" -b
 
+      - name: Prewarm iOS simulator runtime
+        run: |
+          xcrun simctl launch "${{ steps.resolve-sim.outputs.sim_udid }}" com.apple.Preferences || true
+          xcrun simctl terminate "${{ steps.resolve-sim.outputs.sim_udid }}" com.apple.Preferences || true
+          xcrun simctl spawn "${{ steps.resolve-sim.outputs.sim_udid }}" launchctl print system >/dev/null || true
+
       - name: Run iOS Maestro smoke flow
+        env:
+          MAESTRO_DRIVER_STARTUP_TIMEOUT: "240000"
         run: |
           mkdir -p artifacts/platform-smoke/ios
           maestro test \
