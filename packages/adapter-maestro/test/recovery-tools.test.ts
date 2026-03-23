@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import { persistActionRecord } from "@mobile-e2e-mcp/core";
 import { REASON_CODES, type ToolResult, type PerformActionWithEvidenceData } from "@mobile-e2e-mcp/contracts";
 import { replayLastStablePathWithMaestro } from "../src/recovery-tools.ts";
+import { recoverToKnownStateWithMaestro } from "../src/recovery-tools.ts";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 
@@ -105,4 +106,68 @@ test("replayLastStablePathWithMaestro refuses high-risk replay boundaries", asyn
   } finally {
     await cleanupAction(actionId);
   }
+});
+
+test("recoverToKnownStateWithMaestro stops early for backend-terminal readiness", async () => {
+  const sessionId = `recovery-terminal-${Date.now()}`;
+  const result = await recoverToKnownStateWithMaestro(
+    { sessionId, platform: "android", runnerProfile: "phase1", dryRun: true },
+    {
+      getSessionStateWithMaestro: async () => ({
+        status: "success",
+        reasonCode: REASON_CODES.ok,
+        sessionId,
+        durationMs: 1,
+        attempts: 1,
+        artifacts: [],
+        data: {
+          dryRun: true,
+          platform: "android",
+          runnerProfile: "phase1",
+          sessionRecordFound: false,
+          state: { appPhase: "blocked", readiness: "backend_failed_terminal", blockingSignals: ["error_state"] },
+          capabilities: { platform: "android", runnerProfile: "phase1", toolCapabilities: [], groups: [] },
+          screenSummary: { appPhase: "blocked", readiness: "backend_failed_terminal", blockingSignals: ["error_state"] },
+        },
+        nextSuggestions: [],
+      }),
+      launchAppWithMaestro: async () => ({
+        status: "success",
+        reasonCode: REASON_CODES.ok,
+        sessionId,
+        durationMs: 1,
+        attempts: 1,
+        artifacts: [],
+        data: { dryRun: true, runnerProfile: "phase1", appId: "app", launchCommand: [], exitCode: 0 },
+        nextSuggestions: [],
+      }),
+      performActionWithEvidenceWithMaestro: async () => ({
+        status: "success",
+        reasonCode: REASON_CODES.ok,
+        sessionId,
+        durationMs: 1,
+        attempts: 1,
+        artifacts: [],
+        data: {
+          sessionRecordFound: false,
+          outcome: {
+            actionId: "noop",
+            actionType: "tap_element",
+            resolutionStrategy: "deterministic",
+            stateChanged: false,
+            fallbackUsed: false,
+            retryCount: 0,
+            outcome: "success",
+          },
+          evidenceDelta: {},
+          lowLevelStatus: "success",
+          lowLevelReasonCode: REASON_CODES.ok,
+        },
+        nextSuggestions: [],
+      }),
+    },
+  );
+
+  assert.equal(result.status, "failed");
+  assert.equal(result.reasonCode, REASON_CODES.networkBackendTerminal);
 });
