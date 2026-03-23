@@ -30,10 +30,11 @@ function buildBasePerformActionResult(params: {
   failureCategory?: NonNullable<PerformActionWithEvidenceData["outcome"]["failureCategory"]>;
   targetQuality?: NonNullable<PerformActionWithEvidenceData["outcome"]["targetQuality"]>;
   actionabilityReview?: string[];
+  reasonCode?: ToolResult<PerformActionWithEvidenceData>["reasonCode"];
 }): ToolResult<PerformActionWithEvidenceData> {
   return {
     status: params.status,
-    reasonCode: params.status === "failed" ? REASON_CODES.adapterError : REASON_CODES.unsupportedOperation,
+    reasonCode: params.reasonCode ?? (params.status === "failed" ? REASON_CODES.adapterError : REASON_CODES.unsupportedOperation),
     sessionId: params.sessionId,
     durationMs: 5,
     attempts: 1,
@@ -77,7 +78,7 @@ function buildBasePerformActionResult(params: {
       },
       actionabilityReview: params.actionabilityReview,
       lowLevelStatus: params.status,
-      lowLevelReasonCode: params.status === "failed" ? REASON_CODES.adapterError : REASON_CODES.unsupportedOperation,
+      lowLevelReasonCode: params.reasonCode ?? (params.status === "failed" ? REASON_CODES.adapterError : REASON_CODES.unsupportedOperation),
       evidence: [],
       sessionAuditPath: buildSessionAuditRelativePath(params.sessionId),
     },
@@ -411,6 +412,45 @@ test("performActionWithAutoRemediation stops early on offline-terminal readiness
     );
 
     assert.equal(result.data.autoRemediation?.stopReason, "offline_terminal");
+    assert.equal(recoverCalled, false);
+  } finally {
+    await cleanupSessionArtifacts(sessionId);
+  }
+});
+
+test("performActionWithAutoRemediation stops when retry budget is exhausted without state change", async () => {
+  const sessionId = `auto-remediation-retry-exhausted-${Date.now()}`;
+  const server = createServer();
+  let recoverCalled = false;
+
+  try {
+    await server.invoke("start_session", { sessionId, platform: "android", deviceId: buildTestDeviceId(sessionId), profile: "phase1" });
+    const result = await performActionWithAutoRemediation(
+      {
+        sessionId,
+        platform: "android",
+        dryRun: true,
+        autoRemediate: true,
+        action: { actionType: "tap_element", contentDesc: "Open list" },
+      },
+      {
+        performAction: async () => buildBasePerformActionResult({
+          sessionId,
+          status: "failed",
+          actionId: "auto-retry-exhausted",
+          appPhase: "loading",
+          readiness: "waiting_network",
+          reasonCode: REASON_CODES.retryExhaustedNoStateChange,
+        }),
+        explainLastFailure: async () => { throw new Error("explain should not run"); },
+        rankFailureCandidates: async () => { throw new Error("rank should not run"); },
+        suggestKnownRemediation: async () => { throw new Error("suggest should not run"); },
+        recoverToKnownState: async () => { recoverCalled = true; throw new Error("recover should not run"); },
+        replayLastStablePath: async () => { throw new Error("replay should not run"); },
+      },
+    );
+
+    assert.equal(result.data.autoRemediation?.stopReason, "retry_exhausted_no_state_change");
     assert.equal(recoverCalled, false);
   } finally {
     await cleanupSessionArtifacts(sessionId);

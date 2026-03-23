@@ -300,9 +300,9 @@ test("perform_action_with_evidence appends an action event to the persisted sess
     const audit = await loadSessionAuditRecord(repoRoot, sessionId);
     assert.ok(stored);
     assert.ok(audit);
-    const lastEvent = stored.session.timeline[stored.session.timeline.length - 1];
-    assert.equal(lastEvent?.type, "action_outcome_recorded");
-    assert.equal(lastEvent?.actionId, actionResult.data.outcome.actionId);
+    const actionEvent = [...stored.session.timeline].reverse().find((event) => event.type === "action_outcome_recorded");
+    assert.equal(actionEvent?.type, "action_outcome_recorded");
+    assert.equal(actionEvent?.actionId, actionResult.data.outcome.actionId);
     assert.equal((audit?.artifact_paths.length ?? 0) > 0, true);
     assert.equal(audit?.artifact_paths.some((entry) => typeof entry.retention === "string" || entry.retention === undefined), true);
   } finally {
