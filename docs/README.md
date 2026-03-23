@@ -34,3 +34,12 @@ If a delivery process becomes stable and reusable, promote it into `architecture
 - `engineering/ai-first-capability-expansion-guideline.md` — keep new features aligned with AI-first, deterministic-first, policy-aware harness design
 - `engineering/capability-family-inventory.md` — capability family ownership and phased refactor guardrails
 - `engineering/adapter-maestro-index-decomposition-implementation-playbook.zh-CN.md` — step-by-step implementation playbook for shrinking adapter-maestro `index.ts` without boundary regressions
+
+## Recommended architecture entry points
+
+- `architecture/orchestration-robustness-strategy.md` — priority deepening areas for high-frequency automation-flow failures and network anomaly handling
+- `architecture/bounded-retry-and-state-change-evidence-architecture.md` — runtime design for bounded retry, checkpoint, replay-safe resume, and state-change proof
+- `architecture/network-anomaly-runtime-architecture.md` — runtime design for network-aware readiness, attribution, retry, and early-stop behavior
+- `architecture/orchestration-robustness-implementation-checklist.md` — directly executable milestone checklist for robustness work
+- `architecture/failure-attribution-and-recovery-architecture.zh-CN.md` — bounded failure-to-recovery closure
+- `architecture/interruption-orchestrator-v2.zh-CN.md` — interruption handling runtime architecture
