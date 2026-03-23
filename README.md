@@ -341,7 +341,7 @@ the repository settings:
 - [docs/architecture/policy-engine-runtime-architecture.zh-CN.md](docs/architecture/policy-engine-runtime-architecture.zh-CN.md) — policy runtime/guard/scope mapping
 - [docs/architecture/platform-implementation-matrix.zh-CN.md](docs/architecture/platform-implementation-matrix.zh-CN.md) — cross-platform support matrix
 - [docs/delivery/roadmap.md](docs/delivery/roadmap.md) — delivery phases
-- [docs/delivery/npm-release-and-git-tagging.zh-CN.md](docs/delivery/npm-release-and-git-tagging.zh-CN.md) — npm 发版与 Git tag 一体化规范（含 PR/pre-tag/tag 分层 doc-sync 规则）
+- [docs/delivery/npm-release-and-git-tagging.zh-CN.md](docs/delivery/npm-release-and-git-tagging.zh-CN.md) — npm release and Git tagging integration guide (includes layered doc-sync rules for PR/pre-tag/tag stages)
 - [docs/showcase/README.md](docs/showcase/README.md) — real-device demo evidence and repro scripts
 - [tests/README.md](tests/README.md) — test layers and CI scope
 
