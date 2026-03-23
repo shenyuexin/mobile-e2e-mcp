@@ -26,18 +26,11 @@ npx -y @shenyuexin/mobile-e2e-mcp@latest
 }
 ```
 
-## Key tools
+## AI agent invocation guides
 
-- `describe_capabilities`
-- `start_session` / `end_session`
-- `run_flow`
-- `inspect_ui`, `query_ui`, `wait_for_ui`
-- `tap_element`, `type_into_element`, `scroll_and_tap_element`
-- `get_logs`, `get_crash_signals`, `collect_debug_evidence`
-
-## Golden path guide
-
-- https://github.com/shenyuexin/mobile-e2e-mcp/blob/main/docs/guides/golden-path.md
+- Canonical invocation guide: https://github.com/shenyuexin/mobile-e2e-mcp/blob/main/docs/guides/ai-agent-invocation.zh-CN.md
+- Golden path guide: https://github.com/shenyuexin/mobile-e2e-mcp/blob/main/docs/guides/golden-path.md
+- Flow generation guide: https://github.com/shenyuexin/mobile-e2e-mcp/blob/main/docs/guides/flow-generation.md
 
 For full architecture and contribution docs, see:
 

@@ -55,21 +55,31 @@
 
 原则：**不是每个 tag 都必须更新 README，但每个对外可见能力变更都必须有公共文档落点**。
 
+对于 AI / 用户调用方式相关变化，默认应优先检查 canonical invocation guide，而不是把相同说明复制到多篇文档中：
+
+- `docs/guides/ai-agent-invocation.zh-CN.md`（调用真相源）
+- `docs/guides/golden-path.md`（首跑前门）
+- `docs/guides/flow-generation.md`（录制 / 导出 / 回放专题）
+
 建议按三层执行：
 
 1. **PR 阶段（主关口）**
    - 对外可见变化（能力边界、工具目录、命令入口、支持平台、发布流程）应在 PR 内同步文档。
-   - 推荐至少更新其一：`README.md` / `README.zh-CN.md` / `docs/README.md` 或对应专题文档。
+   - 若变化影响 AI / 用户调用方式，优先更新 `docs/guides/ai-agent-invocation.zh-CN.md`；专题变化再更新对应 topic guide。
+   - README / `docs/README.md` 更适合作为入口导航，不应承担完整调用流程的重复维护。
 2. **`release:mcp:prepare-tag` 阶段（二次确认）**
    - 在发版前做一次“自上个 MCP tag 以来的对外变化”清单核对，确认是否存在 public docs 漂移。
+   - 如果命中了 tool surface / capability boundary 变化，但 canonical invocation guide 未更新，应至少给出 warning 并人工确认是否属于豁免场景。
 3. **Tag workflow 阶段（兜底提醒）**
-   - 建议做 warning/notice，不建议因为 README 未更新直接阻断 npm publish。
+   - 建议做 warning/notice，不建议因为 README 或 invocation guide 未更新直接阻断 npm publish。
 
 建议触发条件（命中任一目录时，优先检查文档是否需要同步；这些是高概率触发器，不代表“命中就必须改文档”）：
 
 - `packages/mcp-server/src/server.ts`（工具暴露面）
+- `packages/mcp-server/src/tools/**`（工具行为与推荐调用路径）
 - `packages/contracts/**`（契约/Schema 变更）
 - `configs/profiles/**`、`configs/policies/**`（支持边界/治理策略）
+- `docs/guides/ai-agent-invocation.zh-CN.md`、`docs/guides/golden-path.md`、`docs/guides/flow-generation.md`（调用入口与专题指南）
 - `docs/architecture/**`（对外架构叙事变化）
 - `.github/workflows/release-mcp.yml`、`scripts/release/**`（发版自动化流程变化）
 - `packages/mcp-server/package.json` 中影响安装/发布/仓库关联的元数据字段
@@ -80,7 +90,7 @@
 - 测试/脚手架调整且不影响外部用法
 - 仅修复拼写、格式、注释
 
-> 实践建议：将“public docs 是否需要更新”作为 release checklist 固定项，而不是把它设计成强制失败门禁。
+> 实践建议：将“public docs / canonical invocation guide 是否需要更新”作为 release checklist 固定项，而不是把它设计成强制失败门禁。
 
 ## 标准操作流程（推荐）
 

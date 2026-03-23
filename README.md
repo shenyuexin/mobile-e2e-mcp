@@ -24,7 +24,8 @@ If you want a quick hands-on tour before diving into architecture details, start
   - [docs/showcase/README.md](docs/showcase/README.md)
   - [docs/showcase/demo-playbook.zh-CN.md](docs/showcase/demo-playbook.zh-CN.md)
   - [docs/showcase/failure-intelligence-demo.md](docs/showcase/failure-intelligence-demo.md)
-- Golden path guide:
+- AI invocation and task guides:
+  - [docs/guides/ai-agent-invocation.zh-CN.md](docs/guides/ai-agent-invocation.zh-CN.md)
   - [docs/guides/golden-path.md](docs/guides/golden-path.md)
   - [docs/guides/flow-generation.md](docs/guides/flow-generation.md)
 - CI evidence and boundary notes:
@@ -133,6 +134,12 @@ For AI/code-analysis workflows, use this order:
 2. **Read `docs/engineering/ai-first-capability-expansion-guideline.md`** before changing tools, contracts, adapters, policy/session/evidence flows, or support-boundary docs.
 3. **Delta-check live repo files** (`git ls-files` + targeted reads).
 4. Treat `repomix-output.xml` as the **primary entry point**, not the only source of truth.
+
+For MCP tool usage and invocation sequencing after installation, use:
+
+- [`docs/guides/ai-agent-invocation.zh-CN.md`](docs/guides/ai-agent-invocation.zh-CN.md) — canonical tool-selection and invocation guide
+- [`docs/guides/golden-path.md`](docs/guides/golden-path.md) — first-run closed loop
+- [`docs/guides/flow-generation.md`](docs/guides/flow-generation.md) — record/export/replay topic guide
 
 Why: packed context may omit some files (binary assets, ignored paths, etc.), so final conclusions must be verified against live files.
 
@@ -323,6 +330,7 @@ the repository settings:
 
 - [README.zh-CN.md](README.zh-CN.md) — Chinese overview
 - [docs/README.md](docs/README.md) — public documentation index and publication policy
+- [docs/guides/ai-agent-invocation.zh-CN.md](docs/guides/ai-agent-invocation.zh-CN.md) — canonical AI-agent invocation guide
 - [docs/engineering/ai-first-capability-expansion-guideline.md](docs/engineering/ai-first-capability-expansion-guideline.md) — feature expansion rules for AI-first harness capabilities
 - [docs/architecture/overview.md](docs/architecture/overview.md) — goals/scope/principles
 - [docs/architecture/architecture.md](docs/architecture/architecture.md) — reference architecture

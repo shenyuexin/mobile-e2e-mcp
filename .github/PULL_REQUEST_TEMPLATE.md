@@ -12,6 +12,7 @@
 - User-visible or AI-facing behavior change:
 - Platforms/frameworks affected: Android / iOS / React Native / Flutter / docs-only
 - Support boundary change: none / contract-ready / experimental / reproducible-demo / ci-verified
+- Invocation guidance impact: none / canonical / topic-only
 
 ## Implementation notes
 
@@ -44,6 +45,7 @@
 
 - [ ] No secrets, credentials, or local artifacts committed
 - [ ] Docs updated when behavior or support boundary changed
+- [ ] Invocation guidance updated or explicitly marked not needed when tool usage, sequencing, session rules, recovery routing, or support boundary changed
 - [ ] `docs/engineering/ai-first-capability-expansion-guideline.md` was reviewed for any capability-surface change (or explicitly marked not applicable)
 - [ ] Contracts/exports updated before downstream consumption when applicable
 - [ ] Policy / session / evidence impact reviewed when capability behavior changed

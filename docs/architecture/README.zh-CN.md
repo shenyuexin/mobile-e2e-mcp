@@ -17,7 +17,6 @@
 - [execution-coordinator-and-fallback-ladder.zh-CN.md](./execution-coordinator-and-fallback-ladder.zh-CN.md)
 - [evidence-timeline-architecture.zh-CN.md](./evidence-timeline-architecture.zh-CN.md)
 - [failure-attribution-and-recovery-architecture.zh-CN.md](./failure-attribution-and-recovery-architecture.zh-CN.md)
-- [tool-implementation-handbook.zh-CN.md](./tool-implementation-handbook.zh-CN.md) — MCP 工具用户手册（46 tools，用途 + 命令）
 
 ## 3. 平台与框架
 

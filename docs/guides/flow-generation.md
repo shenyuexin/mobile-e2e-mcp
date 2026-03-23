@@ -1,5 +1,7 @@
 # Flow Generation Guide
 
+> **Canonical invocation notice**: Authoritative invocation rules and sequencing live in [AI Agent Invocation Guide](./ai-agent-invocation.zh-CN.md). This document covers only the record/export/replay workflow.
+
 This document is the flow export/replay operation guide. It covers two valid paths:
 
 1. Action-record path: `perform_action_with_evidence -> export_session_flow -> run_flow`

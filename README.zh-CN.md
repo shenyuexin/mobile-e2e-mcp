@@ -23,6 +23,10 @@
 - 演示说明与证据索引：
   - [docs/showcase/README.md](docs/showcase/README.md)
   - [docs/showcase/demo-playbook.zh-CN.md](docs/showcase/demo-playbook.zh-CN.md)
+- AI 调用与任务指南：
+  - [docs/guides/ai-agent-invocation.zh-CN.md](docs/guides/ai-agent-invocation.zh-CN.md)
+  - [docs/guides/golden-path.md](docs/guides/golden-path.md)
+  - [docs/guides/flow-generation.md](docs/guides/flow-generation.md)
 - CI 证据与边界说明：
   - [docs/showcase/ci-evidence.md](docs/showcase/ci-evidence.md)
   - [CI 工作流运行记录](https://github.com/shenyuexin/mobile-e2e-mcp/actions/workflows/ci.yml)
@@ -111,6 +115,12 @@
 2. **如果改动涉及 tools、contracts、adapter、policy/session/evidence 流程或支持边界文案，先读 `docs/engineering/ai-first-capability-expansion-guideline.md`。**
 3. **再核对实时仓库文件**（`git ls-files` + 定向读取）。
 4. 将 `repomix-output.xml` 作为**第一入口**，但不要当作唯一事实来源。
+
+如果你是要在安装后实际调用 MCP 工具，请优先阅读：
+
+- [`docs/guides/ai-agent-invocation.zh-CN.md`](docs/guides/ai-agent-invocation.zh-CN.md) —— AI 调用真相源
+- [`docs/guides/golden-path.md`](docs/guides/golden-path.md) —— 首跑闭环前门
+- [`docs/guides/flow-generation.md`](docs/guides/flow-generation.md) —— 录制 / 导出 / 回放专题
 
 原因：打包上下文可能遗漏部分文件（如二进制、忽略路径等），最终结论必须由真实仓库文件校验。
 
@@ -278,6 +288,7 @@ pnpm test:ci
 
 - [README.md](README.md) — English overview
 - [docs/README.md](docs/README.md) — 对外文档总索引与公开边界
+- [docs/guides/ai-agent-invocation.zh-CN.md](docs/guides/ai-agent-invocation.zh-CN.md) — AI Agent 调用真相源与默认工具链
 - [docs/architecture/overview.md](docs/architecture/overview.md) — 目标/范围/原则
 - [docs/architecture/architecture.md](docs/architecture/architecture.md) — 参考架构
 - [docs/architecture/capability-map.md](docs/architecture/capability-map.md) — 能力域与成熟度
