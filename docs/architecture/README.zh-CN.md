@@ -29,6 +29,10 @@
 
 ## 4. 可靠性与治理专题
 
+- [orchestration-robustness-strategy.md](./orchestration-robustness-strategy.md) — 高频自动化场景下的能力深化优先级：先做 orchestration robustness，再做 network anomaly handling
+- [bounded-retry-and-state-change-evidence-architecture.md](./bounded-retry-and-state-change-evidence-architecture.md) — bounded retry、state-change evidence、checkpoint / replay-safe boundary 的运行时深化设计
+- [network-anomaly-runtime-architecture.md](./network-anomaly-runtime-architecture.md) — network-aware readiness、retry、stop 与平台边界的运行时架构
+- [orchestration-robustness-implementation-checklist.md](./orchestration-robustness-implementation-checklist.md) — orchestration robustness 的可直接执行实施清单与验证门禁
 - [interruption-orchestrator-v2.zh-CN.md](./interruption-orchestrator-v2.zh-CN.md)
 - [mobile-e2e-ocr-fallback-design.md](./mobile-e2e-ocr-fallback-design.md)
 - [mobile-e2e-ocr-fallback-implementation-checklist.md](./mobile-e2e-ocr-fallback-implementation-checklist.md)
