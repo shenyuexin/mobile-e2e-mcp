@@ -87,3 +87,4 @@ Minimum app-under-test contract expectations:
 - Execution coordinator and fallback ladder: [`docs/architecture/execution-coordinator-and-fallback-ladder.zh-CN.md`](./execution-coordinator-and-fallback-ladder.zh-CN.md)
 - Evidence and timeline architecture: [`docs/architecture/evidence-timeline-architecture.zh-CN.md`](./evidence-timeline-architecture.zh-CN.md)
 - Failure attribution and recovery architecture: [`docs/architecture/failure-attribution-and-recovery-architecture.zh-CN.md`](./failure-attribution-and-recovery-architecture.zh-CN.md)
+- Orchestration robustness strategy: [`docs/architecture/orchestration-robustness-strategy.md`](./orchestration-robustness-strategy.md)
