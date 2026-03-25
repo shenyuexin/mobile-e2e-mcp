@@ -1,12 +1,8 @@
-import { mkdir, writeFile } from "node:fs/promises";
-import path from "node:path";
-import { setTimeout as delay } from "node:timers/promises";
 import type {
   InspectUiData,
   InspectUiInput,
   QueryUiData,
   QueryUiInput,
-  QueryUiMatch,
   ResolveUiTargetData,
   ResolveUiTargetInput,
   ToolResult,
@@ -22,34 +18,27 @@ import {
   resolveRepoPath,
 } from "./harness-config.js";
 import {
-  buildInspectUiSummary,
   buildNonExecutedUiTargetResolution,
   buildUiTargetResolution,
   hasQueryUiSelector,
-  isWaitConditionMet,
-  parseAndroidUiHierarchyNodes,
   parseInspectUiSummary,
   parseIosInspectSummary,
-  queryUiNodes,
   reasonCodeForResolutionStatus,
-  shouldAbortWaitForUiAfterReadFailure,
 } from "./ui-model.js";
 import {
-  type AndroidUiSnapshot,
-  type AndroidUiSnapshotFailure,
-  type IosUiSnapshot,
-  type IosUiSnapshotFailure,
   buildAndroidUiDumpCommands,
   captureAndroidUiSnapshot,
+  captureAndroidUiRuntimeSnapshot,
   captureIosUiSnapshot,
+  captureIosUiRuntimeSnapshot,
   isAndroidUiSnapshotFailure,
   isIosUiSnapshotFailure,
+  runUiWaitPollingLoop,
 } from "./ui-runtime.js";
 import { resolveUiRuntimePlatformHooks } from "./ui-runtime-platform.js";
 import {
   buildExecutionEvidence,
   buildFailureReason,
-  executeRunner,
   toRelativePath,
 } from "./runtime-shared.js";
 import {
@@ -114,8 +103,6 @@ export async function inspectUiWithMaestroTool(
     platform,
     outputPath: input.outputPath,
   });
-  const absoluteOutputPath = path.resolve(repoRoot, relativeOutputPath);
-
   if (platform === "ios") {
     const idbCommand = runtimeHooks.buildHierarchyCapturePreviewCommand(deviceId);
 
@@ -151,11 +138,26 @@ export async function inspectUiWithMaestroTool(
       };
     }
 
-    const idbProbe = await runtimeHooks.probeRuntimeAvailability?.(repoRoot);
-    if (!idbProbe || idbProbe.exitCode !== 0) {
+    const snapshot = await captureIosUiSnapshot(
+      repoRoot,
+      deviceId,
+      input.sessionId,
+      runnerProfile,
+      input.outputPath,
+      {
+        sessionId: input.sessionId,
+        platform,
+        runnerProfile,
+        harnessConfigPath: input.harnessConfigPath,
+        deviceId,
+        outputPath: input.outputPath,
+        dryRun: false,
+      },
+    );
+    if (isIosUiSnapshotFailure(snapshot)) {
       return {
         status: "partial",
-        reasonCode: runtimeHooks.probeFailureReasonCode,
+        reasonCode: snapshot.reasonCode,
         sessionId: input.sessionId,
         durationMs: Date.now() - startTime,
         attempts: 1,
@@ -163,49 +165,43 @@ export async function inspectUiWithMaestroTool(
         data: {
           dryRun: false,
           runnerProfile,
-          outputPath: relativeOutputPath,
+          outputPath: snapshot.outputPath,
           command: idbCommand,
-          exitCode: idbProbe?.exitCode ?? null,
+          exitCode: snapshot.exitCode,
           supportLevel: "partial",
           platformSupportNote:
             "iOS inspect_ui depends on idb availability in the local environment.",
         },
-        nextSuggestions: [runtimeHooks.probeUnavailableSuggestion("inspect_ui")],
+        nextSuggestions: [snapshot.message],
       };
     }
 
-    await mkdir(path.dirname(absoluteOutputPath), { recursive: true });
-    const idbExecution = await executeRunner(idbCommand, repoRoot, process.env);
-    if (idbExecution.exitCode === 0) {
-      await writeFile(absoluteOutputPath, idbExecution.stdout, "utf8");
-    }
-
     return {
-      status: idbExecution.exitCode === 0 ? "success" : "partial",
+      status: snapshot.execution.exitCode === 0 ? "success" : "partial",
       reasonCode:
-        idbExecution.exitCode === 0
+        snapshot.execution.exitCode === 0
           ? REASON_CODES.ok
           : REASON_CODES.configurationError,
       sessionId: input.sessionId,
       durationMs: Date.now() - startTime,
       attempts: 1,
       artifacts:
-        idbExecution.exitCode === 0
-          ? [toRelativePath(repoRoot, absoluteOutputPath)]
+        snapshot.execution.exitCode === 0
+          ? [toRelativePath(repoRoot, snapshot.absoluteOutputPath)]
           : [],
       data: {
         dryRun: false,
         runnerProfile,
-        outputPath: relativeOutputPath,
-        command: idbCommand,
-        exitCode: idbExecution.exitCode,
+        outputPath: snapshot.relativeOutputPath,
+        command: snapshot.command,
+        exitCode: snapshot.execution.exitCode,
         supportLevel: "partial",
         evidence:
-          idbExecution.exitCode === 0
+          snapshot.execution.exitCode === 0
             ? [
                 buildExecutionEvidence(
                   "ui_dump",
-                  relativeOutputPath,
+                  snapshot.relativeOutputPath,
                   "partial",
                   "Captured iOS UI hierarchy artifact.",
                 ),
@@ -213,14 +209,17 @@ export async function inspectUiWithMaestroTool(
             : undefined,
         platformSupportNote:
           "iOS inspect_ui can capture hierarchy artifacts, but downstream query/action tooling is still partial compared with Android.",
-        content: idbExecution.exitCode === 0 ? idbExecution.stdout : undefined,
+        content:
+          snapshot.execution.exitCode === 0
+            ? snapshot.execution.stdout
+            : undefined,
         summary:
-          idbExecution.exitCode === 0
-            ? parseIosInspectSummary(idbExecution.stdout)
+          snapshot.execution.exitCode === 0
+            ? parseIosInspectSummary(snapshot.execution.stdout)
             : undefined,
       },
       nextSuggestions:
-        idbExecution.exitCode === 0
+        snapshot.execution.exitCode === 0
           ? []
           : [
               "Ensure idb companion is available for the selected simulator and retry inspect_ui.",
@@ -229,8 +228,6 @@ export async function inspectUiWithMaestroTool(
   }
 
   const { dumpCommand, readCommand } = buildAndroidUiDumpCommands(deviceId);
-
-  await mkdir(path.dirname(absoluteOutputPath), { recursive: true });
 
   if (input.dryRun) {
     return {
@@ -262,76 +259,87 @@ export async function inspectUiWithMaestroTool(
     };
   }
 
-  const dumpExecution = await executeRunner(dumpCommand, repoRoot, process.env);
-  if (dumpExecution.exitCode !== 0) {
-    return {
-      status: "failed",
-      reasonCode: buildFailureReason(
-        dumpExecution.stderr,
-        dumpExecution.exitCode,
-      ),
+  const snapshot = await captureAndroidUiSnapshot(
+    repoRoot,
+    deviceId,
+    input.sessionId,
+    runnerProfile,
+    input.outputPath,
+    {
       sessionId: input.sessionId,
-      durationMs: Date.now() - startTime,
-      attempts: 1,
-      artifacts: [],
-      data: {
-        dryRun: false,
-        runnerProfile,
-        outputPath: relativeOutputPath,
-        command: dumpCommand,
-        exitCode: dumpExecution.exitCode,
-        supportLevel: "full",
-      },
-      nextSuggestions: [
-        "Check Android device state and ensure uiautomator dump is permitted before retrying inspect_ui.",
-      ],
-    };
-  }
-
-  const readExecution = await executeRunner(readCommand, repoRoot, process.env);
-  if (readExecution.exitCode === 0) {
-    await writeFile(absoluteOutputPath, readExecution.stdout, "utf8");
-  }
+      platform,
+      runnerProfile,
+      harnessConfigPath: input.harnessConfigPath,
+      deviceId,
+      outputPath: input.outputPath,
+      dryRun: false,
+    },
+  );
+  if (isAndroidUiSnapshotFailure(snapshot)) {
+      return {
+        status: "failed",
+      reasonCode: snapshot.reasonCode,
+        sessionId: input.sessionId,
+        durationMs: Date.now() - startTime,
+        attempts: 1,
+        artifacts: [],
+        data: {
+          dryRun: false,
+          runnerProfile,
+          outputPath: snapshot.outputPath,
+          command: dumpCommand,
+          exitCode: snapshot.exitCode,
+          supportLevel: "full",
+        },
+      nextSuggestions: [snapshot.message],
+      };
+    }
 
   return {
-    status: readExecution.exitCode === 0 ? "success" : "failed",
+    status: snapshot.readExecution.exitCode === 0 ? "success" : "failed",
     reasonCode:
-      readExecution.exitCode === 0
+      snapshot.readExecution.exitCode === 0
         ? REASON_CODES.ok
-        : buildFailureReason(readExecution.stderr, readExecution.exitCode),
+        : buildFailureReason(
+            snapshot.readExecution.stderr,
+            snapshot.readExecution.exitCode,
+          ),
     sessionId: input.sessionId,
     durationMs: Date.now() - startTime,
     attempts: 1,
     artifacts:
-      readExecution.exitCode === 0
-        ? [toRelativePath(repoRoot, absoluteOutputPath)]
+      snapshot.readExecution.exitCode === 0
+        ? [toRelativePath(repoRoot, snapshot.absoluteOutputPath)]
         : [],
     data: {
       dryRun: false,
       runnerProfile,
-      outputPath: relativeOutputPath,
-      command: readCommand,
-      exitCode: readExecution.exitCode,
+      outputPath: snapshot.relativeOutputPath,
+      command: snapshot.readCommand,
+      exitCode: snapshot.readExecution.exitCode,
       supportLevel: "full",
       evidence:
-        readExecution.exitCode === 0
+        snapshot.readExecution.exitCode === 0
           ? [
               buildExecutionEvidence(
                 "ui_dump",
-                relativeOutputPath,
+                snapshot.relativeOutputPath,
                 "full",
                 "Captured Android UI hierarchy artifact.",
               ),
             ]
           : undefined,
-      content: readExecution.exitCode === 0 ? readExecution.stdout : undefined,
+      content:
+        snapshot.readExecution.exitCode === 0
+          ? snapshot.readExecution.stdout
+          : undefined,
       summary:
-        readExecution.exitCode === 0
-          ? parseInspectUiSummary(readExecution.stdout)
+        snapshot.readExecution.exitCode === 0
+          ? parseInspectUiSummary(snapshot.readExecution.stdout)
           : undefined,
     },
     nextSuggestions:
-      readExecution.exitCode === 0
+      snapshot.readExecution.exitCode === 0
         ? []
         : ["Check Android device state before retrying inspect_ui."],
   };
@@ -520,11 +528,8 @@ export async function queryUiWithMaestroTool(
     };
   }
 
-  const absoluteOutputPath = path.resolve(repoRoot, defaultOutputPath);
   const { dumpCommand, readCommand } = buildAndroidUiDumpCommands(deviceId);
   const command = [...dumpCommand, ...readCommand];
-
-  await mkdir(path.dirname(absoluteOutputPath), { recursive: true });
 
   if (input.dryRun) {
     return {
@@ -558,90 +563,91 @@ export async function queryUiWithMaestroTool(
     };
   }
 
-  const dumpExecution = await executeRunner(dumpCommand, repoRoot, process.env);
-  if (dumpExecution.exitCode !== 0) {
-    return {
-      status: "failed",
-      reasonCode: buildFailureReason(
-        dumpExecution.stderr,
-        dumpExecution.exitCode,
-      ),
+  const snapshot = await captureAndroidUiSnapshot(
+    repoRoot,
+    deviceId,
+    input.sessionId,
+    runnerProfile,
+    input.outputPath,
+    {
       sessionId: input.sessionId,
-      durationMs: Date.now() - startTime,
-      attempts: 1,
-      artifacts: [],
-      data: {
-        dryRun: false,
-        runnerProfile,
-        outputPath: defaultOutputPath,
-        query,
-        command,
-        exitCode: dumpExecution.exitCode,
-        result: { query, totalMatches: 0, matches: [] },
-        supportLevel: "full",
-      },
-      nextSuggestions: [
-        "Check Android device state and ensure uiautomator dump is permitted before retrying query_ui.",
-      ],
-    };
-  }
+      platform: input.platform,
+      runnerProfile,
+      harnessConfigPath: input.harnessConfigPath,
+      deviceId,
+      outputPath: input.outputPath,
+      dryRun: false,
+      ...query,
+    },
+  );
+  if (isAndroidUiSnapshotFailure(snapshot)) {
+      return {
+        status: "failed",
+        reasonCode: snapshot.reasonCode,
+        sessionId: input.sessionId,
+        durationMs: Date.now() - startTime,
+        attempts: 1,
+        artifacts: [],
+        data: {
+          dryRun: false,
+          runnerProfile,
+          outputPath: snapshot.outputPath,
+          query,
+          command,
+          exitCode: snapshot.exitCode,
+          result: { query, totalMatches: 0, matches: [] },
+          supportLevel: "full",
+        },
+        nextSuggestions: [snapshot.message],
+      };
+    }
 
-  const readExecution = await executeRunner(readCommand, repoRoot, process.env);
-  if (readExecution.exitCode === 0) {
-    await writeFile(absoluteOutputPath, readExecution.stdout, "utf8");
-  }
-
-  const nodes =
-    readExecution.exitCode === 0
-      ? parseAndroidUiHierarchyNodes(readExecution.stdout)
-      : [];
-  const summary =
-    readExecution.exitCode === 0
-      ? buildInspectUiSummary(nodes)
-      : undefined;
-  const queryResult =
-    readExecution.exitCode === 0
-      ? queryUiNodes(nodes, query)
-      : { totalMatches: 0, matches: [] as QueryUiMatch[] };
+  const queryResult = { query, ...snapshot.queryResult };
 
   return {
-    status: readExecution.exitCode === 0 ? "success" : "failed",
+    status: snapshot.readExecution.exitCode === 0 ? "success" : "failed",
     reasonCode:
-      readExecution.exitCode === 0
+      snapshot.readExecution.exitCode === 0
         ? REASON_CODES.ok
-        : buildFailureReason(readExecution.stderr, readExecution.exitCode),
+        : buildFailureReason(
+            snapshot.readExecution.stderr,
+            snapshot.readExecution.exitCode,
+          ),
     sessionId: input.sessionId,
     durationMs: Date.now() - startTime,
     attempts: 1,
     artifacts:
-      readExecution.exitCode === 0
-        ? [toRelativePath(repoRoot, absoluteOutputPath)]
+      snapshot.readExecution.exitCode === 0
+        ? [toRelativePath(repoRoot, snapshot.absoluteOutputPath)]
         : [],
     data: {
       dryRun: false,
       runnerProfile,
-      outputPath: defaultOutputPath,
+      outputPath: snapshot.relativeOutputPath,
       query,
       command,
-      exitCode: readExecution.exitCode,
-      result: { query, ...queryResult },
+      exitCode: snapshot.readExecution.exitCode,
+      result: queryResult,
       supportLevel: "full",
       evidence:
-        readExecution.exitCode === 0
+        snapshot.readExecution.exitCode === 0
           ? [
               buildExecutionEvidence(
                 "ui_dump",
-                defaultOutputPath,
+                snapshot.relativeOutputPath,
                 "full",
                 "Captured Android query_ui hierarchy artifact.",
               ),
             ]
           : undefined,
-      content: readExecution.exitCode === 0 ? readExecution.stdout : undefined,
-      summary,
+      content:
+        snapshot.readExecution.exitCode === 0
+          ? snapshot.readExecution.stdout
+          : undefined,
+      summary: snapshot.summary,
     },
     nextSuggestions:
-      readExecution.exitCode !== 0
+      snapshot.readExecution.exitCode !== 0
         ? ["Check Android device state before retrying query_ui."]
         : queryResult.totalMatches === 0
           ? [
@@ -1098,120 +1104,113 @@ export async function waitForUiWithMaestroTool(
       };
     }
 
-    let polls = 0;
-    let lastSnapshot: IosUiSnapshot | IosUiSnapshotFailure | undefined;
-    const deadline = Date.now() + timeoutMs;
-    while (Date.now() <= deadline) {
-      polls += 1;
-      lastSnapshot = await captureIosUiSnapshot(
-        repoRoot,
-        deviceId,
-        input.sessionId,
-        runnerProfile,
-        input.outputPath,
-        {
-          sessionId: input.sessionId,
-          platform,
-          runnerProfile,
-          harnessConfigPath: input.harnessConfigPath,
+    const waitOutcome = await runUiWaitPollingLoop({
+      query,
+      waitUntil,
+      timeoutMs,
+      intervalMs,
+      defaultOutputPath,
+      previewCommand: idbCommand,
+      captureSnapshot: () =>
+        captureIosUiRuntimeSnapshot(
+          repoRoot,
           deviceId,
-          outputPath: input.outputPath,
-          dryRun: false,
-          ...query,
-        },
-      );
-      if (
-        !isIosUiSnapshotFailure(lastSnapshot)
-        && isWaitConditionMet({ query, ...lastSnapshot.queryResult }, waitUntil)
-      ) {
-        return {
-          status: "success",
-          reasonCode: REASON_CODES.ok,
-          sessionId: input.sessionId,
-          durationMs: Date.now() - startTime,
-          attempts: polls,
-          artifacts: [toRelativePath(repoRoot, lastSnapshot.absoluteOutputPath)],
-          data: {
-            dryRun: false,
+          input.sessionId,
+          runnerProfile,
+          input.outputPath,
+          {
+            sessionId: input.sessionId,
+            platform,
             runnerProfile,
-            outputPath: lastSnapshot.relativeOutputPath,
-            query,
-            timeoutMs,
-            intervalMs,
-            waitUntil,
-            polls,
-            command: lastSnapshot.command,
-            exitCode: lastSnapshot.execution.exitCode,
-            result: { query, ...lastSnapshot.queryResult },
-            supportLevel: "full",
-            content: lastSnapshot.execution.stdout,
-            summary: lastSnapshot.summary,
+            harnessConfigPath: input.harnessConfigPath,
+            deviceId,
+            outputPath: input.outputPath,
+            dryRun: false,
+            ...query,
           },
-          nextSuggestions: [],
-        };
-      }
-      if (Date.now() < deadline) {
-        await delay(intervalMs);
-      }
-    }
+        ),
+    });
 
-    if (lastSnapshot && isIosUiSnapshotFailure(lastSnapshot)) {
+    if (waitOutcome.outcome === "failure") {
       return {
         status: "failed",
-        reasonCode: lastSnapshot.reasonCode,
+        reasonCode: waitOutcome.reasonCode,
         sessionId: input.sessionId,
         durationMs: Date.now() - startTime,
-        attempts: polls,
+        attempts: waitOutcome.polls,
         artifacts: [],
         data: {
           dryRun: false,
           runnerProfile,
-          outputPath: lastSnapshot.outputPath,
+          outputPath: waitOutcome.state.outputPath,
           query,
           timeoutMs,
           intervalMs,
           waitUntil,
-          polls,
-          command: lastSnapshot.command,
-          exitCode: lastSnapshot.exitCode,
-          result: { query, totalMatches: 0, matches: [] },
+          polls: waitOutcome.polls,
+          command: waitOutcome.state.command,
+          exitCode: waitOutcome.state.exitCode,
+          result: waitOutcome.state.result,
           supportLevel: "full",
         },
-        nextSuggestions: [lastSnapshot.message],
+        nextSuggestions: [waitOutcome.message],
       };
     }
 
-    const timeoutSnapshot =
-      lastSnapshot && !isIosUiSnapshotFailure(lastSnapshot)
-        ? lastSnapshot
-        : undefined;
-    const result = timeoutSnapshot
-      ? { query, ...timeoutSnapshot.queryResult }
-      : { query, totalMatches: 0, matches: [] as QueryUiMatch[] };
+    if (waitOutcome.outcome === "matched") {
+      return {
+        status: "success",
+        reasonCode: REASON_CODES.ok,
+        sessionId: input.sessionId,
+        durationMs: Date.now() - startTime,
+        attempts: waitOutcome.polls,
+        artifacts: waitOutcome.state.absoluteOutputPath
+          ? [toRelativePath(repoRoot, waitOutcome.state.absoluteOutputPath)]
+          : [],
+        data: {
+          dryRun: false,
+          runnerProfile,
+          outputPath: waitOutcome.state.outputPath,
+          query,
+          timeoutMs,
+          intervalMs,
+          waitUntil,
+          polls: waitOutcome.polls,
+          command: waitOutcome.state.command,
+          exitCode: waitOutcome.state.exitCode,
+          result: waitOutcome.state.result,
+          supportLevel: "full",
+          content: waitOutcome.state.content,
+          summary: waitOutcome.state.summary,
+        },
+        nextSuggestions: [],
+      };
+    }
+
     return {
       status: "partial",
       reasonCode: reasonCodeForWaitTimeout(waitUntil),
       sessionId: input.sessionId,
       durationMs: Date.now() - startTime,
-      attempts: polls,
-      artifacts: timeoutSnapshot
-        ? [toRelativePath(repoRoot, timeoutSnapshot.absoluteOutputPath)]
+      attempts: waitOutcome.polls,
+      artifacts: waitOutcome.state.absoluteOutputPath
+        ? [toRelativePath(repoRoot, waitOutcome.state.absoluteOutputPath)]
         : [],
       data: {
         dryRun: false,
         runnerProfile,
-        outputPath: timeoutSnapshot?.relativeOutputPath ?? defaultOutputPath,
+        outputPath: waitOutcome.state.outputPath,
         query,
         timeoutMs,
         intervalMs,
         waitUntil,
-        polls,
-        command: timeoutSnapshot?.command ?? idbCommand,
-        exitCode: timeoutSnapshot?.execution.exitCode ?? null,
-        result,
+        polls: waitOutcome.polls,
+        command: waitOutcome.state.command,
+        exitCode: waitOutcome.state.exitCode,
+        result: waitOutcome.state.result,
         supportLevel: "full",
-        content: timeoutSnapshot?.execution.stdout,
-        summary: timeoutSnapshot?.summary,
+        content: waitOutcome.state.content,
+        summary: waitOutcome.state.summary,
       },
       nextSuggestions: [
         `Timed out waiting for iOS UI condition '${waitUntil}'. Broaden the selector, change waitUntil, increase timeoutMs, or inspect the latest hierarchy artifact.`,
@@ -1258,198 +1257,124 @@ export async function waitForUiWithMaestroTool(
     };
   }
 
-  let polls = 0;
-  let lastSnapshot: AndroidUiSnapshot | AndroidUiSnapshotFailure | undefined;
-  let consecutiveCaptureFailures = 0;
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() <= deadline) {
-    polls += 1;
-    lastSnapshot = await captureAndroidUiSnapshot(
-      repoRoot,
-      deviceId,
-      input.sessionId,
-      runnerProfile,
-      input.outputPath,
-      {
-        sessionId: input.sessionId,
-        platform: input.platform,
-        runnerProfile,
-        harnessConfigPath: input.harnessConfigPath,
+  const waitOutcome = await runUiWaitPollingLoop({
+    query,
+    waitUntil,
+    timeoutMs,
+    intervalMs,
+    defaultOutputPath,
+    previewCommand: command,
+    captureSnapshot: () =>
+      captureAndroidUiRuntimeSnapshot(
+        repoRoot,
         deviceId,
-        outputPath: input.outputPath,
-        dryRun: false,
-        ...query,
-      },
-    );
-    if (isAndroidUiSnapshotFailure(lastSnapshot)) {
-      consecutiveCaptureFailures += 1;
-      if (
-        shouldAbortWaitForUiAfterReadFailure({
-          consecutiveFailures: consecutiveCaptureFailures,
-          maxConsecutiveFailures:
-            DEFAULT_WAIT_MAX_CONSECUTIVE_CAPTURE_FAILURES,
-        })
-      ) {
-        return {
-          status: "failed",
-          reasonCode: lastSnapshot.reasonCode,
+        input.sessionId,
+        runnerProfile,
+        input.outputPath,
+        {
           sessionId: input.sessionId,
-          durationMs: Date.now() - startTime,
-          attempts: polls,
-          artifacts: [],
-          data: {
-            dryRun: false,
-            runnerProfile,
-            outputPath: lastSnapshot.outputPath,
-            query,
-            timeoutMs,
-            intervalMs,
-            waitUntil,
-            polls,
-            command: lastSnapshot.command,
-            exitCode: lastSnapshot.exitCode,
-            result: { query, totalMatches: 0, matches: [] },
-            supportLevel: "full",
-          },
-          nextSuggestions: [
-            `Android UI hierarchy capture failed ${String(consecutiveCaptureFailures)} times in a row during wait_for_ui. Check device state and retry instead of waiting for timeout.`,
-          ],
-        };
-      }
-    } else if (lastSnapshot.readExecution.exitCode !== 0) {
-      consecutiveCaptureFailures += 1;
-      if (
-        shouldAbortWaitForUiAfterReadFailure({
-          consecutiveFailures: consecutiveCaptureFailures,
-          maxConsecutiveFailures:
-            DEFAULT_WAIT_MAX_CONSECUTIVE_CAPTURE_FAILURES,
-        })
-      ) {
-        return {
-          status: "failed",
-          reasonCode: buildFailureReason(
-            lastSnapshot.readExecution.stderr,
-            lastSnapshot.readExecution.exitCode,
-          ),
-          sessionId: input.sessionId,
-          durationMs: Date.now() - startTime,
-          attempts: polls,
-          artifacts: [],
-          data: {
-            dryRun: false,
-            runnerProfile,
-            outputPath: lastSnapshot.relativeOutputPath,
-            query,
-            timeoutMs,
-            intervalMs,
-            waitUntil,
-            polls,
-            command: lastSnapshot.command,
-            exitCode: lastSnapshot.readExecution.exitCode,
-            result: { query, totalMatches: 0, matches: [] },
-            supportLevel: "full",
-          },
-          nextSuggestions: [
-            `Android UI hierarchy reads failed ${String(consecutiveCaptureFailures)} times in a row during wait_for_ui. Check device state and retry instead of waiting for timeout.`,
-          ],
-        };
-      }
-    } else {
-      consecutiveCaptureFailures = 0;
-    }
-    if (
-      !isAndroidUiSnapshotFailure(lastSnapshot)
-      && lastSnapshot.readExecution.exitCode === 0
-      && isWaitConditionMet({ query, ...lastSnapshot.queryResult }, waitUntil)
-    ) {
-      return {
-        status: "success",
-        reasonCode: REASON_CODES.ok,
-        sessionId: input.sessionId,
-        durationMs: Date.now() - startTime,
-        attempts: polls,
-        artifacts: [toRelativePath(repoRoot, lastSnapshot.absoluteOutputPath)],
-        data: {
-          dryRun: false,
+          platform: input.platform,
           runnerProfile,
-          outputPath: lastSnapshot.relativeOutputPath,
-          query,
-          timeoutMs,
-          intervalMs,
-          waitUntil,
-          polls,
-          command: lastSnapshot.command,
-          exitCode: lastSnapshot.readExecution.exitCode,
-          result: { query, ...lastSnapshot.queryResult },
-          supportLevel: "full",
-          content: lastSnapshot.readExecution.stdout,
-          summary: lastSnapshot.summary,
+          harnessConfigPath: input.harnessConfigPath,
+          deviceId,
+          outputPath: input.outputPath,
+          dryRun: false,
+          ...query,
         },
-        nextSuggestions: [],
-      };
-    }
-    if (Date.now() < deadline) {
-      await delay(intervalMs);
-    }
-  }
+      ),
+    buildRetryableSnapshotFailure: (snapshot) =>
+      snapshot.exitCode !== 0
+        ? {
+            reasonCode: buildFailureReason(snapshot.stderr, snapshot.exitCode),
+            message: `Android UI hierarchy reads failed ${String(DEFAULT_WAIT_MAX_CONSECUTIVE_CAPTURE_FAILURES)} times in a row during wait_for_ui. Check device state and retry instead of waiting for timeout.`,
+          }
+        : undefined,
+    buildCaptureFailureAbortMessage: (consecutiveFailures) =>
+      `Android UI hierarchy capture failed ${String(consecutiveFailures)} times in a row during wait_for_ui. Check device state and retry instead of waiting for timeout.`,
+    maxConsecutiveRetryableFailures:
+      DEFAULT_WAIT_MAX_CONSECUTIVE_CAPTURE_FAILURES,
+  });
 
-  if (lastSnapshot && isAndroidUiSnapshotFailure(lastSnapshot)) {
+  if (waitOutcome.outcome === "failure") {
     return {
       status: "failed",
-      reasonCode: lastSnapshot.reasonCode,
+      reasonCode: waitOutcome.reasonCode,
       sessionId: input.sessionId,
       durationMs: Date.now() - startTime,
-      attempts: polls,
+      attempts: waitOutcome.polls,
       artifacts: [],
       data: {
         dryRun: false,
         runnerProfile,
-        outputPath: lastSnapshot.outputPath,
+        outputPath: waitOutcome.state.outputPath,
         query,
         timeoutMs,
         intervalMs,
         waitUntil,
-        polls,
-        command: lastSnapshot.command,
-        exitCode: lastSnapshot.exitCode,
-        result: { query, totalMatches: 0, matches: [] },
+        polls: waitOutcome.polls,
+        command: waitOutcome.state.command,
+        exitCode: waitOutcome.state.exitCode,
+        result: waitOutcome.state.result,
         supportLevel: "full",
       },
-      nextSuggestions: [lastSnapshot.message],
+      nextSuggestions: [waitOutcome.message],
     };
   }
 
-  const timeoutSnapshot =
-    !lastSnapshot || isAndroidUiSnapshotFailure(lastSnapshot)
-      ? undefined
-      : lastSnapshot;
-  const result = timeoutSnapshot
-    ? { query, ...timeoutSnapshot.queryResult }
-    : { query, totalMatches: 0, matches: [] as QueryUiMatch[] };
+  if (waitOutcome.outcome === "matched") {
+    return {
+      status: "success",
+      reasonCode: REASON_CODES.ok,
+      sessionId: input.sessionId,
+      durationMs: Date.now() - startTime,
+      attempts: waitOutcome.polls,
+      artifacts: waitOutcome.state.absoluteOutputPath
+        ? [toRelativePath(repoRoot, waitOutcome.state.absoluteOutputPath)]
+        : [],
+      data: {
+        dryRun: false,
+        runnerProfile,
+        outputPath: waitOutcome.state.outputPath,
+        query,
+        timeoutMs,
+        intervalMs,
+        waitUntil,
+        polls: waitOutcome.polls,
+        command: waitOutcome.state.command,
+        exitCode: waitOutcome.state.exitCode,
+        result: waitOutcome.state.result,
+        supportLevel: "full",
+        content: waitOutcome.state.content,
+        summary: waitOutcome.state.summary,
+      },
+      nextSuggestions: [],
+    };
+  }
+
   return {
     status: "partial",
     reasonCode: reasonCodeForWaitTimeout(waitUntil),
     sessionId: input.sessionId,
     durationMs: Date.now() - startTime,
-    attempts: polls,
-    artifacts: timeoutSnapshot
-      ? [toRelativePath(repoRoot, timeoutSnapshot.absoluteOutputPath)]
+    attempts: waitOutcome.polls,
+    artifacts: waitOutcome.state.absoluteOutputPath
+      ? [toRelativePath(repoRoot, waitOutcome.state.absoluteOutputPath)]
       : [],
     data: {
       dryRun: false,
       runnerProfile,
-      outputPath: timeoutSnapshot?.relativeOutputPath ?? defaultOutputPath,
+      outputPath: waitOutcome.state.outputPath,
       query,
       timeoutMs,
       intervalMs,
       waitUntil,
-      polls,
-      command: timeoutSnapshot?.command ?? command,
-      exitCode: timeoutSnapshot?.readExecution.exitCode ?? null,
-      result,
+      polls: waitOutcome.polls,
+      command: waitOutcome.state.command,
+      exitCode: waitOutcome.state.exitCode,
+      result: waitOutcome.state.result,
       supportLevel: "full",
-      content: timeoutSnapshot?.readExecution.stdout,
-      summary: timeoutSnapshot?.summary,
+      content: waitOutcome.state.content,
+      summary: waitOutcome.state.summary,
     },
     nextSuggestions: [
       `Timed out waiting for Android UI condition '${waitUntil}'. Broaden the selector, change waitUntil, increase timeoutMs, or inspect the latest hierarchy artifact.`,

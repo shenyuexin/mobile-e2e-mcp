@@ -25,25 +25,19 @@ import {
 import {
   buildNonExecutedUiTargetResolution,
   buildScrollSwipeCoordinates,
-  buildUiTargetResolution,
   hasQueryUiSelector,
   reasonCodeForResolutionStatus,
 } from "./ui-model.js";
 import {
-  type AndroidUiSnapshot,
-  type AndroidUiSnapshotFailure,
-  type IosUiSnapshot,
-  type IosUiSnapshotFailure,
   buildAndroidUiDumpCommands,
-  captureAndroidUiSnapshot,
-  captureIosUiSnapshot,
-  isAndroidUiSnapshotFailure,
-  isIosUiSnapshotFailure,
+  captureAndroidUiRuntimeSnapshot,
+  captureIosUiRuntimeSnapshot,
+  executeUiActionCommand,
+  runUiScrollResolveLoop,
 } from "./ui-runtime.js";
 import { resolveUiRuntimePlatformHooks } from "./ui-runtime-platform.js";
 import {
   buildFailureReason,
-  executeRunner,
   toRelativePath,
 } from "./runtime-shared.js";
 import {
@@ -57,7 +51,6 @@ import {
   DEFAULT_SCROLL_DURATION_MS,
   DEFAULT_SCROLL_MAX_SWIPES,
   normalizeScrollDirection,
-  shouldContinueScrollResolution,
 } from "./ui-tool-utils.js";
 import { resolveUiTargetWithMaestroTool } from "./ui-inspection-tools.js";
 
@@ -117,9 +110,13 @@ export async function tapWithMaestroTool(
     };
   }
 
-  if (runtimeHooks.requiresProbe) {
-    const idbProbe = await runtimeHooks.probeRuntimeAvailability?.(repoRoot);
-    if (!idbProbe || idbProbe.exitCode !== 0) {
+  const actionResult = await executeUiActionCommand({
+    repoRoot,
+    command,
+    requiresProbe: runtimeHooks.requiresProbe,
+    probeRuntimeAvailability: runtimeHooks.probeRuntimeAvailability,
+  });
+  if (!actionResult.execution) {
       return {
         status: "partial",
         reasonCode: runtimeHooks.probeFailureReasonCode,
@@ -133,14 +130,13 @@ export async function tapWithMaestroTool(
           x: input.x,
           y: input.y,
           command,
-          exitCode: idbProbe?.exitCode ?? null,
+          exitCode: actionResult.probeExecution?.exitCode ?? null,
         },
         nextSuggestions: [runtimeHooks.probeUnavailableSuggestion("tap")],
       };
-    }
   }
 
-  const execution = await executeRunner(command, repoRoot, process.env);
+  const execution = actionResult.execution;
   return {
     status: execution.exitCode === 0 ? "success" : "failed",
     reasonCode:
@@ -221,9 +217,13 @@ export async function typeTextWithMaestroTool(
     };
   }
 
-  if (runtimeHooks.requiresProbe) {
-    const idbProbe = await runtimeHooks.probeRuntimeAvailability?.(repoRoot);
-    if (!idbProbe || idbProbe.exitCode !== 0) {
+  const actionResult = await executeUiActionCommand({
+    repoRoot,
+    command,
+    requiresProbe: runtimeHooks.requiresProbe,
+    probeRuntimeAvailability: runtimeHooks.probeRuntimeAvailability,
+  });
+  if (!actionResult.execution) {
       return {
         status: "partial",
         reasonCode: runtimeHooks.probeFailureReasonCode,
@@ -236,14 +236,13 @@ export async function typeTextWithMaestroTool(
           runnerProfile,
           text: input.text,
           command,
-          exitCode: idbProbe?.exitCode ?? null,
+          exitCode: actionResult.probeExecution?.exitCode ?? null,
         },
         nextSuggestions: [runtimeHooks.probeUnavailableSuggestion("type_text")],
       };
-    }
   }
 
-  const execution = await executeRunner(command, repoRoot, process.env);
+  const execution = actionResult.execution;
   return {
     status: execution.exitCode === 0 ? "success" : "failed",
     reasonCode:
@@ -780,175 +779,152 @@ export async function scrollAndResolveUiTargetWithMaestroTool(
       };
     }
 
-    let swipesPerformed = 0;
-    const commandHistory: string[][] = [];
-    let lastSnapshot: IosUiSnapshot | IosUiSnapshotFailure | undefined;
-
-    while (swipesPerformed <= maxSwipes) {
-      lastSnapshot = await captureIosUiSnapshot(
-        repoRoot,
-        deviceId,
-        input.sessionId,
-        runnerProfile,
-        input.outputPath,
-        {
-          sessionId: input.sessionId,
-          platform,
-          runnerProfile,
-          harnessConfigPath: input.harnessConfigPath,
+    const scrollOutcome = await runUiScrollResolveLoop({
+      query,
+      maxSwipes,
+      defaultOutputPath,
+      captureSnapshot: () =>
+        captureIosUiRuntimeSnapshot(
+          repoRoot,
           deviceId,
-          outputPath: input.outputPath,
+          input.sessionId,
+          runnerProfile,
+          input.outputPath,
+          {
+            sessionId: input.sessionId,
+            platform,
+            runnerProfile,
+            harnessConfigPath: input.harnessConfigPath,
+            deviceId,
+            outputPath: input.outputPath,
+            dryRun: false,
+            ...query,
+          },
+        ),
+      buildSwipeCommand: (nodes) =>
+        runtimeHooks.buildSwipeCommand(
+          deviceId,
+          buildScrollSwipeCoordinates(nodes, swipeDirection, swipeDurationMs),
+        ),
+      executeSwipeCommand: async (command) => {
+        const execution = await executeUiActionCommand({
+          repoRoot,
+          command,
+          requiresProbe: false,
+        });
+        return execution.execution ?? { exitCode: null, stdout: "", stderr: "" };
+      },
+      scrollFailureMessage:
+        "iOS swipe failed while searching for the target. Check simulator state and idb availability before retrying scroll_and_resolve_ui_target.",
+    });
+
+    if (scrollOutcome.outcome === "failure") {
+      return {
+        status: "failed",
+        reasonCode: scrollOutcome.reasonCode,
+        sessionId: input.sessionId,
+        durationMs: Date.now() - startTime,
+        attempts: scrollOutcome.state.attempts,
+        artifacts: scrollOutcome.state.absoluteOutputPath
+          ? [toRelativePath(repoRoot, scrollOutcome.state.absoluteOutputPath)]
+          : [],
+        data: {
           dryRun: false,
-          ...query,
+          runnerProfile,
+          outputPath: scrollOutcome.state.outputPath,
+          query,
+          maxSwipes,
+          swipeDirection,
+          swipeDurationMs,
+          swipesPerformed: scrollOutcome.state.swipesPerformed,
+          commandHistory: scrollOutcome.state.commandHistory,
+          exitCode: scrollOutcome.state.exitCode,
+          result: scrollOutcome.state.result,
+          resolution: scrollOutcome.state.resolution,
+          supportLevel: "full",
+          content: scrollOutcome.state.content,
+          summary: scrollOutcome.state.summary,
         },
-      );
-      if (isIosUiSnapshotFailure(lastSnapshot)) {
-        return {
-          status: "failed",
-          reasonCode: lastSnapshot.reasonCode,
-          sessionId: input.sessionId,
-          durationMs: Date.now() - startTime,
-          attempts: swipesPerformed + 1,
-          artifacts: [],
-          data: {
-            dryRun: false,
-            runnerProfile,
-            outputPath: lastSnapshot.outputPath,
-            query,
-            maxSwipes,
-            swipeDirection,
-            swipeDurationMs,
-            swipesPerformed,
-            commandHistory: [...commandHistory, lastSnapshot.command],
-            exitCode: lastSnapshot.exitCode,
-            result: { query, totalMatches: 0, matches: [] },
-            resolution: buildNonExecutedUiTargetResolution(query, "full"),
-            supportLevel: "full",
-          },
-          nextSuggestions: [lastSnapshot.message],
-        };
-      }
+        nextSuggestions: [scrollOutcome.message],
+      };
+    }
 
-      commandHistory.push(lastSnapshot.command);
-      const result = { query, ...lastSnapshot.queryResult };
-      const resolution = buildUiTargetResolution(query, result, "full");
-      if (!shouldContinueScrollResolution(resolution.status)) {
-        return {
-          status: resolution.status === "resolved" ? "success" : "partial",
-          reasonCode: reasonCodeForResolutionStatus(resolution.status),
-          sessionId: input.sessionId,
-          durationMs: Date.now() - startTime,
-          attempts: swipesPerformed + 1,
-          artifacts: [toRelativePath(repoRoot, lastSnapshot.absoluteOutputPath)],
-          data: {
-            dryRun: false,
-            runnerProfile,
-            outputPath: lastSnapshot.relativeOutputPath,
-            query,
-            maxSwipes,
-            swipeDirection,
-            swipeDurationMs,
-            swipesPerformed,
-            commandHistory,
-            exitCode: lastSnapshot.execution.exitCode,
-            result,
-            resolution,
-            supportLevel: "full",
-            content: lastSnapshot.execution.stdout,
-            summary: lastSnapshot.summary,
-          },
-          nextSuggestions:
-            resolution.status === "resolved"
-              ? []
-              : buildResolutionNextSuggestions(
-                  resolution.status,
-                  "scroll_and_resolve_ui_target",
-                  resolution,
-                ),
-        };
-      }
+    if (scrollOutcome.outcome === "resolved" || scrollOutcome.outcome === "stopped") {
+      return {
+        status:
+          scrollOutcome.outcome === "resolved" ? "success" : "partial",
+        reasonCode: reasonCodeForResolutionStatus(
+          scrollOutcome.state.resolution.status,
+        ),
+        sessionId: input.sessionId,
+        durationMs: Date.now() - startTime,
+        attempts: scrollOutcome.state.attempts,
+        artifacts: scrollOutcome.state.absoluteOutputPath
+          ? [toRelativePath(repoRoot, scrollOutcome.state.absoluteOutputPath)]
+          : [],
+        data: {
+          dryRun: false,
+          runnerProfile,
+          outputPath: scrollOutcome.state.outputPath,
+          query,
+          maxSwipes,
+          swipeDirection,
+          swipeDurationMs,
+          swipesPerformed: scrollOutcome.state.swipesPerformed,
+          commandHistory: scrollOutcome.state.commandHistory,
+          exitCode: scrollOutcome.state.exitCode,
+          result: scrollOutcome.state.result,
+          resolution: scrollOutcome.state.resolution,
+          supportLevel: "full",
+          content: scrollOutcome.state.content,
+          summary: scrollOutcome.state.summary,
+        },
+        nextSuggestions:
+          scrollOutcome.outcome === "resolved"
+            ? []
+            : buildResolutionNextSuggestions(
+                scrollOutcome.state.resolution.status,
+                "scroll_and_resolve_ui_target",
+                scrollOutcome.state.resolution,
+              ),
+      };
+    }
 
-      if (swipesPerformed === maxSwipes) {
-        return {
-          status: "partial",
-          reasonCode: REASON_CODES.noMatch,
-          sessionId: input.sessionId,
-          durationMs: Date.now() - startTime,
-          attempts: swipesPerformed + 1,
-          artifacts: [toRelativePath(repoRoot, lastSnapshot.absoluteOutputPath)],
-          data: {
-            dryRun: false,
-            runnerProfile,
-            outputPath: lastSnapshot.relativeOutputPath,
-            query,
-            maxSwipes,
-            swipeDirection,
-            swipeDurationMs,
-            swipesPerformed,
-            commandHistory,
-            exitCode: lastSnapshot.execution.exitCode,
-            result,
-            resolution,
-            supportLevel: "full",
-            content: lastSnapshot.execution.stdout,
-            summary: lastSnapshot.summary,
-          },
-          nextSuggestions:
-            resolution.status === "off_screen"
-              ? [
-                  "Reached maxSwipes while the best iOS match stayed off-screen. Keep scrolling, change swipe direction, or refine the selector toward visible content.",
-                ]
-              : [
-                  "Reached maxSwipes without finding a matching iOS target. Narrow the selector or increase maxSwipes.",
-                ],
-        };
-      }
-
-      const swipe = buildScrollSwipeCoordinates(
-        lastSnapshot.nodes,
+    return {
+      status: "partial",
+      reasonCode: REASON_CODES.noMatch,
+      sessionId: input.sessionId,
+      durationMs: Date.now() - startTime,
+      attempts: scrollOutcome.state.attempts,
+      artifacts: scrollOutcome.state.absoluteOutputPath
+        ? [toRelativePath(repoRoot, scrollOutcome.state.absoluteOutputPath)]
+        : [],
+      data: {
+        dryRun: false,
+        runnerProfile,
+        outputPath: scrollOutcome.state.outputPath,
+        query,
+        maxSwipes,
         swipeDirection,
         swipeDurationMs,
-      );
-      const swipeCommand = runtimeHooks.buildSwipeCommand(deviceId, swipe);
-      commandHistory.push(swipeCommand);
-      const swipeExecution = await executeRunner(
-        swipeCommand,
-        repoRoot,
-        process.env,
-      );
-      if (swipeExecution.exitCode !== 0) {
-        return {
-          status: "failed",
-          reasonCode: REASON_CODES.actionScrollFailed,
-          sessionId: input.sessionId,
-          durationMs: Date.now() - startTime,
-          attempts: swipesPerformed + 1,
-          artifacts: [toRelativePath(repoRoot, lastSnapshot.absoluteOutputPath)],
-          data: {
-            dryRun: false,
-            runnerProfile,
-            outputPath: lastSnapshot.relativeOutputPath,
-            query,
-            maxSwipes,
-            swipeDirection,
-            swipeDurationMs,
-            swipesPerformed,
-            commandHistory,
-            exitCode: swipeExecution.exitCode,
-            result,
-            resolution,
-            supportLevel: "full",
-            content: lastSnapshot.execution.stdout,
-            summary: lastSnapshot.summary,
-          },
-          nextSuggestions: [
-            "iOS swipe failed while searching for the target. Check simulator state and idb availability before retrying scroll_and_resolve_ui_target.",
-          ],
-        };
-      }
-
-      swipesPerformed += 1;
-    }
+        swipesPerformed: scrollOutcome.state.swipesPerformed,
+        commandHistory: scrollOutcome.state.commandHistory,
+        exitCode: scrollOutcome.state.exitCode,
+        result: scrollOutcome.state.result,
+        resolution: scrollOutcome.state.resolution,
+        supportLevel: "full",
+        content: scrollOutcome.state.content,
+        summary: scrollOutcome.state.summary,
+      },
+      nextSuggestions:
+        scrollOutcome.state.resolution.status === "off_screen"
+          ? [
+              "Reached maxSwipes while the best iOS match stayed off-screen. Keep scrolling, change swipe direction, or refine the selector toward visible content.",
+            ]
+          : [
+              "Reached maxSwipes without finding a matching iOS target. Narrow the selector or increase maxSwipes.",
+            ],
+    };
   }
 
   const selection = await loadHarnessSelection(
@@ -999,206 +975,122 @@ export async function scrollAndResolveUiTargetWithMaestroTool(
     };
   }
 
-  let swipesPerformed = 0;
-  const commandHistory: string[][] = [];
-  let lastSnapshot: AndroidUiSnapshot | AndroidUiSnapshotFailure | undefined;
-
-  while (swipesPerformed <= maxSwipes) {
-    lastSnapshot = await captureAndroidUiSnapshot(
-      repoRoot,
-      deviceId,
-      input.sessionId,
-      runnerProfile,
-      input.outputPath,
-      {
-        sessionId: input.sessionId,
-        platform: input.platform,
-        runnerProfile,
-        harnessConfigPath: input.harnessConfigPath,
+  const scrollOutcome = await runUiScrollResolveLoop({
+    query,
+    maxSwipes,
+    defaultOutputPath,
+    captureSnapshot: () =>
+      captureAndroidUiRuntimeSnapshot(
+        repoRoot,
         deviceId,
-        outputPath: input.outputPath,
+        input.sessionId,
+        runnerProfile,
+        input.outputPath,
+        {
+          sessionId: input.sessionId,
+          platform: input.platform,
+          runnerProfile,
+          harnessConfigPath: input.harnessConfigPath,
+          deviceId,
+          outputPath: input.outputPath,
+          dryRun: false,
+          ...query,
+        },
+      ),
+    buildSwipeCommand: (nodes) =>
+      runtimeHooks.buildSwipeCommand(
+        deviceId,
+        buildScrollSwipeCoordinates(nodes, swipeDirection, swipeDurationMs),
+      ),
+    executeSwipeCommand: async (command) => {
+      const execution = await executeUiActionCommand({
+        repoRoot,
+        command,
+        requiresProbe: false,
+      });
+      return execution.execution ?? { exitCode: null, stdout: "", stderr: "" };
+    },
+    scrollFailureMessage:
+      "Android swipe failed while searching for the target. Check device state and retry scroll_and_resolve_ui_target.",
+    buildRetryableSnapshotFailure: (snapshot) =>
+      snapshot.exitCode !== 0
+        ? {
+            reasonCode: buildFailureReason(snapshot.stderr, snapshot.exitCode),
+            message:
+              "Could not read the Android UI hierarchy while scrolling for target resolution. Check device state and retry.",
+          }
+        : undefined,
+  });
+
+  if (scrollOutcome.outcome === "failure") {
+    return {
+      status: "failed",
+      reasonCode: scrollOutcome.reasonCode,
+      sessionId: input.sessionId,
+      durationMs: Date.now() - startTime,
+      attempts: scrollOutcome.state.attempts,
+      artifacts: scrollOutcome.state.absoluteOutputPath
+        ? [toRelativePath(repoRoot, scrollOutcome.state.absoluteOutputPath)]
+        : [],
+      data: {
         dryRun: false,
-        ...query,
+        runnerProfile,
+        outputPath: scrollOutcome.state.outputPath,
+        query,
+        maxSwipes,
+        swipeDirection,
+        swipeDurationMs,
+        swipesPerformed: scrollOutcome.state.swipesPerformed,
+        commandHistory: scrollOutcome.state.commandHistory,
+        exitCode: scrollOutcome.state.exitCode,
+        result: scrollOutcome.state.result,
+        resolution: scrollOutcome.state.resolution,
+        supportLevel: "full",
+        content: scrollOutcome.state.content,
+        summary: scrollOutcome.state.summary,
       },
-    );
-    if (isAndroidUiSnapshotFailure(lastSnapshot)) {
-      return {
-        status: "failed",
-        reasonCode: lastSnapshot.reasonCode,
-        sessionId: input.sessionId,
-        durationMs: Date.now() - startTime,
-        attempts: swipesPerformed + 1,
-        artifacts: [],
-        data: {
-          dryRun: false,
-          runnerProfile,
-          outputPath: lastSnapshot.outputPath,
-          query,
-          maxSwipes,
-          swipeDirection,
-          swipeDurationMs,
-          swipesPerformed,
-          commandHistory: [...commandHistory, lastSnapshot.command],
-          exitCode: lastSnapshot.exitCode,
-          result: { query, totalMatches: 0, matches: [] },
-          resolution: buildNonExecutedUiTargetResolution(query, "full"),
-          supportLevel: "full",
-        },
-        nextSuggestions: [lastSnapshot.message],
-      };
-    }
+      nextSuggestions: [scrollOutcome.message],
+    };
+  }
 
-    commandHistory.push(lastSnapshot.command);
-    if (lastSnapshot.readExecution.exitCode !== 0) {
-      return {
-        status: "failed",
-        reasonCode: buildFailureReason(
-          lastSnapshot.readExecution.stderr,
-          lastSnapshot.readExecution.exitCode,
-        ),
-        sessionId: input.sessionId,
-        durationMs: Date.now() - startTime,
-        attempts: swipesPerformed + 1,
-        artifacts: [],
-        data: {
-          dryRun: false,
-          runnerProfile,
-          outputPath: lastSnapshot.relativeOutputPath,
-          query,
-          maxSwipes,
-          swipeDirection,
-          swipeDurationMs,
-          swipesPerformed,
-          commandHistory,
-          exitCode: lastSnapshot.readExecution.exitCode,
-          result: { query, totalMatches: 0, matches: [] },
-          resolution: buildNonExecutedUiTargetResolution(query, "full"),
-          supportLevel: "full",
-        },
-        nextSuggestions: [
-          "Could not read the Android UI hierarchy while scrolling for target resolution. Check device state and retry.",
-        ],
-      };
-    }
-
-    const result = { query, ...lastSnapshot.queryResult };
-    const resolution = buildUiTargetResolution(query, result, "full");
-    if (!shouldContinueScrollResolution(resolution.status)) {
-      return {
-        status: resolution.status === "resolved" ? "success" : "partial",
-        reasonCode: reasonCodeForResolutionStatus(resolution.status),
-        sessionId: input.sessionId,
-        durationMs: Date.now() - startTime,
-        attempts: swipesPerformed + 1,
-        artifacts: [toRelativePath(repoRoot, lastSnapshot.absoluteOutputPath)],
-        data: {
-          dryRun: false,
-          runnerProfile,
-          outputPath: lastSnapshot.relativeOutputPath,
-          query,
-          maxSwipes,
-          swipeDirection,
-          swipeDurationMs,
-          swipesPerformed,
-          commandHistory,
-          exitCode: lastSnapshot.readExecution.exitCode,
-          result,
-          resolution,
-          supportLevel: "full",
-          content: lastSnapshot.readExecution.stdout,
-          summary: lastSnapshot.summary,
-        },
-        nextSuggestions:
-          resolution.status === "resolved"
-            ? []
-            : buildResolutionNextSuggestions(
-                resolution.status,
-                "scroll_and_resolve_ui_target",
-                resolution,
-              ),
-      };
-    }
-
-    if (swipesPerformed === maxSwipes) {
-      return {
-        status: "partial",
-        reasonCode: REASON_CODES.noMatch,
-        sessionId: input.sessionId,
-        durationMs: Date.now() - startTime,
-        attempts: swipesPerformed + 1,
-        artifacts: [toRelativePath(repoRoot, lastSnapshot.absoluteOutputPath)],
-        data: {
-          dryRun: false,
-          runnerProfile,
-          outputPath: lastSnapshot.relativeOutputPath,
-          query,
-          maxSwipes,
-          swipeDirection,
-          swipeDurationMs,
-          swipesPerformed,
-          commandHistory,
-          exitCode: lastSnapshot.readExecution.exitCode,
-          result,
-          resolution,
-          supportLevel: "full",
-          content: lastSnapshot.readExecution.stdout,
-          summary: lastSnapshot.summary,
-        },
-        nextSuggestions:
-          resolution.status === "off_screen"
-            ? [
-                "Reached maxSwipes while the best Android match stayed off-screen. Keep scrolling, change swipe direction, or refine the selector toward visible content.",
-              ]
-            : [
-                "Reached maxSwipes without finding a matching Android target. Narrow the selector or increase maxSwipes.",
-              ],
-      };
-    }
-
-    const swipe = buildScrollSwipeCoordinates(
-      lastSnapshot.nodes,
-      swipeDirection,
-      swipeDurationMs,
-    );
-    const swipeCommand = runtimeHooks.buildSwipeCommand(deviceId, swipe);
-    commandHistory.push(swipeCommand);
-    const swipeExecution = await executeRunner(
-      swipeCommand,
-      repoRoot,
-      process.env,
-    );
-    if (swipeExecution.exitCode !== 0) {
-      return {
-        status: "failed",
-        reasonCode: REASON_CODES.actionScrollFailed,
-        sessionId: input.sessionId,
-        durationMs: Date.now() - startTime,
-        attempts: swipesPerformed + 1,
-        artifacts: [toRelativePath(repoRoot, lastSnapshot.absoluteOutputPath)],
-        data: {
-          dryRun: false,
-          runnerProfile,
-          outputPath: lastSnapshot.relativeOutputPath,
-          query,
-          maxSwipes,
-          swipeDirection,
-          swipeDurationMs,
-          swipesPerformed,
-          commandHistory,
-          exitCode: swipeExecution.exitCode,
-          result,
-          resolution,
-          supportLevel: "full",
-          content: lastSnapshot.readExecution.stdout,
-          summary: lastSnapshot.summary,
-        },
-        nextSuggestions: [
-          "Android swipe failed while searching for the target. Check device state and retry scroll_and_resolve_ui_target.",
-        ],
-      };
-    }
-
-    swipesPerformed += 1;
+  if (scrollOutcome.outcome === "resolved" || scrollOutcome.outcome === "stopped") {
+    return {
+      status: scrollOutcome.outcome === "resolved" ? "success" : "partial",
+      reasonCode: reasonCodeForResolutionStatus(
+        scrollOutcome.state.resolution.status,
+      ),
+      sessionId: input.sessionId,
+      durationMs: Date.now() - startTime,
+      attempts: scrollOutcome.state.attempts,
+      artifacts: scrollOutcome.state.absoluteOutputPath
+        ? [toRelativePath(repoRoot, scrollOutcome.state.absoluteOutputPath)]
+        : [],
+      data: {
+        dryRun: false,
+        runnerProfile,
+        outputPath: scrollOutcome.state.outputPath,
+        query,
+        maxSwipes,
+        swipeDirection,
+        swipeDurationMs,
+        swipesPerformed: scrollOutcome.state.swipesPerformed,
+        commandHistory: scrollOutcome.state.commandHistory,
+        exitCode: scrollOutcome.state.exitCode,
+        result: scrollOutcome.state.result,
+        resolution: scrollOutcome.state.resolution,
+        supportLevel: "full",
+        content: scrollOutcome.state.content,
+        summary: scrollOutcome.state.summary,
+      },
+      nextSuggestions:
+        scrollOutcome.outcome === "resolved"
+          ? []
+          : buildResolutionNextSuggestions(
+              scrollOutcome.state.resolution.status,
+              "scroll_and_resolve_ui_target",
+              scrollOutcome.state.resolution,
+            ),
+    };
   }
 
   return {
@@ -1206,30 +1098,35 @@ export async function scrollAndResolveUiTargetWithMaestroTool(
     reasonCode: REASON_CODES.noMatch,
     sessionId: input.sessionId,
     durationMs: Date.now() - startTime,
-    attempts: swipesPerformed + 1,
-    artifacts: [],
+    attempts: scrollOutcome.state.attempts,
+    artifacts: scrollOutcome.state.absoluteOutputPath
+      ? [toRelativePath(repoRoot, scrollOutcome.state.absoluteOutputPath)]
+      : [],
     data: {
       dryRun: false,
       runnerProfile,
-      outputPath: defaultOutputPath,
+      outputPath: scrollOutcome.state.outputPath,
       query,
       maxSwipes,
       swipeDirection,
       swipeDurationMs,
-      swipesPerformed,
-      commandHistory,
-      exitCode: null,
-      result: { query, totalMatches: 0, matches: [] },
-      resolution: buildUiTargetResolution(
-        query,
-        { query, totalMatches: 0, matches: [] },
-        "full",
-      ),
+      swipesPerformed: scrollOutcome.state.swipesPerformed,
+      commandHistory: scrollOutcome.state.commandHistory,
+      exitCode: scrollOutcome.state.exitCode,
+      result: scrollOutcome.state.result,
+      resolution: scrollOutcome.state.resolution,
       supportLevel: "full",
+      content: scrollOutcome.state.content,
+      summary: scrollOutcome.state.summary,
     },
-    nextSuggestions: [
-      "Reached the end of scroll_and_resolve_ui_target without a resolvable Android match.",
-    ],
+    nextSuggestions:
+      scrollOutcome.state.resolution.status === "off_screen"
+        ? [
+            "Reached maxSwipes while the best Android match stayed off-screen. Keep scrolling, change swipe direction, or refine the selector toward visible content.",
+          ]
+        : [
+            "Reached maxSwipes without finding a matching Android target. Narrow the selector or increase maxSwipes.",
+          ],
   };
 }
 
