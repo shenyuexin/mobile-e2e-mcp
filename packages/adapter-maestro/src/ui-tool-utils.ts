@@ -1,0 +1,82 @@
+import type {
+  ReasonCode,
+  UiScrollDirection,
+  UiTargetResolution,
+  WaitForUiMode,
+} from "@mobile-e2e-mcp/contracts";
+import { REASON_CODES } from "@mobile-e2e-mcp/contracts";
+
+export const DEFAULT_WAIT_UNTIL: WaitForUiMode = "visible";
+export const DEFAULT_SCROLL_DIRECTION: UiScrollDirection = "up";
+export const DEFAULT_WAIT_TIMEOUT_MS = 5000;
+export const DEFAULT_WAIT_INTERVAL_MS = 500;
+export const DEFAULT_SCROLL_MAX_SWIPES = 3;
+export const DEFAULT_SCROLL_DURATION_MS = 250;
+export const DEFAULT_WAIT_MAX_CONSECUTIVE_CAPTURE_FAILURES = 2;
+
+export function shouldContinueScrollResolution(status: string): boolean {
+  return status === "no_match" || status === "off_screen";
+}
+
+export function buildResolutionNextSuggestions(
+  status:
+    | "resolved"
+    | "no_match"
+    | "ambiguous"
+    | "missing_bounds"
+    | "disabled_match"
+    | "off_screen"
+    | "unsupported"
+    | "not_executed",
+  toolName: string,
+  resolution?: Pick<UiTargetResolution, "bestCandidate" | "ambiguityDiff">,
+): string[] {
+  if (status === "resolved") return [];
+  if (status === "no_match") return [`No UI nodes matched the provided selector for ${toolName}. Broaden the selector or inspect nearby nodes.`];
+  if (status === "ambiguous") {
+    const diffHint = resolution?.ambiguityDiff?.differingFields
+      ?.slice(0, 2)
+      .map((field) => field.field)
+      .join(", ");
+    const selectorHint = resolution?.ambiguityDiff?.suggestedSelectors?.[0];
+    const scoreDelta = resolution?.ambiguityDiff?.scoreDelta;
+    return [
+      `Multiple UI nodes matched the selector for ${toolName}. Narrow the selector before performing an element action${diffHint ? `; top differing fields: ${diffHint}` : ""}${typeof scoreDelta === "number" ? `; top score delta: ${scoreDelta}` : ""}.`,
+      selectorHint
+        ? `Suggested narrowing selector: ${JSON.stringify(selectorHint)}`
+        : "Inspect the top candidates and add a more specific resourceId/contentDesc/text filter.",
+    ];
+  }
+  if (status === "missing_bounds") return [`A matching UI node was found for ${toolName}, but its bounds were not parseable.`];
+  if (status === "disabled_match") return [`A matching UI node was found for ${toolName}, but the best candidate is disabled. Wait for the UI to become actionable or refine the selector.`];
+  if (status === "off_screen") {
+    return [
+      `A matching UI node was found for ${toolName}, but it is currently outside the visible viewport. Scroll toward the candidate before retrying.`,
+      resolution?.bestCandidate?.node.resourceId
+        ? `Top off-screen candidate resourceId: ${resolution.bestCandidate.node.resourceId}`
+        : "Consider scroll_and_resolve_ui_target or change swipe direction.",
+    ];
+  }
+  if (status === "not_executed") {
+    return [`${toolName} did not execute live UI resolution in this run. Re-run without dryRun or fix the upstream capture failure.`];
+  }
+  return [`${toolName} is not fully supported for this platform in the current repository state.`];
+}
+
+export function normalizeWaitForUiMode(
+  value: WaitForUiMode | undefined,
+): WaitForUiMode {
+  return value ?? DEFAULT_WAIT_UNTIL;
+}
+
+export function normalizeScrollDirection(
+  value: UiScrollDirection | undefined,
+): UiScrollDirection {
+  return value ?? DEFAULT_SCROLL_DIRECTION;
+}
+
+export function reasonCodeForWaitTimeout(
+  _waitUntil: WaitForUiMode,
+): ReasonCode {
+  return REASON_CODES.timeout;
+}
