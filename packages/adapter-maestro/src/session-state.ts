@@ -6,6 +6,7 @@ import type {
   GetSessionStateInput,
   InspectUiSummary,
   LogSummary,
+  ManualHandoffRecommendation,
   SessionTimelineEvent,
   StateSummary,
   ToolResult,
@@ -95,7 +96,16 @@ function inferPageHints(visibleTexts: string[], candidateActions: string[]): str
   const normalized = [...visibleTexts, ...candidateActions].map((value) => value.toLowerCase());
   const hints = new Set<string>();
   for (const value of normalized) {
-    if (value.includes("login") || value.includes("sign in") || value.includes("password") || value.includes("email")) {
+    if (
+      value.includes("login")
+      || value.includes("sign in")
+      || value.includes("password")
+      || value.includes("email")
+      || value.includes("验证码")
+      || value.includes("verification code")
+      || value.includes("sms code")
+      || value.includes("手机号")
+    ) {
       hints.add("authentication");
     }
     if (value.includes("category") || value.includes("mobile phones") || value.includes("search")) {
@@ -109,6 +119,119 @@ function inferPageHints(visibleTexts: string[], candidateActions: string[]): str
     }
   }
   return [...hints].slice(0, 5);
+}
+
+function inferProtectedPageAssessment(params: {
+  visibleTexts: string[];
+  candidateActions: string[];
+  uiSummary?: InspectUiSummary;
+}): StateSummary["protectedPage"] | undefined {
+  const combined = [...params.visibleTexts, ...params.candidateActions]
+    .map((value) => value.toLowerCase());
+  const signals = new Set<string>();
+
+  for (const value of combined) {
+    if (value.includes("验证码") || value.includes("verification code") || value.includes("sms code")) {
+      signals.add("otp_surface");
+    }
+    if (value.includes("滑块") || value.includes("captcha") || value.includes("人机验证")) {
+      signals.add("human_verification");
+    }
+    if (value.includes("已阅读并同意") || value.includes("服务协议") || value.includes("隐私权政策")) {
+      signals.add("consent_gate");
+    }
+    if (value.includes("安全键盘") || value.includes("secure keyboard")) {
+      signals.add("secure_input_surface");
+    }
+  }
+
+  if (signals.size === 0) {
+    return undefined;
+  }
+
+  const signalList = [...signals].slice(0, 6);
+  const uiTreeOnly = Boolean(params.uiSummary && params.uiSummary.totalNodes > 0);
+  const note = signalList.includes("human_verification")
+    ? "A verification or challenge surface is visible; treat screenshots and deterministic selectors as potentially constrained."
+    : "This screen likely belongs to a login, consent, or verification boundary with higher automation friction.";
+
+  return {
+    suspected: true,
+    observability: uiTreeOnly ? "ui_tree_only" : "limited",
+    signals: signalList,
+    note,
+  };
+}
+
+function inferManualHandoffRecommendation(params: {
+  visibleTexts: string[];
+  candidateActions: string[];
+  protectedPage?: StateSummary["protectedPage"];
+}): ManualHandoffRecommendation | undefined {
+  const combined = [...params.visibleTexts, ...params.candidateActions]
+    .map((value) => value.toLowerCase());
+  const containsAny = (...patterns: string[]): boolean =>
+    patterns.some((pattern) => combined.some((value) => value.includes(pattern)));
+
+  if (containsAny("请输入验证码", "验证码", "verification code", "sms code")) {
+    return {
+      required: true,
+      reason: "otp_required",
+      summary: "A one-time verification code step is visible and should be completed by a human operator.",
+      suggestedOperatorActions: [
+        "Read the verification code from the trusted channel and enter it on-device.",
+        "Do not expose or persist the one-time code in automation logs.",
+      ],
+      resumeHints: [
+        "After the code is entered, run get_screen_summary or get_session_state to confirm the post-login state.",
+      ],
+    };
+  }
+
+  if (containsAny("滑块", "captcha", "人机验证")) {
+    return {
+      required: true,
+      reason: "captcha_required",
+      summary: "A human verification challenge is visible and requires manual completion.",
+      suggestedOperatorActions: [
+        "Complete the verification challenge directly on the device.",
+        "Resume automation only after the challenge surface is fully dismissed.",
+      ],
+      resumeHints: [
+        "Re-query the current screen after challenge dismissal before issuing write actions.",
+      ],
+    };
+  }
+
+  if (containsAny("已阅读并同意", "服务协议", "隐私权政策")) {
+    return {
+      required: false,
+      reason: "consent_required",
+      summary: "A consent gate is visible; automation may proceed only after explicit user acknowledgement or an allowed consent interaction.",
+      suggestedOperatorActions: [
+        "Confirm the consent text is acceptable for the current environment before continuing.",
+      ],
+      resumeHints: [
+        "If policy allows, the agent may tap the consent checkbox before continuing the flow.",
+      ],
+    };
+  }
+
+  if (params.protectedPage?.suspected) {
+    return {
+      required: false,
+      reason: "protected_page",
+      summary: "This screen appears to be a protected automation boundary; validate observability before attempting high-risk actions.",
+      suggestedOperatorActions: [
+        "Prefer bounded actions and explicit post-action checks while on this surface.",
+      ],
+      resumeHints: [
+        "Escalate to request_manual_handoff if the next step requires secrets, OTP, or challenge completion.",
+      ],
+    };
+  }
+
+  return undefined;
 }
 
 function buildStateConfidence(params: { appPhase: StateSummary["appPhase"]; readiness: StateSummary["readiness"]; uiSummary?: InspectUiSummary; blockingSignals: string[]; recentFailures: string[] }): number {
@@ -248,6 +371,22 @@ export function buildStateSummaryFromSignals(params: {
     hasEmptyState ? "empty_state" : undefined,
     ...pageHints.map((hint) => `page_hint:${hint}`),
   ], 8);
+  const protectedPage = inferProtectedPageAssessment({
+    visibleTexts,
+    candidateActions,
+    uiSummary: params.uiSummary,
+  });
+  const manualHandoff = inferManualHandoffRecommendation({
+    visibleTexts,
+    candidateActions,
+    protectedPage,
+  });
+  if (protectedPage?.suspected) {
+    derivedSignals.push("protected_page_suspected");
+  }
+  if (manualHandoff?.required) {
+    derivedSignals.push(`manual_handoff:${manualHandoff.reason}`);
+  }
   const stateConfidence = buildStateConfidence({
     appPhase,
     readiness,
@@ -269,6 +408,8 @@ export function buildStateSummaryFromSignals(params: {
     candidateActions,
     recentFailures,
     topVisibleTexts: visibleTexts,
+    protectedPage,
+    manualHandoff,
   };
 }
 
@@ -408,6 +549,12 @@ export async function getScreenSummaryWithMaestro(
       ...inspectResult.nextSuggestions,
       ...(logResult?.nextSuggestions ?? []),
       ...(crashResult?.nextSuggestions ?? []),
+      ...(screenSummary.manualHandoff?.required
+        ? [
+          `Manual handoff recommended: ${screenSummary.manualHandoff.summary}`,
+          "Call request_manual_handoff to record the operator checkpoint in the active session timeline.",
+        ]
+        : []),
     ])).slice(0, 5),
   };
 }
@@ -501,7 +648,12 @@ export async function getSessionStateWithMaestro(
       evidence: screenSummaryResult.data.evidence,
     },
     nextSuggestions: sessionRecord
-      ? screenSummaryResult.nextSuggestions
+      ? Array.from(new Set([
+        ...screenSummaryResult.nextSuggestions,
+        ...(screenSummaryResult.data.screenSummary.manualHandoff?.required
+          ? ["Use request_manual_handoff if a human operator must complete OTP, captcha, or protected-page steps."]
+          : []),
+      ])).slice(0, 5)
       : Array.from(new Set([
         "start_session before long-running execution if you want state snapshots persisted across tools.",
         ...screenSummaryResult.nextSuggestions,

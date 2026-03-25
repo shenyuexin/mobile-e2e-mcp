@@ -205,11 +205,11 @@ Tool registry/signature dispatch live in `packages/mcp-server/src/server.ts`, wh
 
 ## Complete MCP Tool Catalog (Current)
 
-The server currently exposes **54 tools**. For AI agents, this is the fastest way to understand what actions are available.
+The server currently exposes **55 tools**. For AI agents, this is the fastest way to understand what actions are available.
 
 ### 1) Session & lifecycle
 
-`start_session`, `end_session`, `run_flow`, `reset_app_state`
+`start_session`, `request_manual_handoff`, `end_session`, `run_flow`, `reset_app_state`
 
 ### 2) Task orchestration & flow capture
 

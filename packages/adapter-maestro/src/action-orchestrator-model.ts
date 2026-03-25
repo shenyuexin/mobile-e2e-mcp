@@ -294,6 +294,8 @@ export function buildRetryRecommendations(params: {
   const hasNoopRefreshSignal = params.actionabilityReview.includes("refresh_signal:noop")
     || params.actionabilityReview.includes("post_action_refresh_no_additional_change");
   const hasBlockedSignal = params.actionabilityReview.some((item) => item.startsWith("blocking:")) || params.failureCategory === "blocked";
+  const manualHandoffMarker = params.actionabilityReview.find((item) => item.startsWith("manual_handoff_required:"));
+  const manualHandoffReason = manualHandoffMarker?.replace("manual_handoff_required:", "");
   const hasTargetResolution = params.actionabilityReview.find((item) => item.startsWith("target_resolution:"));
   const targetSuggestedSelector = params.actionabilityReview.find((item) => item.startsWith("target_suggested_selector:"))?.replace("target_suggested_selector:", "");
   const targetScoreDelta = params.actionabilityReview.find((item) => item.startsWith("target_score_delta:"))?.replace("target_score_delta:", "");
@@ -312,6 +314,13 @@ export function buildRetryRecommendations(params: {
         targetScoreDelta ? `Top candidate score delta: ${targetScoreDelta}.` : undefined,
         targetVisibility ? `Visibility heuristics: ${targetVisibility}.` : undefined,
       ].filter((item): item is string => Boolean(item)).join(" "),
+    ];
+  }
+
+  if (manualHandoffMarker) {
+    return [
+      "Do not retry this action automatically; the runtime detected a manual handoff boundary.",
+      `Call request_manual_handoff before continuing${manualHandoffReason ? ` (reason: ${manualHandoffReason})` : ""}.`,
     ];
   }
 
@@ -359,6 +368,9 @@ export function classifyRetryRecommendationTier(params: {
   if (params.ocrFallbackSuggestions && params.ocrFallbackSuggestions.length > 0) {
     return "inspect_only";
   }
+  if (params.actionabilityReview.some((item) => item.startsWith("manual_handoff_required:"))) {
+    return "handoff_required";
+  }
   if (params.finalStatus === "success" && params.stateChanged) {
     return "none";
   }
@@ -388,6 +400,16 @@ export function buildRetryRecommendation(params: {
   failureCategory?: ActionOutcomeSummary["failureCategory"];
   actionabilityReview: string[];
 }): NonNullable<PerformActionWithEvidenceData["retryRecommendation"]> {
+  if (params.tier === "handoff_required") {
+    const handoffReason = params.actionabilityReview.find((item) => item.startsWith("manual_handoff_required:"))?.replace("manual_handoff_required:", "");
+    return {
+      tier: params.tier,
+      reason: handoffReason
+        ? `The current screen requires human intervention before automation can continue (${handoffReason}).`
+        : "The current screen requires human intervention before automation can continue.",
+      suggestedAction: "Record the checkpoint with request_manual_handoff, let the operator complete the step on-device, then reacquire screen state before resuming.",
+    };
+  }
   if (params.tier === "refine_selector") {
     const suggestedSelector = params.actionabilityReview.find((item) => item.startsWith("target_suggested_selector:"))?.replace("target_suggested_selector:", "");
     const scoreDelta = params.actionabilityReview.find((item) => item.startsWith("target_score_delta:"))?.replace("target_score_delta:", "");

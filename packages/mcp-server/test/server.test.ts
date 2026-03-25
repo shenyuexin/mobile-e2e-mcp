@@ -47,6 +47,7 @@ test("createServer lists newly added UI tools", () => {
   assert.ok(tools.includes("cancel_record_session"));
   assert.ok(tools.includes("export_session_flow"));
   assert.ok(tools.includes("record_task_flow"));
+  assert.ok(tools.includes("request_manual_handoff"));
   assert.ok(tools.includes("compare_against_baseline"));
   assert.ok(tools.includes("explain_last_failure"));
   assert.ok(tools.includes("find_similar_failures"));
@@ -90,6 +91,58 @@ test("server invoke returns capability discovery profiles", async () => {
   assert.equal(result.data.capabilities.ocrFallback?.deterministicFirst, true);
   assert.equal(result.data.capabilities.ocrFallback?.hostRequirement, "darwin");
   assert.equal(Array.isArray(result.data.capabilities.ocrFallback?.configuredProviders), true);
+});
+
+test("server invoke records manual handoff checkpoints into session timeline", async () => {
+  const server = createServer();
+  const sessionId = `server-handoff-${Date.now()}`;
+  try {
+    const started = await server.invoke("start_session", {
+      sessionId,
+      platform: "android",
+      deviceId: buildTestDeviceId(sessionId),
+      appId: "com.example.app",
+      profile: "phase1",
+    });
+    assert.equal(started.status, "success");
+
+    const result = await server.invoke("request_manual_handoff", {
+      sessionId,
+      platform: "android",
+      reason: "otp_required",
+      summary: "OTP input requires a human operator.",
+      suggestedOperatorActions: ["Enter the code directly on-device."],
+      resumeHints: ["Re-run get_screen_summary after the code is submitted."],
+      blocking: true,
+      stateSummary: {
+        appPhase: "authentication",
+        readiness: "interrupted",
+        blockingSignals: ["verification_prompt"],
+      },
+    });
+
+    assert.equal(result.status, "success");
+    assert.equal(result.reasonCode, "OK");
+    assert.equal(result.data.reason, "otp_required");
+    assert.equal(result.data.blocking, true);
+    assert.equal(result.data.requested, true);
+
+    const persisted = JSON.parse(
+      await readFile(path.resolve(repoRoot, buildSessionRecordRelativePath(sessionId)), "utf8"),
+    ) as {
+      session: {
+        latestStateSummary?: { appPhase?: string; readiness?: string; manualHandoff?: { reason?: string; required?: boolean } };
+        timeline: Array<{ type?: string; eventType?: string; detail?: string }>;
+      };
+    };
+    assert.equal(persisted.session.timeline.some((event) => event.type === "manual_handoff_requested" && event.eventType === "manual_handoff"), true);
+    assert.equal(persisted.session.latestStateSummary?.appPhase, "authentication");
+    assert.equal(persisted.session.latestStateSummary?.readiness, "interrupted");
+    assert.equal(persisted.session.latestStateSummary?.manualHandoff?.reason, "otp_required");
+    assert.equal(persisted.session.latestStateSummary?.manualHandoff?.required, true);
+  } finally {
+    await cleanupSessionArtifact(sessionId);
+  }
 });
 
 test("server invoke keeps resolve_ui_target Android dry-run semantics", async () => {

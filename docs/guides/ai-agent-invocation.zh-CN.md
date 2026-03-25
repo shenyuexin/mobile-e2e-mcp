@@ -155,11 +155,25 @@
 
 - `recover_to_known_state`
 
-### 3.9 录制、导出与回放
+### 3.9 处理 OTP / 验证码 / 受保护页面
+
+`get_screen_summary -> get_session_state -> request_manual_handoff`
+
+建议分流：
+
+- 当 `screenSummary.manualHandoff.required=true` 时，不要继续假装全自动完成；
+- 如果是通过 `perform_action_with_evidence` 触达到 OTP / 验证码页，结果现在会显式返回：
+  - `reasonCode=MANUAL_HANDOFF_REQUIRED`
+  - `retryRecommendationTier=handoff_required`
+  - 开启 `autoRemediate` 时，`autoRemediation.stopReason=manual_handoff_required`
+- 对 OTP / 验证码 / 人机挑战，调用 `request_manual_handoff` 把人工接管点写入 session timeline；
+- 人工完成后，再重新调用 `get_screen_summary` 或 `get_session_state` 确认页面是否已退出受保护边界。
+
+### 3.10 录制、导出与回放
 
 这条链路只在专题文档维护：[`flow-generation.md`](./flow-generation.md)
 
-### 3.10 抓 React Native / Expo JS 调试信号
+### 3.11 抓 React Native / Expo JS 调试信号
 
 `list_js_debug_targets -> capture_js_console_logs` 或 `capture_js_network_events`
 

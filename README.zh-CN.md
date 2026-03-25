@@ -180,11 +180,11 @@
 
 ## 完整 MCP 工具目录（当前）
 
-当前服务共暴露 **54 个工具**。对于 AI Agent，这是最快建立“可做什么”的入口。
+当前服务共暴露 **55 个工具**。对于 AI Agent，这是最快建立“可做什么”的入口。
 
 ### 1）会话与生命周期
 
-`start_session`、`end_session`、`run_flow`、`reset_app_state`
+`start_session`、`request_manual_handoff`、`end_session`、`run_flow`、`reset_app_state`
 
 ### 2）任务编排与流程采集
 

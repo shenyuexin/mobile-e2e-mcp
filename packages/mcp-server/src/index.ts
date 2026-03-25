@@ -6,6 +6,7 @@ import type {
   DetectInterruptionInput,
   PerformActionWithEvidenceInput,
   Platform,
+  RequestManualHandoffInput,
   ResolveInterruptionInput,
   ResumeInterruptedActionInput,
   ToolResult,
@@ -62,6 +63,7 @@ import { persistSessionEvidenceCapture } from "./tools/persist-session-evidence.
 import { queryUi } from "./tools/query-ui.js";
 import { rankFailureCandidates } from "./tools/rank-failure-candidates.js";
 import { recordScreen } from "./tools/record-screen.js";
+import { requestManualHandoff } from "./tools/request-manual-handoff.js";
 import { recoverToKnownState } from "./tools/recover-to-known-state.js";
 import { replayLastStablePath } from "./tools/replay-last-stable-path.js";
 import { resetAppState } from "./tools/reset-app-state.js";
@@ -602,6 +604,14 @@ const TOOL_DESCRIPTORS: ReadonlyArray<ToolDescriptor> = [
     handler: recordTaskFlow,
     policy: { enforced: true, requiredScopes: ["read"] },
     session: { required: false },
+    audit: { captureResultEvidence: false },
+  }),
+  defineToolDescriptor({
+    name: "request_manual_handoff",
+    description: "Record an explicit operator handoff checkpoint for OTP, consent, captcha, or protected-page workflows.",
+    handler: (input: RequestManualHandoffInput) => requestManualHandoff(input),
+    policy: { enforced: true, requiredScopes: ["write"] },
+    session: { required: true, requireResolvedSessionContext: true },
     audit: { captureResultEvidence: false },
   }),
   defineToolDescriptor({

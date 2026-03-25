@@ -76,3 +76,28 @@ test("offline-terminal-stop is classified as offline_terminal", () => {
 
   assert.equal(summary.readiness, "offline_terminal");
 });
+
+test("otp verification surfaces trigger protected-page and manual-handoff signals", () => {
+  const summary = buildStateSummaryFromSignals({
+    uiSummary: {
+      totalNodes: 18,
+      clickableNodes: 3,
+      scrollableNodes: 0,
+      nodesWithText: 9,
+      nodesWithContentDesc: 1,
+      sampleNodes: [
+        { clickable: false, enabled: true, scrollable: false, text: "请输入验证码" },
+        { clickable: false, enabled: true, scrollable: false, text: "验证码已发送至 177****2554" },
+        { clickable: true, enabled: true, scrollable: false, text: "下一步" },
+      ],
+    },
+  });
+
+  assert.equal(summary.appPhase, "authentication");
+  assert.equal(summary.protectedPage?.suspected, true);
+  assert.equal(summary.protectedPage?.observability, "ui_tree_only");
+  assert.equal(summary.manualHandoff?.required, true);
+  assert.equal(summary.manualHandoff?.reason, "otp_required");
+  assert.equal(summary.derivedSignals?.includes("protected_page_suspected"), true);
+  assert.equal(summary.derivedSignals?.includes("manual_handoff:otp_required"), true);
+});

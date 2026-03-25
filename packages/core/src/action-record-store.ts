@@ -33,7 +33,8 @@ export interface PersistedActionRecord {
 		| "refine_selector"
 		| "wait_then_retry"
 		| "refresh_context"
-		| "recover_first";
+		| "recover_first"
+		| "handoff_required";
 	retryRecommendation?: RetryRecommendation;
 	retryDecisionTrace?: RetryDecisionTrace;
 	postActionVerificationTrace?: PostActionVerificationTrace;

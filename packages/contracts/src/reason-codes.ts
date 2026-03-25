@@ -12,6 +12,7 @@ export const REASON_CODES = {
   interruptionUnclassified: "INTERRUPTION_UNCLASSIFIED",
   interruptionResolutionFailed: "INTERRUPTION_RESOLUTION_FAILED",
   interruptionRecoveryStateDrift: "INTERRUPTION_RECOVERY_STATE_DRIFT",
+  manualHandoffRequired: "MANUAL_HANDOFF_REQUIRED",
   missingBounds: "MISSING_BOUNDS",
   noMatch: "NO_MATCH",
   ocrAmbiguousTarget: "OCR_AMBIGUOUS_TARGET",

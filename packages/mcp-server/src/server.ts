@@ -68,6 +68,8 @@ import type {
   RecordSessionStatusData,
   RecordTaskFlowData,
   RecordTaskFlowInput,
+  RequestManualHandoffData,
+  RequestManualHandoffInput,
   RecoverToKnownStateData,
   RecoverToKnownStateInput,
   ReplayLastStablePathData,
@@ -135,6 +137,7 @@ export interface MobileE2EMcpToolContractMap {
   cancel_record_session: ToolContract<CancelRecordSessionInput, CancelRecordSessionData>;
   export_session_flow: ToolContract<ExportSessionFlowInput, ExportSessionFlowData>;
   record_task_flow: ToolContract<RecordTaskFlowInput, RecordTaskFlowData>;
+  request_manual_handoff: ToolContract<RequestManualHandoffInput, RequestManualHandoffData>;
   explain_last_failure: ToolContract<ExplainLastFailureInput, ExplainLastFailureData>;
   find_similar_failures: ToolContract<FindSimilarFailuresInput, FindSimilarFailuresData>;
   get_action_outcome: ToolContract<GetActionOutcomeInput, GetActionOutcomeData>;

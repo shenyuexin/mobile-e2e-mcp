@@ -70,6 +70,7 @@
 ## H. Session, Governance, and Collaboration
 
 - startSession / endSession
+- manualHandoffCheckpoint
 - checkpoint / rollback
 - attachArtifacts
 - exportSessionReport

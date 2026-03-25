@@ -1,5 +1,6 @@
 import {
   type ActionIntent,
+  type ManualHandoffRecommendation,
   type ActionOutcomeSummary,
   type PerformActionWithEvidenceData,
   type PerformActionWithEvidenceInput,
@@ -103,6 +104,36 @@ function isInterruptionGuardPassed(status: ResolveInterruptionData["status"] | u
   return status === "resolved" || status === "not_needed";
 }
 
+function requiredManualHandoff(state?: StateSummary): ManualHandoffRecommendation | undefined {
+  return state?.manualHandoff?.required ? state.manualHandoff : undefined;
+}
+
+function buildManualHandoffReview(params: {
+  recommendation: ManualHandoffRecommendation;
+  phase: "pre" | "post";
+  stateSummary?: StateSummary;
+}): string[] {
+  return uniqueNonEmpty([
+    `manual_handoff_required:${params.recommendation.reason}`,
+    `manual_handoff_phase:${params.phase}`,
+    "manual_handoff_blocking:true",
+    params.recommendation.summary ? `manual_handoff_summary:${params.recommendation.summary}` : undefined,
+    params.stateSummary?.protectedPage?.suspected ? "protected_page_suspected:true" : undefined,
+    params.stateSummary?.protectedPage?.observability ? `protected_page_observability:${params.stateSummary.protectedPage.observability}` : undefined,
+  ], 6);
+}
+
+function buildManualHandoffNextSuggestions(recommendation?: ManualHandoffRecommendation): string[] {
+  if (!recommendation) {
+    return [];
+  }
+  return uniqueNonEmpty([
+    "Call request_manual_handoff before continuing this workflow.",
+    ...(recommendation.suggestedOperatorActions ?? []),
+    ...(recommendation.resumeHints ?? []),
+  ], 5);
+}
+
 export async function performActionWithEvidenceWithMaestro(
   input: PerformActionWithEvidenceInput,
   deps: ActionOrchestratorDeps = {},
@@ -171,6 +202,7 @@ export async function performActionWithEvidenceWithMaestro(
   }
 
   const runnerProfile = input.runnerProfile ?? sessionRecord?.session.profile ?? DEFAULT_RUNNER_PROFILE;
+  const getScreenSummary = ocrFallbackTestHooks?.getScreenSummary ?? getScreenSummaryWithMaestro;
   const resolveInterruptionExecutor = interruptionGuardTestHooks?.resolveInterruption ?? resolveInterruptionWithMaestro;
   const resumeInterruptionExecutor = interruptionGuardTestHooks?.resumeInterruptedAction
     ?? ((resumeInput: ResumeInterruptedActionInput) => resumeInterruptedActionWithMaestro(resumeInput, { executeIntentWithMaestro: executeIntent }));
@@ -221,7 +253,7 @@ export async function performActionWithEvidenceWithMaestro(
     };
   }
 
-  const preStateResult = await getScreenSummaryWithMaestro({
+  const preStateResult = await getScreenSummary({
     sessionId: input.sessionId,
     platform,
     runnerProfile,
@@ -231,18 +263,31 @@ export async function performActionWithEvidenceWithMaestro(
     includeDebugSignals: input.includeDebugSignals ?? true,
     dryRun: input.dryRun,
   });
-  const lowLevelResult = await executeIntent({
-    sessionId: input.sessionId,
-    platform,
-    runnerProfile,
-    harnessConfigPath: input.harnessConfigPath,
-    deviceId: input.deviceId ?? sessionRecord?.session.deviceId,
-    appId: input.appId ?? sessionRecord?.session.appId,
-    dryRun: input.dryRun,
-  }, input.action);
-
   const preStateSummary = preStateResult.data.screenSummary;
-  const ocrFallbackResult = canAttemptOcrFallback(input.action, lowLevelResult)
+  const preActionManualHandoff = requiredManualHandoff(preStateSummary);
+  const manualHandoffPreblocked = Boolean(preActionManualHandoff);
+  const lowLevelResult = manualHandoffPreblocked
+    ? {
+      status: "failed" as const,
+      reasonCode: REASON_CODES.manualHandoffRequired,
+      sessionId: input.sessionId,
+      durationMs: 0,
+      attempts: 0,
+      artifacts: [] as string[],
+      data: {},
+      nextSuggestions: buildManualHandoffNextSuggestions(preActionManualHandoff),
+    }
+    : await executeIntent({
+      sessionId: input.sessionId,
+      platform,
+      runnerProfile,
+      harnessConfigPath: input.harnessConfigPath,
+      deviceId: input.deviceId ?? sessionRecord?.session.deviceId,
+      appId: input.appId ?? sessionRecord?.session.appId,
+      dryRun: input.dryRun,
+    }, input.action);
+
+  const ocrFallbackResult = !manualHandoffPreblocked && canAttemptOcrFallback(input.action, lowLevelResult)
     ? await executeOcrFallback({
       input,
       platform,
@@ -263,7 +308,9 @@ export async function performActionWithEvidenceWithMaestro(
   let actionStatus = ocrFallbackResult?.attempted ? ocrFallbackResult.status : lowLevelResult.status;
   let actionReasonCode = ocrFallbackResult?.attempted ? ocrFallbackResult.reasonCode : lowLevelResult.reasonCode;
   const fallbackUsed = Boolean(ocrFallbackResult?.used);
-  const postStateResult = ocrFallbackResult?.postStateResult ?? await getScreenSummaryWithMaestro({
+  const postStateResult = manualHandoffPreblocked
+    ? preStateResult
+    : ocrFallbackResult?.postStateResult ?? await getScreenSummary({
     sessionId: input.sessionId,
     platform,
     runnerProfile,
@@ -306,12 +353,31 @@ export async function performActionWithEvidenceWithMaestro(
     postState: postStateSummary,
     evidenceDelta,
   });
+  let manualHandoffContext: {
+    phase: "pre" | "post";
+    recommendation: ManualHandoffRecommendation;
+    stateSummary: StateSummary;
+  } | undefined = manualHandoffPreblocked
+    ? { phase: "pre" as const, recommendation: preActionManualHandoff!, stateSummary: preStateSummary }
+    : undefined;
+  if (!manualHandoffContext) {
+    const postActionManualHandoff = requiredManualHandoff(postStateSummary);
+    if (postActionManualHandoff) {
+      manualHandoffContext = { phase: "post" as const, recommendation: postActionManualHandoff, stateSummary: postStateSummary };
+    }
+  }
+  if (manualHandoffContext) {
+    actionStatus = manualHandoffContext.phase === "pre" ? "failed" : "partial";
+    actionReasonCode = REASON_CODES.manualHandoffRequired;
+    failureCategory = "blocked";
+    stepState = "terminal_stop";
+  }
   const maxRetryAttempts = stepState === "recoverable_waiting" || stepState === "partial_progress" ? 3 : stepState === "degraded_but_continue_safe" ? 2 : 1;
   let retryAttemptIndex = 1;
-  let retryStopReason: string | undefined;
+  let retryStopReason: string | undefined = manualHandoffContext ? "manual_handoff_required" : undefined;
 
   while (shouldRetryStep({ stepState, evidenceConfidence, attemptIndex: retryAttemptIndex, maxAttempts: maxRetryAttempts })) {
-    const retryPostStateResult = await getScreenSummaryWithMaestro({
+    const retryPostStateResult = await getScreenSummary({
       sessionId: input.sessionId,
       platform,
       runnerProfile,
@@ -353,6 +419,15 @@ export async function performActionWithEvidenceWithMaestro(
       postState: postStateSummary,
       evidenceDelta,
     });
+    const retryManualHandoff = requiredManualHandoff(postStateSummary);
+    if (retryManualHandoff) {
+      manualHandoffContext = { phase: "post", recommendation: retryManualHandoff, stateSummary: postStateSummary };
+      actionStatus = "partial";
+      actionReasonCode = REASON_CODES.manualHandoffRequired;
+      failureCategory = "blocked";
+      stepState = "terminal_stop";
+      retryStopReason = "manual_handoff_required";
+    }
     if (stateChanged || stepState === "checkpoint_candidate") {
       break;
     }
@@ -406,9 +481,9 @@ export async function performActionWithEvidenceWithMaestro(
 
   let postActionRefreshAttempted = false;
   let refreshedPostStateSummary: StateSummary | undefined;
-  if (shouldAttemptPostActionRefresh({ failureCategory, finalStatus: actionStatus, stateChanged })) {
+  if (!manualHandoffContext && shouldAttemptPostActionRefresh({ failureCategory, finalStatus: actionStatus, stateChanged })) {
     postActionRefreshAttempted = true;
-    const refreshedPostStateResult = await getScreenSummaryWithMaestro({
+    const refreshedPostStateResult = await getScreenSummary({
       sessionId: input.sessionId,
       platform,
       runnerProfile,
@@ -439,6 +514,15 @@ export async function performActionWithEvidenceWithMaestro(
         stateChanged,
         targetResolution,
       });
+      const refreshedManualHandoff = requiredManualHandoff(postStateSummary);
+      if (refreshedManualHandoff) {
+        manualHandoffContext = { phase: "post", recommendation: refreshedManualHandoff, stateSummary: postStateSummary };
+        actionStatus = "partial";
+        actionReasonCode = REASON_CODES.manualHandoffRequired;
+        failureCategory = "blocked";
+        stepState = "terminal_stop";
+        retryStopReason = "manual_handoff_required";
+      }
     }
   }
 
@@ -538,6 +622,9 @@ export async function performActionWithEvidenceWithMaestro(
         ? "retry_tier_code:refresh_context_stale_state"
         : "retry_tier_code:refresh_context_noop");
     }
+  }
+  if (manualHandoffContext) {
+    actionabilityReview.unshift(...buildManualHandoffReview(manualHandoffContext).reverse());
   }
 
   const retryRecommendationTier = classifyRetryRecommendationTier({
@@ -683,6 +770,8 @@ export async function performActionWithEvidenceWithMaestro(
         postActionInterruption.data.status !== "not_needed" ? `post_interruption:${postActionInterruption.data.status}` : undefined,
       ], 8),
       actionabilityReview: finalActionabilityReview,
+      manualHandoffRequired: manualHandoffContext?.recommendation.required,
+      manualHandoffReason: manualHandoffContext?.recommendation.reason,
       lowLevelStatus: finalLowLevelStatus,
       lowLevelReasonCode: finalLowLevelReasonCode,
       evidence,
@@ -690,13 +779,16 @@ export async function performActionWithEvidenceWithMaestro(
       preActionInterruption: preActionInterruption.data,
       postActionInterruption: postActionInterruption.data,
     },
-    nextSuggestions: buildRetryRecommendations({
-      finalStatus: finalToolStatus,
-      stateChanged,
-      postActionRefreshAttempted,
-      actionabilityReview: finalActionabilityReview,
-      failureCategory: finalOutcome.failureCategory,
-      ocrFallbackSuggestions: ocrFallbackResult?.nextSuggestions,
-    }),
+    nextSuggestions: uniqueNonEmpty([
+      ...buildManualHandoffNextSuggestions(manualHandoffContext?.recommendation),
+      ...buildRetryRecommendations({
+        finalStatus: finalToolStatus,
+        stateChanged,
+        postActionRefreshAttempted,
+        actionabilityReview: finalActionabilityReview,
+        failureCategory: finalOutcome.failureCategory,
+        ocrFallbackSuggestions: ocrFallbackResult?.nextSuggestions,
+      }),
+    ], 8),
   };
 }

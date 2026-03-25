@@ -1,4 +1,4 @@
-import type { ActionIntent, AndroidPerformancePreset, AndroidReplayOptions, CaptureJsConsoleLogsInput, CaptureJsNetworkEventsInput, CollectDebugEvidenceInput, CollectDiagnosticsInput, CompareAgainstBaselineInput, DescribeCapabilitiesInput, DoctorInput, ExplainLastFailureInput, FindSimilarFailuresInput, GetActionOutcomeInput, GetCrashSignalsInput, GetLogsInput, GetScreenSummaryInput, GetSessionStateInput, InspectUiInput, InstallAppInput, IosPerformanceTemplate, LaunchAppInput, ListDevicesInput, ListJsDebugTargetsInput, MeasureAndroidPerformanceInput, MeasureIosPerformanceInput, PerformActionWithEvidenceInput, Platform, QueryUiInput, RankFailureCandidatesInput, RecordScreenInput, RecoverToKnownStateInput, ReplayLastStablePathInput, ResetAppStateInput, ResetAppStateStrategy, ResolveUiTargetInput, RunFlowInput, RunnerProfile, ScreenshotInput, ScrollAndResolveUiTargetInput, ScrollAndTapElementInput, StartSessionInput, SuggestKnownRemediationInput, TapElementInput, TapInput, TerminateAppInput, ToolResult, TypeTextInput, TypeIntoElementInput, UiScrollDirection, WaitForUiInput, WaitForUiMode } from "@mobile-e2e-mcp/contracts";
+import type { ActionIntent, AndroidPerformancePreset, AndroidReplayOptions, CaptureJsConsoleLogsInput, CaptureJsNetworkEventsInput, CollectDebugEvidenceInput, CollectDiagnosticsInput, CompareAgainstBaselineInput, DescribeCapabilitiesInput, DoctorInput, ExplainLastFailureInput, FindSimilarFailuresInput, GetActionOutcomeInput, GetCrashSignalsInput, GetLogsInput, GetScreenSummaryInput, GetSessionStateInput, InspectUiInput, InstallAppInput, IosPerformanceTemplate, LaunchAppInput, ListDevicesInput, ListJsDebugTargetsInput, MeasureAndroidPerformanceInput, MeasureIosPerformanceInput, PerformActionWithEvidenceInput, Platform, QueryUiInput, RankFailureCandidatesInput, RecordScreenInput, RecoverToKnownStateInput, ReplayLastStablePathInput, RequestManualHandoffInput, ResetAppStateInput, ResetAppStateStrategy, ResolveUiTargetInput, RunFlowInput, RunnerProfile, ScreenshotInput, ScrollAndResolveUiTargetInput, ScrollAndTapElementInput, StartSessionInput, SuggestKnownRemediationInput, TapElementInput, TapInput, TerminateAppInput, ToolResult, TypeTextInput, TypeIntoElementInput, UiScrollDirection, WaitForUiInput, WaitForUiMode } from "@mobile-e2e-mcp/contracts";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 import { applyContextAlias } from "./cli/context-resolver.js";
@@ -47,6 +47,7 @@ export function parseCliArgs(argv: string[]): CliOptions {
   let measureAndroidPerformance = false;
   let measureIosPerformance = false;
   let performActionWithEvidence = false;
+  let requestManualHandoff = false;
   let autoRemediate = false;
   let rankFailureCandidates = false;
   let recordScreen = false;
@@ -82,6 +83,11 @@ export function parseCliArgs(argv: string[]): CliOptions {
   let launchUrl: string | undefined;
   let appId: string | undefined;
   let deviceId: string | undefined;
+  let handoffReason: RequestManualHandoffInput["reason"] | undefined;
+  let handoffSummary: string | undefined;
+  let handoffActions: string[] | undefined;
+  let handoffResumeHints: string[] | undefined;
+  let handoffBlocking: boolean | undefined;
   let queryClassName: string | undefined;
   let queryClickable: boolean | undefined;
   let queryContentDesc: string | undefined;
@@ -141,6 +147,7 @@ export function parseCliArgs(argv: string[]): CliOptions {
     else if (arg === "--measure-android-performance") { measureAndroidPerformance = true; }
     else if (arg === "--measure-ios-performance") { measureIosPerformance = true; }
     else if (arg === "--perform-action-with-evidence") { performActionWithEvidence = true; }
+    else if (arg === "--request-manual-handoff") { requestManualHandoff = true; }
     else if (arg === "--auto-remediate") { autoRemediate = true; }
     else if (arg === "--rank-failure-candidates") { rankFailureCandidates = true; }
     else if (arg === "--record-screen") { recordScreen = true; }
@@ -176,6 +183,11 @@ export function parseCliArgs(argv: string[]): CliOptions {
     else if (arg === "--launch-url" && nextValue) { launchUrl = nextValue; index += 1; }
     else if (arg === "--app-id" && nextValue) { appId = nextValue; index += 1; }
     else if (arg === "--device-id" && nextValue) { deviceId = nextValue; index += 1; }
+    else if (arg === "--handoff-reason" && nextValue && ["otp_required", "captcha_required", "consent_required", "protected_page", "secure_input_required", "unknown"].includes(nextValue)) { handoffReason = nextValue as RequestManualHandoffInput["reason"]; index += 1; }
+    else if (arg === "--handoff-summary" && nextValue) { handoffSummary = nextValue; index += 1; }
+    else if (arg === "--handoff-actions" && nextValue) { handoffActions = nextValue.split(",").map((value) => value.trim()).filter(Boolean); index += 1; }
+    else if (arg === "--handoff-resume-hints" && nextValue) { handoffResumeHints = nextValue.split(",").map((value) => value.trim()).filter(Boolean); index += 1; }
+    else if (arg === "--handoff-blocking" && nextValue) { handoffBlocking = parseBooleanArg(nextValue); index += 1; }
     else if ((arg === "--query-class-name" || arg === "--class-name") && nextValue) { queryClassName = nextValue; index += 1; }
     else if ((arg === "--query-clickable" || arg === "--clickable") && nextValue) { const parsed = parseBooleanArg(nextValue); if (parsed !== undefined) queryClickable = parsed; index += 1; }
     else if ((arg === "--query-content-desc" || arg === "--content-desc") && nextValue) { queryContentDesc = nextValue; index += 1; }
@@ -236,6 +248,7 @@ export function parseCliArgs(argv: string[]): CliOptions {
     measureAndroidPerformance,
     measureIosPerformance,
     performActionWithEvidence,
+    requestManualHandoff,
     autoRemediate,
     rankFailureCandidates,
     recordScreen,
@@ -271,7 +284,12 @@ export function parseCliArgs(argv: string[]): CliOptions {
     launchUrl,
     appId,
     deviceId,
-      queryClassName,
+    handoffReason,
+    handoffSummary,
+    handoffActions,
+    handoffResumeHints,
+    handoffBlocking,
+    queryClassName,
       queryClickable,
       queryContentDesc,
       queryLimit,
@@ -555,6 +573,26 @@ export async function main(): Promise<void> {
     };
     const result = await server.invoke("get_session_state", getSessionStateInput);
     console.log(JSON.stringify({ tools: server.listTools(), getSessionStateResult: result }, null, 2));
+    if (result.status === "failed") process.exitCode = 1;
+    return;
+  }
+  if (cliOptions.requestManualHandoff) {
+    const requestManualHandoffInput: RequestManualHandoffInput = {
+      sessionId: cliOptions.sessionId ?? `handoff-${Date.now()}`,
+      platform: cliOptions.platform,
+      runnerProfile: cliOptions.runnerProfile,
+      harnessConfigPath: cliOptions.harnessConfigPath,
+      deviceId: cliOptions.deviceId,
+      appId: cliOptions.appId,
+      reason: cliOptions.handoffReason ?? "unknown",
+      summary: cliOptions.handoffSummary,
+      suggestedOperatorActions: cliOptions.handoffActions,
+      resumeHints: cliOptions.handoffResumeHints,
+      blocking: cliOptions.handoffBlocking,
+      dryRun: cliOptions.dryRun,
+    };
+    const result = await server.invoke("request_manual_handoff", requestManualHandoffInput);
+    console.log(JSON.stringify({ tools: server.listTools(), requestManualHandoffResult: result }, null, 2));
     if (result.status === "failed") process.exitCode = 1;
     return;
   }

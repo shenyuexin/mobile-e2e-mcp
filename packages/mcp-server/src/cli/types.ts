@@ -36,6 +36,7 @@ export interface CliOptions {
   measureAndroidPerformance: boolean;
   measureIosPerformance: boolean;
   performActionWithEvidence: boolean;
+  requestManualHandoff: boolean;
   autoRemediate: boolean;
   rankFailureCandidates: boolean;
   recordScreen: boolean;
@@ -71,6 +72,11 @@ export interface CliOptions {
   launchUrl?: string;
   appId?: string;
   deviceId?: string;
+  handoffReason?: "otp_required" | "captcha_required" | "consent_required" | "protected_page" | "secure_input_required" | "unknown";
+  handoffSummary?: string;
+  handoffActions?: string[];
+  handoffResumeHints?: string[];
+  handoffBlocking?: boolean;
   queryClassName?: string;
   queryClickable?: boolean;
   queryContentDesc?: string;

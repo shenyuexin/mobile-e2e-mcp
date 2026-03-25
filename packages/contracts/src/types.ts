@@ -4,6 +4,8 @@ export type Platform = "android" | "ios";
 export type ToolStatus = "success" | "failed" | "partial";
 export type RunnerProfile = "phase1" | "native_android" | "native_ios" | "flutter_android";
 export type CapabilitySupportLevel = "full" | "partial" | "unsupported";
+export type ManualHandoffReason = "otp_required" | "captcha_required" | "consent_required" | "protected_page" | "secure_input_required" | "unknown";
+export type ProtectedPageObservability = "normal" | "ui_tree_only" | "screenshot_limited" | "limited";
 export type ExecutionEvidenceKind = "ui_dump" | "screenshot" | "screen_recording" | "log" | "crash_signal" | "diagnostics_bundle" | "debug_summary" | "performance_trace" | "performance_summary" | "performance_export";
 export type AppPhase = "launching" | "ready" | "loading" | "blocked" | "backgrounded" | "crashed" | "authentication" | "detail" | "catalog" | "empty" | "unknown";
 export type StateReadiness = "ready" | "waiting_network" | "waiting_ui" | "degraded_success" | "backend_failed_terminal" | "offline_terminal" | "interrupted" | "unknown";
@@ -216,6 +218,21 @@ export interface CapabilityProfile {
   ocrFallback?: OcrCapabilitySummary;
 }
 
+export interface ProtectedPageAssessment {
+  suspected: boolean;
+  observability: ProtectedPageObservability;
+  signals: string[];
+  note?: string;
+}
+
+export interface ManualHandoffRecommendation {
+  required: boolean;
+  reason: ManualHandoffReason;
+  summary: string;
+  suggestedOperatorActions: string[];
+  resumeHints: string[];
+}
+
 export interface StateSummary {
   screenId?: string;
   screenTitle?: string;
@@ -225,11 +242,13 @@ export interface StateSummary {
   blockingSignals: string[];
    stateConfidence?: number;
    pageHints?: string[];
-   derivedSignals?: string[];
+  derivedSignals?: string[];
   visibleTargetCount?: number;
   candidateActions?: string[];
   recentFailures?: string[];
   topVisibleTexts?: string[];
+  protectedPage?: ProtectedPageAssessment;
+  manualHandoff?: ManualHandoffRecommendation;
 }
 export interface EvidenceCompleteness {
   level: EvidenceCompletenessLevel;
@@ -326,6 +345,7 @@ export interface CheckpointDecisionTrace {
 export type AutoRemediationStopReason =
   | "not_requested"
   | "action_succeeded"
+  | "manual_handoff_required"
   | "missing_session_record"
   | "missing_evidence_window"
   | "selector_missing"
@@ -929,6 +949,31 @@ export interface GetSessionStateData {
   crashSummary?: LogSummary;
   evidence?: ExecutionEvidence[];
 }
+export interface RequestManualHandoffInput {
+  sessionId: string;
+  platform?: Platform;
+  runnerProfile?: RunnerProfile;
+  harnessConfigPath?: string;
+  deviceId?: string;
+  appId?: string;
+  reason: ManualHandoffReason;
+  summary?: string;
+  suggestedOperatorActions?: string[];
+  resumeHints?: string[];
+  blocking?: boolean;
+  artifactRefs?: string[];
+  stateSummary?: StateSummary;
+  dryRun?: boolean;
+}
+export interface RequestManualHandoffData {
+  requested: boolean;
+  handoffId: string;
+  reason: ManualHandoffReason;
+  blocking: boolean;
+  recordedAt: string;
+  operatorPrompt: string;
+  stateSummary?: StateSummary;
+}
 export interface PerformActionWithEvidenceInput {
   sessionId: string;
   platform?: Platform;
@@ -948,13 +993,15 @@ export interface PerformActionWithEvidenceData {
   preStateSummary?: StateSummary;
   postStateSummary?: StateSummary;
   postActionRefreshAttempted?: boolean;
-  retryRecommendationTier?: "none" | "inspect_only" | "refine_selector" | "wait_then_retry" | "refresh_context" | "recover_first";
+  retryRecommendationTier?: "none" | "inspect_only" | "refine_selector" | "wait_then_retry" | "refresh_context" | "recover_first" | "handoff_required";
   retryRecommendation?: RetryRecommendation;
   retryDecisionTrace?: RetryDecisionTrace;
   postActionVerificationTrace?: PostActionVerificationTrace;
   checkpointDecisionTrace?: CheckpointDecisionTrace;
   timelineDecisionMarkers?: string[];
   actionabilityReview?: string[];
+  manualHandoffRequired?: boolean;
+  manualHandoffReason?: ManualHandoffReason;
   lowLevelStatus: ToolStatus;
   lowLevelReasonCode: ReasonCode;
   evidence?: ExecutionEvidence[];

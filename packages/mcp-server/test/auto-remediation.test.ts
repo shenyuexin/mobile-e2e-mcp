@@ -31,6 +31,8 @@ function buildBasePerformActionResult(params: {
   targetQuality?: NonNullable<PerformActionWithEvidenceData["outcome"]["targetQuality"]>;
   actionabilityReview?: string[];
   reasonCode?: ToolResult<PerformActionWithEvidenceData>["reasonCode"];
+  manualHandoffRequired?: boolean;
+  manualHandoffReason?: "otp_required" | "captcha_required" | "consent_required" | "protected_page" | "secure_input_required" | "unknown";
 }): ToolResult<PerformActionWithEvidenceData> {
   return {
     status: params.status,
@@ -75,8 +77,18 @@ function buildBasePerformActionResult(params: {
         appPhase: params.appPhase ?? "unknown",
         readiness: params.readiness ?? "unknown",
         blockingSignals: [],
+        manualHandoff: params.manualHandoffRequired
+          ? {
+            required: true,
+            reason: params.manualHandoffReason ?? "unknown",
+            summary: "Manual operator intervention is required.",
+            blocking: true,
+          }
+          : undefined,
       },
       actionabilityReview: params.actionabilityReview,
+      manualHandoffRequired: params.manualHandoffRequired,
+      manualHandoffReason: params.manualHandoffReason,
       lowLevelStatus: params.status,
       lowLevelReasonCode: params.reasonCode ?? (params.status === "failed" ? REASON_CODES.adapterError : REASON_CODES.unsupportedOperation),
       evidence: [],
@@ -223,6 +235,50 @@ test("performActionWithAutoRemediation stops when the audit gate is unavailable"
 
     assert.equal(result.data.autoRemediation?.stopReason, "audit_unavailable");
     assert.equal(recoverCalled, false);
+  } finally {
+    await cleanupSessionArtifacts(sessionId);
+  }
+});
+
+test("performActionWithAutoRemediation stops immediately when perform_action_with_evidence requires manual handoff", async () => {
+  const sessionId = `auto-remediation-handoff-${Date.now()}`;
+  const server = createServer();
+
+  try {
+    await server.invoke("start_session", { sessionId, platform: "android", deviceId: buildTestDeviceId(sessionId), profile: "phase1" });
+    const result = await performActionWithAutoRemediation(
+      {
+        sessionId,
+        platform: "android",
+        dryRun: true,
+        autoRemediate: true,
+        action: { actionType: "tap_element", text: "Get code" },
+      },
+      {
+        performAction: async () => buildBasePerformActionResult({
+          sessionId,
+          status: "partial",
+          actionId: "auto-handoff",
+          actionType: "tap_element",
+          appPhase: "blocked",
+          readiness: "interrupted",
+          failureCategory: "blocked",
+          reasonCode: REASON_CODES.manualHandoffRequired,
+          actionabilityReview: ["manual_handoff_required:otp_required"],
+          manualHandoffRequired: true,
+          manualHandoffReason: "otp_required",
+        }),
+        explainLastFailure: async () => { throw new Error("explain should not run"); },
+        rankFailureCandidates: async () => { throw new Error("rank should not run"); },
+        suggestKnownRemediation: async () => { throw new Error("suggest should not run"); },
+        recoverToKnownState: async () => { throw new Error("recover should not run"); },
+        replayLastStablePath: async () => { throw new Error("replay should not run"); },
+      },
+    );
+
+    assert.equal(result.data.autoRemediation?.attempted, false);
+    assert.equal(result.data.autoRemediation?.stopReason, "manual_handoff_required");
+    assert.equal(result.data.autoRemediation?.stopDetail.includes("otp_required"), true);
   } finally {
     await cleanupSessionArtifacts(sessionId);
   }

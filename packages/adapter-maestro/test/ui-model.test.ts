@@ -889,6 +889,65 @@ test("performActionWithEvidenceWithMaestro includes target-obscured hints in act
   assert.equal(result.data.actionabilityReview?.some((item) => item.startsWith("target_resolution:")), true);
 });
 
+test("performActionWithEvidenceWithMaestro upgrades to manual handoff stop semantics when post-state requires OTP", async () => {
+  let screenSummaryCalls = 0;
+  setOcrFallbackTestHooksForTesting({
+    getScreenSummary: async (input) => {
+      screenSummaryCalls += 1;
+      return buildScreenSummaryResult(
+        input.sessionId,
+        screenSummaryCalls === 1
+          ? buildFixtureScreenSummary({
+            screenId: "login-form",
+            screenTitle: "Login",
+            appPhase: "ready",
+            readiness: "ready",
+          })
+          : buildFixtureScreenSummary({
+            screenId: "otp-verify",
+            screenTitle: "Verification Code",
+            appPhase: "authentication",
+            readiness: "interrupted",
+            protectedPage: {
+              suspected: true,
+              observability: "ui_tree_only",
+              reasons: ["otp_verification"],
+            },
+            manualHandoff: {
+              required: true,
+              reason: "otp_required",
+              summary: "OTP verification requires operator input.",
+              blocking: true,
+              suggestedOperatorActions: ["Enter the OTP on-device."],
+              resumeHints: ["Re-check the screen summary after the code is accepted."],
+            },
+          }),
+      );
+    },
+  });
+
+  const result = await performActionWithEvidenceWithMaestro({
+    sessionId: "perform-action-manual-handoff",
+    platform: "android",
+    dryRun: true,
+    action: {
+      actionType: "tap_element",
+      text: "Get code",
+    },
+  });
+
+  assert.equal(result.status, "partial");
+  assert.equal(result.reasonCode, REASON_CODES.manualHandoffRequired);
+  assert.equal(result.data.outcome.failureCategory, "blocked");
+  assert.equal(result.data.outcome.stepState, "terminal_stop");
+  assert.equal(result.data.manualHandoffRequired, true);
+  assert.equal(result.data.manualHandoffReason, "otp_required");
+  assert.equal(result.data.retryRecommendationTier, "handoff_required");
+  assert.equal(result.data.retryDecisionTrace?.stopReason, "manual_handoff_required");
+  assert.equal(result.data.actionabilityReview?.some((item) => item === "manual_handoff_required:otp_required"), true);
+  assert.equal(result.nextSuggestions.some((item) => item.includes("request_manual_handoff")), true);
+});
+
 test("performActionWithEvidenceWithMaestro blocks action when pre-guard interruption is denied", async () => {
   setInterruptionGuardTestHooksForTesting({
     resolveInterruption: async (input) => ({
@@ -1222,6 +1281,7 @@ test("performActionWithEvidenceWithMaestro uses screenshot fixture for OCR tap s
   }
 
   const fixture = await readJsonFixture<MacVisionExecutionResult>("tests/fixtures/ocr/continue-success.observations.json");
+  let screenSummaryCalls = 0;
   setOcrFallbackTestHooksForTesting({
     now: () => new Date().toISOString(),
     createProvider: () => new MacVisionOcrProvider({ execute: async () => fixture }),
@@ -1242,10 +1302,18 @@ test("performActionWithEvidenceWithMaestro uses screenshot fixture for OCR tap s
       },
       nextSuggestions: [],
     }),
-    getScreenSummary: async (input) => buildScreenSummaryResult(input.sessionId, buildFixtureScreenSummary({
-      screenTitle: "Confirmation",
-      topVisibleTexts: ["Thanks"],
-    })),
+    getScreenSummary: async (input) => buildScreenSummaryResult(
+      input.sessionId,
+      buildFixtureScreenSummary(screenSummaryCalls++ === 0
+        ? {
+          screenTitle: "Shipping",
+          topVisibleTexts: ["Continue"],
+        }
+        : {
+          screenTitle: "Confirmation",
+          topVisibleTexts: ["Thanks"],
+        }),
+    ),
   });
 
   const result = await performActionWithEvidenceWithMaestro({
@@ -1408,6 +1476,7 @@ test("adapter-maestro and OcrService agree on successful fixture outcome", async
   const fixture = await readJsonFixture<MacVisionExecutionResult>("tests/fixtures/ocr/continue-success.observations.json");
   const [adapterResult, serviceResult] = await Promise.all([
     (async () => {
+      let screenSummaryCalls = 0;
       setOcrFallbackTestHooksForTesting({
         now: () => new Date().toISOString(),
         createProvider: () => new MacVisionOcrProvider({ execute: async () => fixture }),
@@ -1428,10 +1497,18 @@ test("adapter-maestro and OcrService agree on successful fixture outcome", async
           },
           nextSuggestions: [],
         }),
-        getScreenSummary: async (input) => buildScreenSummaryResult(input.sessionId, buildFixtureScreenSummary({
-          screenTitle: "Confirmation",
-          topVisibleTexts: ["Thanks"],
-        })),
+        getScreenSummary: async (input) => buildScreenSummaryResult(
+          input.sessionId,
+          buildFixtureScreenSummary(screenSummaryCalls++ === 0
+            ? {
+              screenTitle: "Shipping",
+              topVisibleTexts: ["Continue"],
+            }
+            : {
+              screenTitle: "Confirmation",
+              topVisibleTexts: ["Thanks"],
+            }),
+        ),
       });
 
       return performActionWithEvidenceWithMaestro({

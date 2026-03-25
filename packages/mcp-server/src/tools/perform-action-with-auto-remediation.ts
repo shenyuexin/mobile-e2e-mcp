@@ -100,6 +100,17 @@ function buildMetadataStop(auto: {
 }
 
 function classifyMetadataDrivenStop(base: ToolResult<PerformActionWithEvidenceData>): { stopReason: AutoRemediationResult["stopReason"]; stopDetail: string } | undefined {
+  const manualHandoffReason = base.data.manualHandoffReason
+    ?? base.data.postStateSummary?.manualHandoff?.reason
+    ?? base.data.preStateSummary?.manualHandoff?.reason;
+  if (base.data.manualHandoffRequired || base.data.postStateSummary?.manualHandoff?.required || base.data.preStateSummary?.manualHandoff?.required) {
+    return {
+      stopReason: "manual_handoff_required",
+      stopDetail: manualHandoffReason
+        ? `The runtime detected a manual handoff boundary (${manualHandoffReason}), so bounded auto-remediation stops before recovery or replay.`
+        : "The runtime detected a manual handoff boundary, so bounded auto-remediation stops before recovery or replay.",
+    };
+  }
   const readiness = base.data.postStateSummary?.readiness;
   if (readiness === "backend_failed_terminal") {
     return {
