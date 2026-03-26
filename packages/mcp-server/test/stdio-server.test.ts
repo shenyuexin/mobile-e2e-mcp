@@ -589,7 +589,20 @@ test("handleRequest supports tools/call alias for perform_action_with_evidence",
   const typedResult = result as {
     status: string;
     reasonCode: string;
-    data: { outcome: { actionType: string; actionId: string; failureCategory?: string }; retryRecommendationTier?: string; actionabilityReview?: string[]; autoRemediation?: { stopReason: string } };
+    data: {
+      outcome: {
+        actionType: string;
+        actionId: string;
+        failureCategory?: string;
+        progressMarker?: string;
+        postconditionStatus?: string;
+        stateChangeCategory?: string;
+        stateChangeConfidence?: string;
+      };
+      retryRecommendationTier?: string;
+      actionabilityReview?: string[];
+      autoRemediation?: { stopReason: string };
+    };
   };
 
   assert.equal(typedResult.status, "partial");
@@ -597,6 +610,10 @@ test("handleRequest supports tools/call alias for perform_action_with_evidence",
   assert.equal(typedResult.data.outcome.actionType, "tap_element");
   assert.equal(typeof typedResult.data.outcome.actionId, "string");
   assert.equal(typedResult.data.outcome.failureCategory, "unsupported");
+  assert.equal(typedResult.data.outcome.progressMarker, "none");
+  assert.equal(typedResult.data.outcome.postconditionStatus, "not_met");
+  assert.equal(typedResult.data.outcome.stateChangeCategory, "no_material_change");
+  assert.equal(typedResult.data.outcome.stateChangeConfidence, "weak");
   assert.equal(typedResult.data.retryRecommendationTier, "inspect_only");
   assert.equal(Array.isArray(typedResult.data.actionabilityReview), true);
   assert.equal(typeof typedResult.data.autoRemediation?.stopReason, "string");
@@ -807,11 +824,14 @@ test("handleRequest supports tools/call alias for explain_last_failure", async (
       arguments: { sessionId: "stdio-explain-failure-dry-run" },
     },
   });
-  const typedResult = result as { reasonCode: string; data: { found: boolean; attribution?: { affectedLayer: string } } };
+  const typedResult = result as { reasonCode: string; data: { found: boolean; attribution?: { affectedLayer: string }; diagnosisPacket?: { strongestSuspectLayer?: string; confidence?: string; strongestCausalSignal?: string } } };
 
   assert.equal(typedResult.reasonCode, "OK");
   assert.equal(typedResult.data.found, true);
   assert.equal(typeof typedResult.data.attribution?.affectedLayer, "string");
+  assert.equal(typedResult.data.diagnosisPacket?.strongestSuspectLayer, "ui_locator");
+  assert.equal(typedResult.data.diagnosisPacket?.confidence, "moderate");
+  assert.equal(typeof typedResult.data.diagnosisPacket?.strongestCausalSignal, "string");
 });
 
 test("handleRequest supports tools/call alias for rank_failure_candidates", async () => {
@@ -1956,8 +1976,11 @@ test("handleRequest resolves Wave 3/4 session-bound context from active session"
       },
     });
 
-    const debugResult = await handleRequest({ id: 154, method: "tools/call", params: { name: "collect_debug_evidence", arguments: { sessionId, dryRun: true } } }) as { status: string; reasonCode: string };
+    const debugResult = await handleRequest({ id: 154, method: "tools/call", params: { name: "collect_debug_evidence", arguments: { sessionId, dryRun: true } } }) as { status: string; reasonCode: string; data: { diagnosisPacket?: { strongestSuspectLayer?: string; confidence?: string; escalationThreshold?: string } } };
     assert.equal(debugResult.reasonCode, "OK");
+    assert.equal(debugResult.data.diagnosisPacket?.strongestSuspectLayer, "environment");
+    assert.equal(debugResult.data.diagnosisPacket?.confidence, "moderate");
+    assert.equal(debugResult.data.diagnosisPacket?.escalationThreshold, "if_summary_inconclusive");
 
     const screenSummary = await handleRequest({ id: 155, method: "tools/call", params: { name: "get_screen_summary", arguments: { sessionId, dryRun: true } } }) as { status: string; reasonCode: string };
     assert.equal(screenSummary.reasonCode === "OK" || screenSummary.reasonCode === "UNSUPPORTED_OPERATION", true);

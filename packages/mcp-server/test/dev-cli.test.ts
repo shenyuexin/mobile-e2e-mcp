@@ -867,7 +867,7 @@ test("main dispatches perform_action_with_evidence Android dry-run through the C
     "--content-desc", "View products",
     "--dry-run",
   ]) as {
-    performActionWithEvidenceResult: { status: string; reasonCode: string; data: { outcome: { actionType: string; actionId: string; failureCategory?: string }; retryRecommendationTier?: string; actionabilityReview?: string[]; autoRemediation?: { stopReason: string } } };
+    performActionWithEvidenceResult: { status: string; reasonCode: string; data: { outcome: { actionType: string; actionId: string; failureCategory?: string; progressMarker?: string; postconditionStatus?: string; stateChangeCategory?: string; stateChangeConfidence?: string }; retryRecommendationTier?: string; actionabilityReview?: string[]; autoRemediation?: { stopReason: string } } };
   };
 
   assert.equal(output.performActionWithEvidenceResult.status, "partial");
@@ -875,6 +875,10 @@ test("main dispatches perform_action_with_evidence Android dry-run through the C
   assert.equal(output.performActionWithEvidenceResult.data.outcome.actionType, "tap_element");
   assert.equal(typeof output.performActionWithEvidenceResult.data.outcome.actionId, "string");
   assert.equal(output.performActionWithEvidenceResult.data.outcome.failureCategory, "unsupported");
+  assert.equal(output.performActionWithEvidenceResult.data.outcome.progressMarker, "none");
+  assert.equal(output.performActionWithEvidenceResult.data.outcome.postconditionStatus, "not_met");
+  assert.equal(output.performActionWithEvidenceResult.data.outcome.stateChangeCategory, "no_material_change");
+  assert.equal(output.performActionWithEvidenceResult.data.outcome.stateChangeConfidence, "weak");
   assert.equal(output.performActionWithEvidenceResult.data.retryRecommendationTier, "inspect_only");
   assert.equal(Array.isArray(output.performActionWithEvidenceResult.data.actionabilityReview), true);
   assert.equal(typeof output.performActionWithEvidenceResult.data.autoRemediation?.stopReason, "string");
@@ -894,13 +898,17 @@ test("main dispatches get_action_outcome through the CLI", async () => {
     "--get-action-outcome",
     "--action-id", actionOutput.performActionWithEvidenceResult.data.outcome.actionId,
   ]) as {
-    getActionOutcomeResult: { status: string; reasonCode: string; data: { found: boolean; outcome?: { actionType: string } } };
+    getActionOutcomeResult: { status: string; reasonCode: string; data: { found: boolean; outcome?: { actionType: string; postconditionStatus?: string; progressMarker?: string }; diagnosisPacket?: { strongestSuspectLayer?: string; confidence?: string } } };
   };
 
   assert.equal(output.getActionOutcomeResult.status, "success");
   assert.equal(output.getActionOutcomeResult.reasonCode, "OK");
   assert.equal(output.getActionOutcomeResult.data.found, true);
   assert.equal(output.getActionOutcomeResult.data.outcome?.actionType, "wait_for_ui");
+  assert.equal(output.getActionOutcomeResult.data.outcome?.postconditionStatus, "not_met");
+  assert.equal(output.getActionOutcomeResult.data.outcome?.progressMarker, "none");
+  assert.equal(output.getActionOutcomeResult.data.diagnosisPacket?.strongestSuspectLayer, "ui_locator");
+  assert.equal(output.getActionOutcomeResult.data.diagnosisPacket?.confidence, "moderate");
 });
 
 test("main dispatches explain_last_failure through the CLI", async () => {
@@ -917,12 +925,15 @@ test("main dispatches explain_last_failure through the CLI", async () => {
     "--explain-last-failure",
     "--session-id", sessionId,
   ]) as {
-    explainLastFailureResult: { reasonCode: string; data: { found: boolean; attribution?: { affectedLayer: string } } };
+    explainLastFailureResult: { reasonCode: string; data: { found: boolean; attribution?: { affectedLayer: string }; diagnosisPacket?: { strongestSuspectLayer?: string; confidence?: string; strongestCausalSignal?: string; recommendedNextProbe?: string; recommendedRecovery?: string } } };
   };
 
   assert.equal(output.explainLastFailureResult.reasonCode, "OK");
   assert.equal(output.explainLastFailureResult.data.found, true);
   assert.equal(typeof output.explainLastFailureResult.data.attribution?.affectedLayer, "string");
+  assert.equal(output.explainLastFailureResult.data.diagnosisPacket?.strongestSuspectLayer, "ui_locator");
+  assert.equal(output.explainLastFailureResult.data.diagnosisPacket?.confidence, "moderate");
+  assert.equal(typeof output.explainLastFailureResult.data.diagnosisPacket?.strongestCausalSignal, "string");
 });
 
 test("main dispatches rank_failure_candidates through the CLI", async () => {
@@ -1033,12 +1044,19 @@ test("main dispatches Phase F lookup tools through the CLI", async () => {
   await runCli(["--session-id", sessionId, "--perform-action-with-evidence", "--platform", "android", "--action-type", "launch_app", "--dry-run"]);
   await runCli(["--session-id", sessionId, "--perform-action-with-evidence", "--platform", "android", "--action-type", "tap_element", "--content-desc", "View products", "--dry-run"]);
 
-  const similar = await runCli(["--find-similar-failures", "--session-id", sessionId]) as { findSimilarFailuresResult: { reasonCode: string } };
-  const baseline = await runCli(["--compare-against-baseline", "--session-id", sessionId]) as { compareAgainstBaselineResult: { reasonCode: string } };
+  const similar = await runCli(["--find-similar-failures", "--session-id", sessionId]) as { findSimilarFailuresResult: { reasonCode: string; data: { similarFailures: Array<{ matchedSignals?: string[]; replayValue?: string }> } } };
+  const baseline = await runCli(["--compare-against-baseline", "--session-id", sessionId]) as { compareAgainstBaselineResult: { reasonCode: string; data: { comparison?: { replayValue?: string; checkpointDivergence?: string } } } };
   const remediation = await runCli(["--suggest-known-remediation", "--session-id", sessionId]) as { suggestKnownRemediationResult: { reasonCode: string } };
 
   assert.equal(similar.findSimilarFailuresResult.reasonCode, "OK");
   assert.equal(baseline.compareAgainstBaselineResult.reasonCode, "OK");
+  if (similar.findSimilarFailuresResult.data.similarFailures[0]) {
+    assert.equal(Array.isArray(similar.findSimilarFailuresResult.data.similarFailures[0].matchedSignals), true);
+  }
+  if (baseline.compareAgainstBaselineResult.data.comparison) {
+    assert.equal(typeof baseline.compareAgainstBaselineResult.data.comparison.replayValue, "string");
+    assert.equal(typeof baseline.compareAgainstBaselineResult.data.comparison.checkpointDivergence, "string");
+  }
   assert.equal(remediation.suggestKnownRemediationResult.reasonCode, "OK");
 });
 
@@ -1053,7 +1071,7 @@ test("main dispatches collect_debug_evidence Android dry-run through the CLI", a
     collectDebugEvidenceResult: {
       status: string;
       reasonCode: string;
-      data: { supportLevel: string; jsDebugMetroBaseUrl?: string; jsDebugTargetEndpoint?: string; jsDebugTargetCandidateCount?: number; jsDebugTargetSelectionReason?: string; logSummary?: { query?: string }; suspectAreas: string[]; jsDebugTargetId?: string; jsConsoleLogCount?: number; jsNetworkEventCount?: number; jsConsoleSummary?: { totalLogs: number; exceptionCount: number }; jsNetworkSummary?: { totalTrackedRequests: number; failedRequestCount: number }; evidence?: Array<{ kind: string }> };
+      data: { supportLevel: string; jsDebugMetroBaseUrl?: string; jsDebugTargetEndpoint?: string; jsDebugTargetCandidateCount?: number; jsDebugTargetSelectionReason?: string; logSummary?: { query?: string }; suspectAreas: string[]; jsDebugTargetId?: string; jsConsoleLogCount?: number; jsNetworkEventCount?: number; jsConsoleSummary?: { totalLogs: number; exceptionCount: number }; jsNetworkSummary?: { totalTrackedRequests: number; failedRequestCount: number }; evidence?: Array<{ kind: string }>; diagnosisPacket?: { strongestSuspectLayer?: string; confidence?: string; escalationThreshold?: string } };
     };
   };
 
@@ -1063,6 +1081,9 @@ test("main dispatches collect_debug_evidence Android dry-run through the CLI", a
   assert.equal(output.collectDebugEvidenceResult.data.jsDebugMetroBaseUrl, "http://127.0.0.1:8081");
   assert.equal(output.collectDebugEvidenceResult.data.jsDebugTargetEndpoint, "http://127.0.0.1:8081/json/list");
   assert.equal(output.collectDebugEvidenceResult.data.jsDebugTargetCandidateCount, 0);
+  assert.equal(output.collectDebugEvidenceResult.data.diagnosisPacket?.strongestSuspectLayer, "environment");
+  assert.equal(output.collectDebugEvidenceResult.data.diagnosisPacket?.confidence, "moderate");
+  assert.equal(output.collectDebugEvidenceResult.data.diagnosisPacket?.escalationThreshold, "if_summary_inconclusive");
   assert.equal(output.collectDebugEvidenceResult.data.jsDebugTargetSelectionReason, undefined);
   assert.equal(output.collectDebugEvidenceResult.data.logSummary?.query, "error");
   assert.equal(Array.isArray(output.collectDebugEvidenceResult.data.suspectAreas), true);

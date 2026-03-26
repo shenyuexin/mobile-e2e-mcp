@@ -230,6 +230,10 @@ test("server invoke supports perform_action_with_evidence Android dry-run", asyn
   assert.equal(result.data.outcome.actionType, "tap_element");
   assert.equal(typeof result.data.outcome.actionId, "string");
   assert.equal(result.data.outcome.failureCategory, "unsupported");
+  assert.equal(result.data.outcome.progressMarker, "none");
+  assert.equal(result.data.outcome.postconditionStatus, "not_met");
+  assert.equal(result.data.outcome.stateChangeCategory, "no_material_change");
+  assert.equal(result.data.outcome.stateChangeConfidence, "weak");
   assert.equal(Array.isArray(result.data.actionabilityReview), true);
   assert.equal(result.data.retryRecommendationTier, "inspect_only");
   assert.equal(result.nextSuggestions[0]?.includes("Inspect the returned pre/post state summaries"), true);
@@ -440,6 +444,10 @@ test("server invoke supports get_action_outcome after perform_action_with_eviden
   assert.equal(outcomeResult.reasonCode, "OK");
   assert.equal(outcomeResult.data.found, true);
   assert.equal(outcomeResult.data.outcome?.actionType, "wait_for_ui");
+  assert.equal(outcomeResult.data.outcome?.postconditionStatus, "not_met");
+  assert.equal(outcomeResult.data.outcome?.progressMarker, "none");
+  assert.equal(outcomeResult.data.diagnosisPacket?.strongestSuspectLayer, "ui_locator");
+  assert.equal(outcomeResult.data.diagnosisPacket?.confidence, "moderate");
 });
 
 test("server invoke supports explain_last_failure after perform_action_with_evidence", async () => {
@@ -466,6 +474,11 @@ test("server invoke supports explain_last_failure after perform_action_with_evid
   assert.equal(result.reasonCode, "OK");
   assert.equal(result.data.found, true);
   assert.equal(typeof result.data.attribution?.affectedLayer, "string");
+  assert.equal(result.data.diagnosisPacket?.strongestSuspectLayer, "ui_locator");
+  assert.equal(result.data.diagnosisPacket?.confidence, "moderate");
+  assert.equal(typeof result.data.diagnosisPacket?.strongestCausalSignal, "string");
+  assert.equal(typeof result.data.diagnosisPacket?.recommendedNextProbe, "string");
+  assert.equal(typeof result.data.diagnosisPacket?.recommendedRecovery, "string");
   assert.equal(
     result.nextSuggestions.some((item) => item.includes("Inspect the action packet"))
       || result.data.retryRecommendation?.suggestedAction.includes("Inspect the action packet") === true,
@@ -612,6 +625,13 @@ test("server invoke supports Phase F lookup tools", async () => {
   assert.equal(typeof similar.data.found, "boolean");
   assert.equal(baseline.reasonCode, "OK");
   assert.equal(typeof baseline.data.found, "boolean");
+  if (similar.data.similarFailures[0]) {
+    assert.equal(Array.isArray(similar.data.similarFailures[0].matchedSignals), true);
+  }
+  if (baseline.data.comparison) {
+    assert.equal(typeof baseline.data.comparison.replayValue, "string");
+    assert.equal(typeof baseline.data.comparison.checkpointDivergence, "string");
+  }
   assert.equal(remediation.reasonCode, "OK");
   assert.equal(Array.isArray(remediation.data.remediation), true);
 });
@@ -1076,6 +1096,9 @@ test("server invoke supports collect_debug_evidence Android dry-run", async () =
   assert.equal(result.data.jsConsoleSummary?.exceptionCount, 0);
   assert.equal(result.data.jsNetworkSummary?.totalTrackedRequests, 0);
   assert.equal(result.data.jsNetworkSummary?.failedRequestCount, 0);
+  assert.equal(result.data.diagnosisPacket?.strongestSuspectLayer, "environment");
+  assert.equal(result.data.diagnosisPacket?.confidence, "moderate");
+  assert.equal(result.data.diagnosisPacket?.escalationThreshold, "if_summary_inconclusive");
   assert.equal(result.data.evidence?.some((item) => item.kind === "log"), true);
   assert.equal(result.data.evidence?.some((item) => item.kind === "crash_signal"), true);
 });

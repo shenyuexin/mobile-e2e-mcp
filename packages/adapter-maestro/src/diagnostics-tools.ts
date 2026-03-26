@@ -1,6 +1,7 @@
 import type {
   CollectDebugEvidenceData,
   CollectDebugEvidenceInput,
+  DiagnosisPacket,
   DebugSignalSummary,
   JsConsoleLogEntry,
   JsConsoleLogSummary,
@@ -37,6 +38,54 @@ import {
 import { buildExecutionEvidence, normalizePositiveInteger } from "./runtime-shared.js";
 
 const DEFAULT_DEBUG_PACKET_JS_TIMEOUT_MS = 1000;
+
+function buildDiagnosisPacket(params: {
+  reasonCode: ReasonCode;
+  suspectAreas: string[];
+  environmentIssue?: string;
+  logSummary?: LogSummary;
+  crashSummary?: LogSummary;
+  jsConsoleSummary?: JsConsoleLogSummary;
+  jsNetworkSummary?: JsNetworkFailureSummary;
+}): DiagnosisPacket | undefined {
+  const strongestCausalSignal = params.suspectAreas[0]
+    ?? params.crashSummary?.topSignals[0]?.sample
+    ?? params.logSummary?.topSignals[0]?.sample
+    ?? "Summarized evidence is still inconclusive; inspect the strongest available clue before escalating.";
+
+  const strongestSuspectLayer: DiagnosisPacket["strongestSuspectLayer"] = params.environmentIssue
+    ? "environment"
+    : params.crashSummary?.topSignals[0]
+      ? "crash"
+      : (params.jsConsoleSummary?.exceptionCount ?? 0) > 0
+        ? "runtime"
+        : (params.jsNetworkSummary?.failedRequestCount ?? 0) > 0
+          ? "network"
+          : params.logSummary?.topSignals[0]
+            ? "runtime"
+            : "environment";
+
+  return {
+    strongestSuspectLayer,
+    strongestCausalSignal,
+    confidence: params.environmentIssue || params.reasonCode !== REASON_CODES.ok ? "weak" : "moderate",
+    recommendedNextProbe: params.environmentIssue
+      ? "Restore device or Metro inspector availability before relying on summarized evidence."
+      : strongestSuspectLayer === "network"
+        ? "Inspect the failing API host, response status, and readiness transition around the action window."
+        : strongestSuspectLayer === "crash"
+          ? "Inspect the crash artifact and top crash signal before reading full logs."
+          : "Inspect the strongest summarized suspect before escalating to heavier diagnostics.",
+    recommendedRecovery: strongestSuspectLayer === "environment"
+      ? "Restore environment readiness first, then re-run bounded evidence capture."
+      : strongestSuspectLayer === "network"
+        ? "Wait for network readiness or confirm terminal backend/offline state before retrying."
+        : strongestSuspectLayer === "crash"
+          ? "Stabilize or relaunch the app before retrying the same path."
+          : "Use the summarized suspect to choose one bounded next probe before retrying.",
+    escalationThreshold: "if_summary_inconclusive",
+  };
+}
 
 function mergeSignalSummaries(...summaries: Array<LogSummary | undefined>): DebugSignalSummary[] {
   const merged = new Map<string, DebugSignalSummary>();
@@ -391,6 +440,15 @@ export async function collectDebugEvidenceWithRuntime(input: CollectDebugEvidenc
     jsConsoleLogCount: jsConsoleResult?.data.collectedCount,
     jsNetworkEventCount: jsNetworkResult?.data.collectedCount,
   });
+  const diagnosisPacket = buildDiagnosisPacket({
+    reasonCode,
+    suspectAreas,
+    environmentIssue,
+    logSummary: logsResult.data.summary,
+    crashSummary: crashResult.data.summary,
+    jsConsoleSummary: jsConsoleResult?.data.summary,
+    jsNetworkSummary: jsNetworkResult?.data.summary,
+  });
   const nextSuggestions = buildDebugNextSuggestions({
     reasonCode,
     suspectAreas,
@@ -462,6 +520,7 @@ export async function collectDebugEvidenceWithRuntime(input: CollectDebugEvidenc
       jsNetworkEventCount: jsNetworkResult?.data.collectedCount,
       jsConsoleSummary: jsConsoleResult?.data.summary,
       jsNetworkSummary: jsNetworkResult?.data.summary,
+      diagnosisPacket,
       diagnosisBriefing,
       suspectAreas,
       interestingSignals,
