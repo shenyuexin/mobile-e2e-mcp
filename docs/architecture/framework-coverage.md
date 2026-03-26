@@ -75,9 +75,50 @@ Framework profile (instrumentation quality layer):
 
 Framework profile determines determinism quality and fallback frequency; it is not a replacement for platform adapter.
 
+## 6. Layering Diagram
+
+The current repository uses a **platform-backbone plus framework-profile** model rather than a fully separate plugin backend per framework.
+
+```mermaid
+flowchart TD
+    A["MCP tools / session / policy / evidence"] --> B["Platform adapter backbone"]
+
+    B --> C["Android adapter path"]
+    B --> D["iOS adapter path"]
+
+    C --> E["Native profile"]
+    C --> F["React Native profile"]
+    C --> G["Flutter profile"]
+
+    D --> H["Native profile"]
+    D --> I["React Native profile"]
+    D --> J["Flutter profile"]
+
+    F -. "supplemental debug lane" .-> K["RN / Metro / DevTools signals"]
+    I -. "supplemental debug lane" .-> K
+
+    G -. "bounded fallback when semantics are weak" .-> L["OCR / CV fallback"]
+    J -. "bounded fallback when semantics are weak" .-> L
+```
+
+Read the diagram from top to bottom:
+
+- MCP tools enter through the shared session/policy/evidence layer first.
+- Android and iOS adapters remain the execution backbone for UI actions, app lifecycle, screenshots, logs, and flow running.
+- Native / React Native / Flutter are treated as framework profiles that change instrumentation expectations, determinism quality, and fallback frequency.
+- React Native adds a supplemental debug lane; it does not replace the platform automation lane.
+- Flutter relies more heavily on semantics quality, with bounded OCR/CV fallback only after deterministic resolution fails.
+
+### Current repository interpretation
+
+- `configs/profiles/native.yaml` describes the native instrumentation baseline on top of the shared platform adapters.
+- `configs/profiles/react-native.yaml` describes a validated RN sample baseline, while the runtime still executes through Android/iOS platform control surfaces.
+- `configs/profiles/flutter.yaml` describes Flutter expectations as a profile, not a separate execution backbone.
+- Live `RunnerProfile` values are currently narrower than the conceptual matrix: `phase1`, `native_android`, `native_ios`, and `flutter_android`.
+
 ---
 
-## 6. Compatibility Matrix (Template)
+## 7. Compatibility Matrix (Template)
 
 Maintain a matrix by:
 

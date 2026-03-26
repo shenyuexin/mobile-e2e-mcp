@@ -24,7 +24,7 @@
 - [adapters-ios.md](./adapters-ios.md)
 - [adapters-react-native.md](./adapters-react-native.md)
 - [adapters-flutter.md](./adapters-flutter.md)
-- [framework-coverage.md](./framework-coverage.md)
+- [framework-coverage.md](./framework-coverage.md) — platform adapter / framework profile 分层说明与 Mermaid 图
 - [platform-implementation-matrix.zh-CN.md](./platform-implementation-matrix.zh-CN.md)
 
 ## 4. 可靠性与治理专题
