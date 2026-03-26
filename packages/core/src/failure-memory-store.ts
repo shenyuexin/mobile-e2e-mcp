@@ -1,12 +1,15 @@
 import { randomUUID } from "node:crypto";
 import { mkdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
-import type { ActionOutcomeSummary, FailureSignature } from "@mobile-e2e-mcp/contracts";
+import type { ActionOutcomeSummary, ActionProgressMarker, CheckpointDivergence, FailureSignature, ReplayValue, StateChangeCategory, StateReadiness } from "@mobile-e2e-mcp/contracts";
 
 export interface PersistedFailureIndexEntry {
 	actionId: string;
 	sessionId: string;
 	signature: FailureSignature;
+	causalSignals?: string[];
+	replayValue?: ReplayValue;
+	checkpointDivergence?: CheckpointDivergence;
 	remediation?: string[];
 	updatedAt: string;
 }
@@ -16,6 +19,10 @@ export interface PersistedBaselineIndexEntry {
 	sessionId: string;
 	actionType: ActionOutcomeSummary["actionType"];
 	screenId?: string;
+	readiness?: StateReadiness;
+	progressMarker?: ActionProgressMarker;
+	stateChangeCategory?: StateChangeCategory;
+	replayValue?: ReplayValue;
 	updatedAt: string;
 }
 

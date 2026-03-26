@@ -389,13 +389,24 @@ test("recordFailureSignature tolerates a truncated failure index and rewrites it
       signature: {
         actionType: "tap_element",
         affectedLayer: "runtime",
+        readiness: "ready",
+        progressMarker: "none",
+        stateChangeCategory: "no_material_change",
       },
+      causalSignals: ["state_unchanged"],
+      replayValue: "low",
+      checkpointDivergence: "outcome_mismatch",
       remediation: ["Inspect runtime output"],
       updatedAt: new Date().toISOString(),
     });
 
     const index = await loadFailureIndex(repoRoot);
     assert.equal(index.some((entry) => entry.actionId === "action-corrupt-index-test"), true);
+    const rewritten = index.find((entry) => entry.actionId === "action-corrupt-index-test");
+    assert.equal(rewritten?.signature.readiness, "ready");
+    assert.equal(rewritten?.causalSignals?.includes("state_unchanged"), true);
+    assert.equal(rewritten?.replayValue, "low");
+    assert.equal(rewritten?.checkpointDivergence, "outcome_mismatch");
   } finally {
     await rm(failureIndexPath, { force: true });
   }
