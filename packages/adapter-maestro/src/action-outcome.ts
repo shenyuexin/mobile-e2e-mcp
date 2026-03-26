@@ -33,6 +33,7 @@ import {
   loadSessionRecord,
   queryTimelineAroundAction,
   recordFailureSignature,
+  type PersistedBaselineIndexEntry,
 } from "@mobile-e2e-mcp/core";
 import { resolveRepoPath } from "./harness-config.js";
 
@@ -150,6 +151,16 @@ function buildFailureAttribution(params: {
 
 function topRuntimeSignal(delta?: EvidenceDeltaSummary): string | undefined {
   return delta?.runtimeDeltaSummary ?? delta?.logDeltaSummary;
+}
+
+function buildEvidenceFingerprint(delta?: EvidenceDeltaSummary): string | undefined {
+  const fingerprint = uniqueNonEmpty([
+    delta?.uiDiffSummary ? `ui:${delta.uiDiffSummary}` : undefined,
+    delta?.networkDeltaSummary ? `network:${delta.networkDeltaSummary}` : undefined,
+    delta?.runtimeDeltaSummary ? `runtime:${delta.runtimeDeltaSummary}` : undefined,
+    delta?.logDeltaSummary ? `log:${delta.logDeltaSummary}` : undefined,
+  ], 4).join("|");
+  return fingerprint || undefined;
 }
 
 function buildFailureSignature(params: {
@@ -283,6 +294,27 @@ function buildBaselineComparison(params: {
   };
 }
 
+function scoreBaselineCandidate(current: ActionOutcomeSummary, candidate: PersistedBaselineIndexEntry): number {
+  let score = 0;
+  if (candidate.actionType === current.actionType) score += 5;
+  const currentScreenId = current.postState?.screenId ?? current.preState?.screenId;
+  const currentReadiness = current.postState?.readiness ?? current.preState?.readiness;
+  if (candidate.screenId && candidate.screenId === currentScreenId) score += 4;
+  if (candidate.readiness && candidate.readiness === currentReadiness) score += 3;
+  if (candidate.progressMarker && candidate.progressMarker === current.progressMarker) score += 2;
+  if (candidate.stateChangeCategory && candidate.stateChangeCategory === current.stateChangeCategory) score += 2;
+  if (candidate.replayValue === "high") score += 1;
+  if (candidate.fallbackUsed === current.fallbackUsed) score += 1;
+  return score;
+}
+
+function selectBestBaseline(current: ActionOutcomeSummary, baselines: PersistedBaselineIndexEntry[], currentActionId: string): PersistedBaselineIndexEntry | undefined {
+  return baselines
+    .filter((entry) => entry.actionId !== currentActionId && entry.actionType === current.actionType)
+    .map((entry) => ({ entry, score: scoreBaselineCandidate(current, entry) }))
+    .sort((left, right) => right.score - left.score || right.entry.updatedAt.localeCompare(left.entry.updatedAt))[0]?.entry;
+}
+
 export async function getActionOutcomeWithMaestro(
   input: GetActionOutcomeInput,
 ): Promise<ToolResult<GetActionOutcomeData>> {
@@ -385,6 +417,9 @@ export async function explainLastFailureWithMaestro(
     causalSignals: attribution.candidateCauses.slice(0, 3),
     replayValue: deriveReplayValueFromOutcome(record.outcome),
     checkpointDivergence: record.outcome.outcome === "success" ? "none" : "outcome_mismatch",
+    fallbackUsed: record.outcome.fallbackUsed,
+    evidenceFingerprint: buildEvidenceFingerprint(record.evidenceDelta),
+    baselineRelation: record.outcome.outcome === "success" ? "same_checkpoint" : "drifted_checkpoint",
     remediation: [attribution.recommendedRecovery, attribution.recommendedNextProbe].filter((value): value is string => Boolean(value)),
     updatedAt: new Date().toISOString(),
   });
@@ -539,7 +574,7 @@ export async function compareAgainstBaselineWithMaestro(
   }
 
   const baselines = await loadBaselineIndex(repoRoot);
-  const baseline = baselines.find((entry) => entry.actionType === current.outcome.actionType && entry.actionId !== current.actionId);
+  const baseline = selectBestBaseline(current.outcome, baselines, current.actionId);
   const comparison = buildBaselineComparison({
     baseline,
     current: { actionId: current.actionId, outcome: current.outcome },

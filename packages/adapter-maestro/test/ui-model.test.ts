@@ -1739,6 +1739,66 @@ test("compareAgainstBaselineWithMaestro reports divergence metadata for drifted 
   assert.equal(result.data.comparison?.divergenceSignals?.includes("screen_mismatch"), true);
 });
 
+test("compareAgainstBaselineWithMaestro prefers the closest matching baseline over the first same-action entry", async () => {
+  const sessionId = `baseline-preference-${Date.now()}`;
+  const poorBaselineActionId = `baseline-poor-${Date.now()}`;
+  const bestBaselineActionId = `baseline-best-${Date.now()}`;
+  const currentActionId = `baseline-current-${Date.now()}`;
+
+  await recordBaselineEntry(repoRoot, {
+    actionId: bestBaselineActionId,
+    sessionId,
+    actionType: "tap_element",
+    screenId: "catalog",
+    readiness: "ready",
+    progressMarker: "full",
+    stateChangeCategory: "screen_transition",
+    replayValue: "high",
+    updatedAt: new Date().toISOString(),
+  });
+  await recordBaselineEntry(repoRoot, {
+    actionId: poorBaselineActionId,
+    sessionId,
+    actionType: "tap_element",
+    screenId: "settings",
+    readiness: "waiting_ui",
+    progressMarker: "partial",
+    stateChangeCategory: "same_screen_delta",
+    replayValue: "low",
+    updatedAt: new Date().toISOString(),
+  });
+  await persistActionRecord(repoRoot, {
+    actionId: currentActionId,
+    sessionId,
+    intent: { actionType: "tap_element", contentDesc: "View products" },
+    outcome: {
+      actionId: currentActionId,
+      actionType: "tap_element",
+      resolutionStrategy: "deterministic",
+      preState: { appPhase: "ready", readiness: "ready", blockingSignals: [], screenId: "catalog" },
+      postState: { appPhase: "ready", readiness: "ready", blockingSignals: [], screenId: "catalog" },
+      stateChanged: false,
+      fallbackUsed: false,
+      retryCount: 0,
+      progressMarker: "full",
+      stateChangeCategory: "screen_transition",
+      outcome: "success",
+    },
+    evidenceDelta: {},
+    evidence: [],
+    lowLevelStatus: "success",
+    lowLevelReasonCode: REASON_CODES.ok,
+    updatedAt: new Date().toISOString(),
+  });
+
+  const result = await compareAgainstBaselineWithMaestro({ sessionId, actionId: currentActionId });
+
+  assert.equal(result.reasonCode, "OK");
+  assert.equal(result.data.comparison?.baselineActionId, bestBaselineActionId);
+  assert.equal(result.data.comparison?.matched, true);
+  assert.equal(result.data.comparison?.replayValue, "high");
+});
+
 test("suggestKnownRemediationWithMaestro returns remediation hints", async () => {
   const sessionId = "known-remediation-dry-run";
   await performActionWithEvidenceWithMaestro({ sessionId, platform: "android", dryRun: true, action: { actionType: "tap_element", contentDesc: "View products" } });

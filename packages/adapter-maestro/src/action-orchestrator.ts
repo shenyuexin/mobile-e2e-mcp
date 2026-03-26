@@ -627,6 +627,14 @@ export async function performActionWithEvidenceWithMaestro(
       replayValue: outcome.outcome === "success"
         ? (outcome.progressMarker === "full" || outcome.postconditionStatus === "met" ? "high" : "medium")
         : "low",
+      fallbackUsed: outcome.fallbackUsed,
+      evidenceFingerprint: uniqueNonEmpty([
+        evidenceDelta.uiDiffSummary ? `ui:${evidenceDelta.uiDiffSummary}` : undefined,
+        evidenceDelta.networkDeltaSummary ? `network:${evidenceDelta.networkDeltaSummary}` : undefined,
+        evidenceDelta.runtimeDeltaSummary ? `runtime:${evidenceDelta.runtimeDeltaSummary}` : undefined,
+        evidenceDelta.logDeltaSummary ? `log:${evidenceDelta.logDeltaSummary}` : undefined,
+      ], 4).join("|") || undefined,
+      baselineRelation: "same_checkpoint",
       updatedAt: new Date().toISOString(),
     });
   }
