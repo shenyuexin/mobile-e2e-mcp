@@ -108,6 +108,89 @@ test("replayLastStablePathWithMaestro refuses high-risk replay boundaries", asyn
   }
 });
 
+test("replayLastStablePathWithMaestro reports checkpoint divergence and replay value", async () => {
+  const sessionId = `recovery-divergence-${Date.now()}`;
+  const actionId = `recovery-divergence-action-${Date.now()}`;
+  try {
+    await persistActionRecord(repoRoot, {
+      actionId,
+      sessionId,
+      intent: { actionType: "launch_app", appId: "host.exp.exponent" },
+      outcome: {
+        actionId,
+        actionType: "launch_app",
+        resolutionStrategy: "deterministic",
+        preState: { appPhase: "launching", readiness: "waiting_ui", blockingSignals: [], screenId: "splash" },
+        postState: { appPhase: "ready", readiness: "ready", blockingSignals: [], screenId: "catalog" },
+        stateChanged: true,
+        fallbackUsed: false,
+        retryCount: 0,
+        progressMarker: "full",
+        outcome: "success",
+      },
+      evidenceDelta: {},
+      evidence: [],
+      lowLevelStatus: "success",
+      lowLevelReasonCode: REASON_CODES.ok,
+      updatedAt: new Date().toISOString(),
+    });
+
+    const result = await replayLastStablePathWithMaestro(
+      { sessionId, platform: "android", runnerProfile: "phase1", dryRun: true },
+      {
+        ...buildReplayDeps({
+          status: "success",
+          reasonCode: REASON_CODES.ok,
+          sessionId,
+          durationMs: 1,
+          attempts: 1,
+          artifacts: [],
+          data: {
+            sessionRecordFound: false,
+            outcome: {
+              actionId: "replayed-divergence",
+              actionType: "launch_app",
+              resolutionStrategy: "deterministic",
+              stateChanged: true,
+              fallbackUsed: false,
+              retryCount: 0,
+              outcome: "success",
+            },
+            evidenceDelta: {},
+            lowLevelStatus: "success",
+            lowLevelReasonCode: REASON_CODES.ok,
+          },
+          nextSuggestions: [],
+        }),
+        getSessionStateWithMaestro: async () => ({
+          status: "success",
+          reasonCode: REASON_CODES.ok,
+          sessionId,
+          durationMs: 1,
+          attempts: 1,
+          artifacts: [],
+          data: {
+            dryRun: true,
+            platform: "android",
+            runnerProfile: "phase1",
+            sessionRecordFound: false,
+            state: { appPhase: "ready", readiness: "ready", blockingSignals: [], screenId: "login" },
+            capabilities: { platform: "android", runnerProfile: "phase1", toolCapabilities: [], groups: [] },
+            screenSummary: { appPhase: "ready", readiness: "ready", blockingSignals: [], screenId: "login" },
+          },
+          nextSuggestions: [],
+        }),
+      },
+    );
+
+    assert.equal(result.reasonCode, REASON_CODES.ok);
+    assert.equal(result.data.summary.checkpointDivergence, "screen_mismatch");
+    assert.equal(result.data.summary.replayValue, "medium");
+  } finally {
+    await cleanupAction(actionId);
+  }
+});
+
 test("recoverToKnownStateWithMaestro stops early for backend-terminal readiness", async () => {
   const sessionId = `recovery-terminal-${Date.now()}`;
   const result = await recoverToKnownStateWithMaestro(

@@ -1,6 +1,7 @@
 import {
   type ActionIntent,
   type ActionOutcomeSummary,
+  type CheckpointDivergence,
   type CheckpointDecisionTrace,
   type PerformActionWithEvidenceData,
   type GetSessionStateData,
@@ -9,6 +10,7 @@ import {
   type RecoverToKnownStateInput,
   REASON_CODES,
   type RecoverySummary,
+  type ReplayValue,
   type ReplayLastStablePathData,
   type ReplayLastStablePathInput,
   type ReasonCode,
@@ -64,6 +66,32 @@ function buildRecoveryTimelineEvent(summary: RecoverySummary, artifacts: string[
     artifactRefs: artifacts,
     stateSummary: summary.stateAfter ?? summary.stateBefore,
   };
+}
+
+function deriveReplayValueFromStableRecord(outcome: ActionOutcomeSummary): ReplayValue {
+  if (outcome.outcome !== "success") return "low";
+  if (outcome.progressMarker === "full" || outcome.postconditionStatus === "met") return "high";
+  return "medium";
+}
+
+function deriveCheckpointDivergence(params: {
+  stableOutcome: ActionOutcomeSummary;
+  currentState?: GetSessionStateData["state"];
+}): CheckpointDivergence {
+  const stableScreenId = params.stableOutcome.postState?.screenId ?? params.stableOutcome.preState?.screenId;
+  const currentScreenId = params.currentState?.screenId;
+  if (stableScreenId && currentScreenId && stableScreenId !== currentScreenId) {
+    return "screen_mismatch";
+  }
+  const stableReadiness = params.stableOutcome.postState?.readiness ?? params.stableOutcome.preState?.readiness;
+  const currentReadiness = params.currentState?.readiness;
+  if (stableReadiness && currentReadiness && stableReadiness !== currentReadiness) {
+    return "readiness_mismatch";
+  }
+  if (params.stableOutcome.progressMarker && params.stableOutcome.progressMarker !== "full") {
+    return "signal_mismatch";
+  }
+  return "none";
 }
 
 const HIGH_RISK_REPLAY_KEYWORDS = ["pay", "payment", "purchase", "buy", "checkout", "order", "delete", "remove", "send", "submit", "confirm"];
@@ -283,6 +311,23 @@ export async function replayLastStablePathWithMaestro(
     };
   }
 
+  const before = await deps.getSessionStateWithMaestro({
+    sessionId: input.sessionId,
+    platform,
+    runnerProfile: input.runnerProfile ?? sessionRecord?.session.profile ?? DEFAULT_RUNNER_PROFILE,
+    harnessConfigPath: input.harnessConfigPath,
+    deviceId: input.deviceId ?? sessionRecord?.session.deviceId,
+    appId: input.appId ?? sessionRecord?.session.appId,
+    dryRun: input.dryRun,
+  });
+  const checkpointDivergence = deriveCheckpointDivergence({
+    stableOutcome: stableRecord.outcome,
+    currentState: before.status === "success" ? before.data.state : undefined,
+  });
+  const replayValue: ReplayValue = checkpointDivergence === "none"
+    ? deriveReplayValueFromStableRecord(stableRecord.outcome)
+    : "medium";
+
   const replayed = await deps.performActionWithEvidenceWithMaestro({
     sessionId: input.sessionId,
     platform,
@@ -316,6 +361,8 @@ export async function replayLastStablePathWithMaestro(
     replayedActionId: stableRecord.actionId,
     stopReasonCode: replayed.reasonCode,
     checkpointDecision,
+    replayValue,
+    checkpointDivergence,
   };
 
   return {

@@ -1,12 +1,16 @@
 import {
   type ActionOutcomeSummary,
+  type BaselineComparison,
+  type CheckpointDivergence,
   type CompareAgainstBaselineData,
   type CompareAgainstBaselineInput,
+  type DiagnosisPacket,
   type EvidenceDeltaSummary,
   type ExplainLastFailureData,
   type ExplainLastFailureInput,
   type FailureAttribution,
   type FailureSignature,
+  type ReplayValue,
   type FindSimilarFailuresData,
   type FindSimilarFailuresInput,
   type GetActionOutcomeData,
@@ -14,6 +18,7 @@ import {
   type RankFailureCandidatesData,
   type RankFailureCandidatesInput,
   REASON_CODES,
+  type StateReadiness,
   type SimilarFailure,
   type SuggestKnownRemediationData,
   type SuggestKnownRemediationInput,
@@ -99,6 +104,14 @@ function buildFailureAttribution(params: {
     candidateCauses.push(mostLikelyCause);
     recommendedNextProbe = "Inspect backend status/error payload evidence for the failing request path.";
     recommendedRecovery = "Stop optimistic retries and surface terminal backend failure.";
+  } else if (!params.outcome.stateChanged && ["tap_element", "type_into_element", "wait_for_ui"].includes(params.outcome.actionType)) {
+    affectedLayer = params.outcome.outcome === "partial" ? "ui_locator" : "ui_state";
+    mostLikelyCause = params.outcome.outcome === "partial"
+      ? "The selector-driven action did not execute fully, so locator ambiguity or unsupported resolution is most likely."
+      : "The selector resolved but the app state did not change after the action.";
+    candidateCauses.push(mostLikelyCause);
+    recommendedNextProbe = "Inspect the pre/post screen summaries and selector resolution outcome for the bounded action.";
+    recommendedRecovery = "Refine the selector or wait for a more stable screen before retrying.";
   } else if ((delta?.runtimeDeltaSummary ?? "").toLowerCase().includes("crash") || (delta?.runtimeDeltaSummary ?? "").toLowerCase().includes("anr")) {
     affectedLayer = "crash";
     mostLikelyCause = delta?.runtimeDeltaSummary ?? "Crash-like runtime signal detected after the action.";
@@ -117,14 +130,6 @@ function buildFailureAttribution(params: {
     candidateCauses.push(mostLikelyCause);
     recommendedNextProbe = "Inspect runtime and JS console deltas after the action.";
     recommendedRecovery = "Stabilize the runtime error before retrying the same path.";
-  } else if (!params.outcome.stateChanged && ["tap_element", "type_into_element", "wait_for_ui"].includes(params.outcome.actionType)) {
-    affectedLayer = params.outcome.outcome === "partial" ? "ui_locator" : "ui_state";
-    mostLikelyCause = params.outcome.outcome === "partial"
-      ? "The selector-driven action did not execute fully, so locator ambiguity or unsupported resolution is most likely."
-      : "The selector resolved but the app state did not change after the action.";
-    candidateCauses.push(mostLikelyCause);
-    recommendedNextProbe = "Inspect the pre/post screen summaries and selector resolution outcome for the bounded action.";
-    recommendedRecovery = "Refine the selector or wait for a more stable screen before retrying.";
   }
 
   for (const event of params.surroundingEvents ?? []) {
@@ -158,6 +163,22 @@ function buildFailureSignature(params: {
     affectedLayer: params.attribution.affectedLayer,
     topSignal: topRuntimeSignal(params.evidenceDelta),
     interruptionCategory: params.outcome.postState?.blockingSignals[0],
+    readiness: params.outcome.postState?.readiness ?? params.outcome.preState?.readiness,
+    progressMarker: params.outcome.progressMarker,
+    stateChangeCategory: params.outcome.stateChangeCategory,
+  };
+}
+
+function buildDiagnosisPacketFromAttribution(attribution: FailureAttribution): DiagnosisPacket {
+  return {
+    strongestSuspectLayer: attribution.affectedLayer,
+    strongestCausalSignal: attribution.mostLikelyCause,
+    confidence: attribution.affectedLayer === "unknown" || attribution.missingEvidence.length > 0 ? "weak" : "moderate",
+    recommendedNextProbe: attribution.recommendedNextProbe,
+    recommendedRecovery: attribution.recommendedRecovery,
+    escalationThreshold: attribution.affectedLayer === "unknown" || attribution.missingEvidence.length > 0
+      ? "if_summary_inconclusive"
+      : "none",
   };
 }
 
@@ -168,7 +189,98 @@ function scoreSimilarFailure(left: FailureSignature, right: FailureSignature): n
   if (left.screenId && left.screenId === right.screenId) score += 2;
   if (left.interruptionCategory && left.interruptionCategory === right.interruptionCategory) score += 1;
   if (left.topSignal && right.topSignal && left.topSignal === right.topSignal) score += 2;
+  if (left.readiness && left.readiness === right.readiness) score += 1;
+  if (left.progressMarker && left.progressMarker === right.progressMarker) score += 1;
+  if (left.stateChangeCategory && left.stateChangeCategory === right.stateChangeCategory) score += 1;
   return score;
+}
+
+function matchedSignalsForSimilarFailure(left: FailureSignature, right: FailureSignature): string[] {
+  return [
+    left.actionType === right.actionType ? "action_type" : undefined,
+    left.affectedLayer === right.affectedLayer ? "affected_layer" : undefined,
+    left.screenId && left.screenId === right.screenId ? "screen_id" : undefined,
+    left.interruptionCategory && left.interruptionCategory === right.interruptionCategory ? "interruption_category" : undefined,
+    left.topSignal && right.topSignal && left.topSignal === right.topSignal ? "top_signal" : undefined,
+    left.readiness && left.readiness === right.readiness ? "readiness" : undefined,
+    left.progressMarker && left.progressMarker === right.progressMarker ? "progress_marker" : undefined,
+    left.stateChangeCategory && left.stateChangeCategory === right.stateChangeCategory ? "state_change_category" : undefined,
+  ].filter((value): value is string => Boolean(value));
+}
+
+function deriveReplayValueFromOutcome(outcome: ActionOutcomeSummary): ReplayValue {
+  if (outcome.outcome !== "success") return "low";
+  if (outcome.progressMarker === "full" || outcome.postconditionStatus === "met") return "high";
+  if (outcome.progressMarker === "partial" || outcome.postconditionStatus === "partial") return "medium";
+  return "medium";
+}
+
+function deriveCheckpointDivergence(params: {
+  baselineScreenId?: string;
+  baselineReadiness?: StateReadiness;
+  current: ActionOutcomeSummary;
+}): CheckpointDivergence {
+  const currentScreenId = params.current.postState?.screenId ?? params.current.preState?.screenId;
+  const currentReadiness = params.current.postState?.readiness ?? params.current.preState?.readiness;
+  if (params.baselineScreenId && currentScreenId && params.baselineScreenId !== currentScreenId) {
+    return "screen_mismatch";
+  }
+  if (params.baselineReadiness && currentReadiness && params.baselineReadiness !== currentReadiness) {
+    return "readiness_mismatch";
+  }
+  if (params.current.outcome !== "success") {
+    return "outcome_mismatch";
+  }
+  if (params.current.progressMarker && params.current.progressMarker !== "full") {
+    return "signal_mismatch";
+  }
+  return "none";
+}
+
+function buildBaselineComparison(params: {
+  baseline: { actionId: string; screenId?: string; readiness?: FailureSignature["readiness"]; progressMarker?: FailureSignature["progressMarker"]; stateChangeCategory?: FailureSignature["stateChangeCategory"]; replayValue?: ReplayValue } | undefined;
+  current: { actionId: string; outcome: ActionOutcomeSummary };
+}): BaselineComparison | undefined {
+  if (!params.baseline) return undefined;
+  const differences: string[] = [];
+  const divergenceSignals: string[] = [];
+  const currentScreenId = params.current.outcome.postState?.screenId ?? params.current.outcome.preState?.screenId;
+  const currentReadiness = params.current.outcome.postState?.readiness ?? params.current.outcome.preState?.readiness;
+  if (currentScreenId !== params.baseline.screenId) {
+    differences.push(`screen ${currentScreenId ?? "unknown"} != ${params.baseline.screenId ?? "unknown"}`);
+    divergenceSignals.push("screen_mismatch");
+  }
+  if (currentReadiness !== params.baseline.readiness) {
+    differences.push(`readiness ${currentReadiness ?? "unknown"} != ${params.baseline.readiness ?? "unknown"}`);
+    divergenceSignals.push("readiness_mismatch");
+  }
+  if (params.current.outcome.outcome !== "success") {
+    differences.push(`outcome ${params.current.outcome.outcome} differs from successful baseline`);
+    divergenceSignals.push("outcome_mismatch");
+  }
+  if (params.current.outcome.progressMarker && params.current.outcome.progressMarker !== params.baseline.progressMarker) {
+    differences.push(`progress ${params.current.outcome.progressMarker} != ${params.baseline.progressMarker ?? "unknown"}`);
+    divergenceSignals.push("signal_mismatch");
+  }
+  const checkpointDivergence = deriveCheckpointDivergence({
+    baselineScreenId: params.baseline.screenId,
+    baselineReadiness: params.baseline.readiness,
+    current: params.current.outcome,
+  });
+  const replayValue: ReplayValue = checkpointDivergence === "none"
+    ? (params.baseline.replayValue ?? deriveReplayValueFromOutcome(params.current.outcome))
+    : divergenceSignals.length >= 2
+      ? "low"
+      : "medium";
+  return {
+    baselineActionId: params.baseline.actionId,
+    comparedActionId: params.current.actionId,
+    differences,
+    matched: differences.length === 0,
+    divergenceSignals,
+    replayValue,
+    checkpointDivergence,
+  };
 }
 
 export async function getActionOutcomeWithMaestro(
@@ -178,6 +290,12 @@ export async function getActionOutcomeWithMaestro(
   const repoRoot = resolveRepoPath();
   const record = await loadActionRecord(repoRoot, input.actionId);
   const found = Boolean(record) && (input.sessionId === undefined || record?.sessionId === input.sessionId);
+  const diagnosisPacket = record
+    ? buildDiagnosisPacketFromAttribution(buildFailureAttribution({
+      outcome: record.outcome,
+      evidenceDelta: record.evidenceDelta,
+    }))
+    : undefined;
 
   return {
     status: found ? "success" : "failed",
@@ -192,6 +310,7 @@ export async function getActionOutcomeWithMaestro(
         actionId: input.actionId,
         sessionId: record?.sessionId,
         outcome: record?.outcome,
+        diagnosisPacket,
         retryRecommendationTier: record?.retryRecommendationTier,
         retryRecommendation: record?.retryRecommendation,
         evidenceDelta: record?.evidenceDelta,
@@ -254,6 +373,7 @@ export async function explainLastFailureWithMaestro(
     evidenceDelta: record.evidenceDelta,
     surroundingEvents: timelineWindow.surroundingEvents,
   });
+  const diagnosisPacket = buildDiagnosisPacketFromAttribution(attribution);
   await recordFailureSignature(repoRoot, {
     actionId: resolvedActionId,
     sessionId: input.sessionId,
@@ -262,6 +382,9 @@ export async function explainLastFailureWithMaestro(
       attribution,
       evidenceDelta: record.evidenceDelta,
     }),
+    causalSignals: attribution.candidateCauses.slice(0, 3),
+    replayValue: deriveReplayValueFromOutcome(record.outcome),
+    checkpointDivergence: record.outcome.outcome === "success" ? "none" : "outcome_mismatch",
     remediation: [attribution.recommendedRecovery, attribution.recommendedNextProbe].filter((value): value is string => Boolean(value)),
     updatedAt: new Date().toISOString(),
   });
@@ -278,6 +401,7 @@ export async function explainLastFailureWithMaestro(
       found: true,
       actionId: resolvedActionId,
       outcome: record.outcome,
+      diagnosisPacket,
       retryRecommendationTier: record.retryRecommendationTier,
       retryRecommendation: record.retryRecommendation,
       attribution,
@@ -375,6 +499,8 @@ export async function findSimilarFailuresWithMaestro(
         sessionId: entry.sessionId,
         signature: entry.signature,
         matchScore: scoreSimilarFailure(signature, entry.signature),
+        matchedSignals: matchedSignalsForSimilarFailure(signature, entry.signature),
+        replayValue: entry.replayValue,
       }))
       .filter((entry) => entry.matchScore > 0)
       .sort((left, right) => right.matchScore - left.matchScore)
@@ -414,15 +540,10 @@ export async function compareAgainstBaselineWithMaestro(
 
   const baselines = await loadBaselineIndex(repoRoot);
   const baseline = baselines.find((entry) => entry.actionType === current.outcome.actionType && entry.actionId !== current.actionId);
-  const differences: string[] = [];
-  if (baseline) {
-    if ((current.outcome.postState?.screenId ?? current.outcome.preState?.screenId) !== baseline.screenId) {
-      differences.push(`screen ${current.outcome.postState?.screenId ?? current.outcome.preState?.screenId ?? "unknown"} != ${baseline.screenId ?? "unknown"}`);
-    }
-    if (current.outcome.outcome !== "success") {
-      differences.push(`outcome ${current.outcome.outcome} differs from successful baseline`);
-    }
-  }
+  const comparison = buildBaselineComparison({
+    baseline,
+    current: { actionId: current.actionId, outcome: current.outcome },
+  });
 
   return {
     status: "success",
@@ -434,12 +555,7 @@ export async function compareAgainstBaselineWithMaestro(
     data: {
       found: Boolean(baseline),
       actionId: current.actionId,
-      comparison: {
-        baselineActionId: baseline?.actionId,
-        comparedActionId: current.actionId,
-        differences,
-        matched: differences.length === 0 && Boolean(baseline),
-      },
+      comparison,
     },
     nextSuggestions: baseline ? [] : ["No successful baseline exists yet for this action type; create one by recording a successful bounded action."],
   };
