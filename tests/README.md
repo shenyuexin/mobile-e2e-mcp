@@ -44,6 +44,14 @@ Current evidence-model coverage includes:
 - adapter-level dry-run evidence emission checks for screenshot, UI dump, logs, crash signals, diagnostics, and aggregated debug evidence
 - compatibility guarantee that structured `evidence[]` is additive and does not replace the legacy top-level `artifacts[]`
 
+Current debug-first harness deepening coverage also includes:
+
+- outcome-proof assertions for `progressMarker`, `postconditionStatus`, `stateChangeCategory`, and `stateChangeConfidence`
+- diagnosis-packet assertions for strongest suspect, causal signal, confidence, next probe, recovery hint, and escalation threshold
+- causal memory / baseline assertions for `matchedSignals`, `replayValue`, `checkpointDivergence`, and preference for the closest matching baseline over shallow same-action matches
+- bounded auto-remediation assertions for explicit `stateMachineStatus` / `stateMachineTrace`, including waiting recovery and terminal stop paths
+- bounded auto-remediation assertions for checkpoint-drift-driven replay selection when baseline comparison says replay is safer than local retry
+
 Current screenshot-driven OCR fallback coverage includes:
 
 - adapter-vision fixture-based OCR service scenarios for assert success, tap verification success, low-confidence rejection, and ambiguity rejection
@@ -63,3 +71,7 @@ Current GitHub Actions CI scope:
 - `.github/workflows/ci.yml` runs on `ubuntu-latest` because the current workflow is intentionally limited to no-device, no-simulator regression layers
 - `.github/workflows/ocr-smoke.yml` is a separate macOS-only lane; it runs automatically only when OCR-related paths change, and it can also be started manually with `workflow_dispatch`
 - real Android emulator and real iOS simulator/device regression are still separate future lanes and should not be inferred from the current Ubuntu-only workflow
+
+Important boundary note:
+
+- the current debug-first recovery/state-machine coverage is still primarily no-device and dry-run oriented; it improves structured observability and bounded decision regression, but it does not by itself prove generalized real-run recovery maturity across all platforms

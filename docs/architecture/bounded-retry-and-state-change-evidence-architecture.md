@@ -57,6 +57,18 @@ This gap appears in scenarios such as:
 
 The goal is to make retry behavior **deterministic-first, bounded, explainable, and evidence-driven**.
 
+### Current verified baseline
+
+The current shipped baseline now exposes auto-remediation-facing recovery markers in addition to the existing retry/checkpoint traces:
+
+- `retryDecisionTrace` remains the bounded retry record for action-local retry semantics.
+- `checkpointDecisionTrace` remains the replay/checkpoint boundary record.
+- `autoRemediation.stateMachineStatus` now exposes the dominant orchestration state seen by the bounded remediation wrapper.
+- `autoRemediation.stateMachineTrace` now exposes compact trace markers such as retry-stop, waiting-state detection, and selected recovery path.
+- the bounded auto-remediation wrapper can now promote a replay path when baseline/checkpoint drift indicates that replaying the last stable path is safer than local retry.
+
+This should be read as **observability of the current bounded decision path**, not as a claim that the repository already implements a fully generalized recovery state machine across every tool path.
+
 ---
 
 ## 3. Step-State Model
