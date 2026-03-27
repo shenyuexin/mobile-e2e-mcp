@@ -4,7 +4,7 @@
 [![Platform Smoke (iOS sim + Android emulator)](https://github.com/shenyuexin/mobile-e2e-mcp/actions/workflows/platform-smoke.yml/badge.svg?branch=main)](https://github.com/shenyuexin/mobile-e2e-mcp/actions/workflows/platform-smoke.yml)
 [![Real Device Acceptance (self-hosted)](https://img.shields.io/badge/Real%20Device%20Acceptance-self--hosted%20manual-0A66C2)](https://github.com/shenyuexin/mobile-e2e-mcp/actions/workflows/real-device-acceptance.yml)
 
-> AI-first mobile E2E orchestration for Android/iOS/React Native/Flutter, with deterministic-first execution, bounded visual fallback, and governance-aware automation.
+> AI-first mobile E2E orchestration for Android and iOS platform adapters, with React Native and Flutter framework profiles layered on top, deterministic-first execution, bounded visual fallback, and governance-aware automation.
 
 This repository is a pnpm monorepo that combines MCP tooling, adapter execution, and architecture docs for a scalable mobile E2E platform.
 
@@ -205,7 +205,7 @@ Tool registry/signature dispatch live in `packages/mcp-server/src/server.ts`, wh
 
 ## Complete MCP Tool Catalog (Current)
 
-The server currently exposes **55 tools**. For AI agents, this is the fastest way to understand what actions are available.
+The server currently exposes **55 tools**. For AI agents, this is the current tool surface.
 
 ### 1) Session & lifecycle
 
@@ -296,7 +296,7 @@ Testing details and fixture strategy: `tests/README.md`.
 
 - This is not a replacement for every mobile framework internals.
 - This is not OCR-first automation.
-- This is not a guarantee of immediate parity across all native/RN/Flutter edge cases.
+- This does not imply separate full RN or Flutter backends, or immediate parity across all native/RN/Flutter edge cases.
 - This is not a single abstraction that erases all platform differences.
 
 ## Practical Reading Path (Human + AI)
@@ -355,7 +355,7 @@ Detailed public planning references are maintained in `docs/delivery/roadmap.md`
 
 ## Positioning
 
-This project is not another isolated test framework. It is a universal AI-facing orchestration layer that routes mobile E2E actions across multiple backends with deterministic-first behavior and strict governance boundaries.
+This project is not another isolated test framework. It is an AI-facing orchestration layer that routes mobile E2E actions through shared platform adapters and framework profiles, with deterministic-first behavior and strict governance boundaries.
 
 ## Support This Project
 

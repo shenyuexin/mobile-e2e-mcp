@@ -73,11 +73,11 @@ Framework profile (instrumentation quality layer):
 - React Native profile
 - Flutter profile
 
-Framework profile determines determinism quality and fallback frequency; it is not a replacement for platform adapter.
+Framework profile determines determinism quality and fallback frequency. It does not replace the platform adapter, and it does not mean there are separate full RN or Flutter execution backends.
 
 ## 6. Layering Diagram
 
-The current repository uses a **platform-backbone plus framework-profile** model rather than a fully separate plugin backend per framework.
+The current repository uses a **platform-backbone plus framework-profile** model rather than a fully separate backend per framework.
 
 ```mermaid
 flowchart TD
@@ -106,13 +106,13 @@ Read the diagram from top to bottom:
 - MCP tools enter through the shared session/policy/evidence layer first.
 - Android and iOS adapters remain the execution backbone for UI actions, app lifecycle, screenshots, logs, and flow running.
 - Native / React Native / Flutter are treated as framework profiles that change instrumentation expectations, determinism quality, and fallback frequency.
-- React Native adds a supplemental debug lane; it does not replace the platform automation lane.
-- Flutter relies more heavily on semantics quality, with bounded OCR/CV fallback only after deterministic resolution fails.
+- React Native adds a supplemental debug lane on top of the platform backbone; it does not replace it.
+- Flutter relies more heavily on semantics quality, with bounded OCR/CV fallback only after deterministic resolution fails on the shared platform backbone.
 
 ### Current repository interpretation
 
 - `configs/profiles/native.yaml` describes the native instrumentation baseline on top of the shared platform adapters.
-- `configs/profiles/react-native.yaml` describes a validated RN sample baseline, while the runtime still executes through Android/iOS platform control surfaces.
+- `configs/profiles/react-native.yaml` describes a validated RN sample baseline, while runtime execution still flows through Android/iOS platform control surfaces.
 - `configs/profiles/flutter.yaml` describes Flutter expectations as a profile, not a separate execution backbone.
 - Live `RunnerProfile` values are currently narrower than the conceptual matrix: `phase1`, `native_android`, `native_ios`, and `flutter_android`.
 

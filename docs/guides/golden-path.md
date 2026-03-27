@@ -2,7 +2,7 @@
 
 > **Canonical invocation notice**: Authoritative invocation rules and sequencing live in [AI Agent Invocation Guide](./ai-agent-invocation.zh-CN.md). This document covers only the front-door first-run path.
 
-本指南用于让新用户在不理解全部 54 个工具的情况下，按一条固定链路完成一次可观测闭环。
+本指南用于让新用户在不需要记住全部工具的情况下，按一条固定链路完成一次可观测闭环。
 
 ## 前门工具链（7 步）
 
