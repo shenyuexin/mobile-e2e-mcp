@@ -295,16 +295,29 @@ export async function runFlowWithRuntime(input: RunFlowInput): Promise<ToolResul
           summary: `Replay started with ${replayPlan.steps.length + replayPlan.unsupportedCommands.length} steps.`,
         }),
       );
+      const firstUnsupportedStepNumber = replayPlan.unsupportedCommands[0]?.stepNumber;
+      const skippedStepOutcomes = replayPlan.steps.map((step) => ({
+        replayStepId: step.replayStepId,
+        stepNumber: step.stepNumber,
+        status: "skipped" as const,
+        reasonCode: REASON_CODES.unsupportedOperation,
+        attempts: 0,
+        boundedRecoveryAttempted: false,
+        selectedRecovery: "none" as const,
+        artifacts: [],
+        blockingStepNumber: firstUnsupportedStepNumber,
+        stopReason: "blocked_by_unsupported_flow_command",
+      }));
       const replayProgress = {
         totalSteps: replayPlan.steps.length + replayPlan.unsupportedCommands.length,
         completedSteps: [],
         partialSteps: [],
         failedSteps: replayPlan.unsupportedCommands.map((command) => command.stepNumber),
-        skippedSteps: [],
+        skippedSteps: replayPlan.steps.map((step) => step.stepNumber),
         remainingSteps: [],
         firstFailedStepNumber: replayPlan.unsupportedCommands[0]?.stepNumber,
       };
-      const stepOutcomes = replayPlan.unsupportedCommands.map((command) => ({
+      const failedStepOutcomes = replayPlan.unsupportedCommands.map((command) => ({
         replayStepId: `replay-step-${command.stepNumber}`,
         stepNumber: command.stepNumber,
         status: "failed" as const,
@@ -316,7 +329,8 @@ export async function runFlowWithRuntime(input: RunFlowInput): Promise<ToolResul
         actionabilityReview: [`unsupported_flow_command:${command.command}`],
         stopReason: `unsupported_flow_command:${command.command}`,
       }));
-      for (const outcome of stepOutcomes) {
+      const stepOutcomes = [...failedStepOutcomes, ...skippedStepOutcomes].sort((left, right) => left.stepNumber - right.stepNumber);
+      for (const outcome of failedStepOutcomes) {
         await appendReplayTimelineEvent(
           repoRoot,
           input.sessionId,
