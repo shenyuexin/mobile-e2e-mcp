@@ -956,6 +956,43 @@ test("server invoke surfaces unsupported generated flow commands explicitly", as
   }
 });
 
+test("server invoke marks supported generated steps as skipped when a later step is unsupported", async () => {
+  const server = createServer();
+  const sessionId = `server-mixed-unsupported-flow-${Date.now()}`;
+  const flowPath = `flows/samples/generated/${sessionId}.yaml`;
+  try {
+    await writeFile(
+      path.resolve(repoRoot, flowPath),
+      'appId: com.example.demo\n---\n- launchApp:\n    appId: com.example.demo\n- tapOn:\n    point: 10,10\n',
+      'utf8',
+    );
+
+    const replay = await server.invoke("run_flow", {
+      sessionId,
+      platform: "android",
+      flowPath,
+      dryRun: true,
+      runCount: 1,
+    }) as {
+      status: string;
+      reasonCode: string;
+      data: {
+        replayProgress?: { failedSteps: number[]; skippedSteps: number[]; totalSteps: number };
+        stepOutcomes?: Array<{ stepNumber: number; status: string }>;
+      };
+    };
+
+    assert.equal(replay.status, "partial");
+    assert.equal(replay.reasonCode, "UNSUPPORTED_OPERATION");
+    assert.deepEqual(replay.data.replayProgress?.failedSteps, [2]);
+    assert.deepEqual(replay.data.replayProgress?.skippedSteps, [1]);
+    assert.equal(replay.data.replayProgress?.totalSteps, 2);
+    assert.deepEqual(replay.data.stepOutcomes?.map((step) => [step.stepNumber, step.status]), [[1, "skipped"], [2, "failed"]]);
+  } finally {
+    await rm(path.resolve(repoRoot, flowPath), { force: true });
+  }
+});
+
 test("server invoke supports install_app Android dry-run when artifact path exists", async () => {
   const server = createServer();
   const result = await server.invoke("install_app", {
