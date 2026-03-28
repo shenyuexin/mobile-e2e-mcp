@@ -448,7 +448,7 @@ export async function performActionWithAutoRemediation(
     ? undefined
     : await deps.compareAgainstBaseline({ sessionId: input.sessionId, actionId });
   const rank = explain.status === "failed" ? undefined : await deps.rankFailureCandidates({ sessionId: input.sessionId });
-  const suggest = explain.status === "failed" ? undefined : await deps.suggestKnownRemediation({ sessionId: input.sessionId });
+  const suggest = explain.status === "failed" ? undefined : await deps.suggestKnownRemediation({ sessionId: input.sessionId, platform: input.platform });
   const remediationSuggestions = uniqueStrings([
     ...(suggest?.data.remediation ?? []),
     ...explain.nextSuggestions,

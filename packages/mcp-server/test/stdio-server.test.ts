@@ -1002,11 +1002,74 @@ test("handleRequest supports Phase F lookup aliases", async () => {
   });
   const similar = await handleRequest({ id: 46, method: "tools/call", params: { name: "find_similar_failures", arguments: { sessionId: "stdio-phase-f-dry-run" } } });
   const baseline = await handleRequest({ id: 47, method: "tools/call", params: { name: "compare_against_baseline", arguments: { sessionId: "stdio-phase-f-dry-run" } } });
-  const remediation = await handleRequest({ id: 48, method: "tools/call", params: { name: "suggest_known_remediation", arguments: { sessionId: "stdio-phase-f-dry-run" } } });
+  const remediation = await handleRequest({ id: 48, method: "tools/call", params: { name: "suggest_known_remediation", arguments: { sessionId: "stdio-phase-f-dry-run", platform: "android" } } });
 
   assert.equal((similar as { reasonCode: string }).reasonCode, "OK");
   assert.equal((baseline as { reasonCode: string }).reasonCode, "OK");
   assert.equal((remediation as { reasonCode: string }).reasonCode, "OK");
+  const typedRemediation = remediation as {
+    data: {
+      skillGuidance?: {
+        route: string[];
+        mostLikelyGap: string;
+        askForNext: string[];
+        handoffSkill?: string;
+      };
+    };
+  };
+  assert.deepEqual(typedRemediation.data.skillGuidance?.route, [
+    "mobile-e2e-readiness-baseline",
+    "android-e2e-readiness",
+  ]);
+  assert.equal(typeof typedRemediation.data.skillGuidance?.mostLikelyGap, "string");
+  assert.equal(Array.isArray(typedRemediation.data.skillGuidance?.askForNext), true);
+  assert.equal(typedRemediation.data.skillGuidance?.handoffSkill, "android-development");
+});
+
+test("handleRequest supports Phase F lookup aliases for iOS skill-guided remediation", async () => {
+  await handleRequest({
+    id: 145,
+    method: "tools/call",
+    params: {
+      name: "perform_action_with_evidence",
+      arguments: {
+        sessionId: "stdio-phase-f-ios-dry-run",
+        platform: "ios",
+        dryRun: true,
+        action: { actionType: "tap_element", contentDesc: "View products" },
+      },
+    },
+  });
+
+  const remediation = await handleRequest({
+    id: 146,
+    method: "tools/call",
+    params: {
+      name: "suggest_known_remediation",
+      arguments: { sessionId: "stdio-phase-f-ios-dry-run", platform: "ios" },
+    },
+  });
+
+  const typedRemediation = remediation as {
+    reasonCode: string;
+    data: {
+      skillGuidance?: {
+        route: string[];
+        mostLikelyGap: string;
+        askForNext: string[];
+        handoffSkill?: string;
+      };
+    };
+  };
+
+  assert.equal(typedRemediation.reasonCode, "OK");
+  assert.deepEqual(typedRemediation.data.skillGuidance?.route, [
+    "mobile-e2e-readiness-baseline",
+    "ios-e2e-readiness",
+  ]);
+  assert.equal(typeof typedRemediation.data.skillGuidance?.mostLikelyGap, "string");
+  assert.equal(Array.isArray(typedRemediation.data.skillGuidance?.askForNext), true);
+  assert.equal(typedRemediation.data.skillGuidance?.handoffSkill, "ios-development");
 });
 
 test("handleRequest supports tools/call alias for wait_for_ui", async () => {

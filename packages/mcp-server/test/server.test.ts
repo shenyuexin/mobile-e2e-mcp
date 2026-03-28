@@ -619,7 +619,7 @@ test("server invoke supports Phase F lookup tools", async () => {
 
   const similar = await server.invoke("find_similar_failures", { sessionId });
   const baseline = await server.invoke("compare_against_baseline", { sessionId });
-  const remediation = await server.invoke("suggest_known_remediation", { sessionId });
+  const remediation = await server.invoke("suggest_known_remediation", { sessionId, platform: "android" });
 
   assert.equal(similar.reasonCode, "OK");
   assert.equal(typeof similar.data.found, "boolean");
@@ -634,6 +634,38 @@ test("server invoke supports Phase F lookup tools", async () => {
   }
   assert.equal(remediation.reasonCode, "OK");
   assert.equal(Array.isArray(remediation.data.remediation), true);
+  assert.deepEqual(remediation.data.skillGuidance?.route, [
+    "mobile-e2e-readiness-baseline",
+    "android-e2e-readiness",
+  ]);
+  assert.equal(typeof remediation.data.skillGuidance?.mostLikelyGap, "string");
+  assert.equal(Array.isArray(remediation.data.skillGuidance?.askForNext), true);
+  assert.equal(remediation.data.skillGuidance?.handoffSkill, "android-development");
+});
+
+test("server invoke returns iOS skill-guided remediation on Phase F lookup tools", async () => {
+  const server = createServer();
+  const sessionId = "server-phase-f-ios-dry-run";
+  await server.invoke("perform_action_with_evidence", {
+    sessionId,
+    platform: "ios",
+    dryRun: true,
+    action: {
+      actionType: "tap_element",
+      contentDesc: "View products",
+    },
+  });
+
+  const remediation = await server.invoke("suggest_known_remediation", { sessionId, platform: "ios" });
+
+  assert.equal(remediation.reasonCode, "OK");
+  assert.deepEqual(remediation.data.skillGuidance?.route, [
+    "mobile-e2e-readiness-baseline",
+    "ios-e2e-readiness",
+  ]);
+  assert.equal(typeof remediation.data.skillGuidance?.mostLikelyGap, "string");
+  assert.equal(Array.isArray(remediation.data.skillGuidance?.askForNext), true);
+  assert.equal(remediation.data.skillGuidance?.handoffSkill, "ios-development");
 });
 
 test("server invoke keeps wait_for_ui iOS partial semantics", async () => {

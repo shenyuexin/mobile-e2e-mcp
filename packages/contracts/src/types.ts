@@ -1195,11 +1195,21 @@ export interface CompareAgainstBaselineData {
 export interface SuggestKnownRemediationInput {
   sessionId: string;
   actionId?: string;
+  platform?: Platform;
+}
+export interface SkillGuidedRemediation {
+  route: string[];
+  mostLikelyGap: string;
+  why: string;
+  askForNext: string[];
+  firstFix: string;
+  handoffSkill?: string;
 }
 export interface SuggestKnownRemediationData {
   found: boolean;
   actionId?: string;
   remediation: string[];
+  skillGuidance?: SkillGuidedRemediation;
 }
 export interface ExecuteIntentStepInput {
   intent: string;

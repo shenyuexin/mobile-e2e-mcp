@@ -933,7 +933,7 @@ const TOOL_DESCRIPTORS: ReadonlyArray<ToolDescriptor> = [
   }),
   defineToolDescriptor({
     name: "suggest_known_remediation",
-    description: "Suggest remediation based on similar failures and local successful baselines.",
+    description: "Suggest remediation based on similar failures, local baselines, and built-in readiness skill routing.",
     handler: suggestKnownRemediation,
     policy: { enforced: true, requiredScopes: ["read"] },
     session: { required: false },

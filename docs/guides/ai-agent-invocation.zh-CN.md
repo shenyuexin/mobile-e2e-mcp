@@ -105,6 +105,14 @@
 
 原则：先拿 **AI 可消费摘要**，再拿更重原始证据。
 
+补充：`suggest_known_remediation` 现在会在本地 failure memory / baseline 之外，默认给出一层 **readiness-skill 路由式建议**，包括：
+
+- `route`：推荐先走 baseline / Android / iOS 哪条 readiness 诊断链
+- `mostLikelyGap`：当前最可能的 contract / readiness 缺口
+- `askForNext`：下一步最值得补的证据
+- `firstFix`：先改哪一层，而不是先加 retry
+- `handoffSkill`：当 contract gap 已明确时，应该切到哪个实现型 skill
+
 ## 3. 常见意图 → 推荐工具链
 
 ### 3.1 确认环境是否可跑
@@ -141,6 +149,12 @@
 ### 3.7 处理失败或 flaky 行为
 
 `explain_last_failure -> rank_failure_candidates -> suggest_known_remediation`
+
+推荐理解：
+
+- `explain_last_failure` = 先看失败归因
+- `rank_failure_candidates` = 再看最可疑层
+- `suggest_known_remediation` = 默认给出 **skill-guided 下一步动作**，把问题分流到 baseline / Android / iOS readiness 逻辑，再决定是否切到实现型 skill
 
 如果怀疑是重复模式：
 

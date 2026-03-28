@@ -189,6 +189,7 @@ export type {
   ResumeInterruptedActionData,
   ResumeInterruptedActionInput,
   SimilarFailure,
+  SkillGuidedRemediation,
   SuggestKnownRemediationData,
   SuggestKnownRemediationInput,
   ResolveUiTargetData,

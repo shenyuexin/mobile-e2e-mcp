@@ -36,6 +36,7 @@ import {
   type PersistedBaselineIndexEntry,
 } from "@mobile-e2e-mcp/core";
 import { resolveRepoPath } from "./harness-config.js";
+import { buildSkillGuidedRemediation } from "./readiness-guidance.js";
 
 function uniqueNonEmpty(values: Array<string | undefined>, limit = 8): string[] {
   return Array.from(new Set(values.map((value) => value?.trim()).filter((value): value is string => Boolean(value)))).slice(0, limit);
@@ -599,16 +600,35 @@ export async function compareAgainstBaselineWithMaestro(
 export async function suggestKnownRemediationWithMaestro(
   input: SuggestKnownRemediationInput,
 ): Promise<ToolResult<SuggestKnownRemediationData>> {
+  const explained = await explainLastFailureWithMaestro({ sessionId: input.sessionId });
+  if (explained.status === "failed") {
+    return {
+      status: "failed",
+      reasonCode: explained.reasonCode,
+      sessionId: input.sessionId,
+      durationMs: explained.durationMs,
+      attempts: 1,
+      artifacts: explained.artifacts,
+      data: { found: false, remediation: [] },
+      nextSuggestions: explained.nextSuggestions,
+    };
+  }
   const similar = await findSimilarFailuresWithMaestro({ sessionId: input.sessionId, actionId: input.actionId });
   const baseline = await compareAgainstBaselineWithMaestro({ sessionId: input.sessionId, actionId: input.actionId });
   const repoRoot = resolveRepoPath();
+  const sessionRecord = await loadSessionRecord(repoRoot, input.sessionId);
   const failureIndex = await loadFailureIndex(repoRoot);
-  const actionId = similar.data.actionId ?? baseline.data.actionId;
+  const actionId = input.actionId ?? explained.data.actionId ?? similar.data.actionId ?? baseline.data.actionId;
   const indexedRemediation = actionId ? failureIndex.find((entry) => entry.actionId === actionId)?.remediation ?? [] : [];
+  const skillGuidance = buildSkillGuidedRemediation({
+    platform: input.platform ?? sessionRecord?.session.platform,
+    attribution: explained.data.attribution,
+  });
   const remediation = uniqueNonEmpty([
     ...indexedRemediation,
     ...(similar.data.similarFailures.length > 0 ? ["This failure resembles previous incidents; inspect the closest matching signature before changing selectors."] : []),
     ...(baseline.data.comparison?.differences.length ? ["Current action diverges from a successful baseline; inspect the listed differences first."] : []),
+    skillGuidance.firstFix,
   ], 5);
 
   return {
@@ -622,9 +642,14 @@ export async function suggestKnownRemediationWithMaestro(
       found: remediation.length > 0,
       actionId,
       remediation,
+      skillGuidance,
     },
     nextSuggestions: remediation.length > 0
-      ? prioritizeSuggestionBuckets(remediation)
+      ? prioritizeSuggestionBuckets(
+        remediation,
+        skillGuidance.askForNext,
+        skillGuidance.handoffSkill ? [`When the contract gap is clear, hand off to ${skillGuidance.handoffSkill}.`] : [],
+      )
       : ["No known remediation was indexed yet; explain the failure first to seed local memory."],
   };
 }
