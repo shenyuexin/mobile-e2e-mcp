@@ -17,9 +17,22 @@ Core execution model:
 1. `repomix-output.xml` (global context snapshot)
 2. `README.md` or `README.zh-CN.md` (entry-level architecture + scripts)
 3. `docs/engineering/ai-first-capability-expansion-guideline.md` (mandatory capability-expansion guardrails)
-4. Live repo delta-check (`git ls-files` + targeted file reads)
+4. `.planning/PROJECT.md`, `.planning/ROADMAP.md`, `.planning/STATE.md` when the task is non-trivial or depends on current execution context
+5. `.planning/PLANNING-PROTOCOL.md` when the task adds, inserts, completes, or re-scopes planned work
+6. Live repo delta-check (`git ls-files` + targeted file reads)
 
 Do not treat `repomix-output.xml` as the only source of truth.
+
+### Internal planning workspace rule
+
+This repository keeps its internal planning system under `.planning/`.
+
+- `PROJECT.md` = stable planning charter and long-lived decisions
+- `ROADMAP.md` = phase sequencing, dependencies, and completion tracking
+- `STATE.md` = current execution reality and resume point
+- `PLANNING-PROTOCOL.md` = update order and sync rules for new plans, summaries, verification, and roadmap/state changes
+
+Use `.planning/` for execution coordination and session continuity. Do not treat it as the only source of shipped product truth; formal behavior still lives in code, tests, CI, and public docs.
 
 ### Mandatory activation rule for AI coding agents
 

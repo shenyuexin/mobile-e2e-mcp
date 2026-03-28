@@ -73,6 +73,7 @@ coverage/
 *.ips
 
 .sisyphus/
+.worktrees/
 .planning/
 
 # Optional open-source scope trimming (internal/phase artifacts)
