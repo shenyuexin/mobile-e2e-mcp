@@ -108,8 +108,14 @@ export {
   restoreSegment,
   getCurrentSegmentElements,
   computePageFingerprint,
+  detectHorizontalScrollables,
+  performBoundedProbe,
+  startHorizontalScrollState,
 } from "./scroll-segment.js";
-export type { SegmentDiscoveryResult } from "./scroll-segment.js";
+export type { SegmentDiscoveryResult, HorizontalContainerInfo, ProbeResult } from "./scroll-segment.js";
+
+// Scroll state normalization
+export { normalizeScrollState } from "./types.js";
 
 // Report
 export { generateReport } from "./report.js";

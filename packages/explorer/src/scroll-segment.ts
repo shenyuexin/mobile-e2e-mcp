@@ -11,6 +11,7 @@ import { resolveExplorerPlatformHooks } from "./explorer-platform.js";
 import { evaluateElementRules } from "./rules/rule-evaluator.js";
 import { buildExplorerRuleRegistry } from "./rules/rule-registry.js";
 import type { ClickableTarget, ExplorerConfig, Frame, McpToolInterface, PageSnapshot, RuleDecisionEntry, UiHierarchy } from "./types.js";
+import { normalizeScrollState } from "./types.js";
 
 const SIDE_EFFECT_PATTERNS = [
   /delete/i,
@@ -79,6 +80,24 @@ export interface SegmentDiscoveryResult {
   newElements?: ClickableTarget[];
   isLastSegment?: boolean;
   snapshot?: PageSnapshot;
+}
+
+/** Information about a detected horizontal scroll container. */
+export interface HorizontalContainerInfo {
+  node: UiHierarchy;
+  confidence: "high" | "medium" | "low";
+  platform: "android" | "ios";
+  type?: "page-snap";
+}
+
+/** Result of a bounded probe to validate horizontal scrollability. */
+export interface ProbeResult {
+  enabled: boolean;
+  disabledReason?: "fingerprint_changed" | "no_new_elements" | "scroll_failed" | "unsupported_platform";
+  confidence: "high" | "medium" | "low";
+  fingerprintBefore: string;
+  fingerprintAfter: string;
+  newElementCount: number;
 }
 
 const DEFAULT_MAX_SEGMENTS = 10;
@@ -202,6 +221,204 @@ export function computePageFingerprint(snapshot: PageSnapshot): string {
   return `${snapshot.appId}::${type}::${title}`;
 }
 
+function detectPageSnapStrategy(candidates: HorizontalContainerInfo[]): "page-snap" | "continuous-scroll" {
+  return candidates.some(c => c.type === "page-snap") ? "page-snap" : "continuous-scroll";
+}
+
+export function detectHorizontalScrollables(uiTree: UiHierarchy): HorizontalContainerInfo[] {
+  const allNodes = flattenTree(uiTree);
+  const results: HorizontalContainerInfo[] = [];
+
+  const androidPatterns: Array<{ pattern: RegExp; confidence: HorizontalContainerInfo["confidence"]; type?: HorizontalContainerInfo["type"] }> = [
+    { pattern: /HorizontalScrollView/i, confidence: "high" },
+    { pattern: /ViewPager2?/i, confidence: "high", type: "page-snap" },
+    { pattern: /RecyclerView/i, confidence: "medium" },
+  ];
+
+  const iosPatterns: Array<{ pattern: RegExp; confidence: HorizontalContainerInfo["confidence"]; type?: HorizontalContainerInfo["type"] }> = [
+    { pattern: /UICollectionView/i, confidence: "medium" },
+    { pattern: /UIPageViewController/i, confidence: "medium", type: "page-snap" },
+    { pattern: /UIScrollView/i, confidence: "low" },
+  ];
+
+  for (const node of allNodes) {
+    const className = (node.className ?? node.elementType ?? "").toLowerCase();
+
+    for (const { pattern, confidence, type } of androidPatterns) {
+      if (pattern.test(className)) {
+        results.push({ node, confidence, platform: "android", type });
+        break;
+      }
+    }
+
+    for (const { pattern, confidence, type } of iosPatterns) {
+      if (pattern.test(className)) {
+        results.push({ node, confidence, platform: "ios", type });
+        break;
+      }
+    }
+  }
+
+  return results;
+}
+
+export async function performBoundedProbe(
+  mcp: McpToolInterface,
+  frame: Frame,
+  config: ExplorerConfig,
+  candidates: HorizontalContainerInfo[],
+): Promise<ProbeResult> {
+  const platformHooks = resolveExplorerPlatformHooks(config.platform);
+  const fingerprintBefore = frame.scrollState?.pageFingerprint ?? computePageFingerprint({
+    screenId: "",
+    screenTitle: "",
+    uiTree: { clickable: false, enabled: false, scrollable: false },
+    clickableElements: [],
+    screenshotPath: "",
+    capturedAt: new Date().toISOString(),
+    arrivedFrom: null,
+    viaElement: null,
+    depth: frame.depth,
+    loadTimeMs: 0,
+    stabilityScore: 1.0,
+    appId: config.appId,
+  });
+
+  const scrollResult = await mcp.scrollOnly({ direction: "left", distance: "medium" });
+  if (scrollResult.status !== "success" && scrollResult.status !== "partial") {
+    console.log(`[SCROLL-PROBE] Horizontal probe scroll failed: ${scrollResult.reasonCode}`);
+    return {
+      enabled: false,
+      disabledReason: "scroll_failed",
+      confidence: "low",
+      fingerprintBefore,
+      fingerprintAfter: fingerprintBefore,
+      newElementCount: 0,
+    };
+  }
+
+  await mcp.waitForUiStable({ timeoutMs: 3000 });
+
+  const inspectResult = await mcp.inspectUi({ appId: config.appId });
+  if (inspectResult.status !== "success" && inspectResult.status !== "partial") {
+    return {
+      enabled: false,
+      disabledReason: "scroll_failed",
+      confidence: "low",
+      fingerprintBefore,
+      fingerprintAfter: fingerprintBefore,
+      newElementCount: 0,
+    };
+  }
+
+  const inspectData = inspectResult.data as unknown as Record<string, unknown>;
+  const uiTree = platformHooks.parseInspectUi(inspectData, { fallbackToDataRoot: true }) as UiHierarchy;
+  const appId = platformHooks.extractAppId(uiTree) ?? config.appId;
+  const pageContext = typeof inspectData.pageContext === "object" && inspectData.pageContext !== null
+    ? inspectData.pageContext
+    : undefined;
+  const postSnapshot: PageSnapshot = {
+    screenId: "",
+    screenTitle: platformHooks.extractScreenTitle(uiTree),
+    pageContext: pageContext as PageSnapshot["pageContext"],
+    uiTree,
+    clickableElements: [],
+    screenshotPath: "",
+    capturedAt: new Date().toISOString(),
+    arrivedFrom: null,
+    viaElement: null,
+    depth: frame.depth,
+    loadTimeMs: 0,
+    stabilityScore: 1.0,
+    appId,
+  };
+
+  const fingerprintAfter = computePageFingerprint(postSnapshot);
+
+  if (fingerprintAfter !== fingerprintBefore) {
+    console.log(
+      `[SCROLL-PROBE] Horizontal probe fingerprint changed: ${fingerprintBefore} → ${fingerprintAfter}. Disabling.`,
+    );
+    return {
+      enabled: false,
+      disabledReason: "fingerprint_changed",
+      confidence: "high",
+      fingerprintBefore,
+      fingerprintAfter,
+      newElementCount: 0,
+    };
+  }
+
+  const postElements = findClickableElements(uiTree, config);
+  const seenKeys = frame.scrollState?.seenKeys ?? new Set<string>();
+  const newElementCount = postElements.filter(e => {
+    const key = getClickableTargetKey(e);
+    return key && !seenKeys.has(key);
+  }).length;
+
+  if (newElementCount === 0) {
+    console.log(`[SCROLL-PROBE] Horizontal probe found no new elements.`);
+    return {
+      enabled: false,
+      disabledReason: "no_new_elements",
+      confidence: "medium",
+      fingerprintBefore,
+      fingerprintAfter,
+      newElementCount: 0,
+    };
+  }
+
+  const bestConfidence = candidates.length > 0
+    ? candidates.reduce((best, c) => {
+        const order: Record<string, number> = { high: 3, medium: 2, low: 1 };
+        return (order[c.confidence] ?? 0) > (order[best.confidence] ?? 0) ? c : best;
+      }).confidence
+    : "low" as const;
+
+  console.log(
+    `[SCROLL-PROBE] Horizontal probe result: enabled=true, confidence=${bestConfidence}, newElementCount=${newElementCount}`,
+  );
+
+  return {
+    enabled: true,
+    confidence: bestConfidence,
+    fingerprintBefore,
+    fingerprintAfter,
+    newElementCount,
+  };
+}
+
+export function startHorizontalScrollState(
+  frame: Frame,
+  snapshot: PageSnapshot,
+  config: ExplorerConfig,
+  probeResult: ProbeResult,
+): void {
+  const candidates = detectHorizontalScrollables(snapshot.uiTree);
+  const strategy = detectPageSnapStrategy(candidates);
+
+  frame.scrollState = {
+    enabled: true,
+    axis: "horizontal",
+    forwardDirection: "left",
+    restoreDirection: "right",
+    strategy,
+    supportLevel: "experimental",
+    segmentIndex: 0,
+    segments: [[]],
+    seenKeys: new Set(),
+    pageFingerprint: probeResult.fingerprintAfter,
+    maxSegments: DEFAULT_MAX_SEGMENTS,
+    restoreAttempts: 0,
+    maxRestoreAttempts: DEFAULT_MAX_RESTORE_ATTEMPTS,
+  };
+
+  console.log(
+    `[SCROLL-STATE] Initialized horizontal scroll state for "${snapshot.screenTitle}" — ` +
+    `strategy=${strategy}, confidence=${probeResult.confidence}, fingerprint=${probeResult.fingerprintAfter}`,
+  );
+}
+
 function isIosExplorerPlatform(platform: ExplorerConfig["platform"]): boolean {
   return platform === "ios-simulator" || platform === "ios-device";
 }
@@ -288,45 +505,54 @@ export function initScrollState(
     flattenedNodes,
     visibleElements,
   );
-  if (!hasScrollable && !fallbackArmed) {
-    if (visibleElements >= 8) {
-      const containerTypes = Array.from(new Set(
-        flattenedNodes
-          .map(node => node.className ?? node.elementType ?? node.accessibilityRole)
-          .filter((value): value is string => typeof value === "string" && value.length > 0),
-      )).slice(0, 8);
-      console.log(
-        `[SCROLL-STATE] Not initialized for "${snapshot.screenTitle ?? snapshot.screenId}" — ` +
-        `no scrollable container detected, visibleElements=${visibleElements}, ` +
-        `containerTypes=${JSON.stringify(containerTypes)}`,
-      );
-    }
+  if (hasScrollable || fallbackArmed) {
+    const builtSegment = frame.elements.length > 0
+      ? { elements: frame.elements, ruleDecisions: snapshot.ruleDecisions ?? [] }
+      : buildSegmentElements(snapshot, frame, config);
+    const elements = builtSegment.elements;
+    const seenKeys = new Set(elements.map(getClickableTargetKey).filter(Boolean));
+
+    frame.scrollState = {
+      enabled: true,
+      segmentIndex: 0,
+      segments: [elements],
+      seenKeys,
+      pageFingerprint: computePageFingerprint(snapshot),
+      maxSegments: DEFAULT_MAX_SEGMENTS,
+      restoreAttempts: 0,
+      maxRestoreAttempts: DEFAULT_MAX_RESTORE_ATTEMPTS,
+      ruleDecisions: builtSegment.ruleDecisions,
+    };
+    snapshot.ruleDecisions = builtSegment.ruleDecisions;
+
+    console.log(
+      `[SCROLL-STATE] Initialized for "${snapshot.screenTitle}"${fallbackArmed ? " via iOS Group fallback" : ""} — ` +
+      `${elements.length} elements in segment 0, fingerprint=${frame.scrollState.pageFingerprint}`,
+    );
     return;
   }
 
-  const builtSegment = frame.elements.length > 0
-    ? { elements: frame.elements, ruleDecisions: snapshot.ruleDecisions ?? [] }
-    : buildSegmentElements(snapshot, frame, config);
-  const elements = builtSegment.elements;
-  const seenKeys = new Set(elements.map(getClickableTargetKey).filter(Boolean));
+  // No vertical scrollable — try horizontal detection
+  const horizontalCandidates = detectHorizontalScrollables(snapshot.uiTree);
+  if (horizontalCandidates.length > 0) {
+    console.log(
+      `[SCROLL-STATE] No vertical scrollable, but found ${horizontalCandidates.length} horizontal candidate(s) ` +
+      `for "${snapshot.screenTitle ?? snapshot.screenId}" — deferring to probe.`,
+    );
+  }
 
-  frame.scrollState = {
-    enabled: true,
-    segmentIndex: 0,
-    segments: [elements],
-    seenKeys,
-    pageFingerprint: computePageFingerprint(snapshot),
-    maxSegments: DEFAULT_MAX_SEGMENTS,
-    restoreAttempts: 0,
-    maxRestoreAttempts: DEFAULT_MAX_RESTORE_ATTEMPTS,
-    ruleDecisions: builtSegment.ruleDecisions,
-  };
-  snapshot.ruleDecisions = builtSegment.ruleDecisions;
-
-  console.log(
-    `[SCROLL-STATE] Initialized for "${snapshot.screenTitle}"${fallbackArmed ? " via iOS Group fallback" : ""} — ` +
-    `${elements.length} elements in segment 0, fingerprint=${frame.scrollState.pageFingerprint}`,
-  );
+  if (visibleElements >= 8) {
+    const containerTypes = Array.from(new Set(
+      flattenedNodes
+        .map(node => node.className ?? node.elementType ?? node.accessibilityRole)
+        .filter((value): value is string => typeof value === "string" && value.length > 0),
+    )).slice(0, 8);
+    console.log(
+      `[SCROLL-STATE] Not initialized for "${snapshot.screenTitle ?? snapshot.screenId}" — ` +
+      `no scrollable container detected, visibleElements=${visibleElements}, ` +
+      `containerTypes=${JSON.stringify(containerTypes)}`,
+    );
+  }
 }
 
 export function getCurrentSegmentElements(frame: Frame): ClickableTarget[] {
@@ -346,6 +572,7 @@ export async function discoverNextSegment(
   }
 
   const ss = frame.scrollState;
+  const normalized = normalizeScrollState(ss);
   if (ss.segmentIndex + 1 >= ss.maxSegments) {
     console.log(`[SCROLL-SEGMENT] maxSegments (${ss.maxSegments}) reached`);
     return { success: false, isLastSegment: true };
@@ -353,7 +580,7 @@ export async function discoverNextSegment(
 
   const platformHooks = resolveExplorerPlatformHooks(config.platform);
 
-  const scrollResult = await mcp.scrollOnly({ direction: "up", distance: "medium" });
+  const scrollResult = await mcp.scrollOnly({ direction: normalized.forwardDirection as "up" | "down" | "left" | "right", distance: "medium" });
   if (scrollResult.status !== "success" && scrollResult.status !== "partial") {
     console.log(`[SCROLL-SEGMENT] scrollOnly failed: ${scrollResult.reasonCode}`);
     return { success: false, isLastSegment: true };
@@ -441,6 +668,7 @@ export async function restoreSegment(
     return true;
   }
 
+  const normalized = normalizeScrollState(ss);
   const platformHooks = resolveExplorerPlatformHooks(config.platform);
 
   const inspectResult = await mcp.inspectUi({ appId: config.appId });
@@ -459,14 +687,34 @@ export async function restoreSegment(
     }
   }
 
-  console.log(`[SCROLL-RESTORE] Restoring to segment ${ss.segmentIndex}`);
+  console.log(`[SCROLL-RESTORE] Restoring to segment ${ss.segmentIndex} (axis=${normalized.axis})`);
 
-  for (let i = 0; i < ss.segmentIndex; i++) {
-    const scrollResult = await mcp.scrollOnly({ direction: "up", distance: "medium" });
-    if (scrollResult.status !== "success" && scrollResult.status !== "partial") {
-      return false;
+  if (normalized.axis === "horizontal") {
+    // Reset to origin by scrolling in the restore direction N times
+    for (let i = 0; i < ss.segmentIndex; i++) {
+      const scrollResult = await mcp.scrollOnly({ direction: normalized.restoreDirection as "up" | "down" | "left" | "right", distance: "medium" });
+      if (scrollResult.status !== "success" && scrollResult.status !== "partial") {
+        return false;
+      }
+      await mcp.waitForUiStable({ timeoutMs: 2000 });
     }
-    await mcp.waitForUiStable({ timeoutMs: 2000 });
+    // Then scroll forward segmentIndex times to reach the target
+    for (let i = 0; i < ss.segmentIndex; i++) {
+      const scrollResult = await mcp.scrollOnly({ direction: normalized.forwardDirection as "up" | "down" | "left" | "right", distance: "medium" });
+      if (scrollResult.status !== "success" && scrollResult.status !== "partial") {
+        return false;
+      }
+      await mcp.waitForUiStable({ timeoutMs: 2000 });
+    }
+  } else {
+    // Vertical: scroll up N times (original behavior)
+    for (let i = 0; i < ss.segmentIndex; i++) {
+      const scrollResult = await mcp.scrollOnly({ direction: "up", distance: "medium" });
+      if (scrollResult.status !== "success" && scrollResult.status !== "partial") {
+        return false;
+      }
+      await mcp.waitForUiStable({ timeoutMs: 2000 });
+    }
   }
 
   const verifyResult = await mcp.inspectUi({ appId: config.appId });

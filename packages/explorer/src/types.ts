@@ -386,7 +386,39 @@ export interface Frame {
 		maxRestoreAttempts: number;
 		/** Rule decisions observed while filtering scroll segment elements. */
 		ruleDecisions?: RuleDecisionEntry[];
+		/** Scroll axis orientation. Default: `"vertical"`. */
+		axis?: "vertical" | "horizontal";
+		/** Direction to advance scroll for next segment. Default: `"up"` (downward scroll). */
+		forwardDirection?: "up" | "left";
+		/** Direction to scroll back when restoring position. Default: `"up"`. */
+		restoreDirection?: "up" | "right";
+		/** Scroll strategy: continuous smooth scroll vs discrete page-snap. Default: `"continuous-scroll"`. */
+		strategy?: "continuous-scroll" | "page-snap";
+		/** Support maturity level for this scroll capability. Default: `"stable"`. */
+		supportLevel?: "stable" | "experimental";
 	};
+}
+
+/** Default values for optional scrollState fields. */
+const SCROLL_STATE_DEFAULTS = {
+	axis: "vertical" as const,
+	forwardDirection: "up" as const,
+	restoreDirection: "up" as const,
+	strategy: "continuous-scroll" as const,
+	supportLevel: "stable" as const,
+};
+
+/**
+ * Fill in default values for optional scrollState fields.
+ * Throws if called with undefined.
+ */
+export function normalizeScrollState(
+	ss: Frame["scrollState"],
+): NonNullable<Frame["scrollState"]> {
+	if (!ss) {
+		throw new Error("normalizeScrollState called with undefined scrollState");
+	}
+	return { ...SCROLL_STATE_DEFAULTS, ...ss };
 }
 
 /** Registry of visited pages with dedup capability. */
