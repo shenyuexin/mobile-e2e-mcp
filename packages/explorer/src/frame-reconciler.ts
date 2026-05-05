@@ -81,6 +81,11 @@ export function reconcileStackToSnapshot(
     };
     resumedFrame.appId = snapshot.appId ?? resumedFrame.appId ?? targetAppId;
     resumedFrame.isExternalApp = false;
+    // Invalidate stale scroll state
+    if (resumedFrame.scrollState) {
+      console.log(`[FRAME-RECONCILE] Invalidating scrollState at depth=${resumedFrame.depth}`);
+      resumedFrame.scrollState = undefined;
+    }
     return resumedFrame;
   }
 
@@ -104,6 +109,11 @@ export function reconcileStackToSnapshot(
     rootFrame.path = [];
     rootFrame.elementIndex = 0;
     rootFrame.elements = [];
+    // Invalidate stale scroll state
+    if (rootFrame.scrollState) {
+      console.log(`[FRAME-RECONCILE] Invalidating root frame scrollState`);
+      rootFrame.scrollState = undefined;
+    }
     return rootFrame;
   }
 

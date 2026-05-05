@@ -4,12 +4,17 @@ import type { ToolResult } from "@mobile-e2e-mcp/contracts";
 import { getElementKey } from "../src/element-prioritizer.js";
 import {
   computePageFingerprint,
+  detectHorizontalScrollables,
   discoverNextSegment,
   getCurrentSegmentElements,
   initScrollState,
+  performBoundedProbe,
   restoreSegment,
+  startHorizontalScrollState,
+  type ProbeResult,
 } from "../src/scroll-segment.js";
 import type { ClickableTarget, ExplorerConfig, Frame, McpToolInterface, PageSnapshot, UiHierarchy } from "../src/types.js";
+import { normalizeScrollState } from "../src/types.js";
 import { parseUiTreeFromInspectData } from "../src/ui-tree-parser.js";
 
 function okResult<T>(data: T): ToolResult<T> {
@@ -1025,5 +1030,363 @@ describe("scroll-segment: getElementKey", () => {
       scrollable: false,
     };
     assert.notEqual(getElementKey(el1), getElementKey(el2));
+  });
+});
+
+describe("scroll-segment: detectHorizontalScrollables", () => {
+  it("detects Android HorizontalScrollView with high confidence", () => {
+    const uiTree: UiHierarchy = {
+      className: "android.widget.HorizontalScrollView",
+      clickable: false,
+      enabled: true,
+      scrollable: true,
+      children: [
+        { className: "Button", text: "Tab 1", clickable: true, enabled: true, scrollable: false, children: [] },
+      ],
+    };
+    const candidates = detectHorizontalScrollables(uiTree);
+    assert.equal(candidates.length, 1);
+    assert.equal(candidates[0].confidence, "high");
+    assert.equal(candidates[0].platform, "android");
+  });
+
+  it("detects iOS UICollectionView with medium confidence", () => {
+    const uiTree: UiHierarchy = {
+      className: "UICollectionView",
+      clickable: false,
+      enabled: true,
+      scrollable: true,
+      children: [
+        { className: "Cell", text: "Item 1", clickable: true, enabled: true, scrollable: false, children: [] },
+      ],
+    };
+    const candidates = detectHorizontalScrollables(uiTree);
+    assert.equal(candidates.length, 1);
+    assert.equal(candidates[0].confidence, "medium");
+    assert.equal(candidates[0].platform, "ios");
+  });
+
+  it("does not detect tab bar or bottom navigation as horizontal scrollable", () => {
+    const uiTree: UiHierarchy = {
+      className: "Application",
+      clickable: false,
+      enabled: true,
+      scrollable: false,
+      children: [
+        { className: "TabBar", clickable: true, enabled: true, scrollable: false, children: [] },
+        { className: "BottomNavigationView", clickable: true, enabled: true, scrollable: false, children: [] },
+        { className: "Button", text: "Home", clickable: true, enabled: true, scrollable: false, children: [] },
+      ],
+    };
+    const candidates = detectHorizontalScrollables(uiTree);
+    assert.equal(candidates.length, 0);
+  });
+});
+
+describe("scroll-segment: startHorizontalScrollState", () => {
+  it("detects page-snap strategy for ViewPager containers", () => {
+    const uiTree: UiHierarchy = {
+      className: "androidx.viewpager.widget.ViewPager",
+      clickable: false,
+      enabled: true,
+      scrollable: true,
+      children: [
+        { className: "android.widget.FrameLayout", clickable: false, enabled: true, scrollable: false, children: [] },
+      ],
+    };
+    const snapshot = makeSnapshot(uiTree, "Gallery", "com.test.app");
+    const frame: Frame = {
+      state: { screenId: "screen-gallery", screenTitle: "Gallery" },
+      depth: 0,
+      path: [],
+      elementIndex: 0,
+      elements: [],
+    };
+    const probeResult: ProbeResult = {
+      enabled: true,
+      confidence: "high",
+      fingerprintBefore: "fp-before",
+      fingerprintAfter: "fp-after",
+      newElementCount: 3,
+    };
+    startHorizontalScrollState(frame, snapshot, createMockConfig(), probeResult);
+    assert.ok(frame.scrollState);
+    assert.equal(frame.scrollState.axis, "horizontal");
+    assert.equal(frame.scrollState.forwardDirection, "left");
+    assert.equal(frame.scrollState.restoreDirection, "right");
+    assert.equal(frame.scrollState.strategy, "page-snap");
+    assert.equal(frame.scrollState.supportLevel, "experimental");
+  });
+});
+
+describe("scroll-segment: performBoundedProbe", () => {
+  function makeProbeFrame(fingerprint: string): Frame {
+    return {
+      state: { screenId: "screen-1", screenTitle: "Settings" },
+      depth: 0,
+      path: [],
+      elementIndex: 0,
+      elements: [],
+      scrollState: {
+        enabled: true,
+        segmentIndex: 0,
+        segments: [[]],
+        seenKeys: new Set<string>(),
+        pageFingerprint: fingerprint,
+        maxSegments: 10,
+        restoreAttempts: 0,
+        maxRestoreAttempts: 3,
+      },
+    };
+  }
+
+  it("enables horizontal scroll when fingerprint is unchanged and new elements appear", async () => {
+    const frame = makeProbeFrame("com.test.app::unknown::Settings");
+    const postProbeTree: UiHierarchy = {
+      className: "Application",
+      packageName: "com.test.app",
+      clickable: false,
+      enabled: true,
+      scrollable: false,
+      children: [
+        {
+          className: "android.widget.TextView",
+          text: "Settings",
+          clickable: false,
+          enabled: true,
+          scrollable: false,
+          children: [],
+        },
+        {
+          className: "Button",
+          text: "NewButton",
+          contentDesc: "NewButton",
+          clickable: true,
+          enabled: true,
+          scrollable: false,
+          children: [],
+        },
+      ],
+    };
+    const mcp = {
+      scrollOnly: async () => okResult({ swipesPerformed: 1 } as any),
+      waitForUiStable: async () => okResult({ stable: true } as any),
+      inspectUi: async () => okResult({ content: postProbeTree } as any),
+    } as unknown as McpToolInterface;
+
+    const probeResult = await performBoundedProbe(mcp, frame, createMockConfig(), [
+      { node: postProbeTree, confidence: "high", platform: "android" },
+    ]);
+    assert.equal(probeResult.enabled, true);
+    assert.equal(probeResult.newElementCount, 1);
+    assert.equal(probeResult.confidence, "high");
+  });
+
+  it("disables horizontal scroll when fingerprint changes", async () => {
+    const frame = makeProbeFrame("com.test.app::unknown::Settings");
+    const differentPageTree: UiHierarchy = {
+      className: "Application",
+      packageName: "com.test.app",
+      clickable: false,
+      enabled: true,
+      scrollable: false,
+      children: [
+        {
+          className: "android.widget.TextView",
+          text: "DifferentPage",
+          clickable: false,
+          enabled: true,
+          scrollable: false,
+          children: [],
+        },
+      ],
+    };
+    const mcp = {
+      scrollOnly: async () => okResult({ swipesPerformed: 1 } as any),
+      waitForUiStable: async () => okResult({ stable: true } as any),
+      inspectUi: async () => okResult({ content: differentPageTree } as any),
+    } as unknown as McpToolInterface;
+
+    const probeResult = await performBoundedProbe(mcp, frame, createMockConfig(), []);
+    assert.equal(probeResult.enabled, false);
+    assert.equal(probeResult.disabledReason, "fingerprint_changed");
+  });
+
+  it("logs [SCROLL-PROBE] and disables when fingerprint drifts", async () => {
+    const frame = makeProbeFrame("com.test.app::unknown::Settings");
+    const differentPageTree: UiHierarchy = {
+      className: "Application",
+      packageName: "com.test.app",
+      clickable: false,
+      enabled: true,
+      scrollable: false,
+      children: [
+        {
+          className: "android.widget.TextView",
+          text: "DifferentPage",
+          clickable: false,
+          enabled: true,
+          scrollable: false,
+          children: [],
+        },
+      ],
+    };
+    const mcp = {
+      scrollOnly: async () => okResult({ swipesPerformed: 1 } as any),
+      waitForUiStable: async () => okResult({ stable: true } as any),
+      inspectUi: async () => okResult({ content: differentPageTree } as any),
+    } as unknown as McpToolInterface;
+
+    const originalLog = console.log;
+    const messages: string[] = [];
+    console.log = (message?: unknown, ...optionalParams: unknown[]) => {
+      messages.push([message, ...optionalParams].map(String).join(" "));
+    };
+
+    let probeResult: ProbeResult;
+    try {
+      probeResult = await performBoundedProbe(mcp, frame, createMockConfig(), []);
+    } finally {
+      console.log = originalLog;
+    }
+
+    assert.equal(probeResult.enabled, false);
+    assert.equal(probeResult.disabledReason, "fingerprint_changed");
+    assert.equal(
+      messages.some((m) => m.includes("[SCROLL-PROBE]") && m.includes("fingerprint changed")),
+      true,
+    );
+  });
+});
+
+describe("scroll-segment: discoverNextSegment horizontal", () => {
+  it("emits direction left for horizontal axis", async () => {
+    const seg0Tree = makeScrollablePage("Settings", ["Bluetooth"]);
+    const seg1Tree = makeScrollablePage("Settings", ["Apps"]);
+    const snapshot0 = makeSnapshot(seg0Tree, "Settings", "com.test.app");
+    const frame: Frame = {
+      state: { screenId: "screen-1", screenTitle: "Settings" },
+      depth: 0,
+      path: [],
+      elementIndex: 1,
+      elements: [],
+      scrollState: {
+        enabled: true,
+        axis: "horizontal",
+        forwardDirection: "left",
+        restoreDirection: "right",
+        segmentIndex: 0,
+        segments: [[]],
+        seenKeys: new Set<string>(),
+        pageFingerprint: computePageFingerprint(snapshot0),
+        maxSegments: 10,
+        restoreAttempts: 0,
+        maxRestoreAttempts: 3,
+      },
+    };
+
+    const scrollDirections: string[] = [];
+    const mcp = {
+      scrollOnly: async (args: { direction: string }) => {
+        scrollDirections.push(args.direction);
+        return okResult({ swipesPerformed: 1 } as any);
+      },
+      waitForUiStable: async () => okResult({ stable: true } as any),
+      inspectUi: async () => okResult({ content: seg1Tree } as any),
+    } as unknown as McpToolInterface;
+
+    const result = await discoverNextSegment(mcp, frame, createMockConfig());
+    assert.equal(result.success, true);
+    assert.deepEqual(scrollDirections, ["left"]);
+  });
+});
+
+describe("scroll-segment: restoreSegment horizontal", () => {
+  it("restores horizontal segment by resetting then scrolling forward", async () => {
+    const seg0 = [{ label: "Tab1", selector: { text: "Tab1" }, elementType: "Button" }];
+    const seg1 = [{ label: "Tab2", selector: { text: "Tab2" }, elementType: "Button" }];
+    const seg2 = [{ label: "Tab3", selector: { text: "Tab3" }, elementType: "Button" }];
+
+    const frame: Frame = {
+      state: { screenId: "s1", screenTitle: "Gallery" },
+      depth: 0,
+      path: [],
+      elementIndex: 0,
+      elements: [],
+      scrollState: {
+        enabled: true,
+        axis: "horizontal",
+        forwardDirection: "left",
+        restoreDirection: "right",
+        segmentIndex: 2,
+        segments: [seg0, seg1, seg2],
+        seenKeys: new Set(["Tab1", "Tab2", "Tab3"]),
+        pageFingerprint: "fp",
+        maxSegments: 10,
+        restoreAttempts: 0,
+        maxRestoreAttempts: 3,
+      },
+    };
+
+    let inspectCall = 0;
+    const scrollDirections: string[] = [];
+    const mcp = {
+      inspectUi: async () => {
+        inspectCall += 1;
+        const tree: UiHierarchy =
+          inspectCall === 1
+            ? {
+                className: "Application",
+                packageName: "com.test.app",
+                clickable: false,
+                enabled: true,
+                scrollable: false,
+                children: [
+                  { className: "Button", text: "Tab1", clickable: true, enabled: true, scrollable: false, children: [] },
+                ],
+              }
+            : {
+                className: "Application",
+                packageName: "com.test.app",
+                clickable: false,
+                enabled: true,
+                scrollable: false,
+                children: [
+                  { className: "Button", text: "Tab3", clickable: true, enabled: true, scrollable: false, children: [] },
+                ],
+              };
+        return okResult({ content: tree } as any);
+      },
+      scrollOnly: async (args: { direction: string }) => {
+        scrollDirections.push(args.direction);
+        return okResult({ swipesPerformed: 1 } as any);
+      },
+      waitForUiStable: async () => okResult({ stable: true } as any),
+    } as unknown as McpToolInterface;
+
+    const result = await restoreSegment(mcp, frame, createMockConfig());
+    assert.equal(result, true);
+    assert.deepEqual(scrollDirections, ["right", "right", "left", "left"]);
+  });
+});
+
+describe("scroll-segment: normalizeScrollState", () => {
+  it("fills defaults for legacy scrollState fixtures without new optional fields", () => {
+    const legacyState = {
+      enabled: true,
+      segmentIndex: 0,
+      segments: [[]] as ClickableTarget[][],
+      seenKeys: new Set<string>(),
+      pageFingerprint: "fp",
+      maxSegments: 10,
+      restoreAttempts: 0,
+      maxRestoreAttempts: 3,
+    };
+    const normalized = normalizeScrollState(legacyState as unknown as Frame["scrollState"]);
+    assert.equal(normalized.axis, "vertical");
+    assert.equal(normalized.forwardDirection, "up");
+    assert.equal(normalized.restoreDirection, "up");
+    assert.equal(normalized.strategy, "continuous-scroll");
+    assert.equal(normalized.supportLevel, "stable");
   });
 });

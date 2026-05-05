@@ -71,6 +71,11 @@ import {
 	initScrollState,
 	restoreSegment,
 } from "./scroll-segment.js";
+import {
+	attemptHorizontalDiscovery,
+	hasHorizontalProbeBeenAttempted,
+	markHorizontalProbeAttempted,
+} from "./engine-horizontal-fallback.js";
 import { createSnapshotter, createTapExecutor } from "./snapshot.js";
 import { createStateGraph } from "./state-graph.js";
 import type {
@@ -78,9 +83,11 @@ import type {
 	ExplorerConfig,
 	Frame,
 	McpToolInterface,
+	PageSnapshot,
 	PageState,
 	RuleDecisionEntry,
 	TransitionLifecycleSummary,
+	UiHierarchy,
 } from "./types.js";
 
 export { FailureLog } from "./engine-helpers.js";
@@ -770,7 +777,18 @@ export async function explore(
 					);
 					continue;
 				}
-				// No more segments — fall through to normal pop
+
+				// Vertical exhausted — try horizontal fallback ONCE
+				if (!hasHorizontalProbeBeenAttempted(frame)) {
+					markHorizontalProbeAttempted(frame);
+					const switched = await attemptHorizontalDiscovery(mcp, frame, config);
+					if (switched) {
+						frame.elementIndex = 0;
+						continue;
+					}
+				}
+
+				// No more segments of any axis — fall through to pop
 				console.log(
 					`[SCROLL-SEGMENT] No more segments for "${frame.state.screenTitle ?? "(none)"}"`,
 				);
