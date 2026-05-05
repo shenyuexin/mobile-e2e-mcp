@@ -1,5 +1,6 @@
 import path from "node:path";
 import type { Platform, QueryUiInput, QueryUiSelector, RunnerProfile } from "@mobile-e2e-mcp/contracts";
+import { evidencePaths } from "./artifact-paths.js";
 import { normalizeQueryUiSelector } from "./ui-model.js";
 
 interface UiSelectorLikeInput {
@@ -33,8 +34,7 @@ export function buildPlatformUiDumpOutputPath(params: {
   }
   const extension = params.platform === "android" ? "xml" : "json";
   return path.posix.join(
-    "artifacts",
-    "ui-dumps",
+    evidencePaths.uiDumps(),
     params.sessionId,
     `${params.platform}-${params.runnerProfile}.${extension}`,
   );
@@ -47,8 +47,7 @@ export function buildUnknownUiDumpOutputPath(params: {
 }): string {
   return params.outputPath
     ?? path.posix.join(
-      "artifacts",
-      "ui-dumps",
+      evidencePaths.uiDumps(),
       params.sessionId,
       `unknown-${params.runnerProfile}.json`,
     );

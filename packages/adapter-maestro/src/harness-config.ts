@@ -228,7 +228,7 @@ export function buildArtifactsDir(
 
   const relativePath = artifactRoot
     ? path.posix.join(artifactRoot, sessionId)
-    : path.posix.join("artifacts", "mcp-server", sessionId, platform, runnerProfile);
+    : path.posix.join("output", "evidence", "mcp-server", sessionId, platform, runnerProfile);
 
   return {
     absolutePath: path.resolve(repoRoot, relativePath),

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { rm, writeFile } from "node:fs/promises";
+import { mkdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
@@ -85,7 +85,7 @@ test("end_session finalizes an existing persisted session record", async () => {
 
     const result = await server.invoke("end_session", {
       sessionId,
-      artifacts: ["artifacts/demo/output.txt"],
+      artifacts: ["output/evidence/demo/output.txt"],
     });
 
     assert.equal(result.status, "success");
@@ -98,7 +98,7 @@ test("end_session finalizes an existing persisted session record", async () => {
     assert.ok(audit);
     assert.equal(stored.closed, true);
     assert.equal(stored.endedAt !== undefined, true);
-    assert.deepEqual(stored.artifacts, ["artifacts/demo/output.txt"]);
+    assert.deepEqual(stored.artifacts, ["output/evidence/demo/output.txt"]);
     assert.equal(stored.session.timeline.some((event) => event.type === "session_ended"), true);
     assert.equal(stored.session.timeline.some((event) => event.type === "lease_released"), true);
     assert.equal(audit?.result, "completed");
@@ -116,7 +116,7 @@ test("end_session stays successful even when no persisted session exists", async
 
   const result = await server.invoke("end_session", {
     sessionId,
-    artifacts: ["artifacts/demo/output.txt"],
+    artifacts: ["output/evidence/demo/output.txt"],
   });
 
   assert.equal(result.status, "success");
@@ -140,11 +140,11 @@ test("end_session returns the persisted endedAt timestamp and stays idempotent",
 
     const firstResult = await server.invoke("end_session", {
       sessionId,
-      artifacts: ["artifacts/demo/output.txt"],
+      artifacts: ["output/evidence/demo/output.txt"],
     });
     const secondResult = await server.invoke("end_session", {
       sessionId,
-      artifacts: ["artifacts/demo/output.txt"],
+      artifacts: ["output/evidence/demo/output.txt"],
     });
 
     assert.equal(firstResult.data.closed, true);
@@ -189,7 +189,7 @@ test("session audit redacts sensitive artifact paths and interruption details", 
     );
     const ended = await server.invoke("end_session", {
       sessionId,
-      artifacts: ["artifacts/debug/token-secret-password-reset-+86 138 0013 8000.txt"],
+      artifacts: ["output/evidence/debug/token-secret-password-reset-+86 138 0013 8000.txt"],
     });
 
     assert.equal(ended.status, "success");
@@ -344,7 +344,7 @@ test("get_logs appends evidence capture artifacts into the session audit", async
     assert.ok(stored);
     assert.ok(audit);
     assert.equal(stored.session.timeline.some((event) => event.type === "get_logs_captured"), true);
-    assert.equal(audit.artifact_paths.some((entry) => entry.path.includes("artifacts/logs")), true);
+    assert.equal(audit.artifact_paths.some((entry) => entry.path.includes("output/evidence/logs")), true);
   } finally {
     await cleanupSessionArtifact(sessionId);
   }
@@ -377,7 +377,7 @@ test("measure_ios_performance appends planned performance artifacts into the ses
     assert.ok(stored);
     assert.ok(audit);
     assert.equal(stored.session.timeline.some((event) => event.type === "measure_ios_performance_captured"), true);
-    assert.equal(audit.artifact_paths.some((entry) => entry.path.includes("artifacts/performance")), true);
+    assert.equal(audit.artifact_paths.some((entry) => entry.path.includes("output/evidence/performance")), true);
     assert.equal(audit.artifact_paths.some((entry) => entry.category === "reports" || entry.category === "debug-output"), true);
   } finally {
     await cleanupSessionArtifact(sessionId);
@@ -489,10 +489,11 @@ test("run_flow unsupported generated preview appends rejection replay timeline e
 });
 
 test("recordFailureSignature tolerates a truncated failure index and rewrites it", async () => {
-  const failureIndexPath = path.resolve(repoRoot, "artifacts/ai-first/failure-index.json");
+  const failureIndexPath = path.resolve(repoRoot, "output/evidence/ai-first/failure-index.json");
   await rm(failureIndexPath, { force: true });
 
   try {
+    await mkdir(path.dirname(failureIndexPath), { recursive: true });
     await writeFile(failureIndexPath, "[\n  {\n", "utf8");
     await recordFailureSignature(repoRoot, {
       actionId: "action-corrupt-index-test",

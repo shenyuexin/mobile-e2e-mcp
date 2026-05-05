@@ -17,7 +17,7 @@ ANDROID_USER_ID="${ANDROID_USER_ID:-}"
 ANDROID_OEM_TEXT_FALLBACK="${ANDROID_OEM_TEXT_FALLBACK:-auto}"
 EXPO_URL="${EXPO_URL:-exp://127.0.0.1:8081}"
 RUN_COUNT="${1:-5}"
-OUT_DIR="${OUT_DIR:-$ROOT/artifacts/phase1-android}"
+OUT_DIR="${OUT_DIR:-$ROOT/output/evidence/phase1-android}"
 
 device_manufacturer() {
   adb -s "$DEVICE_ID" shell getprop ro.product.manufacturer 2>/dev/null | tr '[:upper:]' '[:lower:]' | tr -d '\r'

@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { mkdir, readdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { Platform } from "@mobile-e2e-mcp/contracts";
+import { coreEvidencePaths, legacyCoreEvidencePaths } from "./output-paths.js";
 
 export type DeviceLeaseState = "leased" | "busy";
 
@@ -54,7 +55,13 @@ function isDeviceLease(value: unknown): value is DeviceLease {
 export function buildDeviceLeaseRecordRelativePath(platform: Platform, deviceId: string): string {
   assertSafeSegment(platform, "platform");
   assertSafeSegment(deviceId, "deviceId");
-  return path.posix.join("artifacts", "leases", `${platform}-${deviceId}.json`);
+  return path.posix.join(coreEvidencePaths.leases(), `${platform}-${deviceId}.json`);
+}
+
+function buildLegacyDeviceLeaseRecordRelativePath(platform: Platform, deviceId: string): string {
+  assertSafeSegment(platform, "platform");
+  assertSafeSegment(deviceId, "deviceId");
+  return path.posix.join(legacyCoreEvidencePaths.leases(), `${platform}-${deviceId}.json`);
 }
 
 function buildDeviceLeaseRecordAbsolutePath(repoRoot: string, platform: Platform, deviceId: string): string {
@@ -62,7 +69,15 @@ function buildDeviceLeaseRecordAbsolutePath(repoRoot: string, platform: Platform
 }
 
 function buildLeaseDirectoryAbsolutePath(repoRoot: string): string {
-  return path.resolve(repoRoot, "artifacts", "leases");
+  return path.resolve(repoRoot, coreEvidencePaths.leases());
+}
+
+function buildLegacyLeaseDirectoryAbsolutePath(repoRoot: string): string {
+  return path.resolve(repoRoot, legacyCoreEvidencePaths.leases());
+}
+
+function buildLegacyDeviceLeaseRecordAbsolutePath(repoRoot: string, platform: Platform, deviceId: string): string {
+  return path.resolve(repoRoot, buildLegacyDeviceLeaseRecordRelativePath(platform, deviceId));
 }
 
 async function writeJsonFile(absolutePath: string, value: unknown): Promise<void> {
@@ -78,23 +93,28 @@ async function writeJsonFile(absolutePath: string, value: unknown): Promise<void
 }
 
 export async function loadLeaseByDevice(repoRoot: string, platform: Platform, deviceId: string): Promise<DeviceLease | undefined> {
-  const absolutePath = buildDeviceLeaseRecordAbsolutePath(repoRoot, platform, deviceId);
-  try {
-    const content = await readFile(absolutePath, "utf8");
-    const parsed: unknown = JSON.parse(content);
-    if (!isDeviceLease(parsed)) {
-      return undefined;
+  for (const absolutePath of [
+    buildDeviceLeaseRecordAbsolutePath(repoRoot, platform, deviceId),
+    buildLegacyDeviceLeaseRecordAbsolutePath(repoRoot, platform, deviceId),
+  ]) {
+    try {
+      const content = await readFile(absolutePath, "utf8");
+      const parsed: unknown = JSON.parse(content);
+      if (!isDeviceLease(parsed)) {
+        return undefined;
+      }
+      return parsed;
+    } catch (error: unknown) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+        continue;
+      }
+      if (error instanceof SyntaxError) {
+        return undefined;
+      }
+      throw error;
     }
-    return parsed;
-  } catch (error: unknown) {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
-      return undefined;
-    }
-    if (error instanceof SyntaxError) {
-      return undefined;
-    }
-    throw error;
   }
+  return undefined;
 }
 
 export async function persistLease(repoRoot: string, lease: DeviceLease): Promise<string> {
@@ -119,10 +139,15 @@ export async function removeLease(repoRoot: string, platform: Platform, deviceId
 }
 
 export async function listLeases(repoRoot: string): Promise<DeviceLease[]> {
-  const directoryPath = buildLeaseDirectoryAbsolutePath(repoRoot);
+  const seenLeaseKeys = new Set<string>();
+  const directories = [
+    buildLeaseDirectoryAbsolutePath(repoRoot),
+    buildLegacyLeaseDirectoryAbsolutePath(repoRoot),
+  ];
+  const leases: DeviceLease[] = [];
+  for (const directoryPath of directories) {
   try {
     const entries = await readdir(directoryPath, { withFileTypes: true });
-    const leases: DeviceLease[] = [];
     for (const entry of entries) {
       if (!entry.isFile() || !entry.name.endsWith(".json")) {
         continue;
@@ -131,16 +156,22 @@ export async function listLeases(repoRoot: string): Promise<DeviceLease[]> {
       try {
         const parsed: unknown = JSON.parse(await readFile(absolutePath, "utf8"));
         if (isDeviceLease(parsed)) {
+          const leaseKey = `${parsed.platform}:${parsed.deviceId}`;
+          if (seenLeaseKeys.has(leaseKey)) {
+            continue;
+          }
+          seenLeaseKeys.add(leaseKey);
           leases.push(parsed);
         }
       } catch {
       }
     }
-    return leases;
   } catch (error: unknown) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") {
-      return [];
+      continue;
     }
     throw error;
   }
+  }
+  return leases;
 }

@@ -11,7 +11,7 @@ import { recoverToKnownStateWithMaestro } from "../src/recovery-tools.ts";
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 
 async function cleanupAction(actionId: string): Promise<void> {
-  await rm(path.resolve(repoRoot, "artifacts", "actions", `${actionId}.json`), { force: true });
+  await rm(path.resolve(repoRoot, "output", "evidence", "actions", `${actionId}.json`), { force: true });
 }
 
 function buildReplayDeps(result: ToolResult<PerformActionWithEvidenceData>) {

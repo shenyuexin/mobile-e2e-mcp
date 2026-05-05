@@ -10,7 +10,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[2]
-REPORT_DIR = ROOT / "reports"
+REPORT_DIR = ROOT / "output" / "reports"
 PHASE_REPORT = REPORT_DIR / "phase-sample-report.json"
 RUN_METADATA = Path(
     os.environ.get(
@@ -35,7 +35,7 @@ def read_run_metadata() -> dict:
 
 
 def collect_audit_files() -> list[str]:
-    audit_root = ROOT / "artifacts" / "audit"
+    audit_root = ROOT / "output" / "evidence" / "audit"
     if not audit_root.exists():
         return []
     metadata = read_run_metadata()
@@ -55,13 +55,13 @@ def collect_audit_files() -> list[str]:
 def collect_visual_evidence() -> list[str]:
     visual_paths: list[str] = []
     for pattern in [
-        "artifacts/phase1-ios/**/final.jpg",
-        "artifacts/phase1-android/**/final.jpg",
-        "artifacts/phase2-rn-android/**/final.jpg",
-        "artifacts/phase3-flutter-android/**/final.jpg",
-        "artifacts/phase3-native-android/**/final.jpg",
-        "artifacts/phase3-native-ios/**/final.jpg",
-        "artifacts/phase3-native-ios-real-device/**/final.jpg",
+        "output/evidence/phase1-ios/**/final.jpg",
+        "output/evidence/phase1-android/**/final.jpg",
+        "output/evidence/phase2-rn-android/**/final.jpg",
+        "output/evidence/phase3-flutter-android/**/final.jpg",
+        "output/evidence/phase3-native-android/**/final.jpg",
+        "output/evidence/phase3-native-ios/**/final.jpg",
+        "output/evidence/phase3-native-ios-real-device/**/final.jpg",
     ]:
         visual_paths.extend(
             sorted(str(path.relative_to(ROOT)) for path in ROOT.glob(pattern))

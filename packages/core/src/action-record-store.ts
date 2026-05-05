@@ -20,6 +20,7 @@ import type {
 	RetryRecommendation,
 	ToolStatus,
 } from "@mobile-e2e-mcp/contracts";
+import { coreEvidencePaths, legacyCoreEvidencePaths } from "./output-paths.js";
 import { persistSessionArtifacts } from "./session-record-store.js";
 
 export interface PersistedActionRecord {
@@ -60,7 +61,12 @@ function assertSafeId(input: string): void {
 
 export function buildActionRecordRelativePath(actionId: string): string {
 	assertSafeId(actionId);
-	return path.posix.join("artifacts", "actions", `${actionId}.json`);
+	return path.posix.join(coreEvidencePaths.actions(), `${actionId}.json`);
+}
+
+function buildLegacyActionRecordRelativePath(actionId: string): string {
+	assertSafeId(actionId);
+	return path.posix.join(legacyCoreEvidencePaths.actions(), `${actionId}.json`);
 }
 
 function buildActionRecordAbsolutePath(repoRoot: string, actionId: string): string {
@@ -68,7 +74,15 @@ function buildActionRecordAbsolutePath(repoRoot: string, actionId: string): stri
 }
 
 function buildActionsRootAbsolutePath(repoRoot: string): string {
-	return path.resolve(repoRoot, "artifacts", "actions");
+	return path.resolve(repoRoot, coreEvidencePaths.actions());
+}
+
+function buildLegacyActionsRootAbsolutePath(repoRoot: string): string {
+	return path.resolve(repoRoot, legacyCoreEvidencePaths.actions());
+}
+
+function buildLegacyActionRecordAbsolutePath(repoRoot: string, actionId: string): string {
+	return path.resolve(repoRoot, buildLegacyActionRecordRelativePath(actionId));
 }
 
 async function writeJsonFile(absolutePath: string, value: unknown): Promise<void> {
@@ -101,26 +115,39 @@ export async function loadActionRecord(
 	repoRoot: string,
 	actionId: string,
 ): Promise<PersistedActionRecord | undefined> {
-	const absolutePath = buildActionRecordAbsolutePath(repoRoot, actionId);
-	try {
-		const content = await readFile(absolutePath, "utf8");
-		return JSON.parse(content) as PersistedActionRecord;
-	} catch (error: unknown) {
-		if ((error as NodeJS.ErrnoException).code === "ENOENT") {
-			return undefined;
+	for (const absolutePath of [
+		buildActionRecordAbsolutePath(repoRoot, actionId),
+		buildLegacyActionRecordAbsolutePath(repoRoot, actionId),
+	]) {
+		try {
+			const content = await readFile(absolutePath, "utf8");
+			return JSON.parse(content) as PersistedActionRecord;
+		} catch (error: unknown) {
+			if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+				continue;
+			}
+			if (error instanceof SyntaxError) {
+				return undefined;
+			}
+			throw error;
 		}
-		if (error instanceof SyntaxError) {
-			return undefined;
-		}
-		throw error;
 	}
+	return undefined;
 }
 
 export async function loadLatestActionRecordForSession(
 	repoRoot: string,
 	sessionId: string,
 ): Promise<PersistedActionRecord | undefined> {
-	const actionsRoot = buildActionsRootAbsolutePath(repoRoot);
+	const records = await listActionRecordsForSession(repoRoot, sessionId);
+	return records[0];
+}
+
+async function listActionRecordsFromRoot(
+	repoRoot: string,
+	actionsRoot: string,
+	seenActionIds: Set<string>,
+): Promise<PersistedActionRecord[]> {
 	try {
 		const entries = await readdir(actionsRoot, { withFileTypes: true });
 		const records: PersistedActionRecord[] = [];
@@ -130,23 +157,25 @@ export async function loadLatestActionRecordForSession(
 				continue;
 			}
 			const actionId = entry.name.replace(/\.json$/, "");
+			if (seenActionIds.has(actionId)) {
+				continue;
+			}
+			seenActionIds.add(actionId);
 			let record: PersistedActionRecord | undefined;
 			try {
 				record = await loadActionRecord(repoRoot, actionId);
 			} catch {
 				continue;
 			}
-			if (record?.sessionId === sessionId) {
+			if (record) {
 				records.push(record);
 			}
 		}
 
-		return records.sort((left, right) =>
-			right.updatedAt.localeCompare(left.updatedAt),
-		)[0];
+		return records;
 	} catch (error: unknown) {
 		if ((error as NodeJS.ErrnoException).code === "ENOENT") {
-			return undefined;
+			return [];
 		}
 		throw error;
 	}
@@ -156,36 +185,23 @@ export async function listActionRecordsForSession(
 	repoRoot: string,
 	sessionId: string,
 ): Promise<PersistedActionRecord[]> {
-	const actionsRoot = buildActionsRootAbsolutePath(repoRoot);
-	try {
-		const entries = await readdir(actionsRoot, { withFileTypes: true });
-		const records: PersistedActionRecord[] = [];
+	const seenActionIds = new Set<string>();
+	const records = [
+		...(await listActionRecordsFromRoot(
+			repoRoot,
+			buildActionsRootAbsolutePath(repoRoot),
+			seenActionIds,
+		)),
+		...(await listActionRecordsFromRoot(
+			repoRoot,
+			buildLegacyActionsRootAbsolutePath(repoRoot),
+			seenActionIds,
+		)),
+	];
 
-		for (const entry of entries) {
-			if (!entry.isFile() || !entry.name.endsWith(".json")) {
-				continue;
-			}
-			const actionId = entry.name.replace(/\.json$/, "");
-			let record: PersistedActionRecord | undefined;
-			try {
-				record = await loadActionRecord(repoRoot, actionId);
-			} catch {
-				continue;
-			}
-			if (record?.sessionId === sessionId) {
-				records.push(record);
-			}
-		}
-
-		return records.sort((left, right) =>
-			right.updatedAt.localeCompare(left.updatedAt),
-		);
-	} catch (error: unknown) {
-		if ((error as NodeJS.ErrnoException).code === "ENOENT") {
-			return [];
-		}
-		throw error;
-	}
+	return records
+		.filter((record) => record.sessionId === sessionId)
+		.sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
 }
 
 export async function persistActionRecord(

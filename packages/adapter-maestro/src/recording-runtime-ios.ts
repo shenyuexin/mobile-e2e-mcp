@@ -15,6 +15,7 @@ import type {
 } from "./recording-runtime-platform.js";
 import { executeRunner, shellEscape } from "./runtime-shared.js";
 import { getIosBackendRouter } from "./ios-backend-router.js";
+import { evidencePaths } from "./artifact-paths.js";
 
 export interface SimctlDeviceEntry {
 	udid: string;
@@ -144,8 +145,7 @@ export async function captureIosContextSnapshot(
 	const warnings: string[] = [];
 	const bucketId = params.bucketId ?? "end";
 	const snapshotRelativePath = path.posix.join(
-		"artifacts",
-		"record-snapshots",
+		evidencePaths.recordSnapshots(),
 		params.recordSessionId,
 		`${params.recordSessionId}-${bucketId}.json`,
 	);
@@ -333,11 +333,10 @@ export async function startIosCaptureProcesses(
 		}
 	}
 
-	const snapshotDirRelativePath = path.posix.join(
-		"artifacts",
-		"record-snapshots",
-		params.recordSessionId,
-	);
+  const snapshotDirRelativePath = path.posix.join(
+    evidencePaths.recordSnapshots(),
+    params.recordSessionId,
+  );
 	const snapshotDirAbsolutePath = path.resolve(
 		params.repoRoot,
 		snapshotDirRelativePath,

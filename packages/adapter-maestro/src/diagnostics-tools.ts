@@ -36,6 +36,7 @@ import {
   getLogsWithRuntime,
 } from "./device-runtime.js";
 import { buildExecutionEvidence, normalizePositiveInteger } from "./runtime-shared.js";
+import { evidencePaths as artifactEvidencePaths } from "./artifact-paths.js";
 
 const DEFAULT_DEBUG_PACKET_JS_TIMEOUT_MS = 1000;
 
@@ -83,7 +84,7 @@ function parseIosPhysicalExecutionEvidenceMarkdown(markdown: string): IosPhysica
 }
 
 async function loadLatestIosPhysicalStartupEvidence(repoRoot: string, sessionId: string): Promise<IosPhysicalStartupEvidenceSummary | undefined> {
-  const evidenceRoot = path.resolve(repoRoot, "artifacts", "ios-physical-actions", sessionId);
+  const evidenceRoot = path.resolve(repoRoot, artifactEvidencePaths.iosPhysicalActions(), sessionId);
   let entries: Array<{ name: string; mtimeMs: number }> = [];
   try {
     const listed = await readdir(evidenceRoot, { withFileTypes: true });
@@ -104,7 +105,7 @@ async function loadLatestIosPhysicalStartupEvidence(repoRoot: string, sessionId:
   }
   const latest = entries.sort((left, right) => right.mtimeMs - left.mtimeMs)[0];
   const absolutePath = path.join(evidenceRoot, latest.name);
-  const relativePath = path.posix.join("artifacts", "ios-physical-actions", sessionId, latest.name);
+  const relativePath = path.posix.join(artifactEvidencePaths.iosPhysicalActions(), sessionId, latest.name);
   try {
     const markdown = await readFile(absolutePath, "utf8");
     const parsed = parseIosPhysicalExecutionEvidenceMarkdown(markdown);
@@ -384,7 +385,7 @@ export async function collectDebugEvidenceWithRuntime(input: CollectDebugEvidenc
       data: {
         dryRun: Boolean(input.dryRun),
         runnerProfile: input.runnerProfile ?? DEFAULT_RUNNER_PROFILE,
-        outputPath: input.outputPath ?? path.posix.join("artifacts", "debug-evidence", input.sessionId, "unknown.md"),
+        outputPath: input.outputPath ?? path.posix.join(artifactEvidencePaths.debugEvidence(), input.sessionId, "unknown.md"),
         supportLevel: "partial",
         appId: input.appId,
         diagnosisBriefing: ["Missing platform context"],
@@ -400,13 +401,13 @@ export async function collectDebugEvidenceWithRuntime(input: CollectDebugEvidenc
   const repoRoot = resolveRepoPath();
   const runnerProfile = input.runnerProfile ?? DEFAULT_RUNNER_PROFILE;
   const selection = await loadHarnessSelection(repoRoot, input.platform, runnerProfile, input.harnessConfigPath ?? DEFAULT_HARNESS_CONFIG_PATH);
-  const relativeOutputPath = input.outputPath ?? path.posix.join("artifacts", "debug-evidence", input.sessionId, `${input.platform}-${runnerProfile}.md`);
+  const relativeOutputPath = input.outputPath ?? path.posix.join(artifactEvidencePaths.debugEvidence(), input.sessionId, `${input.platform}-${runnerProfile}.md`);
   const absoluteOutputPath = path.resolve(repoRoot, relativeOutputPath);
-  const logOutputPath = path.posix.join("artifacts", "debug-evidence", input.sessionId, `${input.platform}-${runnerProfile}.logs.txt`);
-  const crashOutputPath = path.posix.join("artifacts", "debug-evidence", input.sessionId, `${input.platform}-${runnerProfile}.crash.txt`);
+  const logOutputPath = path.posix.join(artifactEvidencePaths.debugEvidence(), input.sessionId, `${input.platform}-${runnerProfile}.logs.txt`);
+  const crashOutputPath = path.posix.join(artifactEvidencePaths.debugEvidence(), input.sessionId, `${input.platform}-${runnerProfile}.crash.txt`);
   const diagnosticsOutputPath = input.platform === "android"
-    ? path.posix.join("artifacts", "debug-evidence", input.sessionId, `${input.platform}-${runnerProfile}.diagnostics.zip`)
-    : path.posix.join("artifacts", "debug-evidence", input.sessionId, `${input.platform}-${runnerProfile}.diagnostics`);
+    ? path.posix.join(artifactEvidencePaths.debugEvidence(), input.sessionId, `${input.platform}-${runnerProfile}.diagnostics.zip`)
+    : path.posix.join(artifactEvidencePaths.debugEvidence(), input.sessionId, `${input.platform}-${runnerProfile}.diagnostics`);
   const effectiveAppId = input.appId ?? selection.appId;
   const iosStartupEvidence = input.platform === "ios" && !input.dryRun
     ? await loadLatestIosPhysicalStartupEvidence(repoRoot, input.sessionId)

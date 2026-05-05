@@ -1,6 +1,6 @@
 import { readdir } from "node:fs/promises";
 import path from "node:path";
-import { resolveRepoPath } from "@mobile-e2e-mcp/adapter-maestro";
+import { resolveRepoPath, evidencePaths } from "@mobile-e2e-mcp/adapter-maestro";
 import type {
   ClassifyInterruptionInput,
   DetectInterruptionInput,
@@ -14,6 +14,8 @@ import type {
 import { REASON_CODES, TOOL_NAMES } from "@mobile-e2e-mcp/contracts";
 import {
 	appendSessionTimelineEvent,
+	coreEvidencePaths,
+	legacyCoreEvidencePaths,
 	loadSessionRecord,
 	recoverStaleLeases,
 	runExclusive,
@@ -169,25 +171,35 @@ function defineToolDescriptor<TName extends ToolName>(
 async function listActiveSessionCandidates(
 	repoRoot: string,
 ): Promise<ActiveSessionCandidate[]> {
-	const sessionsDir = path.resolve(repoRoot, "artifacts", "sessions");
-	try {
-		const entries = await readdir(sessionsDir, { withFileTypes: true });
-		const candidates: ActiveSessionCandidate[] = [];
-		for (const entry of entries) {
-			if (!entry.isFile() || !entry.name.endsWith(".json")) {
-				continue;
+	const sessionsDirs = [
+		path.resolve(repoRoot, coreEvidencePaths.sessions()),
+		path.resolve(repoRoot, legacyCoreEvidencePaths.sessions()),
+	];
+	const seenSessionIds = new Set<string>();
+	const candidates: ActiveSessionCandidate[] = [];
+	for (const sessionsDir of sessionsDirs) {
+		try {
+			const entries = await readdir(sessionsDir, { withFileTypes: true });
+			for (const entry of entries) {
+				if (!entry.isFile() || !entry.name.endsWith(".json")) {
+					continue;
+				}
+				const sessionId = entry.name.slice(0, -".json".length);
+				if (seenSessionIds.has(sessionId)) {
+					continue;
+				}
+				seenSessionIds.add(sessionId);
+				const record = await loadSessionRecord(repoRoot, sessionId);
+				if (!record || record.closed) {
+					continue;
+				}
+				candidates.push({ sessionId, session: record.session });
 			}
-			const sessionId = entry.name.slice(0, -".json".length);
-			const record = await loadSessionRecord(repoRoot, sessionId);
-			if (!record || record.closed) {
-				continue;
-			}
-			candidates.push({ sessionId, session: record.session });
+		} catch {
+			continue;
 		}
-		return candidates;
-	} catch {
-		return [];
 	}
+	return candidates;
 }
 
 function pickImplicitSessionId(
@@ -448,7 +460,7 @@ function withSessionExecution<TName extends ToolName>(
 			...result.artifacts,
 			...staleRecovered.recovered.map(
 				(lease: { platform: string; deviceId: string }) =>
-					`artifacts/leases/${lease.platform}-${lease.deviceId}.json`,
+					`${evidencePaths.leases()}/${lease.platform}-${lease.deviceId}.json`,
 			),
 		];
 

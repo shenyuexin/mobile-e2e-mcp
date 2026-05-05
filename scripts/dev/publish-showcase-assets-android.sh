@@ -3,7 +3,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-WORK_DIR="${WORK_DIR:-$ROOT/artifacts/screen-recordings}"
+WORK_DIR="${WORK_DIR:-$ROOT/output/evidence/recordings/videos}"
 SHOWCASE_VIDEOS_DIR="${SHOWCASE_VIDEOS_DIR:-$ROOT/docs/showcase/videos}"
 SHOWCASE_ASSETS_DIR="${SHOWCASE_ASSETS_DIR:-$ROOT/docs/showcase/assets}"
 

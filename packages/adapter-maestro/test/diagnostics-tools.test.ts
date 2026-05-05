@@ -9,7 +9,7 @@ test("buildDebugNextSuggestions includes preflight guidance for iOS startup evid
     suspectAreas: ["iOS startup suspect: preflight"],
     includeDiagnostics: false,
     iosStartupEvidence: {
-      artifactPath: "artifacts/ios-physical-actions/session-a/tap.execution.md",
+      artifactPath: "output/evidence/ios-physical-actions/session-a/tap.execution.md",
       startupPhase: "preflight",
       reasonCode: REASON_CODES.deviceUnavailable,
     },
@@ -31,7 +31,7 @@ test("buildDebugNextSuggestions includes handshake guidance for code74/dtxproxy 
     suspectAreas: ["iOS startup suspect: dtxproxy"],
     includeDiagnostics: true,
     iosStartupEvidence: {
-      artifactPath: "artifacts/ios-physical-actions/session-b/tap.execution.md",
+      artifactPath: "output/evidence/ios-physical-actions/session-b/tap.execution.md",
       startupPhase: "xctest_handshake",
       reasonCode: REASON_CODES.adapterError,
     },
@@ -49,7 +49,7 @@ test("buildDebugNextSuggestions prioritizes signature guidance for preflight con
     suspectAreas: ["iOS startup suspect: signature"],
     includeDiagnostics: false,
     iosStartupEvidence: {
-      artifactPath: "artifacts/ios-physical-actions/session-c/type_text.execution.md",
+      artifactPath: "output/evidence/ios-physical-actions/session-c/type_text.execution.md",
       startupPhase: "preflight",
       reasonCode: REASON_CODES.configurationError,
       summaryLine: "Runner installation failed during iOS preflight because the test-runner code signature could not be validated on device.",

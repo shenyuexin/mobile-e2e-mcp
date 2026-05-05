@@ -1,5 +1,6 @@
 import { ACTION_TYPES, type ActionType } from "@mobile-e2e-mcp/contracts";
 import type { ActionIntent, RawRecordedEvent, RecordedStep, RecordedStepConfidence } from "@mobile-e2e-mcp/contracts";
+import { evidencePaths } from "./artifact-paths.js";
 
 export interface RecordingMappingOptions {
   defaultAppId?: string;
@@ -49,7 +50,7 @@ function isSnapshotPath(value: string | undefined): boolean {
   if (!value) {
     return false;
   }
-  return value.includes("artifacts/record-snapshots/") || value.endsWith(".xml") || value.endsWith(".json");
+  return value.includes(`${evidencePaths.recordSnapshots()}/`) || value.endsWith(".xml") || value.endsWith(".json");
 }
 
 function buildIntentFromEventSelector(event: RawRecordedEvent, actionType: ActionIntent["actionType"]): ActionIntent | undefined {

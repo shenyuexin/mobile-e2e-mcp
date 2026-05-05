@@ -136,8 +136,8 @@ export async function runAndroidToolProbe(): Promise<void> {
   const flowPath = process.env.M2E_FLOW_PATH ?? "flows/samples/generated/android-settings-smoke.yaml";
   const checklistSource = process.env.M2E_CHECKLIST_PATH ?? "docs/testing/android-tool-probe-checklist.md";
 
-  const artifactsDir = join("artifacts", "android-tool-probe", runId);
-  const reportsDir = "reports";
+  const artifactsDir = join("output", "evidence", "probes", "android-tool-probe", runId);
+  const reportsDir = "output/reports";
   await mkdir(artifactsDir, { recursive: true });
   await mkdir(reportsDir, { recursive: true });
 
@@ -284,7 +284,7 @@ export async function runAndroidToolProbe(): Promise<void> {
 
     // 方法 2：如果 session 检测不确定，直接用 adb 检查
     if (!isAppRunning) {
-      const { execFile } = await import("child_process");
+      const { execFile } = await import("node:child_process");
       const dumpsysResult = await new Promise<string>((resolve) => {
         execFile("adb", ["-s", deviceId, "shell", "dumpsys", "activity", "top"], { timeout: 5000 }, (err, stdout) => {
           resolve(err ? "" : stdout);

@@ -38,14 +38,14 @@ Post-fix verification:
 
 ### Screen recordings (raw, local artifacts)
 
-- `artifacts/screen-recordings/m2e-interaction-demo-15s.mp4`
-- `artifacts/screen-recordings/m2e-interaction-demo-slow-30s-v3.mp4`
-- `artifacts/screen-recordings/m2e-interaction-demo-slow-25s-v2.mp4`
-- `artifacts/screen-recordings/m2e-happy-path-full-35s.mp4` (full happy path: login -> add to cart -> orders -> cart)
-- `artifacts/screen-recordings/m2e-happy-path-scroll-pause-40s.mp4` (enhanced happy path: visible double scroll + pause before add to cart)
-- `artifacts/screen-recordings/m2e-demo-failure-intelligence.mp4`
-- `artifacts/screen-recordings/m2e-interruption-demo.mp4`
-- `artifacts/screen-recordings/m2e-interruption-demo-20s.mp4`
+- `output/evidence/recordings/videos/m2e-interaction-demo-15s.mp4`
+- `output/evidence/recordings/videos/m2e-interaction-demo-slow-30s-v3.mp4`
+- `output/evidence/recordings/videos/m2e-interaction-demo-slow-25s-v2.mp4`
+- `output/evidence/recordings/videos/m2e-happy-path-full-35s.mp4` (full happy path: login -> add to cart -> orders -> cart)
+- `output/evidence/recordings/videos/m2e-happy-path-scroll-pause-40s.mp4` (enhanced happy path: visible double scroll + pause before add to cart)
+- `output/evidence/recordings/videos/m2e-demo-failure-intelligence.mp4`
+- `output/evidence/recordings/videos/m2e-interruption-demo.mp4`
+- `output/evidence/recordings/videos/m2e-interruption-demo-20s.mp4`
 
 Curated README-facing videos (tracked under docs):
 
@@ -59,11 +59,11 @@ Curated README-facing videos (tracked under docs):
 
 ### Session evidence (example session)
 
-- `artifacts/sessions/demo-record-android-01.json`
-- `artifacts/audit/demo-record-android-01.json`
-- `artifacts/ui-dumps/demo-record-android-01/android-native_android.xml`
-- `artifacts/state-summaries/demo-record-android-01/android-native_android.logs.txt`
-- `artifacts/state-summaries/demo-record-android-01/android-native_android.crash.txt`
+- `output/evidence/sessions/demo-record-android-01.json`
+- `output/evidence/audit/demo-record-android-01.json`
+- `output/evidence/ui-dumps/demo-record-android-01/android-native_android.xml`
+- `output/evidence/state-summaries/demo-record-android-01/android-native_android.logs.txt`
+- `output/evidence/state-summaries/demo-record-android-01/android-native_android.crash.txt`
 
 ## Notes for Next Iteration
 

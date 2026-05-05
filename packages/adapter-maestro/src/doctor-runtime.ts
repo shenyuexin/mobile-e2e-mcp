@@ -27,6 +27,7 @@ import {
 	DEFAULT_IOS_SIMULATOR_UDID,
 	resolveRepoPath,
 } from "./harness-config.js";
+import { EVIDENCE_ROOT, LEGACY_ARTIFACTS_ROOT } from "./artifact-paths.js";
 import { WdaRealDeviceBackend } from "./ios-backend-wda.js";
 import {
 	resolveAndroidPerformancePlanStrategy,
@@ -747,9 +748,16 @@ async function collectInstallStateChecks(
 	}
 
 	try {
-		const artifactRoot = path.resolve(repoRoot, "artifacts");
-		if (existsSync(artifactRoot)) {
-			const artifactFiles = await listArtifacts(artifactRoot, repoRoot);
+		const artifactRoots = [EVIDENCE_ROOT, LEGACY_ARTIFACTS_ROOT];
+		const artifactFiles = (
+			await Promise.all(
+				artifactRoots.map(async (artifactRoot) => {
+					const absoluteRoot = path.resolve(repoRoot, artifactRoot);
+					return existsSync(absoluteRoot) ? listArtifacts(absoluteRoot, repoRoot) : [];
+				}),
+			)
+		).flat();
+		if (artifactFiles.length > 0) {
 			const errorLogs = artifactFiles.filter((filePath) =>
 				filePath.endsWith("command.stderr.log"),
 			);

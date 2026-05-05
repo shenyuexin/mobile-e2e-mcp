@@ -23,11 +23,11 @@ test("tapResolvedTarget reuses resolved coordinates from scroll result", async (
     sessionId: "scroll-tap",
     durationMs: 1,
     attempts: 1,
-    artifacts: ["artifacts/ui-dumps/test/android.xml"],
+    artifacts: ["output/evidence/ui-dumps/test/android.xml"],
     data: {
       dryRun: true,
       runnerProfile: "phase1",
-      outputPath: "artifacts/ui-dumps/test/android.xml",
+      outputPath: "output/evidence/ui-dumps/test/android.xml",
       query: { text: "Continue" },
       maxSwipes: 1,
       swipeDirection: "up",
@@ -74,7 +74,7 @@ test("tapResolvedTarget returns partial when resolved coordinates are missing", 
     data: {
       dryRun: false,
       runnerProfile: "phase1",
-      outputPath: "artifacts/ui-dumps/test/android.xml",
+      outputPath: "output/evidence/ui-dumps/test/android.xml",
       query: { text: "Continue" },
       maxSwipes: 1,
       swipeDirection: "up",
@@ -118,7 +118,7 @@ test("tapResolvedTarget stops on iOS describe-point mismatch before coordinate t
     data: {
       dryRun: false,
       runnerProfile: "phase1",
-      outputPath: "artifacts/ui-dumps/test/ios.json",
+      outputPath: "output/evidence/ui-dumps/test/ios.json",
       query: { resourceId: "login-submit-button" },
       maxSwipes: 1,
       swipeDirection: "up",
@@ -171,7 +171,7 @@ test("tapResolvedTarget continues on iOS when describe-point agrees", async () =
     data: {
       dryRun: true,
       runnerProfile: "phase1",
-      outputPath: "artifacts/ui-dumps/test/ios.json",
+      outputPath: "output/evidence/ui-dumps/test/ios.json",
       query: { resourceId: "login-submit-button" },
       maxSwipes: 1,
       swipeDirection: "up",
@@ -612,7 +612,7 @@ test("tapWithMaestroTool dry-run uses Maestro command preview for iOS physical d
   ]);
   assert.equal(
     result.data.command[result.data.command.length - 1],
-    "artifacts/ios-physical-actions/ios-physical-tap-preview/tap.maestro.yml",
+    "output/evidence/ios-physical-actions/ios-physical-tap-preview/tap.maestro.yml",
   );
 });
 
@@ -637,7 +637,7 @@ test("typeTextWithMaestroTool dry-run uses Maestro command preview for iOS physi
   ]);
   assert.equal(
     result.data.command[result.data.command.length - 1],
-    "artifacts/ios-physical-actions/ios-physical-type-preview/type_text.maestro.yml",
+    "output/evidence/ios-physical-actions/ios-physical-type-preview/type_text.maestro.yml",
   );
 });
 
@@ -673,7 +673,7 @@ test("tapWithMaestroTool dry-run honors local manual runner backend preview for 
 test("buildIosPhysicalActionExecutionPlan defaults to Maestro CLI backend", () => {
   const plan = buildIosPhysicalActionExecutionPlan(
     "00008101-000D482C1E78001E",
-    "artifacts/ios-physical-actions/demo/tap.maestro.yml",
+    "output/evidence/ios-physical-actions/demo/tap.maestro.yml",
     {},
   );
   assert.equal(plan.backend, "maestro_cli");
@@ -691,7 +691,7 @@ test("buildIosPhysicalActionExecutionPlan defaults to Maestro CLI backend", () =
 test("buildIosPhysicalActionExecutionPlan builds local manual runner command when configured", () => {
   const plan = buildIosPhysicalActionExecutionPlan(
     "00008101-000D482C1E78001E",
-    "artifacts/ios-physical-actions/demo/type_text.maestro.yml",
+    "output/evidence/ios-physical-actions/demo/type_text.maestro.yml",
     { IOS_PHYSICAL_ACTION_BACKEND: "local_manual_runner" },
   );
   assert.equal(plan.backend, "local_manual_runner");
@@ -703,7 +703,7 @@ test("buildIosPhysicalActionExecutionPlan builds local manual runner command whe
   assert.equal(plan.envPatch.IOS_OWNED_RUNNER_UDID, "00008101-000D482C1E78001E");
   assert.equal(
     plan.envPatch.IOS_OWNED_RUNNER_FLOW_PATH,
-    "artifacts/ios-physical-actions/demo/type_text.maestro.yml",
+    "output/evidence/ios-physical-actions/demo/type_text.maestro.yml",
   );
 });
 
@@ -771,7 +771,7 @@ test("buildIosPhysicalExecutionEvidencePaths keeps session-scoped deterministic 
     "session-xyz",
     "tap",
   );
-  assert.equal(paths.relativePath, "artifacts/ios-physical-actions/session-xyz/tap.execution.md");
+  assert.equal(paths.relativePath, "output/evidence/ios-physical-actions/session-xyz/tap.execution.md");
 });
 
 test("buildOwnedRunnerActionEnv extracts tap action payload from flow content", () => {

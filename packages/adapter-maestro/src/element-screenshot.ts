@@ -26,6 +26,7 @@ import {
 import { resolveUiRuntimePlatformHooks } from "./ui-runtime-platform.js";
 import { parseUiBounds } from "./ui-model.js";
 import { takeScreenshotWithRuntime } from "./device-runtime.js";
+import { evidencePaths } from "./artifact-paths.js";
 
 const DEFAULT_CROP_PADDING = 8;
 
@@ -134,8 +135,7 @@ export async function cropElementScreenshot(
   // Directories
   const screenshotDir = path.join(
     repoRoot,
-    "artifacts",
-    "element-screenshots",
+    evidencePaths.elementScreenshots(),
     input.sessionId,
   );
   await mkdir(screenshotDir, { recursive: true });

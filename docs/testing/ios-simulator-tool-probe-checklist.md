@@ -79,7 +79,7 @@ These tools form the default probe, covering the main path for iOS simulator E2E
 ## Artifacts
 
 After each run:
-- `artifacts/ios-simulator-tool-probe/<runId>/report.json` — full JSON report
-- `artifacts/ios-simulator-tool-probe/<runId>/summary.md` — Markdown summary
-- `reports/ios-simulator-tool-probe.json` — latest run (symlink equivalent)
-- `reports/ios-simulator-tool-probe.md` — latest run (symlink equivalent)
+- `output/evidence/probes/ios-simulator-tool-probe/<runId>/report.json` — full JSON report
+- `output/evidence/probes/ios-simulator-tool-probe/<runId>/summary.md` — Markdown summary
+- `output/reports/ios-simulator-tool-probe.json` — latest run (symlink equivalent)
+- `output/reports/ios-simulator-tool-probe.md` — latest run (symlink equivalent)

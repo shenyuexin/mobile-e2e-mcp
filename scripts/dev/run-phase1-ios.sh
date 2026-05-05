@@ -7,7 +7,7 @@ FLOW="$ROOT/flows/samples/react-native/ios-login-smoke.yaml"
 SIM_UDID="${SIM_UDID:-ADA078B9-3C6B-4875-8B85-A7789F368816}"
 EXPO_URL="${EXPO_URL:-exp://127.0.0.1:8081}"
 RUN_COUNT="${1:-5}"
-OUT_DIR="${OUT_DIR:-$ROOT/artifacts/phase1-ios}"
+OUT_DIR="${OUT_DIR:-$ROOT/output/evidence/phase1-ios}"
 
 export PATH="$PATH:$HOME/.maestro/bin"
 export MAESTRO_CLI_NO_ANALYTICS=1

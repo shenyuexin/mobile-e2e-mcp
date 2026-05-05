@@ -10,6 +10,7 @@ import type {
 import path from "node:path";
 import { normalizePositiveInteger, shellEscape } from "./runtime-shared.js";
 import { resolveTraceProcessorPath } from "./toolchain-runtime.js";
+import { evidencePaths } from "./artifact-paths.js";
 
 export { resolveTraceProcessorPath };
 
@@ -53,7 +54,7 @@ export const ANDROID_PERFETTO_CONFIG_DIR = "/data/misc/perfetto-configs";
 export const ANDROID_PERFETTO_TRACE_DIR = "/data/misc/perfetto-traces";
 
 function buildPerformanceOutputRoot(sessionId: string, explicitOutputPath: string | undefined): string {
-  return explicitOutputPath ?? path.posix.join("artifacts", "performance", sessionId);
+  return explicitOutputPath ?? path.posix.join(evidencePaths.performance(), sessionId);
 }
 
 function buildAndroidArtifacts(outputRoot: string, runnerProfile: RunnerProfile, preset: AndroidPerformancePreset): PerformanceArtifactBundle {

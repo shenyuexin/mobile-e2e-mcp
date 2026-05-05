@@ -44,7 +44,7 @@ bash scripts/dev/publish-showcase-assets-android.sh
 - `DEVICE_ID=...`
 - `APP_ID=...`
 - `DURATION_SECONDS=45`
-- `OUT_DIR=artifacts/screen-recordings`
+- `OUT_DIR=output/evidence/recordings/videos`
 - `PREFIX=m2e-happy-path-record`
 - `SESSION_ID=happy-path-record-xxx`
 

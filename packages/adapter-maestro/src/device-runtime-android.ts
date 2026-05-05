@@ -4,6 +4,7 @@ import path from "node:path";
 import type { DeviceRuntimePlatformHooks } from "./device-runtime-platform.js";
 import { boundedRemoteFileReadBatch, parseAnrTraceMetadata } from "./diagnostics-pull.js";
 import { countNonEmptyLines, executeRunner } from "./runtime-shared.js";
+import { evidencePaths } from "./artifact-paths.js";
 
 const DEFAULT_GET_LOGS_LINES = 200;
 const MAX_ANR_FILES = 5;
@@ -130,7 +131,7 @@ export function createAndroidDeviceRuntimeHooks(): DeviceRuntimePlatformHooks {
       };
     },
     buildGetLogsCapturePlan: ({ repoRoot, sessionId, outputPath, runnerProfile, deviceId, sinceSeconds, linesRequested, appId, appFilterApplied, minLogLevel }) => {
-      const relativeOutputPath = outputPath ?? path.posix.join("artifacts", "logs", sessionId, `android-${runnerProfile}.logcat.txt`);
+      const relativeOutputPath = outputPath ?? path.posix.join(evidencePaths.logs(), sessionId, `android-${runnerProfile}.logcat.txt`);
       const levelFilter = minLogLevel ? `*:${minLogLevel}` : undefined;
       return {
         relativeOutputPath,
@@ -164,7 +165,7 @@ export function createAndroidDeviceRuntimeHooks(): DeviceRuntimePlatformHooks {
       };
     },
     buildGetCrashSignalsCapturePlan: ({ repoRoot, sessionId, outputPath, runnerProfile, deviceId, linesRequested }) => {
-      const relativeOutputPath = outputPath ?? path.posix.join("artifacts", "crash-signals", sessionId, `android-${runnerProfile}.crash.txt`);
+      const relativeOutputPath = outputPath ?? path.posix.join(evidencePaths.crashSignals(), sessionId, `android-${runnerProfile}.crash.txt`);
       return {
         relativeOutputPath,
         absoluteOutputPath: path.resolve(repoRoot, relativeOutputPath),
@@ -235,7 +236,7 @@ export function createAndroidDeviceRuntimeHooks(): DeviceRuntimePlatformHooks {
       };
     },
     buildCollectDiagnosticsCapturePlan: ({ repoRoot, sessionId, outputPath, runnerProfile, deviceId }) => {
-      const relativeOutputPath = outputPath ?? path.posix.join("artifacts", "diagnostics", sessionId, `android-${runnerProfile}.zip`);
+      const relativeOutputPath = outputPath ?? path.posix.join(evidencePaths.diagnostics(), sessionId, `android-${runnerProfile}.zip`);
       const absoluteOutputPath = path.resolve(repoRoot, relativeOutputPath);
       const commandOutputPath = absoluteOutputPath.endsWith(".zip") ? absoluteOutputPath.slice(0, -4) : absoluteOutputPath;
       return {

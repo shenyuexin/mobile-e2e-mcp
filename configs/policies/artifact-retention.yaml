@@ -3,10 +3,40 @@ retention:
     screenshots: 14d
     debug-output: 14d
     reports: 30d
+    record-snapshots: 14d
+    record-events: 14d
+    performance-traces: 14d
+    diagnostics: 14d
+    actions: 14d
+    sessions: 14d
+    ui-dumps: 7d
+    logs: 7d
+    crash-signals: 14d
+    state-summaries: 14d
+    debug-evidence: 14d
+    explorer: 30d
+    ios-physical-actions: 14d
+    tmp: 3d
+    recordings: 14d
   ci:
     screenshots: 7d
     debug-output: 7d
     reports: 30d
+    record-snapshots: 7d
+    record-events: 7d
+    performance-traces: 7d
+    diagnostics: 7d
+    actions: 7d
+    sessions: 7d
+    ui-dumps: 3d
+    logs: 3d
+    crash-signals: 7d
+    state-summaries: 7d
+    debug-evidence: 7d
+    explorer: 14d
+    ios-physical-actions: 7d
+    tmp: 1d
+    recordings: 7d
 redaction:
   enabled: true
   targets:

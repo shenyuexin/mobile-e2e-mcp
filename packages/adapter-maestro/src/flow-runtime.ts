@@ -21,6 +21,7 @@ import { launchAppWithRuntime } from "./app-lifecycle-tools.js";
 import { terminateAppWithRuntime } from "./device-runtime.js";
 import { tapElementWithMaestroTool, typeIntoElementWithMaestroTool, waitForUiWithMaestroTool } from "./ui-tools.js";
 import { buildFailureReason, executeRunner, toRelativePath } from "./runtime-shared.js";
+import { evidencePaths } from "./artifact-paths.js";
 
 function readSummaryLine(stdout?: string): string | undefined {
   if (!stdout) {
@@ -290,7 +291,7 @@ export async function runFlowWithRuntime(input: RunFlowInput): Promise<ToolResul
         flowPath: input.flowPath ?? "",
         requestedFlowPath: input.flowPath,
         configuredFlows: [],
-        artifactsDir: path.posix.join("artifacts", "run-flow", input.sessionId),
+        artifactsDir: path.posix.join(evidencePaths.runFlow(), input.sessionId),
         totalRuns: input.runCount ?? 1,
         passedRuns: 0,
         failedRuns: 0,

@@ -26,7 +26,7 @@ test("loadAccessPolicyConfig throws for missing file", async () => {
 });
 
 test("loadAccessPolicyConfig throws for invalid YAML content", async () => {
-  const tmpDir = path.resolve(repoRoot, "artifacts", "_tmp-policy-" + Date.now());
+  const tmpDir = path.resolve(repoRoot, "output", "tmp", "_tmp-policy-" + Date.now());
   const badFile = path.resolve(tmpDir, "bad.yaml");
   await mkdir(tmpDir, { recursive: true });
   // YAML that parses to a plain string, not an object with profiles

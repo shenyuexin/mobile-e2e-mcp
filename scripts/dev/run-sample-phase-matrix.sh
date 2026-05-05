@@ -9,9 +9,9 @@ FLUTTER_RUNS="${3:-3}"
 NATIVE_ANDROID_RUNS="${4:-2}"
 NATIVE_IOS_RUNS="${5:-2}"
 NATIVE_IOS_REAL_DEVICE_RUNS="${6:-1}"
-RUN_METADATA_PATH="$ROOT/reports/self-hosted-run-metadata.json"
+RUN_METADATA_PATH="$ROOT/output/reports/self-hosted-run-metadata.json"
 
-mkdir -p "$ROOT/reports"
+mkdir -p "$ROOT/output/reports"
 cat > "$RUN_METADATA_PATH" <<EOF
 {
   "generated_at": "$(date -u +'%Y-%m-%dT%H:%M:%SZ')",
@@ -23,13 +23,13 @@ cat > "$RUN_METADATA_PATH" <<EOF
 EOF
 
 rm -rf \
-  "$ROOT/artifacts/phase1-ios" \
-  "$ROOT/artifacts/phase1-android" \
-  "$ROOT/artifacts/phase2-rn-android" \
-  "$ROOT/artifacts/phase3-flutter-android" \
-  "$ROOT/artifacts/phase3-native-android" \
-  "$ROOT/artifacts/phase3-native-ios" \
-  "$ROOT/artifacts/phase3-native-ios-real-device"
+  "$ROOT/output/evidence/phase1-ios" \
+  "$ROOT/output/evidence/phase1-android" \
+  "$ROOT/output/evidence/phase2-rn-android" \
+  "$ROOT/output/evidence/phase3-flutter-android" \
+  "$ROOT/output/evidence/phase3-native-android" \
+  "$ROOT/output/evidence/phase3-native-ios" \
+  "$ROOT/output/evidence/phase3-native-ios-real-device"
 
 "$ROOT/scripts/dev/run-phase1-ios.sh" "$IOS_RUNS"
 "$ROOT/scripts/dev/run-phase1-android.sh" "$ANDROID_RUNS"
@@ -48,5 +48,5 @@ fi
 python3 "$ROOT/scripts/report/generate-phase-report.py"
 python3 "$ROOT/scripts/report/generate-acceptance-evidence.py"
 
-printf 'Generated report:\n  %s\n  %s\n' "$ROOT/reports/phase-sample-report.json" "$ROOT/reports/phase-sample-report.md"
-printf 'Generated acceptance evidence:\n  %s\n  %s\n' "$ROOT/reports/acceptance-evidence.json" "$ROOT/reports/acceptance-evidence.md"
+printf 'Generated report:\n  %s\n  %s\n' "$ROOT/output/reports/phase-sample-report.json" "$ROOT/output/reports/phase-sample-report.md"
+printf 'Generated acceptance evidence:\n  %s\n  %s\n' "$ROOT/output/reports/acceptance-evidence.json" "$ROOT/output/reports/acceptance-evidence.md"

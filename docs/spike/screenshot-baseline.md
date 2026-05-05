@@ -21,7 +21,7 @@
 
 | # | Page | File Path | Notes |
 |---|------|-----------|-------|
-| 1 | Settings Home Screen | `artifacts/screenshots/session-1776061377689/ios-phase1.png` | Shows 13 top-level sections, Apple Account (not signed in), search bar |
+| 1 | Settings Home Screen | `output/evidence/screenshots/session-1776061377689/ios-phase1.png` | Shows 13 top-level sections, Apple Account (not signed in), search bar |
 
 ## Visual Characteristics for Dedup
 

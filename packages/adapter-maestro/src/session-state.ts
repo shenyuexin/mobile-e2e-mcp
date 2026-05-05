@@ -14,6 +14,7 @@ import type {
 } from "@mobile-e2e-mcp/contracts";
 import { REASON_CODES as REASON_CODES_VALUES } from "@mobile-e2e-mcp/contracts";
 import { loadSessionRecord, persistSessionState } from "@mobile-e2e-mcp/core";
+import { evidencePaths } from "./artifact-paths.js";
 import { buildCapabilityProfile } from "./capability-model.js";
 import {
 	getCrashSignalsWithRuntime as getCrashSignalsWithMaestro,
@@ -761,8 +762,7 @@ export async function getScreenSummaryWithMaestro(
 				outputPath:
 					input.outputPath ??
 					path.posix.join(
-						"artifacts",
-						"state-summaries",
+						evidencePaths.stateSummaries(),
 						input.sessionId,
 						`unknown-${runnerProfile}.json`,
 					),
@@ -795,14 +795,12 @@ export async function getScreenSummaryWithMaestro(
 	});
 	const includeDebugSignals = input.includeDebugSignals ?? false;
 	const logOutputPath = path.posix.join(
-		"artifacts",
-		"state-summaries",
+		evidencePaths.stateSummaries(),
 		input.sessionId,
 		`${input.platform}-${runnerProfile}.logs.txt`,
 	);
 	const crashOutputPath = path.posix.join(
-		"artifacts",
-		"state-summaries",
+		evidencePaths.stateSummaries(),
 		input.sessionId,
 		`${input.platform}-${runnerProfile}.crash.txt`,
 	);

@@ -7,7 +7,7 @@ DEVICE_ID="${DEVICE_ID:-emulator-5554}"
 APP_ID="${APP_ID:-com.epam.mobitru}"
 ANDROID_USER_ID="${ANDROID_USER_ID:-}"
 RUN_COUNT="${1:-2}"
-OUT_DIR="${OUT_DIR:-$ROOT/artifacts/phase3-native-android}"
+OUT_DIR="${OUT_DIR:-$ROOT/output/evidence/phase3-native-android}"
 APK_PATH="${NATIVE_ANDROID_APK_PATH:-$ROOT/examples/demo-android-app/app/build/outputs/apk/debug/app-debug.apk}"
 
 resolve_driver_reinstall_flag() {

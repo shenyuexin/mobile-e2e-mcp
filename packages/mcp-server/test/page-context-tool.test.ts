@@ -9,7 +9,7 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../
 
 async function cleanupSessionArtifact(sessionId: string): Promise<void> {
   const { rm } = await import("node:fs/promises");
-  await rm(`${repoRoot}/artifacts/sessions/${sessionId}.json`, { force: true });
+  await rm(`${repoRoot}/output/evidence/sessions/${sessionId}.json`, { force: true });
 }
 
 function buildTestDeviceId(sessionId: string): string {

@@ -22,7 +22,7 @@ function buildSession(sessionId: string, deviceId: string): Session {
     appId: "host.exp.exponent",
     policyProfile: "sample-harness-default",
     startedAt: new Date().toISOString(),
-    artifactsRoot: "artifacts",
+    artifactsRoot: "output/evidence",
     timeline: [],
     profile: "phase1",
     phase: "phase2",

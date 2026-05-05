@@ -30,7 +30,7 @@ function buildScreenSummaryResult(
 		data: {
 			dryRun: true,
 			runnerProfile: "phase1",
-			outputPath: `artifacts/state-summaries/${sessionId}/android-phase1.json`,
+			outputPath: `output/evidence/state-summaries/${sessionId}/android-phase1.json`,
 			command: ["fixture", "get_screen_summary"],
 			exitCode: 0,
 			supportLevel: "full",

@@ -20,7 +20,7 @@ function buildScreenSummaryResult(
 		data: {
 			dryRun: true,
 			runnerProfile: "phase1",
-			outputPath: "artifacts/state-summaries/session-1/android-phase1.json",
+			outputPath: "output/evidence/state-summaries/session-1/android-phase1.json",
 			command: ["inspect"],
 			exitCode: 0,
 			supportLevel: "partial",

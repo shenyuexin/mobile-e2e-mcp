@@ -7,7 +7,7 @@
 ## 1) 场景与证据来源
 
 - 场景来源：`docs/showcase/android-real-device-demo-run-2026-03-18.md`
-- 相关录屏：`artifacts/screen-recordings/m2e-demo-failure-intelligence.mp4`
+- 相关录屏：`output/evidence/recordings/videos/m2e-demo-failure-intelligence.mp4`
 - 相关结论：同次 run 中，正常页面曾出现中断误报，后续已修复。
 
 ## 2) 四步链路（输入示例）
@@ -73,9 +73,9 @@
   "reasonCode": "INTERRUPTION_RESOLUTION_FAILED",
   "sessionId": "demo-record-android-01",
   "artifacts": [
-    "artifacts/screen-recordings/m2e-demo-failure-intelligence.mp4",
-    "artifacts/sessions/demo-record-android-01.json",
-    "artifacts/state-summaries/demo-record-android-01/android-native_android.logs.txt"
+    "output/evidence/recordings/videos/m2e-demo-failure-intelligence.mp4",
+    "output/evidence/sessions/demo-record-android-01.json",
+    "output/evidence/state-summaries/demo-record-android-01/android-native_android.logs.txt"
   ]
 }
 ```

@@ -168,7 +168,7 @@ async function runMcpUiProbe(server: ReturnType<typeof createServer>): Promise<v
     runnerProfile: "native_ios",
     deviceId: config.deviceId,
     appId: config.appId,
-    outputPath: `artifacts/explorer/debug-inspect-${probeSessionId}.json`,
+    outputPath: `output/evidence/explorer/debug-inspect-${probeSessionId}.json`,
   }) as ToolResult<{ content?: unknown; summary?: { totalNodes?: number; clickableNodes?: number }; outputPath?: string }>;
 
   if (inspectResult.status !== "success" && inspectResult.status !== "partial") {

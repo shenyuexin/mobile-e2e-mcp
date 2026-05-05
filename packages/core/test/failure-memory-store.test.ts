@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 import { loadBaselineIndex, loadFailureIndex, recordBaselineEntry, recordFailureSignature } from "../src/index.ts";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
-const aiFirstDir = path.resolve(repoRoot, "artifacts", "ai-first");
+const aiFirstDir = path.resolve(repoRoot, "output", "evidence", "ai-first");
 
 async function cleanupIndexes(): Promise<void> {
   await rm(path.resolve(aiFirstDir, "failure-index.json"), { force: true });

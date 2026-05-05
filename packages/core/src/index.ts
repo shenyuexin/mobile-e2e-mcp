@@ -1,4 +1,11 @@
 export {
+	CORE_OUTPUT_ROOT,
+	CORE_EVIDENCE_ROOT,
+	CORE_LEGACY_ARTIFACTS_ROOT,
+	coreEvidencePaths,
+	legacyCoreEvidencePaths,
+} from "./output-paths.js";
+export {
   appendSessionTimelineEvent,
   appendReplayTimelineEvent,
   buildActionRecordRelativePath,

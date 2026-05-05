@@ -8,7 +8,7 @@ This showcase demonstrates passive manual recording with two front-door calls.
 
 ## Evidence to capture
 
-- Record session artifact: `artifacts/record-sessions/<recordSessionId>.json`
-- Raw event stream: `artifacts/record-events/<recordSessionId>.jsonl`
-- Mapped steps: `artifacts/recorded-steps/<recordSessionId>.json`
+- Record session artifact: `output/evidence/record-sessions/<recordSessionId>.json`
+- Raw event stream: `output/evidence/recordings/events/<recordSessionId>.jsonl`
+- Mapped steps: `output/evidence/recorded-steps/<recordSessionId>.json`
 - Generated flow: `flows/samples/generated/<recordSessionId>-<timestamp>.yaml`

@@ -2,6 +2,7 @@ import { mkdir, rm } from "node:fs/promises";
 import path from "node:path";
 import type { Platform } from "@mobile-e2e-mcp/contracts";
 import { buildDeviceLeaseRecordRelativePath, type DeviceLease, listLeases, loadLeaseByDevice, persistLease, removeLease } from "./device-lease-store.js";
+import { coreEvidencePaths } from "./output-paths.js";
 import { loadSessionRecord } from "./session-record-store.js";
 
 export interface AcquireLeaseInput {
@@ -48,7 +49,7 @@ function assertSafeSegment(input: string, label: string): void {
 function buildLeaseLockDirectory(repoRoot: string, platform: Platform, deviceId: string): string {
   assertSafeSegment(platform, "platform");
   assertSafeSegment(deviceId, "deviceId");
-  return path.resolve(repoRoot, "artifacts", "leases", ".locks", `${platform}-${deviceId}.lock`);
+  return path.resolve(repoRoot, coreEvidencePaths.leases(), ".locks", `${platform}-${deviceId}.lock`);
 }
 
 async function withDeviceLeaseLock<T>(repoRoot: string, platform: Platform, deviceId: string, task: () => Promise<T>): Promise<T> {

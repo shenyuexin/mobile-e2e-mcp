@@ -11,10 +11,10 @@ export ACCEPTANCE_PHASE="${ACCEPTANCE_PHASE:-Phase 2 RN Android acceptance}"
 export ACCEPTANCE_WORKSTREAM="${ACCEPTANCE_WORKSTREAM:-framework-acceptance-lane}"
 export ACCEPTANCE_FEATURE="${ACCEPTANCE_FEATURE:-react-native-android}"
 export APP_ID="${APP_ID:-com.anonymous.rnlogindemo}"
-export PHASE2_RN_ANDROID_ARTIFACT_ROOT="${PHASE2_RN_ANDROID_ARTIFACT_ROOT:-$ROOT/artifacts/phase2-rn-android}"
+export PHASE2_RN_ANDROID_ARTIFACT_ROOT="${PHASE2_RN_ANDROID_ARTIFACT_ROOT:-$ROOT/output/evidence/phase2-rn-android}"
 export PHASE_REPORT_PHASE="${PHASE_REPORT_PHASE:-Phase 2 RN Android acceptance report}"
 export PHASE_REPORT_PLATFORMS="${PHASE_REPORT_PLATFORMS:-react-native-android}"
-export ACCEPTANCE_RUN_METADATA_PATH="${ACCEPTANCE_RUN_METADATA_PATH:-$ROOT/reports/phase2-rn-android-run-metadata.json}"
+export ACCEPTANCE_RUN_METADATA_PATH="${ACCEPTANCE_RUN_METADATA_PATH:-$ROOT/output/reports/phase2-rn-android-run-metadata.json}"
 
 if [ ! -f "$EXPO_PROJECT_ROOT/package.json" ] || [ ! -f "$EXPO_PROJECT_ROOT/App.tsx" ]; then
   printf 'Phase 2 RN Android sample app is missing under %s.\n' "$EXPO_PROJECT_ROOT" >&2
@@ -23,7 +23,7 @@ if [ ! -f "$EXPO_PROJECT_ROOT/package.json" ] || [ ! -f "$EXPO_PROJECT_ROOT/App.
 fi
 
 rm -rf "$PHASE2_RN_ANDROID_ARTIFACT_ROOT"
-mkdir -p "$ROOT/reports"
+mkdir -p "$ROOT/output/reports"
 
 cat > "$ACCEPTANCE_RUN_METADATA_PATH" <<EOF
 {
@@ -42,5 +42,5 @@ python3 "$ROOT/scripts/report/generate-phase-report.py"
 python3 "$ROOT/scripts/report/generate-acceptance-evidence.py"
 
 printf 'Phase 2 RN Android acceptance artifacts:\n  %s\n  %s\n' \
-  "$ROOT/reports/phase-sample-report.json" \
-  "$ROOT/reports/acceptance-evidence.json"
+  "$ROOT/output/reports/phase-sample-report.json" \
+  "$ROOT/output/reports/acceptance-evidence.json"

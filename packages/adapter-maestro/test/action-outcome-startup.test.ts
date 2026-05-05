@@ -12,7 +12,7 @@ const repoRoot = resolveRepoPath();
 test("suggestKnownRemediationWithMaestro prioritizes signing guidance for iOS signature preflight evidence", async () => {
   const sessionId = `known-remediation-ios-signature-${Date.now()}`;
   const actionId = `known-remediation-ios-signature-action-${Date.now()}`;
-  const startupDir = path.join(repoRoot, "artifacts", "ios-physical-actions", sessionId);
+  const startupDir = path.join(repoRoot, "output", "evidence", "ios-physical-actions", sessionId);
   await mkdir(startupDir, { recursive: true });
   await writeFile(
     path.join(startupDir, "type_text.execution.md"),
@@ -50,7 +50,7 @@ test("suggestKnownRemediationWithMaestro prioritizes signing guidance for iOS si
     evidence: [
       {
         kind: "log",
-        path: path.posix.join("artifacts", "ios-physical-actions", sessionId, "type_text.execution.md"),
+        path: path.posix.join("output", "evidence", "ios-physical-actions", sessionId, "type_text.execution.md"),
         supportLevel: "partial",
         description: "iOS startup signature evidence",
       },
@@ -72,7 +72,7 @@ test("suggestKnownRemediationWithMaestro prioritizes signing guidance for iOS si
 test("suggestKnownRemediationWithMaestro detects permission interruption from blocking signals", async () => {
   const sessionId = `remediation-permission-${Date.now()}`;
   const actionId = `permission-action-${Date.now()}`;
-  const artifactsDir = path.join(repoRoot, "artifacts", "maestro-actions", sessionId);
+  const artifactsDir = path.join(repoRoot, "output", "evidence", "maestro-actions", sessionId);
   await mkdir(artifactsDir, { recursive: true });
 
   await writeFile(
@@ -111,7 +111,7 @@ test("suggestKnownRemediationWithMaestro detects permission interruption from bl
     evidence: [
       {
         kind: "log",
-        path: path.posix.join("artifacts", "maestro-actions", sessionId, "tap.execution.md"),
+        path: path.posix.join("output", "evidence", "maestro-actions", sessionId, "tap.execution.md"),
         supportLevel: "partial",
         description: "Permission prompt blocking evidence",
       },
@@ -139,7 +139,7 @@ test("suggestKnownRemediationWithMaestro detects permission interruption from bl
 test("suggestKnownRemediationWithMaestro detects network layer issues from offline readiness", async () => {
   const sessionId = `remediation-network-${Date.now()}`;
   const actionId = `network-action-${Date.now()}`;
-  const artifactsDir = path.join(repoRoot, "artifacts", "maestro-actions", sessionId);
+  const artifactsDir = path.join(repoRoot, "output", "evidence", "maestro-actions", sessionId);
   await mkdir(artifactsDir, { recursive: true });
 
   await writeFile(
@@ -178,7 +178,7 @@ test("suggestKnownRemediationWithMaestro detects network layer issues from offli
     evidence: [
       {
         kind: "log",
-        path: path.posix.join("artifacts", "maestro-actions", sessionId, "tap.execution.md"),
+        path: path.posix.join("output", "evidence", "maestro-actions", sessionId, "tap.execution.md"),
         supportLevel: "partial",
         description: "Network offline evidence",
       },
@@ -206,7 +206,7 @@ test("suggestKnownRemediationWithMaestro detects network layer issues from offli
 test("suggestKnownRemediationWithMaestro populates skillGuidance when attribution signals present", async () => {
   const sessionId = `remediation-skill-${Date.now()}`;
   const actionId = `skill-action-${Date.now()}`;
-  const startupDir = path.join(repoRoot, "artifacts", "maestro-actions", sessionId);
+  const startupDir = path.join(repoRoot, "output", "evidence", "maestro-actions", sessionId);
   await mkdir(startupDir, { recursive: true });
 
   // Write evidence that triggers the "environment" affectedLayer (startupPhase=preflight)
@@ -250,7 +250,7 @@ test("suggestKnownRemediationWithMaestro populates skillGuidance when attributio
     evidence: [
       {
         kind: "log",
-        path: path.posix.join("artifacts", "maestro-actions", sessionId, "launch.execution.md"),
+        path: path.posix.join("output", "evidence", "maestro-actions", sessionId, "launch.execution.md"),
         supportLevel: "partial",
         description: "Preflight failure evidence",
       },
@@ -280,7 +280,7 @@ test("suggestKnownRemediationWithMaestro includes indexed remediation from failu
   const sessionId = `remediation-indexed-${Date.now()}`;
   const actionId = `indexed-action-${Date.now()}`;
   const indexedActionId = `indexed-sig-${Date.now()}`;
-  const artifactsDir = path.join(repoRoot, "artifacts", "maestro-actions", sessionId);
+  const artifactsDir = path.join(repoRoot, "output", "evidence", "maestro-actions", sessionId);
   await mkdir(artifactsDir, { recursive: true });
 
   await writeFile(
@@ -317,7 +317,7 @@ test("suggestKnownRemediationWithMaestro includes indexed remediation from failu
     evidence: [
       {
         kind: "log",
-        path: path.posix.join("artifacts", "maestro-actions", sessionId, "tap.execution.md"),
+        path: path.posix.join("output", "evidence", "maestro-actions", sessionId, "tap.execution.md"),
         supportLevel: "partial",
         description: "Indexed remediation test evidence",
       },
@@ -373,7 +373,7 @@ test("suggestKnownRemediationWithMaestro includes similar-failures hint when mat
   const sessionId = `remediation-similar-${Date.now()}`;
   const actionId = `similar-action-${Date.now()}`;
   const olderActionId = `older-similar-action-${Date.now() - 1000}`;
-  const artifactsDir = path.join(repoRoot, "artifacts", "maestro-actions", sessionId);
+  const artifactsDir = path.join(repoRoot, "output", "evidence", "maestro-actions", sessionId);
   await mkdir(artifactsDir, { recursive: true });
 
   await writeFile(
@@ -409,7 +409,7 @@ test("suggestKnownRemediationWithMaestro includes similar-failures hint when mat
     evidence: [
       {
         kind: "log",
-        path: path.posix.join("artifacts", "maestro-actions", sessionId, "tap.execution.md"),
+        path: path.posix.join("output", "evidence", "maestro-actions", sessionId, "tap.execution.md"),
         supportLevel: "partial",
         description: "Similar failures test evidence",
       },
@@ -457,7 +457,7 @@ test("suggestKnownRemediationWithMaestro includes baseline-divergence hint when 
   const sessionId = `remediation-baseline-${Date.now()}`;
   const baselineActionId = `baseline-success-${Date.now()}`;
   const currentActionId = `current-failed-${Date.now()}`;
-  const artifactsDir = path.join(repoRoot, "artifacts", "maestro-actions", sessionId);
+  const artifactsDir = path.join(repoRoot, "output", "evidence", "maestro-actions", sessionId);
   await mkdir(artifactsDir, { recursive: true });
 
   // Write a successful baseline action record
@@ -496,7 +496,7 @@ test("suggestKnownRemediationWithMaestro includes baseline-divergence hint when 
     evidence: [
       {
         kind: "log",
-        path: path.posix.join("artifacts", "maestro-actions", sessionId, "tap_baseline.execution.md"),
+        path: path.posix.join("output", "evidence", "maestro-actions", sessionId, "tap_baseline.execution.md"),
         supportLevel: "partial",
         description: "Baseline success evidence",
       },
@@ -551,7 +551,7 @@ test("suggestKnownRemediationWithMaestro includes baseline-divergence hint when 
     evidence: [
       {
         kind: "log",
-        path: path.posix.join("artifacts", "maestro-actions", sessionId, "tap_current.execution.md"),
+        path: path.posix.join("output", "evidence", "maestro-actions", sessionId, "tap_current.execution.md"),
         supportLevel: "partial",
         description: "Current failed evidence",
       },

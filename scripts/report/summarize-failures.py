@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 
 
-REPORT = Path(__file__).resolve().parents[2] / "reports/phase-sample-report.json"
+REPORT = Path(__file__).resolve().parents[2] / "output/reports/phase-sample-report.json"
 
 def main() -> None:
     data = json.loads(REPORT.read_text())

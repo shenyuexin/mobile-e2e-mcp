@@ -7,7 +7,7 @@ DEVICE_ID="${DEVICE_ID:-emulator-5554}"
 APP_ID="${APP_ID:-com.epam.mobitru}"
 ANDROID_USER_ID="${ANDROID_USER_ID:-}"
 RUN_COUNT="${1:-3}"
-OUT_DIR="${OUT_DIR:-$ROOT/artifacts/phase3-flutter-android}"
+OUT_DIR="${OUT_DIR:-$ROOT/output/evidence/phase3-flutter-android}"
 APK_PATH="${FLUTTER_APK_PATH:-$ROOT/examples/demo-flutter-app/build/app/outputs/flutter-apk/app-debug.apk}"
 
 resolve_driver_reinstall_flag() {

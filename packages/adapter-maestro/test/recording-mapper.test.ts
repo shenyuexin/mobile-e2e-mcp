@@ -115,7 +115,7 @@ test("mapRawEventsToRecordedSteps rejects snapshot-path selector and falls back 
       eventType: "tap",
       x: 120,
       y: 220,
-      resolvedSelector: { text: "artifacts/record-snapshots/rec-1-end.xml" },
+      resolvedSelector: { text: "output/evidence/recordings/snapshots/rec-1-end.xml" },
     } as Partial<RawRecordedEvent>),
   ], { includeAutoWaitStep: false });
 
@@ -135,7 +135,7 @@ test("renderRecordedStepsAsFlow never emits snapshot-path selectors", () => {
         actionType: "tap_element",
         actionIntent: {
           actionType: "tap_element",
-          text: "artifacts/record-snapshots/rec-1-end.xml",
+          text: "output/evidence/recordings/snapshots/rec-1-end.xml",
         },
         confidence: "low",
         reason: "invalid selector test",
@@ -143,7 +143,7 @@ test("renderRecordedStepsAsFlow never emits snapshot-path selectors", () => {
     ],
   });
 
-  assert.equal(rendered.yaml.includes("artifacts/record-snapshots/"), false);
+  assert.equal(rendered.yaml.includes("output/evidence/recordings/snapshots/"), false);
   assert.equal(rendered.warnings.length > 0, true);
 });
 
