@@ -76,11 +76,11 @@ test("redactSensitiveText redacts token password and phone markers", () => {
 
 test("buildAuditedArtifactEntries classifies artifacts and applies retention profiles", () => {
   const entries = withCiEnv(undefined, () => buildAuditedArtifactEntries([
-    "artifacts/screens/login-screenshot.png",
-    "artifacts/reports/summary.md",
-    "artifacts/debug/session-log.txt",
-    "artifacts/misc/archive.bin",
-    "artifacts/debug/session-log.txt",
+    "output/evidence/screenshots/login-screenshot.png",
+    "output/reports/summary.md",
+    "output/evidence/debug/session-log.txt",
+    "output/evidence/misc/archive.bin",
+    "output/evidence/debug/session-log.txt",
   ], governanceConfig));
 
   assert.equal(entries.length, 4);
@@ -100,7 +100,7 @@ test("buildAuditedArtifactEntries classifies artifacts and applies retention pro
 
 test("buildAuditedArtifactEntries uses CI retention tier and redacts sensitive paths", () => {
   const entries = withCiEnv("true", () => buildAuditedArtifactEntries([
-    "artifacts/debug/token-secret-password-reset-+1 415 555 2671.json",
+    "output/evidence/debug/token-secret-password-reset-+1 415 555 2671.json",
   ], governanceConfig));
 
   assert.equal(entries[0]?.category, "debug-output");
@@ -150,7 +150,7 @@ test("buildSessionAuditRecord builds redacted classified audit output", () => {
       appId: "com.example.demo",
       policyProfile: "sample-harness-default",
       startedAt: "2026-03-11T00:00:00.000Z",
-      artifactsRoot: "artifacts/phase3-native-android/audit-session",
+      artifactsRoot: "output/evidence/phase3-native-android/audit-session",
       timeline: [
         {
           timestamp: "2026-03-11T00:00:00.000Z",
@@ -170,9 +170,9 @@ test("buildSessionAuditRecord builds redacted classified audit output", () => {
     closed: true,
     endedAt: "2026-03-11T00:03:00.000Z",
     artifacts: [
-      "artifacts/screens/final-screenshot.png",
-      "artifacts/reports/summary.md",
-      "artifacts/debug/token-secret.txt",
+      "output/evidence/screenshots/final-screenshot.png",
+      "output/reports/summary.md",
+      "output/evidence/debug/token-secret.txt",
     ],
     updatedAt: "2026-03-11T00:03:00.000Z",
   };

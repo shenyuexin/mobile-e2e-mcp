@@ -22,7 +22,7 @@ test("parseIosDeviceExplorerScriptConfig maps iPad env vars to ios-device explor
   assert.equal(config.mode, "full");
   assert.equal(config.appId, "com.apple.Preferences");
   assert.equal(config.deviceId, "00008110-001234567890801E");
-  assert.equal(config.outputDir, "artifacts/explorer/ios-device-full");
+  assert.equal(config.outputDir, "output/evidence/explorer/ios-device-full");
   assert.equal(config.maxDepth, "8");
   assert.equal(config.timeoutMs, "7200000");
 });
@@ -30,7 +30,7 @@ test("parseIosDeviceExplorerScriptConfig maps iPad env vars to ios-device explor
 test("buildIosDeviceExplorerCliArgs targets ios-device Settings traversal", () => {
   const config = parseIosDeviceExplorerScriptConfig(["smoke"], {
     M2E_DEVICE_ID: "00008110-001234567890801E",
-    EXPLORER_OUTPUT_DIR: "artifacts/custom-ios-device",
+    EXPLORER_OUTPUT_DIR: "output/evidence/custom-ios-device",
     EXPLORER_MAX_DEPTH: "3",
     EXPLORER_TIMEOUT_MS: "60000",
   });
@@ -40,7 +40,7 @@ test("buildIosDeviceExplorerCliArgs targets ios-device Settings traversal", () =
     "--app-id", "com.apple.Preferences",
     "--platform", "ios-device",
     "--no-prompt",
-    "--output", "artifacts/custom-ios-device",
+    "--output", "output/evidence/custom-ios-device",
     "--max-depth", "3",
     "--timeout-ms", "60000",
   ]);

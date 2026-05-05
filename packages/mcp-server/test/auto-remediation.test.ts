@@ -40,7 +40,7 @@ function buildBasePerformActionResult(params: {
     sessionId: params.sessionId,
     durationMs: 5,
     attempts: 1,
-    artifacts: [`artifacts/actions/${params.actionId}.json`],
+    artifacts: [`output/evidence/actions/${params.actionId}.json`],
     data: {
       sessionRecordFound: true,
       outcome: {
@@ -162,7 +162,7 @@ test("performActionWithAutoRemediation executes one bounded recovery attempt for
         explainLastFailure: async () => ({ status: "success", reasonCode: REASON_CODES.ok, sessionId, durationMs: 1, attempts: 1, artifacts: [], data: { found: true, actionId: "auto-crash", attribution: buildAttribution("crash") }, nextSuggestions: [] }),
         rankFailureCandidates: async () => ({ status: "success", reasonCode: REASON_CODES.ok, sessionId, durationMs: 1, attempts: 1, artifacts: [], data: { found: true, actionId: "auto-crash", candidates: [buildAttribution("crash")] }, nextSuggestions: [] }),
         suggestKnownRemediation: async () => ({ status: "success", reasonCode: REASON_CODES.ok, sessionId, durationMs: 1, attempts: 1, artifacts: [], data: { found: true, actionId: "auto-crash", remediation: ["Recover to known state."] }, nextSuggestions: [] }),
-        recoverToKnownState: async () => ({ status: "success", reasonCode: REASON_CODES.ok, sessionId, durationMs: 1, attempts: 1, artifacts: ["artifacts/recovery/relaunch.txt"], data: { summary: { strategy: "relaunch_app", recovered: true, note: "Recovered after one relaunch.", stateBefore: { appPhase: "crashed", readiness: "unknown", blockingSignals: [] }, stateAfter: { appPhase: "ready", readiness: "ready", blockingSignals: [] } } }, nextSuggestions: [] }),
+        recoverToKnownState: async () => ({ status: "success", reasonCode: REASON_CODES.ok, sessionId, durationMs: 1, attempts: 1, artifacts: ["output/evidence/recovery/relaunch.txt"], data: { summary: { strategy: "relaunch_app", recovered: true, note: "Recovered after one relaunch.", stateBefore: { appPhase: "crashed", readiness: "unknown", blockingSignals: [] }, stateAfter: { appPhase: "ready", readiness: "ready", blockingSignals: [] } } }, nextSuggestions: [] }),
         replayLastStablePath: async () => { throw new Error("replay should not run"); },
       },
     );
@@ -367,7 +367,7 @@ test("performActionWithAutoRemediation replays when checkpoint drift suggests a 
           sessionId,
           durationMs: 1,
           attempts: 1,
-          artifacts: ["artifacts/recovery/replay.txt"],
+          artifacts: ["output/evidence/recovery/replay.txt"],
           data: {
             summary: {
               strategy: "replay_last_successful_action",
@@ -473,7 +473,7 @@ test("performActionWithAutoRemediation directly recovers waiting-state failures 
         explainLastFailure: async () => { explainCalled = true; throw new Error("explain should not run"); },
         rankFailureCandidates: async () => { throw new Error("rank should not run"); },
         suggestKnownRemediation: async () => { throw new Error("suggest should not run"); },
-        recoverToKnownState: async () => ({ status: "success", reasonCode: REASON_CODES.ok, sessionId, durationMs: 1, attempts: 1, artifacts: ["artifacts/recovery/wait.txt"], data: { summary: { strategy: "wait_until_ready", recovered: true, note: "Recovered after waiting for readiness.", stateBefore: { appPhase: "loading", readiness: "waiting_ui", blockingSignals: [] }, stateAfter: { appPhase: "ready", readiness: "ready", blockingSignals: [] } } }, nextSuggestions: [] }),
+        recoverToKnownState: async () => ({ status: "success", reasonCode: REASON_CODES.ok, sessionId, durationMs: 1, attempts: 1, artifacts: ["output/evidence/recovery/wait.txt"], data: { summary: { strategy: "wait_until_ready", recovered: true, note: "Recovered after waiting for readiness.", stateBefore: { appPhase: "loading", readiness: "waiting_ui", blockingSignals: [] }, stateAfter: { appPhase: "ready", readiness: "ready", blockingSignals: [] } } }, nextSuggestions: [] }),
         replayLastStablePath: async () => { throw new Error("replay should not run"); },
       },
     );

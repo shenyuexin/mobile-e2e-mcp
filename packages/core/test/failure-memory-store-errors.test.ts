@@ -12,7 +12,7 @@ import type { PersistedFailureIndexEntry } from "../src/failure-memory-store.ts"
 const isolatedRepoRoot = path.resolve(await mkdtemp(path.join(os.tmpdir(), "m2e-failure-store-")));
 
 async function cleanupFailureIndex(): Promise<void> {
-  await rm(path.resolve(isolatedRepoRoot, "artifacts", "ai-first", "failure-index.json"), { force: true });
+  await rm(path.resolve(isolatedRepoRoot, "output", "evidence", "ai-first", "failure-index.json"), { force: true });
 }
 
 function buildEntry(actionId: string, suffix = ""): PersistedFailureIndexEntry {
@@ -78,7 +78,7 @@ test("recordFailureSignature maintains newest-first ordering", async () => {
 test("loadFailureIndex returns [] for corrupt JSON index file", async () => {
   await cleanupFailureIndex();
   try {
-    await writeFile(path.resolve(isolatedRepoRoot, "artifacts", "ai-first", "failure-index.json"), "{bad json!!!", "utf8");
+    await writeFile(path.resolve(isolatedRepoRoot, "output", "evidence", "ai-first", "failure-index.json"), "{bad json!!!", "utf8");
     const entries = await loadFailureIndex(isolatedRepoRoot);
     assert.deepEqual(entries, []);
   } finally {

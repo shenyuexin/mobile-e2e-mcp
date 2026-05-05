@@ -841,3 +841,4 @@ export async function runDoctor(
 
 export { cropElementScreenshot } from "./element-screenshot.js";
 export { validateFlow } from "./flow-validation.js";
+export { OUTPUT_ROOT, EVIDENCE_ROOT, REPORTS_ROOT, TMP_ROOT, LEGACY_ARTIFACTS_ROOT, LEGACY_REPORTS_ROOT, evidencePaths, reportPaths, tmpPaths } from "./artifact-paths.js";

@@ -7,7 +7,7 @@ import { buildDeviceLeaseRecordRelativePath, buildLeaseDirectoryAbsolutePath, li
 import type { DeviceLease } from "../src/device-lease-store.ts";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
-const leaseDir = path.resolve(repoRoot, "artifacts", "leases");
+const leaseDir = path.resolve(repoRoot, "output", "evidence", "leases");
 
 test("loadLeaseByDevice returns undefined for corrupt JSON file", async () => {
   const deviceId = `corrupt-lease-${Date.now()}`;
@@ -28,8 +28,8 @@ test("loadLeaseByDevice returns undefined for non-existent device", async () => 
 });
 
 test("listLeases returns [] when leases directory does not exist", async () => {
-  // Use a fake repoRoot that has no artifacts/leases directory
-  const fakeRoot = path.resolve(repoRoot, "artifacts", "_fake-lease-dir-" + Date.now());
+  // Use a fake repoRoot that has no lease directories
+  const fakeRoot = path.resolve(repoRoot, "output", "evidence", "_fake-lease-dir-" + Date.now());
   const result = await listLeases(fakeRoot);
   assert.deepEqual(result, []);
 });

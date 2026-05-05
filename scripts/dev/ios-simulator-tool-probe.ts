@@ -140,8 +140,8 @@ export async function runIosSimulatorToolProbe(): Promise<void> {
   const flowPath = process.env.M2E_FLOW_PATH ?? "flows/samples/ci/ios-settings-smoke.yaml";
   const checklistSource = process.env.M2E_CHECKLIST_PATH ?? "docs/testing/ios-simulator-tool-probe-checklist.md";
 
-  const artifactsDir = join("artifacts", "ios-simulator-tool-probe", runId);
-  const reportsDir = "reports";
+  const artifactsDir = join("output", "evidence", "probes", "ios-simulator-tool-probe", runId);
+  const reportsDir = "output/reports";
   await mkdir(artifactsDir, { recursive: true });
   await mkdir(reportsDir, { recursive: true });
 
@@ -184,7 +184,7 @@ export async function runIosSimulatorToolProbe(): Promise<void> {
     return push(toolName, last ?? { status: "failed" }, `${notesPrefix} text=${candidates[candidates.length - 1]}`);
   };
 
-  const tryTextOrContentDescSelector = async (
+  const _tryTextOrContentDescSelector = async (
     toolName: string, notesPrefix: string,
     textCandidates: string[], contentDescCandidates: string[],
     buildInput: (params: { text?: string; contentDesc?: string }) => Record<string, unknown>,
@@ -234,7 +234,7 @@ export async function runIosSimulatorToolProbe(): Promise<void> {
     return result;
   };
 
-  const tap_cancel = async () => {
+  const _tap_cancel = async () => {
     log("→ calling tap_cancel");
     const result = await invoke("tap_element", {
       sessionId, platform, runnerProfile, deviceId, appId,
@@ -307,14 +307,10 @@ export async function runIosSimulatorToolProbe(): Promise<void> {
   let isAppRunning = false;
   try {
     // 尝试获取 session 状态
-    try {
-      const sessionState = await invoke("get_session_state", { sessionId }) as { currentScreen?: { topActivity?: string } };
-      if (sessionState?.currentScreen?.topActivity?.includes("Preferences")) {
-        isAppRunning = true;
-        log(`    检测到 Settings 已在运行 (session topActivity: ${sessionState.currentScreen.topActivity})`);
-      }
-    } catch {
-      // session 未创建或其他错误，继续 cold start
+    const sessionState = await invoke("get_session_state", { sessionId }) as { currentScreen?: { topActivity?: string } };
+    if (sessionState?.currentScreen?.topActivity?.includes("Preferences")) {
+      isAppRunning = true;
+      log(`    检测到 Settings 已在运行 (session topActivity: ${sessionState.currentScreen.topActivity})`);
     }
   } catch (err) {
     log(`    无法检测 app 状态，将执行 cold start: ${err instanceof Error ? err.message : String(err)}`);

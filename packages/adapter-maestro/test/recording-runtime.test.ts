@@ -46,21 +46,21 @@ test("choosePreferredAndroidDeviceId returns undefined with no online devices", 
 
 test("chooseNearestSnapshotRef prefers pre-action snapshot when available", () => {
   const selected = recordingRuntimeInternals.chooseNearestSnapshotRef(new Date(1773885602500).toISOString(), [
-    { ref: "artifacts/record-snapshots/rec-1/rec-1-1773885601000.xml", capturedAtMs: 1773885601000 },
-    { ref: "artifacts/record-snapshots/rec-1/rec-1-1773885602600.xml", capturedAtMs: 1773885602600 },
-    { ref: "artifacts/record-snapshots/rec-1/rec-1-1773885604000.xml", capturedAtMs: 1773885604000 },
+    { ref: "output/evidence/recordings/snapshots/rec-1/rec-1-1773885601000.xml", capturedAtMs: 1773885601000 },
+    { ref: "output/evidence/recordings/snapshots/rec-1/rec-1-1773885602600.xml", capturedAtMs: 1773885602600 },
+    { ref: "output/evidence/recordings/snapshots/rec-1/rec-1-1773885604000.xml", capturedAtMs: 1773885604000 },
   ]);
 
-  assert.equal(selected, "artifacts/record-snapshots/rec-1/rec-1-1773885601000.xml");
+  assert.equal(selected, "output/evidence/recordings/snapshots/rec-1/rec-1-1773885601000.xml");
 });
 
 test("chooseNearestSnapshotRef falls back to earliest snapshot when no pre-action snapshot exists", () => {
   const selected = recordingRuntimeInternals.chooseNearestSnapshotRef(new Date(1773885600500).toISOString(), [
-    { ref: "artifacts/record-snapshots/rec-1/rec-1-1773885601000.xml", capturedAtMs: 1773885601000 },
-    { ref: "artifacts/record-snapshots/rec-1/rec-1-1773885602600.xml", capturedAtMs: 1773885602600 },
+    { ref: "output/evidence/recordings/snapshots/rec-1/rec-1-1773885601000.xml", capturedAtMs: 1773885601000 },
+    { ref: "output/evidence/recordings/snapshots/rec-1/rec-1-1773885602600.xml", capturedAtMs: 1773885602600 },
   ]);
 
-  assert.equal(selected, "artifacts/record-snapshots/rec-1/rec-1-1773885601000.xml");
+  assert.equal(selected, "output/evidence/recordings/snapshots/rec-1/rec-1-1773885601000.xml");
 });
 
 test("mapMonotonicToIso anchors with capture start monotonic clock", () => {
@@ -101,7 +101,7 @@ test("mapMonotonicToIso keeps first synthetic iOS-style event anchored to sessio
 
 test("parseSnapshotCapturedAtMs extracts epoch millis from snapshot ref", () => {
   const parsed = recordingRuntimeInternals.parseSnapshotCapturedAtMs(
-    "artifacts/record-snapshots/rec-1/rec-1-1773885602600.xml",
+    "output/evidence/recordings/snapshots/rec-1/rec-1-1773885602600.xml",
   );
 
   assert.equal(parsed, 1773885602600);
@@ -413,10 +413,10 @@ test("chooseNearestSnapshotRef keeps later iOS pre-action snapshot when timestam
     1_000_000,
   );
   const selected = recordingRuntimeInternals.chooseNearestSnapshotRef(mappedTimestamp, [
-    { ref: "artifacts/record-snapshots/rec-1/rec-1-1774000800100.json", capturedAtMs: 1774000800100 },
-    { ref: "artifacts/record-snapshots/rec-1/rec-1-1774000800200.json", capturedAtMs: 1774000800200 },
-    { ref: "artifacts/record-snapshots/rec-1/rec-1-1774000800400.json", capturedAtMs: 1774000800400 },
+    { ref: "output/evidence/recordings/snapshots/rec-1/rec-1-1774000800100.json", capturedAtMs: 1774000800100 },
+    { ref: "output/evidence/recordings/snapshots/rec-1/rec-1-1774000800200.json", capturedAtMs: 1774000800200 },
+    { ref: "output/evidence/recordings/snapshots/rec-1/rec-1-1774000800400.json", capturedAtMs: 1774000800400 },
   ]);
 
-  assert.equal(selected, "artifacts/record-snapshots/rec-1/rec-1-1774000800200.json");
+  assert.equal(selected, "output/evidence/recordings/snapshots/rec-1/rec-1-1774000800200.json");
 });

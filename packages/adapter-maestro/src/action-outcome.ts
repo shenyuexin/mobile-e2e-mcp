@@ -39,6 +39,7 @@ import {
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { resolveRepoPath } from "./harness-config.js";
+import { evidencePaths } from "./artifact-paths.js";
 import { buildSkillGuidedRemediation } from "./readiness-guidance.js";
 
 interface IosStartupExecutionEvidence {
@@ -475,7 +476,7 @@ export async function getActionOutcomeWithMaestro(
     sessionId: input.sessionId ?? record?.sessionId ?? input.actionId,
     durationMs: Date.now() - startTime,
     attempts: 1,
-    artifacts: found ? [`artifacts/actions/${input.actionId}.json`] : [],
+    artifacts: found ? [`${evidencePaths.actions()}/${input.actionId}.json`] : [],
     data: found
       ? {
         found: true,
@@ -573,7 +574,7 @@ export async function explainLastFailureWithMaestro(
     sessionId: input.sessionId,
     durationMs: Date.now() - startTime,
     attempts: 1,
-    artifacts: [`artifacts/actions/${resolvedActionId}.json`],
+    artifacts: [`${evidencePaths.actions()}/${resolvedActionId}.json`],
     data: {
       found: true,
       actionId: resolvedActionId,

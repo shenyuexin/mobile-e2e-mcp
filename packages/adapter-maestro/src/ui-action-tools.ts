@@ -59,6 +59,7 @@ import {
   buildIosPhysicalFailureSuggestions,
 } from "./ui-action-tools-ios-physical.js";
 import { scrollAndResolveUiTargetWithMaestroTool } from "./ui-action-scroll.js";
+import { evidencePaths } from "./artifact-paths.js";
 
 async function tapResolvedTarget(
   input: ScrollAndTapElementInput,
@@ -266,7 +267,7 @@ export async function tapWithMaestroTool(
       },
       nextSuggestions: [
         isIosPhysicalTarget
-          ? "Run tap without dryRun to execute an iOS physical-device Maestro point flow (artifacts/ios-physical-actions/<sessionId>/tap.maestro.yml)."
+          ? `Run tap without dryRun to execute an iOS physical-device Maestro point flow (${evidencePaths.iosPhysicalActions()}/<sessionId>/tap.maestro.yml).`
           : runtimeHooks.tapDryRunSuggestion,
       ],
     };
@@ -427,7 +428,7 @@ export async function typeTextWithMaestroTool(
       },
       nextSuggestions: [
         isIosPhysicalTarget
-          ? "Run type_text without dryRun to execute an iOS physical-device Maestro input flow (artifacts/ios-physical-actions/<sessionId>/type_text.maestro.yml)."
+          ? `Run type_text without dryRun to execute an iOS physical-device Maestro input flow (${evidencePaths.iosPhysicalActions()}/<sessionId>/type_text.maestro.yml).`
           : runtimeHooks.typeTextDryRunSuggestion,
       ],
     };

@@ -14,6 +14,7 @@ import {
 	loadSessionAuditSchemaConfig,
 	type SessionAuditRecord,
 } from "./governance.js";
+import { coreEvidencePaths, legacyCoreEvidencePaths } from "./output-paths.js";
 
 export interface PersistedSessionRecord {
 	session: Session;
@@ -60,7 +61,12 @@ export interface TimelineQueryResult {
 
 export function buildSessionAuditRelativePath(sessionId: string): string {
 	assertSafeSessionId(sessionId);
-	return path.posix.join("artifacts", "audit", `${sessionId}.json`);
+	return path.posix.join(coreEvidencePaths.audit(), `${sessionId}.json`);
+}
+
+function buildLegacySessionAuditRelativePath(sessionId: string): string {
+	assertSafeSessionId(sessionId);
+	return path.posix.join(legacyCoreEvidencePaths.audit(), `${sessionId}.json`);
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -93,7 +99,12 @@ function assertSafeSessionId(sessionId: string): void {
 
 export function buildSessionRecordRelativePath(sessionId: string): string {
 	assertSafeSessionId(sessionId);
-	return path.posix.join("artifacts", "sessions", `${sessionId}.json`);
+	return path.posix.join(coreEvidencePaths.sessions(), `${sessionId}.json`);
+}
+
+function buildLegacySessionRecordRelativePath(sessionId: string): string {
+	assertSafeSessionId(sessionId);
+	return path.posix.join(legacyCoreEvidencePaths.sessions(), `${sessionId}.json`);
 }
 
 function buildSessionRecordAbsolutePath(repoRoot: string, sessionId: string): string {
@@ -102,6 +113,14 @@ function buildSessionRecordAbsolutePath(repoRoot: string, sessionId: string): st
 
 function buildSessionAuditAbsolutePath(repoRoot: string, sessionId: string): string {
 	return path.resolve(repoRoot, buildSessionAuditRelativePath(sessionId));
+}
+
+function buildLegacySessionRecordAbsolutePath(repoRoot: string, sessionId: string): string {
+	return path.resolve(repoRoot, buildLegacySessionRecordRelativePath(sessionId));
+}
+
+function buildLegacySessionAuditAbsolutePath(repoRoot: string, sessionId: string): string {
+	return path.resolve(repoRoot, buildLegacySessionAuditRelativePath(sessionId));
 }
 
 async function writeJsonFile(absolutePath: string, value: unknown): Promise<void> {
@@ -164,23 +183,29 @@ export async function loadSessionRecord(
 	repoRoot: string,
 	sessionId: string,
 ): Promise<PersistedSessionRecord | undefined> {
-	const absolutePath = buildSessionRecordAbsolutePath(repoRoot, sessionId);
-	try {
-		const content = await readFile(absolutePath, "utf8");
+	const absolutePaths = [
+		buildSessionRecordAbsolutePath(repoRoot, sessionId),
+		buildLegacySessionRecordAbsolutePath(repoRoot, sessionId),
+	];
+	for (const absolutePath of absolutePaths) {
+		try {
+			const content = await readFile(absolutePath, "utf8");
 		const parsed: unknown = JSON.parse(content);
 		if (!isSessionRecordShape(parsed)) {
 			throw new Error(`Invalid persisted session record at ${absolutePath}`);
 		}
 		return parsed;
-	} catch (error: unknown) {
-		if ((error as NodeJS.ErrnoException).code === "ENOENT") {
-			return undefined;
+		} catch (error: unknown) {
+			if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+				continue;
+			}
+			if (error instanceof SyntaxError) {
+				return undefined;
+			}
+			throw error;
 		}
-		if (error instanceof SyntaxError) {
-			return undefined;
-		}
-		throw error;
 	}
+	return undefined;
 }
 
 async function readJsonFile<T>(absolutePath: string, fallback: T): Promise<T> {
@@ -202,8 +227,12 @@ export async function loadSessionAuditRecord(
 	repoRoot: string,
 	sessionId: string,
 ): Promise<SessionAuditRecord | undefined> {
-	return readJsonFile<SessionAuditRecord | undefined>(
+	const current = await readJsonFile<SessionAuditRecord | undefined>(
 		buildSessionAuditAbsolutePath(repoRoot, sessionId),
+		undefined,
+	);
+	return current ?? readJsonFile<SessionAuditRecord | undefined>(
+		buildLegacySessionAuditAbsolutePath(repoRoot, sessionId),
 		undefined,
 	);
 }

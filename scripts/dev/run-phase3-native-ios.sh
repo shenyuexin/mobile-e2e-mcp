@@ -6,7 +6,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 SIM_UDID="${SIM_UDID:-ADA078B9-3C6B-4875-8B85-A7789F368816}"
 APP_ID="${APP_ID:-com.mobitru.demoapp}"
 RUN_COUNT="${1:-2}"
-OUT_DIR="${OUT_DIR:-$ROOT/artifacts/phase3-native-ios}"
+OUT_DIR="${OUT_DIR:-$ROOT/output/evidence/phase3-native-ios}"
 APP_PATH="${NATIVE_IOS_APP_PATH:-$ROOT/examples/demo-ios-app/build/Build/Products/Debug-iphonesimulator/MobiTruKotlin.app}"
 
 export PATH="$PATH:$HOME/.maestro/bin"

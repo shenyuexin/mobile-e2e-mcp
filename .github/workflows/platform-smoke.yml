@@ -44,18 +44,18 @@ jobs:
         env:
           MAESTRO_DRIVER_STARTUP_TIMEOUT: "240000"
         run: |
-          mkdir -p artifacts/platform-smoke/ios
+          mkdir -p output/evidence/platform-smoke/ios
           maestro test \
             --platform ios \
             --udid "${{ steps.resolve-sim.outputs.sim_udid }}" \
-            --debug-output artifacts/platform-smoke/ios/debug \
+            --debug-output output/evidence/platform-smoke/ios/debug \
             flows/samples/ci/ios-settings-smoke.yaml
 
       - name: Detect iOS platform-smoke artifact files
         if: always()
         id: detect-ios-artifacts
         run: |
-          if [ -d artifacts/platform-smoke/ios ] && [ -n "$(find artifacts/platform-smoke/ios -type f -print -quit)" ]; then
+          if [ -d output/evidence/platform-smoke/ios ] && [ -n "$(find output/evidence/platform-smoke/ios -type f -print -quit)" ]; then
             echo "has_files=true" >> "$GITHUB_OUTPUT"
           else
             echo "has_files=false" >> "$GITHUB_OUTPUT"
@@ -67,7 +67,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: platform-smoke-ios-${{ github.run_id }}
-          path: artifacts/platform-smoke/ios/**
+          path: output/evidence/platform-smoke/ios/**
           if-no-files-found: warn
 
       - name: Append iOS job summary
@@ -106,15 +106,15 @@ jobs:
           arch: x86_64
           profile: pixel_7
           script: |
-            mkdir -p artifacts/platform-smoke/android
+            mkdir -p output/evidence/platform-smoke/android
             adb devices
-            maestro test --platform android --udid emulator-5554 --debug-output artifacts/platform-smoke/android/debug flows/samples/ci/android-settings-smoke.yaml
+            maestro test --platform android --udid emulator-5554 --debug-output output/evidence/platform-smoke/android/debug flows/samples/ci/android-settings-smoke.yaml
 
       - name: Detect Android platform-smoke artifact files
         if: always()
         id: detect-android-artifacts
         run: |
-          if [ -d artifacts/platform-smoke/android ] && [ -n "$(find artifacts/platform-smoke/android -type f -print -quit)" ]; then
+          if [ -d output/evidence/platform-smoke/android ] && [ -n "$(find output/evidence/platform-smoke/android -type f -print -quit)" ]; then
             echo "has_files=true" >> "$GITHUB_OUTPUT"
           else
             echo "has_files=false" >> "$GITHUB_OUTPUT"
@@ -126,7 +126,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: platform-smoke-android-${{ github.run_id }}
-          path: artifacts/platform-smoke/android/**
+          path: output/evidence/platform-smoke/android/**
           if-no-files-found: warn
 
       - name: Append Android job summary

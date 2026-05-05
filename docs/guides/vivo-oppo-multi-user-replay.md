@@ -46,7 +46,7 @@ adb -s <DEVICE_ID> shell am switch-user 0
 ### 3.2 用脚本强制 user 0 执行
 
 ```bash
-OUT_DIR="artifacts/mcp-server/vivo-user0-replay/android/phase1" \
+OUT_DIR="output/evidence/mcp-server/vivo-user0-replay/android/phase1" \
 APP_ID="com.epam.mobitru" \
 FLOW="/ABS/PATH/TO/your-flow.yaml" \
 DEVICE_ID="<DEVICE_ID>" \

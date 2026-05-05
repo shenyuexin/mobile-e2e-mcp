@@ -31,6 +31,7 @@ import {
   buildFailureReason,
 } from "./runtime-shared.js";
 import { getIosBackendRouter } from "./ios-backend-router.js";
+import { evidencePaths } from "./artifact-paths.js";
 import { transformWdaElement, type TransformedElement } from "./ios-backend-wda.js";
 import { WdaRealDeviceBackend } from "./ios-backend-wda.js";
 
@@ -446,7 +447,7 @@ export function isIosUiSnapshotFailure(value: IosUiSnapshot | IosUiSnapshotFailu
 }
 
 export async function captureAndroidUiSnapshot(repoRoot: string, deviceId: string, sessionId: string, runnerProfile: string, outputPath: string | undefined, query: QueryUiInput): Promise<AndroidUiSnapshot | AndroidUiSnapshotFailure> {
-  const relativeOutputPath = outputPath ?? path.posix.join("artifacts", "ui-dumps", sessionId, `android-${runnerProfile}.xml`);
+  const relativeOutputPath = outputPath ?? path.posix.join(evidencePaths.uiDumps(), sessionId, `android-${runnerProfile}.xml`);
   const absoluteOutputPath = path.resolve(repoRoot, relativeOutputPath);
   const { dumpCommand, readCommand } = buildAndroidUiDumpCommands(deviceId);
   const command = [...dumpCommand, ...readCommand];
@@ -475,7 +476,7 @@ export async function captureAndroidUiSnapshot(repoRoot: string, deviceId: strin
 }
 
 export async function captureIosUiSnapshot(repoRoot: string, deviceId: string, sessionId: string, runnerProfile: string, outputPath: string | undefined, query: QueryUiInput): Promise<IosUiSnapshot | IosUiSnapshotFailure> {
-  const relativeOutputPath = outputPath ?? path.posix.join("artifacts", "ui-dumps", sessionId, `ios-${runnerProfile}.json`);
+  const relativeOutputPath = outputPath ?? path.posix.join(evidencePaths.uiDumps(), sessionId, `ios-${runnerProfile}.json`);
   const absoluteOutputPath = path.resolve(repoRoot, relativeOutputPath);
 
   const router = getIosBackendRouter();

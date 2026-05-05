@@ -351,7 +351,7 @@ test("server invoke supports record session lifecycle in dry-run", async () => {
     flowPathHolder.value = ended.data.report.flowPath;
     if (flowPathHolder.value) {
       const exportedFlow = await readFile(path.resolve(repoRoot, flowPathHolder.value), "utf8");
-      assert.equal(exportedFlow.includes("artifacts/record-snapshots/"), false);
+      assert.equal(exportedFlow.includes("output/evidence/recordings/snapshots/"), false);
     }
 
     const cancelled = await server.invoke("cancel_record_session", {
@@ -410,7 +410,7 @@ test("server invoke supports iOS record session lifecycle in dry-run", async () 
       const exportedFlow = await readFile(path.resolve(repoRoot, flowPathHolder.value), "utf8");
       assert.equal(exportedFlow.includes("- tapOn:"), true);
       assert.equal(exportedFlow.includes("- inputText:"), true);
-      assert.equal(exportedFlow.includes("artifacts/record-snapshots/"), false);
+      assert.equal(exportedFlow.includes("output/evidence/recordings/snapshots/"), false);
     }
 
     const cancelled = await server.invoke("cancel_record_session", {

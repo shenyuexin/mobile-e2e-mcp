@@ -77,9 +77,9 @@
 
 证据：
 
-- `artifacts/android-tool-probe/android-tool-probe-1775700510315/report.json`
-- `artifacts/android-tool-probe/android-tool-probe-1775700510315/summary.md`
-- `reports/android-tool-probe.json`
+- `output/evidence/probes/android-tool-probe/android-tool-probe-1775700510315/report.json`
+- `output/evidence/probes/android-tool-probe/android-tool-probe-1775700510315/summary.md`
+- `output/reports/android-tool-probe.json`
 
 汇总：`success=7 / partial=4 / failed=11`
 

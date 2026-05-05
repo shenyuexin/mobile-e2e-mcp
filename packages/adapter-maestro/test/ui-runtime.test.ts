@@ -24,7 +24,7 @@ function buildSnapshot(overrides: Partial<{
 }> = {}): UiRuntimeSnapshot {
   return {
     command: ["capture"],
-    relativeOutputPath: "artifacts/ui-dumps/test/android.xml",
+    relativeOutputPath: "output/evidence/ui-dumps/test/android.xml",
     absoluteOutputPath: "/tmp/android.xml",
     exitCode: 0,
     stdout: "<hierarchy />",
@@ -103,7 +103,7 @@ test("runUiWaitPollingLoop aborts after repeated retryable snapshot failures", a
     waitUntil: "visible",
     timeoutMs: 10,
     intervalMs: 1,
-    defaultOutputPath: "artifacts/ui-dumps/test/android.xml",
+    defaultOutputPath: "output/evidence/ui-dumps/test/android.xml",
     previewCommand: ["preview"],
     captureSnapshot: async () =>
       buildSnapshot({
@@ -170,7 +170,7 @@ test("runUiWaitPollingLoop does not treat off-screen or low-visibility matches a
     waitUntil: "visible",
     timeoutMs: 2,
     intervalMs: 1,
-    defaultOutputPath: "artifacts/ui-dumps/test/android.xml",
+    defaultOutputPath: "output/evidence/ui-dumps/test/android.xml",
     previewCommand: ["preview"],
     captureSnapshot: async () => snapshots.shift() ?? buildSnapshot(),
     buildRetryableSnapshotFailure: () => ({
@@ -193,7 +193,7 @@ test("runUiScrollResolveLoop reports swipe failures with last snapshot state", a
   const outcome = await uiRuntimeInternals.runUiScrollResolveLoop({
     query: { text: "Continue" },
     maxSwipes: 1,
-    defaultOutputPath: "artifacts/ui-dumps/test/android.xml",
+    defaultOutputPath: "output/evidence/ui-dumps/test/android.xml",
     captureSnapshot: async () => buildSnapshot(),
     buildSwipeCommand: () => ["swipe"],
     executeSwipeCommand: async () => ({
@@ -232,7 +232,7 @@ test("runUiScrollResolveLoop returns max_swipes with off-screen resolution state
   const outcome = await uiRuntimeInternals.runUiScrollResolveLoop({
     query: { text: "Continue" },
     maxSwipes: 0,
-    defaultOutputPath: "artifacts/ui-dumps/test/android.xml",
+    defaultOutputPath: "output/evidence/ui-dumps/test/android.xml",
     captureSnapshot: async () =>
       buildSnapshot({
         queryResult: {
@@ -277,7 +277,7 @@ test("runUiScrollResolveLoop keeps a single off-screen match as off_screen inste
   const outcome = await uiRuntimeInternals.runUiScrollResolveLoop({
     query: { text: "Continue" },
     maxSwipes: 0,
-    defaultOutputPath: "artifacts/ui-dumps/test/android.xml",
+    defaultOutputPath: "output/evidence/ui-dumps/test/android.xml",
     captureSnapshot: async () =>
       buildSnapshot({
         queryResult: {
@@ -321,7 +321,7 @@ test("runUiScrollResolveLoop keeps a barely visible single match in off_screen s
   const outcome = await uiRuntimeInternals.runUiScrollResolveLoop({
     query: { text: "Continue" },
     maxSwipes: 0,
-    defaultOutputPath: "artifacts/ui-dumps/test/android.xml",
+    defaultOutputPath: "output/evidence/ui-dumps/test/android.xml",
     captureSnapshot: async () =>
       buildSnapshot({
         queryResult: {

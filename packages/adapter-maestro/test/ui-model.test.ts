@@ -1324,7 +1324,7 @@ test("performActionWithEvidenceWithMaestro runs pre/post guard and resume in seq
         sessionId: input.sessionId,
         durationMs: 1,
         attempts: 1,
-        artifacts: [`artifacts/interruption/resolve-${String(resolveCalls)}.json`],
+        artifacts: [`output/evidence/interruption/resolve-${String(resolveCalls)}.json`],
         data: {
           attempted: true,
           status: "resolved",
@@ -1343,7 +1343,7 @@ test("performActionWithEvidenceWithMaestro runs pre/post guard and resume in seq
         sessionId: input.sessionId,
         durationMs: 1,
         attempts: 1,
-        artifacts: ["artifacts/interruption/resume.json"],
+        artifacts: ["output/evidence/interruption/resume.json"],
         data: {
           attempted: true,
           resumed: true,
@@ -2057,7 +2057,7 @@ test("getActionOutcomeWithMaestro loads persisted dry-run action record", async 
 test("explainLastFailureWithMaestro prioritizes iOS startup handshake evidence from action artifacts", async () => {
   const sessionId = `ios-startup-explain-${Date.now()}`;
   const actionId = `ios-startup-action-${Date.now()}`;
-  const startupDir = path.join(repoRoot, "artifacts", "ios-physical-actions", sessionId);
+  const startupDir = path.join(repoRoot, "output", "evidence", "ios-physical-actions", sessionId);
   await mkdir(startupDir, { recursive: true });
   await writeFile(
     path.join(startupDir, "tap.execution.md"),
@@ -2094,7 +2094,7 @@ test("explainLastFailureWithMaestro prioritizes iOS startup handshake evidence f
     evidence: [
       {
         kind: "log",
-        path: path.posix.join("artifacts", "ios-physical-actions", sessionId, "tap.execution.md"),
+        path: path.posix.join("output", "evidence", "ios-physical-actions", sessionId, "tap.execution.md"),
         supportLevel: "partial",
         description: "iOS startup evidence",
       },
@@ -2116,7 +2116,7 @@ test("explainLastFailureWithMaestro prioritizes iOS startup handshake evidence f
 test("explainLastFailureWithMaestro maps iOS startup preflight evidence to environment layer", async () => {
   const sessionId = `ios-preflight-explain-${Date.now()}`;
   const actionId = `ios-preflight-action-${Date.now()}`;
-  const startupDir = path.join(repoRoot, "artifacts", "ios-physical-actions", sessionId);
+  const startupDir = path.join(repoRoot, "output", "evidence", "ios-physical-actions", sessionId);
   await mkdir(startupDir, { recursive: true });
   await writeFile(
     path.join(startupDir, "type_text.execution.md"),
@@ -2153,7 +2153,7 @@ test("explainLastFailureWithMaestro maps iOS startup preflight evidence to envir
     evidence: [
       {
         kind: "log",
-        path: path.posix.join("artifacts", "ios-physical-actions", sessionId, "type_text.execution.md"),
+        path: path.posix.join("output", "evidence", "ios-physical-actions", sessionId, "type_text.execution.md"),
         supportLevel: "partial",
         description: "iOS preflight startup evidence",
       },
@@ -2392,7 +2392,7 @@ test("suggestKnownRemediationWithMaestro returns remediation hints", async () =>
 test("suggestKnownRemediationWithMaestro prioritizes iOS startup handshake remediation", async () => {
   const sessionId = `known-remediation-ios-startup-${Date.now()}`;
   const actionId = `known-remediation-ios-action-${Date.now()}`;
-  const startupDir = path.join(repoRoot, "artifacts", "ios-physical-actions", sessionId);
+  const startupDir = path.join(repoRoot, "output", "evidence", "ios-physical-actions", sessionId);
   await mkdir(startupDir, { recursive: true });
   await writeFile(
     path.join(startupDir, "tap.execution.md"),
@@ -2429,7 +2429,7 @@ test("suggestKnownRemediationWithMaestro prioritizes iOS startup handshake remed
     evidence: [
       {
         kind: "log",
-        path: path.posix.join("artifacts", "ios-physical-actions", sessionId, "tap.execution.md"),
+        path: path.posix.join("output", "evidence", "ios-physical-actions", sessionId, "tap.execution.md"),
         supportLevel: "partial",
         description: "iOS startup evidence",
       },

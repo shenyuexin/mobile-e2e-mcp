@@ -6,7 +6,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 IOS_DEVICE_ID="${IOS_DEVICE_ID:-${DEVICE_ID:-}}"
 APP_ID="${APP_ID:-com.mobitru.demoapp}"
 RUN_COUNT="${1:-1}"
-OUT_DIR="${OUT_DIR:-$ROOT/artifacts/phase3-native-ios-real-device}"
+OUT_DIR="${OUT_DIR:-$ROOT/output/evidence/phase3-native-ios-real-device}"
 APP_PATH="${NATIVE_IOS_DEVICE_APP_PATH:-}"
 
 if [ -z "$IOS_DEVICE_ID" ]; then

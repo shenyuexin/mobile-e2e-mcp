@@ -17,7 +17,7 @@ function repoRoot(): string {
 
 async function main(): Promise<void> {
   const root = repoRoot();
-  const outputDir = path.resolve(root, "reports");
+  const outputDir = path.resolve(root, "output/reports");
   const outputJson = path.resolve(outputDir, "bounded-auto-remediation-acceptance.json");
   const outputMd = path.resolve(outputDir, "bounded-auto-remediation-acceptance.md");
   const sessionId = `bounded-auto-remediation-${Date.now()}`;
@@ -97,7 +97,7 @@ async function main(): Promise<void> {
       })),
     };
 
-    await writeFile(outputJson, JSON.stringify(payload, null, 2) + "\n", "utf8");
+    await writeFile(outputJson, `${JSON.stringify(payload, null, 2)}\n`, "utf8");
     await writeFile(outputMd, [
       "# Bounded Auto-Remediation Acceptance",
       "",

@@ -45,15 +45,15 @@ jobs:
       - name: Collect OCR smoke diagnostics
         if: failure()
         run: |
-          mkdir -p ocr-smoke-artifacts
-          if [ -f ocr-smoke.log ]; then cp ocr-smoke.log ocr-smoke-artifacts/ocr-smoke.log; fi
-          if [ -f tests/fixtures/ocr/signin-success.png ]; then cp tests/fixtures/ocr/signin-success.png ocr-smoke-artifacts/signin-success.png; fi
-          if [ -f tests/fixtures/ocr/signin-success.observations.json ]; then cp tests/fixtures/ocr/signin-success.observations.json ocr-smoke-artifacts/signin-success.observations.json; fi
-          if [ -f tests/fixtures/ocr/manifest.json ]; then cp tests/fixtures/ocr/manifest.json ocr-smoke-artifacts/manifest.json; fi
+          mkdir -p output/evidence/ocr-smoke
+          if [ -f ocr-smoke.log ]; then cp ocr-smoke.log output/evidence/ocr-smoke/ocr-smoke.log; fi
+          if [ -f tests/fixtures/ocr/signin-success.png ]; then cp tests/fixtures/ocr/signin-success.png output/evidence/ocr-smoke/signin-success.png; fi
+          if [ -f tests/fixtures/ocr/signin-success.observations.json ]; then cp tests/fixtures/ocr/signin-success.observations.json output/evidence/ocr-smoke/signin-success.observations.json; fi
+          if [ -f tests/fixtures/ocr/manifest.json ]; then cp tests/fixtures/ocr/manifest.json output/evidence/ocr-smoke/manifest.json; fi
       - name: Upload OCR smoke diagnostics
         if: failure()
         uses: actions/upload-artifact@v7
         with:
           name: ocr-smoke-diagnostics
-          path: ocr-smoke-artifacts
+          path: output/evidence/ocr-smoke
           if-no-files-found: warn

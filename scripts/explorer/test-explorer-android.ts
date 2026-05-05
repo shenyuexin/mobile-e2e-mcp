@@ -7,7 +7,7 @@
  * Optional env vars:
  *   M2E_DEVICE_ID=10AEA40Z3Y000R5
  *   APP_ID=com.android.settings
- *   EXPLORER_OUTPUT_DIR=artifacts/explorer/android-full
+ *   EXPLORER_OUTPUT_DIR=output/evidence/explorer/android-full
  *   EXPLORER_MAX_DEPTH=8
  *   EXPLORER_TIMEOUT_MS=7200000
  */
@@ -59,7 +59,7 @@ if (!process.env.M2E_DEVICE_ID) {
 }
 
 const outputDir = process.env.EXPLORER_OUTPUT_DIR?.trim()
-  || (mode === "full" ? "artifacts/explorer/android-full" : "artifacts/explorer/android-smoke");
+  || (mode === "full" ? "output/evidence/explorer/android-full" : "output/evidence/explorer/android-smoke");
 const maxDepth = process.env.EXPLORER_MAX_DEPTH?.trim()
   || (mode === "full" ? "8" : "5");
 const timeoutMs = process.env.EXPLORER_TIMEOUT_MS?.trim()
@@ -344,7 +344,7 @@ async function launchSettingsAndVerifyForeground(server: ReturnType<typeof creat
 
 async function runMcpUiProbe(server: ReturnType<typeof createServer>): Promise<void> {
   const probeSessionId = `probe-${Date.now()}`;
-  const probeOutputPath = `artifacts/explorer/debug-inspect-${probeSessionId}.xml`;
+  const probeOutputPath = `output/evidence/explorer/debug-inspect-${probeSessionId}.xml`;
 
   console.log("[PROBE] Running MCP UI probe before explorer...");
 

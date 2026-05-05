@@ -27,6 +27,7 @@ import type {
 } from "@mobile-e2e-mcp/contracts";
 import { REASON_CODES } from "@mobile-e2e-mcp/contracts";
 import { buildCapabilityProfile } from "./capability-model.js";
+import { evidencePaths } from "./artifact-paths.js";
 import { buildDefaultDeviceId, DEFAULT_FLOWS, DEFAULT_HARNESS_CONFIG_PATH, DEFAULT_RUNNER_PROFILE, isRecord, loadHarnessSelection, parseHarnessConfig, readNonEmptyString, readStringArray, resolveRepoPath } from "./harness-config.js";
 import {
   type CollectDiagnosticsCapturePlan,
@@ -572,7 +573,7 @@ export async function takeScreenshotWithRuntime(input: ScreenshotInput): Promise
       data: {
         dryRun: Boolean(input.dryRun),
         runnerProfile: input.runnerProfile ?? DEFAULT_RUNNER_PROFILE,
-        outputPath: input.outputPath ?? path.posix.join("artifacts", "screenshots", input.sessionId, "unknown.png"),
+        outputPath: input.outputPath ?? path.posix.join(evidencePaths.screenshots(), input.sessionId, "unknown.png"),
         command: [],
         exitCode: null,
       },
@@ -585,7 +586,7 @@ export async function takeScreenshotWithRuntime(input: ScreenshotInput): Promise
   const hooks = resolveDeviceRuntimePlatformHooks(input.platform);
   const selection = await loadHarnessSelection(repoRoot, input.platform, runnerProfile, input.harnessConfigPath ?? DEFAULT_HARNESS_CONFIG_PATH);
   const deviceId = input.deviceId ?? selection.deviceId ?? buildDefaultDeviceId(input.platform);
-  const relativeOutputPath = input.outputPath ?? path.posix.join("artifacts", "screenshots", input.sessionId, `${input.platform}-${runnerProfile}.png`);
+  const relativeOutputPath = input.outputPath ?? path.posix.join(evidencePaths.screenshots(), input.sessionId, `${input.platform}-${runnerProfile}.png`);
   const absoluteOutputPath = path.resolve(repoRoot, relativeOutputPath);
   const command = hooks.buildScreenshotCommand(deviceId, absoluteOutputPath);
 
@@ -655,7 +656,7 @@ export async function recordScreenWithRuntime(input: RecordScreenInput): Promise
       data: {
         dryRun: Boolean(input.dryRun),
         runnerProfile: input.runnerProfile ?? DEFAULT_RUNNER_PROFILE,
-        outputPath: input.outputPath ?? path.posix.join("artifacts", "screen-recordings", input.sessionId, "unknown.mp4"),
+        outputPath: input.outputPath ?? path.posix.join(evidencePaths.recordVideos(), input.sessionId, "unknown.mp4"),
         durationMs: normalizeRecordDurationMs(input.durationMs, "android"),
         bitrateMbps: normalizeRecordBitrateMbps(input.bitrateMbps),
         commandLabels: [],
@@ -674,7 +675,7 @@ export async function recordScreenWithRuntime(input: RecordScreenInput): Promise
   const deviceId = input.deviceId ?? selection.deviceId ?? buildDefaultDeviceId(input.platform);
   const durationMs = normalizeRecordDurationMs(input.durationMs, input.platform);
   const bitrateMbps = normalizeRecordBitrateMbps(input.bitrateMbps);
-  const relativeOutputPath = input.outputPath ?? path.posix.join("artifacts", "screen-recordings", input.sessionId, `${input.platform}-${runnerProfile}.mp4`);
+  const relativeOutputPath = input.outputPath ?? path.posix.join(evidencePaths.recordVideos(), input.sessionId, `${input.platform}-${runnerProfile}.mp4`);
   const absoluteOutputPath = path.resolve(repoRoot, relativeOutputPath);
   await mkdir(path.dirname(absoluteOutputPath), { recursive: true });
 
@@ -781,7 +782,7 @@ export async function getLogsWithRuntime(input: GetLogsInput): Promise<ToolResul
       data: {
         dryRun: Boolean(input.dryRun),
         runnerProfile: input.runnerProfile ?? DEFAULT_RUNNER_PROFILE,
-        outputPath: input.outputPath ?? path.posix.join("artifacts", "logs", input.sessionId, "unknown.log"),
+        outputPath: input.outputPath ?? path.posix.join(evidencePaths.logs(), input.sessionId, "unknown.log"),
         command: [],
         exitCode: null,
         supportLevel: "partial",
@@ -891,7 +892,7 @@ export async function getCrashSignalsWithRuntime(input: GetCrashSignalsInput): P
       data: {
         dryRun: Boolean(input.dryRun),
         runnerProfile: input.runnerProfile ?? DEFAULT_RUNNER_PROFILE,
-        outputPath: input.outputPath ?? path.posix.join("artifacts", "crash-signals", input.sessionId, "unknown.log"),
+        outputPath: input.outputPath ?? path.posix.join(evidencePaths.crashSignals(), input.sessionId, "unknown.log"),
         commands: [],
         exitCode: null,
         supportLevel: "partial",
@@ -989,7 +990,7 @@ export async function collectDiagnosticsWithRuntime(input: CollectDiagnosticsInp
       data: {
         dryRun: Boolean(input.dryRun),
         runnerProfile: input.runnerProfile ?? DEFAULT_RUNNER_PROFILE,
-        outputPath: input.outputPath ?? path.posix.join("artifacts", "diagnostics", input.sessionId, "unknown"),
+        outputPath: input.outputPath ?? path.posix.join(evidencePaths.diagnostics(), input.sessionId, "unknown"),
         commands: [],
         exitCode: null,
         supportLevel: "partial",

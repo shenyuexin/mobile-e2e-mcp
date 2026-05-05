@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
-import { readFile, rm } from "node:fs/promises";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { buildActionRecordRelativePath, buildDeviceLeaseRecordRelativePath, buildRecordEventsRelativePath, buildRecordedStepsRelativePath, buildRecordSessionRelativePath, buildSessionAuditRelativePath, buildSessionRecordRelativePath, persistActionRecord } from "@mobile-e2e-mcp/core";
+import { buildActionRecordRelativePath, buildDeviceLeaseRecordRelativePath, buildRecordEventsRelativePath, buildRecordedStepsRelativePath, buildRecordSessionRelativePath, buildSessionAuditRelativePath, buildSessionRecordRelativePath, legacyCoreEvidencePaths, persistActionRecord } from "@mobile-e2e-mcp/core";
 import { buildToolList, handleRequest } from "../src/stdio-server.ts";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
@@ -16,6 +16,33 @@ async function cleanupSessionArtifact(sessionId: string): Promise<void> {
   await rm(path.resolve(repoRoot, buildSessionRecordRelativePath(sessionId)), { force: true });
   await rm(path.resolve(repoRoot, buildSessionAuditRelativePath(sessionId)), { force: true });
   await rm(path.resolve(repoRoot, buildDeviceLeaseRecordRelativePath("android", buildTestDeviceId(sessionId))), { force: true });
+  await rm(path.resolve(repoRoot, legacyCoreEvidencePaths.sessions(), `${sessionId}.json`), { force: true });
+  await rm(path.resolve(repoRoot, legacyCoreEvidencePaths.audit(), `${sessionId}.json`), { force: true });
+  await rm(path.resolve(repoRoot, legacyCoreEvidencePaths.leases(), `android-${buildTestDeviceId(sessionId)}.json`), { force: true });
+  await rm(path.resolve(repoRoot, legacyCoreEvidencePaths.leases(), `ios-${buildTestDeviceId(sessionId)}.json`), { force: true });
+}
+
+async function writeLegacySessionArtifact(sessionId: string, platform: "android" | "ios" = "android"): Promise<void> {
+  const session = {
+    sessionId,
+    platform,
+    deviceId: buildTestDeviceId(sessionId),
+    appId: platform === "android" ? "host.exp.exponent" : "com.apple.Preferences",
+    policyProfile: "sample-harness-default",
+    startedAt: new Date().toISOString(),
+    artifactsRoot: "artifacts",
+    timeline: [],
+    profile: "phase1",
+  };
+  const record = {
+    session,
+    closed: false,
+    artifacts: [],
+    updatedAt: new Date().toISOString(),
+  };
+  const sessionPath = path.resolve(repoRoot, legacyCoreEvidencePaths.sessions(), `${sessionId}.json`);
+  await mkdir(path.dirname(sessionPath), { recursive: true });
+  await writeFile(sessionPath, `${JSON.stringify(record, null, 2)}\n`, "utf8");
 }
 
 async function cleanupActionArtifact(actionId: string): Promise<void> {
@@ -281,6 +308,40 @@ test("handleRequest auto-resolves single active session when sessionId is omitte
         arguments: { sessionId },
       },
     });
+    await cleanupSessionArtifact(sessionId);
+  }
+});
+
+test("handleRequest auto-resolves legacy artifacts session when sessionId is omitted", async () => {
+  const sessionId = `stdio-auto-session-legacy-${Date.now()}`;
+  await cleanupSessionArtifact(sessionId);
+
+  try {
+    await writeLegacySessionArtifact(sessionId);
+
+    const result = await handleRequest({
+      id: 7051,
+      method: "tools/call",
+      params: {
+        name: "get_screen_summary",
+        arguments: {
+          platform: "android",
+          deviceId: buildTestDeviceId(sessionId),
+          dryRun: true,
+          includeDebugSignals: true,
+        },
+      },
+    });
+    const typedResult = result as {
+      status: string;
+      reasonCode: string;
+      sessionId: string;
+    };
+
+    assert.ok(["success", "partial"].includes(typedResult.status));
+    assert.equal(typedResult.reasonCode === "OK" || typedResult.reasonCode === "UNSUPPORTED_OPERATION", true);
+    assert.equal(typedResult.sessionId, sessionId);
+  } finally {
     await cleanupSessionArtifact(sessionId);
   }
 });
@@ -762,7 +823,7 @@ test("handleRequest supports tools/call aliases for record session lifecycle", a
     flowPath = ended.data.report.flowPath;
     if (flowPath) {
       const exportedFlow = await readFile(path.resolve(repoRoot, flowPath), "utf8");
-      assert.equal(exportedFlow.includes("artifacts/record-snapshots/"), false);
+      assert.equal(exportedFlow.includes("output/evidence/recordings/snapshots/"), false);
     }
 
     const cancelled = await handleRequest({
@@ -2435,7 +2496,7 @@ test("handleRequest supports tools/call alias for end_session", async () => {
         name: "end_session",
         arguments: {
           sessionId,
-          artifacts: ["artifacts/demo/output.txt"],
+          artifacts: ["output/evidence/demo/output.txt"],
         },
       },
     });

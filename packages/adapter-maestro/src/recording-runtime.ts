@@ -60,6 +60,7 @@ import {
 	type SnapshotCandidate,
 } from "./recording-runtime-snapshot.js";
 import { resolveRecordingPlatformHooks } from "./recording-runtime-platform.js";
+import { evidencePaths } from "./artifact-paths.js";
 async function maybeNormalizeEventsUsingSnapshotViewport(
 	repoRoot: string,
 	recordSessionId: string,
@@ -604,7 +605,7 @@ export async function endRecordSessionWithMaestro(
 			},
 			nextSuggestions: [
 				"Interact on the iOS physical device while recording (tap/type/swipe), then retry end_record_session.",
-				"If capture remains empty, verify axe/WDA/devicectl availability and review artifacts/record-events/*.jsonl plus artifacts/record-snapshots/*.",
+				`If capture remains empty, verify axe/WDA/devicectl availability and review ${evidencePaths.recordEvents()}/*.jsonl plus ${evidencePaths.recordSnapshots()}/*.`,
 			],
 		};
 	}

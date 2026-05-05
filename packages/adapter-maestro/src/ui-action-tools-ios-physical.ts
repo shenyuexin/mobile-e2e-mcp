@@ -17,13 +17,14 @@ import {
   buildIosPhysicalActionExecutionPlan,
 } from "./ui-runtime-ios.js";
 import { executeRunner, buildFailureReason } from "./runtime-shared.js";
+import { evidencePaths } from "./artifact-paths.js";
 
 export function buildIosPhysicalActionFlowPaths(repoRoot: string, sessionId: string, actionType: "tap" | "type_text"): {
   relativePath: string;
   absolutePath: string;
 } {
   const fileName = `${actionType}.maestro.yml`;
-  const relativePath = path.posix.join("artifacts", "ios-physical-actions", sessionId, fileName);
+  const relativePath = path.posix.join(evidencePaths.iosPhysicalActions(), sessionId, fileName);
   return {
     relativePath,
     absolutePath: path.resolve(repoRoot, relativePath),
@@ -39,7 +40,7 @@ export function buildIosPhysicalExecutionEvidencePaths(
   absolutePath: string;
 } {
   const fileName = `${actionType}.execution.md`;
-  const relativePath = path.posix.join("artifacts", "ios-physical-actions", sessionId, fileName);
+  const relativePath = path.posix.join(evidencePaths.iosPhysicalActions(), sessionId, fileName);
   return {
     relativePath,
     absolutePath: path.resolve(repoRoot, relativePath),
@@ -368,4 +369,3 @@ export async function executeIosPhysicalAction(params: {
     artifacts: [flowPaths.relativePath, evidenceArtifact],
   };
 }
-

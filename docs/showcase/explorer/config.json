@@ -14,7 +14,7 @@
   "editorEntryPolicy": "skip",
   "maxActionSuccessesPerContext": 1,
   "appId": "com.apple.Preferences",
-  "reportDir": "artifacts/explorer/full",
+  "reportDir": "output/evidence/explorer/full",
   "samplingRules": [
     {
       "match": {

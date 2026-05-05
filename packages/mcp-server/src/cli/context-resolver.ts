@@ -1,7 +1,7 @@
 import type { Platform, RunnerProfile, ToolResult } from "@mobile-e2e-mcp/contracts";
 import { REASON_CODES } from "@mobile-e2e-mcp/contracts";
 import { resolveRepoPath } from "@mobile-e2e-mcp/adapter-maestro";
-import { loadSessionRecord } from "@mobile-e2e-mcp/core";
+import { coreEvidencePaths, legacyCoreEvidencePaths, loadSessionRecord } from "@mobile-e2e-mcp/core";
 import { readdir } from "node:fs/promises";
 import path from "node:path";
 import type { CliOptions } from "./types.js";
@@ -31,31 +31,41 @@ interface ActiveSessionCandidate {
 }
 
 async function listActiveSessionCandidates(repoRoot: string): Promise<ActiveSessionCandidate[]> {
-  const sessionsDir = path.resolve(repoRoot, "artifacts", "sessions");
-  try {
-    const entries = await readdir(sessionsDir, { withFileTypes: true });
-    const candidates: ActiveSessionCandidate[] = [];
-    for (const entry of entries) {
-      if (!entry.isFile() || !entry.name.endsWith(".json")) {
-        continue;
+  const sessionsDirs = [
+    path.resolve(repoRoot, coreEvidencePaths.sessions()),
+    path.resolve(repoRoot, legacyCoreEvidencePaths.sessions()),
+  ];
+  const seenSessionIds = new Set<string>();
+  const candidates: ActiveSessionCandidate[] = [];
+  for (const sessionsDir of sessionsDirs) {
+    try {
+      const entries = await readdir(sessionsDir, { withFileTypes: true });
+      for (const entry of entries) {
+        if (!entry.isFile() || !entry.name.endsWith(".json")) {
+          continue;
+        }
+        const sessionId = entry.name.slice(0, -".json".length);
+        if (seenSessionIds.has(sessionId)) {
+          continue;
+        }
+        seenSessionIds.add(sessionId);
+        const record = await loadSessionRecord(repoRoot, sessionId);
+        if (!record || record.closed) {
+          continue;
+        }
+        candidates.push({
+          sessionId,
+          platform: record.session.platform,
+          deviceId: record.session.deviceId,
+          appId: record.session.appId,
+          profile: record.session.profile ?? null,
+        });
       }
-      const sessionId = entry.name.slice(0, -".json".length);
-      const record = await loadSessionRecord(repoRoot, sessionId);
-      if (!record || record.closed) {
-        continue;
-      }
-      candidates.push({
-        sessionId,
-        platform: record.session.platform,
-        deviceId: record.session.deviceId,
-        appId: record.session.appId,
-        profile: record.session.profile ?? null,
-      });
+    } catch {
+      continue;
     }
-    return candidates;
-  } catch {
-    return [];
   }
+  return candidates;
 }
 
 function buildContextAliasError(sessionId: string, detail: string, nextSuggestions: string[]): ToolResult<{ resolvedContext?: ResolvedContextMeta }> {

@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { mkdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { ActionOutcomeSummary, ActionProgressMarker, CheckpointDivergence, FailureSignature, ReplayValue, StateChangeCategory, StateReadiness } from "@mobile-e2e-mcp/contracts";
+import { coreEvidencePaths, legacyCoreEvidencePaths } from "./output-paths.js";
 
 export interface PersistedFailureIndexEntry {
 	actionId: string;
@@ -33,7 +34,11 @@ export interface PersistedBaselineIndexEntry {
 }
 
 function buildAiFirstIndexAbsolutePath(repoRoot: string, fileName: string): string {
-	return path.resolve(repoRoot, "artifacts", "ai-first", fileName);
+	return path.resolve(repoRoot, coreEvidencePaths.aiFirst(), fileName);
+}
+
+function buildLegacyAiFirstIndexAbsolutePath(repoRoot: string, fileName: string): string {
+	return path.resolve(repoRoot, legacyCoreEvidencePaths.aiFirst(), fileName);
 }
 
 async function readJsonFile<T>(absolutePath: string, fallback: T): Promise<T> {
@@ -74,10 +79,7 @@ export async function recordFailureSignature(
 		repoRoot,
 		"failure-index.json",
 	);
-	const existing = await readJsonFile<PersistedFailureIndexEntry[]>(
-		absolutePath,
-		[],
-	);
+	const existing = await loadFailureIndex(repoRoot);
 	const next = [
 		entry,
 		...existing.filter((item) => item.actionId !== entry.actionId),
@@ -88,8 +90,15 @@ export async function recordFailureSignature(
 export async function loadFailureIndex(
 	repoRoot: string,
 ): Promise<PersistedFailureIndexEntry[]> {
-	return readJsonFile<PersistedFailureIndexEntry[]>(
+	const current = await readJsonFile<PersistedFailureIndexEntry[]>(
 		buildAiFirstIndexAbsolutePath(repoRoot, "failure-index.json"),
+		[],
+	);
+	if (current.length > 0) {
+		return current;
+	}
+	return readJsonFile<PersistedFailureIndexEntry[]>(
+		buildLegacyAiFirstIndexAbsolutePath(repoRoot, "failure-index.json"),
 		[],
 	);
 }
@@ -102,10 +111,7 @@ export async function recordBaselineEntry(
 		repoRoot,
 		"baseline-index.json",
 	);
-	const existing = await readJsonFile<PersistedBaselineIndexEntry[]>(
-		absolutePath,
-		[],
-	);
+	const existing = await loadBaselineIndex(repoRoot);
 	const next = [
 		entry,
 		...existing.filter((item) => item.actionId !== entry.actionId),
@@ -116,8 +122,15 @@ export async function recordBaselineEntry(
 export async function loadBaselineIndex(
 	repoRoot: string,
 ): Promise<PersistedBaselineIndexEntry[]> {
-	return readJsonFile<PersistedBaselineIndexEntry[]>(
+	const current = await readJsonFile<PersistedBaselineIndexEntry[]>(
 		buildAiFirstIndexAbsolutePath(repoRoot, "baseline-index.json"),
+		[],
+	);
+	if (current.length > 0) {
+		return current;
+	}
+	return readJsonFile<PersistedBaselineIndexEntry[]>(
+		buildLegacyAiFirstIndexAbsolutePath(repoRoot, "baseline-index.json"),
 		[],
 	);
 }

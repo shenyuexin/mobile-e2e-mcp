@@ -15,7 +15,7 @@ import { formatRunTimestamp } from "../../packages/explorer/src/report/summary.j
 import { createServer } from "../../packages/mcp-server/src/index.js";
 
 const mode = process.argv[2] === "full" ? "full" : "smoke";
-const outputDir = mode === "full" ? "artifacts/explorer/full" : "artifacts/explorer/smoke";
+const outputDir = mode === "full" ? "output/evidence/explorer/full" : "output/evidence/explorer/smoke";
 const maxDepth = mode === "full" ? "8" : "5";
 const timeoutMs = mode === "full" ? "7200000" : "3600000";
 const { logPath, runDir, runId } = prepareRunArtifacts(outputDir);

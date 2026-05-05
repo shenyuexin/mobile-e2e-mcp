@@ -45,7 +45,7 @@ They intentionally validate baseline toolchain execution only, and do not replac
 
 - Smoke proof (`pnpm test:smoke`, dry-run validators, Ubuntu CI): verifies deterministic contracts and dry-run behavior, not real-device fidelity.
 - Platform smoke proof (`.github/workflows/platform-smoke.yml`): verifies simulator/emulator baseline wiring only.
-- Acceptance proof (`.github/workflows/real-device-acceptance.yml`): self-hosted real-run artifacts plus quality gate on `reports/phase-sample-report.json`.
+- Acceptance proof (`.github/workflows/real-device-acceptance.yml`): self-hosted real-run artifacts plus quality gate on `output/reports/phase-sample-report.json`.
 
 Framework lane boundary (current truth):
 
@@ -76,7 +76,7 @@ Notes:
 - If `DEVICE_ID` is unset, both recording wrappers and direct demo TS scripts auto-select the first online Android device.
 - `APK_PATH` is supported by both recording wrappers and by `publish-showcase-assets-android.sh`.
 - Start Expo for the tracked RN sample with `pnpm --dir examples/rn-login-demo start` before running the dedicated Phase 02 acceptance command when using Expo Go.
-- `pnpm run validate:phase2-rn-android-acceptance` uses the React Native Android sample flow and writes lane-local artifacts under `artifacts/phase2-rn-android/**` before regenerating `reports/phase-sample-report.*` and `reports/acceptance-evidence.*`.
+- `pnpm run validate:phase2-rn-android-acceptance` uses the React Native Android sample flow and writes lane-local artifacts under `output/evidence/phase2-rn-android/**` before regenerating `output/reports/phase-sample-report.*` and `output/reports/acceptance-evidence.*`.
 
 ## Snapshot assets used by README
 

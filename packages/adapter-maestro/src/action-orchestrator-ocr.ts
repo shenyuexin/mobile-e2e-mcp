@@ -25,6 +25,7 @@ import {
 } from "@mobile-e2e-mcp/adapter-vision";
 import path from "node:path";
 import { resolveRepoPath } from "./harness-config.js";
+import { evidencePaths } from "./artifact-paths.js";
 
 export interface OcrFallbackExecutionResult {
   attempted: boolean;
@@ -125,7 +126,7 @@ export async function executeOcrFallback(params: {
     runnerProfile: params.runnerProfile,
     harnessConfigPath: params.input.harnessConfigPath,
     deviceId: params.deviceId,
-    outputPath: path.posix.join("artifacts", "screenshots", params.input.sessionId, `${params.platform}-${params.runnerProfile}-ocr.png`),
+    outputPath: path.posix.join(evidencePaths.screenshots(), params.input.sessionId, `${params.platform}-${params.runnerProfile}-ocr.png`),
     dryRun: params.input.dryRun,
   };
   const screenshotResult = await params.deps.takeScreenshot(screenshotInput);

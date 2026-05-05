@@ -2,6 +2,7 @@ import { mkdir, rm } from "node:fs/promises";
 import path from "node:path";
 import type { Platform } from "@mobile-e2e-mcp/contracts";
 import { markBusy, markIdle, refreshHeartbeat } from "./execution-coordinator.js";
+import { coreEvidencePaths } from "./output-paths.js";
 import { appendSessionTimelineEvent } from "./session-record-store.js";
 
 function assertSafeSegment(input: string, label: string): void {
@@ -12,7 +13,7 @@ function assertSafeSegment(input: string, label: string): void {
 
 function buildSessionLockDirectory(repoRoot: string, sessionId: string): string {
   assertSafeSegment(sessionId, "sessionId");
-  return path.resolve(repoRoot, "artifacts", "scheduler", ".locks", `${sessionId}.lock`);
+  return path.resolve(repoRoot, coreEvidencePaths.scheduler(), ".locks", `${sessionId}.lock`);
 }
 
 async function acquireSessionLock(repoRoot: string, sessionId: string): Promise<{ release: () => Promise<void>; waitedMs: number }> {

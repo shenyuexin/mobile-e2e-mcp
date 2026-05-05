@@ -12,6 +12,7 @@ import type {
 	RecordingPlatformHooks,
 } from "./recording-runtime-platform.js";
 import { executeRunner, shellEscape } from "./runtime-shared.js";
+import { evidencePaths } from "./artifact-paths.js";
 
 export interface AdbDeviceEntry {
 	id: string;
@@ -47,8 +48,7 @@ export async function captureAndroidContextSnapshot(
 	const warnings: string[] = [];
 	const bucketId = params.bucketId ?? "end";
 	const snapshotRelativePath = path.posix.join(
-		"artifacts",
-		"record-snapshots",
+		evidencePaths.recordSnapshots(),
 		params.recordSessionId,
 		`${params.recordSessionId}-${bucketId}.xml`,
 	);
@@ -414,8 +414,7 @@ export async function startAndroidCaptureProcesses(
 	}
 
 	const snapshotDirRelativePath = path.posix.join(
-		"artifacts",
-		"record-snapshots",
+		evidencePaths.recordSnapshots(),
 		params.recordSessionId,
 	);
 	const snapshotDirAbsolutePath = path.resolve(

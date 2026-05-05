@@ -37,18 +37,18 @@ class PhaseReport(TypedDict):
 ROOT = Path(__file__).resolve().parents[2]
 PHASE2_RN_ANDROID_ROOT = Path(
     os.environ.get(
-        "PHASE2_RN_ANDROID_ARTIFACT_ROOT", str(ROOT / "artifacts/phase2-rn-android")
+        "PHASE2_RN_ANDROID_ARTIFACT_ROOT", str(ROOT / "output/evidence/phase2-rn-android")
     )
 )
 ARTIFACT_ROOTS = {
-    "react-native-ios": ROOT / "artifacts/phase1-ios",
+    "react-native-ios": ROOT / "output/evidence/phase1-ios",
     "react-native-android": PHASE2_RN_ANDROID_ROOT
     if PHASE2_RN_ANDROID_ROOT.exists()
-    else ROOT / "artifacts/phase1-android",
-    "flutter-android": ROOT / "artifacts/phase3-flutter-android",
-    "native-android": ROOT / "artifacts/phase3-native-android",
-    "native-ios": ROOT / "artifacts/phase3-native-ios",
-    "native-ios-real-device": ROOT / "artifacts/phase3-native-ios-real-device",
+    else ROOT / "output/evidence/phase1-android",
+    "flutter-android": ROOT / "output/evidence/phase3-flutter-android",
+    "native-android": ROOT / "output/evidence/phase3-native-android",
+    "native-ios": ROOT / "output/evidence/phase3-native-ios",
+    "native-ios-real-device": ROOT / "output/evidence/phase3-native-ios-real-device",
 }
 PLATFORM_SAMPLES = {
     "react-native-ios": "rn-login-demo",
@@ -58,7 +58,7 @@ PLATFORM_SAMPLES = {
     "native-ios": "mobitru-native",
     "native-ios-real-device": "mobitru-native",
 }
-REPORT_DIR = ROOT / "reports"
+REPORT_DIR = ROOT / "output" / "reports"
 JSON_OUT = REPORT_DIR / "phase-sample-report.json"
 MD_OUT = REPORT_DIR / "phase-sample-report.md"
 
@@ -132,7 +132,7 @@ def collect_platform(platform: str, root: Path) -> PlatformReport:
 
 
 def collect_scheduler_metrics(platform: str) -> dict[str, float | int]:
-    audit_root = ROOT / "artifacts" / "audit"
+    audit_root = ROOT / "output" / "evidence" / "audit"
     if not audit_root.exists():
         return {
             "queue_wait_p50_ms": 0,

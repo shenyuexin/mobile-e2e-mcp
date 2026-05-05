@@ -10,7 +10,7 @@ FLOW="${MAESTRO_FLOW:-flows/samples/native/mobitru-ios-login.yaml}"
 STARTUP_TIMEOUT="${MAESTRO_DRIVER_STARTUP_TIMEOUT:-300000}"
 MAESTRO_REPO_DIR="${MAESTRO_REPO_DIR:-$HOME/Documents/GitHub/Maestro}"
 RUNNER_MODE="${MAESTRO_RUNNER_MODE:-auto}" # auto|manual
-DEBUG_OUTPUT="${MAESTRO_DEBUG_OUTPUT:-$ROOT/artifacts/maestro-ios-manual-runner}"
+DEBUG_OUTPUT="${MAESTRO_DEBUG_OUTPUT:-$ROOT/output/evidence/maestro-ios-manual-runner}"
 DRY_RUN="${MAESTRO_DRY_RUN:-0}"
 XCTRUNNER_BUNDLE_ID_OVERRIDE="${MAESTRO_XCTRUNNER_BUNDLE_ID:-}"
 

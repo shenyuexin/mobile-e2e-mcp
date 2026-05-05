@@ -7,6 +7,7 @@ import {
 	parseIosInspectNodes,
 	parseUiBounds,
 } from "./ui-model.js";
+import { evidencePaths } from "./artifact-paths.js";
 
 export interface ExtendedRawRecordedEvent extends RawRecordedEvent {
 	eventMonotonicMs?: number;
@@ -50,11 +51,10 @@ export async function listSnapshotRefsForSession(
 	repoRoot: string,
 	recordSessionId: string,
 ): Promise<string[]> {
-	const relativeDir = path.posix.join(
-		"artifacts",
-		"record-snapshots",
-		recordSessionId,
-	);
+  const relativeDir = path.posix.join(
+    evidencePaths.recordSnapshots(),
+    recordSessionId,
+  );
 	const absoluteDir = path.resolve(repoRoot, relativeDir);
 	try {
 		const entries = await readdir(absoluteDir, { withFileTypes: true });

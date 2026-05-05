@@ -78,8 +78,8 @@ Replay:
 
 ## Artifacts to inspect
 
-- `artifacts/record-events/<recordSessionId>.jsonl`
-- `artifacts/recorded-steps/<recordSessionId>.json`
+- `output/evidence/recordings/events/<recordSessionId>.jsonl`
+- `output/evidence/recorded-steps/<recordSessionId>.json`
 - `flows/samples/generated/<recordSessionId>-<timestamp>.yaml`
 
 ## Known limits

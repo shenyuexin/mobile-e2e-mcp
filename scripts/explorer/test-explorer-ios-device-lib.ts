@@ -33,7 +33,7 @@ export function parseIosDeviceExplorerScriptConfig(
     appId: readEnv(env, "APP_ID") ?? "com.apple.Preferences",
     deviceId,
     outputDir: readEnv(env, "EXPLORER_OUTPUT_DIR")
-      ?? (mode === "full" ? "artifacts/explorer/ios-device-full" : "artifacts/explorer/ios-device-smoke"),
+      ?? (mode === "full" ? "output/evidence/explorer/ios-device-full" : "output/evidence/explorer/ios-device-smoke"),
     maxDepth: readEnv(env, "EXPLORER_MAX_DEPTH") ?? (mode === "full" ? "8" : "5"),
     timeoutMs: readEnv(env, "EXPLORER_TIMEOUT_MS") ?? (mode === "full" ? "7200000" : "3600000"),
   };
@@ -67,7 +67,7 @@ Optional env vars:
   IOS_DEVICE_ID=<iPad-UDID>          Preferred physical-device UDID input.
   M2E_DEVICE_ID=<iPad-UDID>          Explorer runner device id fallback.
   APP_ID=com.apple.Preferences       Target app; defaults to iOS Settings.
-  EXPLORER_OUTPUT_DIR=artifacts/...  Report output directory.
+  EXPLORER_OUTPUT_DIR=output/evidence/...  Report output directory.
   EXPLORER_MAX_DEPTH=5               Traversal depth override.
   EXPLORER_TIMEOUT_MS=3600000        Total timeout override.
   IOS_EXECUTION_BACKEND=wda          Physical UI hierarchy/action backend.

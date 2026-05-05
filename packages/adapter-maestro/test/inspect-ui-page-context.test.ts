@@ -14,7 +14,7 @@ test("inspectUiWithMaestroTool exposes pageContext when summary is available", a
       loadHarnessSelection: async () => ({ deviceId: "android-emulator-1" }),
       captureAndroidUiSnapshot: async () => ({
         absoluteOutputPath: "/tmp/inspect-ui-page-context.xml",
-        relativeOutputPath: "artifacts/ui-dumps/inspect-ui-page-context.xml",
+        relativeOutputPath: "output/evidence/ui-dumps/inspect-ui-page-context.xml",
         readCommand: ["fixture", "read"],
         dumpCommand: ["fixture", "dump"],
         readExecution: { exitCode: 0, stdout: "<hierarchy />", stderr: "" },

@@ -5,6 +5,7 @@ import { isIosPhysicalDeviceId } from "./device-runtime.js";
 import type { CrashSignalExecutionResult, DeviceRuntimePlatformHooks } from "./device-runtime-platform.js";
 import { getIosBackendRouter } from "./ios-backend-router.js";
 import { executeRunner, shellEscape, type CommandExecution } from "./runtime-shared.js";
+import { evidencePaths } from "./artifact-paths.js";
 
 const DEFAULT_DEVICE_COMMAND_TIMEOUT_MS = 5000;
 
@@ -518,7 +519,7 @@ export function createIosDeviceRuntimeHooks(): DeviceRuntimePlatformHooks {
       };
     },
     buildGetLogsCapturePlan: ({ repoRoot, sessionId, outputPath, runnerProfile, deviceId, sinceSeconds, appId, appFilterApplied, minLogLevel }) => {
-      const relativeOutputPath = outputPath ?? path.posix.join("artifacts", "logs", sessionId, `ios-${runnerProfile}.simulator.log`);
+      const relativeOutputPath = outputPath ?? path.posix.join(evidencePaths.logs(), sessionId, `ios-${runnerProfile}.simulator.log`);
       // iOS log level mapping (lossy — iOS has no exact V/D/I/W/E/F equivalent)
       const { levelPredicate, actualApplied, levelNote } = buildIosLogLevelPredicate(minLogLevel);
       return {
@@ -553,7 +554,7 @@ export function createIosDeviceRuntimeHooks(): DeviceRuntimePlatformHooks {
       };
     },
     buildGetCrashSignalsCapturePlan: ({ repoRoot, sessionId, outputPath, runnerProfile, deviceId, linesRequested }) => {
-      const relativeOutputPath = outputPath ?? path.posix.join("artifacts", "crash-signals", sessionId, `ios-${runnerProfile}.crash-manifest.txt`);
+      const relativeOutputPath = outputPath ?? path.posix.join(evidencePaths.crashSignals(), sessionId, `ios-${runnerProfile}.crash-manifest.txt`);
       return {
         relativeOutputPath,
         absoluteOutputPath: path.resolve(repoRoot, relativeOutputPath),
@@ -623,7 +624,7 @@ export function createIosDeviceRuntimeHooks(): DeviceRuntimePlatformHooks {
       };
     },
     buildCollectDiagnosticsCapturePlan: ({ repoRoot, sessionId, outputPath, runnerProfile, deviceId }) => {
-      const relativeOutputPath = outputPath ?? path.posix.join("artifacts", "diagnostics", sessionId, `ios-${runnerProfile}`);
+      const relativeOutputPath = outputPath ?? path.posix.join(evidencePaths.diagnostics(), sessionId, `ios-${runnerProfile}`);
       const absoluteOutputPath = path.resolve(repoRoot, relativeOutputPath);
       return {
         relativeOutputPath,

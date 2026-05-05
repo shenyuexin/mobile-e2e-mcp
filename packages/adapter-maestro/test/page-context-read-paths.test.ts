@@ -18,7 +18,7 @@ function buildInspectResult(sessionId: string): ToolResult<InspectUiData> {
 		data: {
 			dryRun: true,
 			runnerProfile: "phase1",
-			outputPath: `artifacts/inspect/${sessionId}.json`,
+			outputPath: `output/evidence/inspect/${sessionId}.json`,
 			command: ["fixture", "inspect_ui"],
 			exitCode: 0,
 			supportLevel: "full",

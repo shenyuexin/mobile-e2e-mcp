@@ -7,6 +7,7 @@ import type {
 	RecordedStep,
 	RecordSessionStatus,
 } from "@mobile-e2e-mcp/contracts";
+import { coreEvidencePaths, legacyCoreEvidencePaths } from "./output-paths.js";
 
 export interface PersistedRecordSession {
 	recordSessionId: string;
@@ -51,29 +52,56 @@ function assertSafeId(input: string): void {
 
 export function buildRecordSessionRelativePath(recordSessionId: string): string {
 	assertSafeId(recordSessionId);
-	return path.posix.join("artifacts", "record-sessions", `${recordSessionId}.json`);
+	return path.posix.join(coreEvidencePaths.recordSessions(), `${recordSessionId}.json`);
+}
+
+function buildLegacyRecordSessionRelativePath(recordSessionId: string): string {
+	assertSafeId(recordSessionId);
+	return path.posix.join(legacyCoreEvidencePaths.recordSessions(), `${recordSessionId}.json`);
 }
 
 export function buildRecordEventsRelativePath(recordSessionId: string): string {
 	assertSafeId(recordSessionId);
-	return path.posix.join("artifacts", "record-events", `${recordSessionId}.jsonl`);
+	return path.posix.join(coreEvidencePaths.recordEvents(), `${recordSessionId}.jsonl`);
+}
+
+function buildLegacyRecordEventsRelativePath(recordSessionId: string): string {
+	assertSafeId(recordSessionId);
+	return path.posix.join(legacyCoreEvidencePaths.recordEvents(), `${recordSessionId}.jsonl`);
 }
 
 export function buildRecordedStepsRelativePath(recordSessionId: string): string {
 	assertSafeId(recordSessionId);
-	return path.posix.join("artifacts", "recorded-steps", `${recordSessionId}.json`);
+	return path.posix.join(coreEvidencePaths.recordedSteps(), `${recordSessionId}.json`);
+}
+
+function buildLegacyRecordedStepsRelativePath(recordSessionId: string): string {
+	assertSafeId(recordSessionId);
+	return path.posix.join(legacyCoreEvidencePaths.recordedSteps(), `${recordSessionId}.json`);
 }
 
 function buildRecordSessionAbsolutePath(repoRoot: string, recordSessionId: string): string {
 	return path.resolve(repoRoot, buildRecordSessionRelativePath(recordSessionId));
 }
 
+function buildLegacyRecordSessionAbsolutePath(repoRoot: string, recordSessionId: string): string {
+	return path.resolve(repoRoot, buildLegacyRecordSessionRelativePath(recordSessionId));
+}
+
 function buildRecordEventsAbsolutePath(repoRoot: string, recordSessionId: string): string {
 	return path.resolve(repoRoot, buildRecordEventsRelativePath(recordSessionId));
 }
 
+function buildLegacyRecordEventsAbsolutePath(repoRoot: string, recordSessionId: string): string {
+	return path.resolve(repoRoot, buildLegacyRecordEventsRelativePath(recordSessionId));
+}
+
 function buildRecordedStepsAbsolutePath(repoRoot: string, recordSessionId: string): string {
 	return path.resolve(repoRoot, buildRecordedStepsRelativePath(recordSessionId));
+}
+
+function buildLegacyRecordedStepsAbsolutePath(repoRoot: string, recordSessionId: string): string {
+	return path.resolve(repoRoot, buildLegacyRecordedStepsRelativePath(recordSessionId));
 }
 
 async function writeJsonFile(absolutePath: string, value: unknown): Promise<void> {
@@ -134,81 +162,99 @@ export async function loadRecordSession(
 	repoRoot: string,
 	recordSessionId: string,
 ): Promise<PersistedRecordSession | undefined> {
-	const absolutePath = buildRecordSessionAbsolutePath(repoRoot, recordSessionId);
-	try {
-		const content = await readFile(absolutePath, "utf8");
-		return JSON.parse(content) as PersistedRecordSession;
-	} catch (error: unknown) {
-		if ((error as NodeJS.ErrnoException).code === "ENOENT") {
-			return undefined;
+	const absolutePaths = [
+		buildRecordSessionAbsolutePath(repoRoot, recordSessionId),
+		buildLegacyRecordSessionAbsolutePath(repoRoot, recordSessionId),
+	];
+	for (const absolutePath of absolutePaths) {
+		try {
+			const content = await readFile(absolutePath, "utf8");
+			return JSON.parse(content) as PersistedRecordSession;
+		} catch (error: unknown) {
+			if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+				continue;
+			}
+			if (error instanceof SyntaxError) {
+				return undefined;
+			}
+			throw error;
 		}
-		if (error instanceof SyntaxError) {
-			return undefined;
-		}
-		throw error;
 	}
+	return undefined;
 }
 
 export async function listRawRecordedEvents(
 	repoRoot: string,
 	recordSessionId: string,
 ): Promise<RawRecordedEvent[]> {
-	const absolutePath = buildRecordEventsAbsolutePath(repoRoot, recordSessionId);
-	try {
-		const content = await readFile(absolutePath, "utf8");
-		const lines = content
-			.split(/\r?\n/)
-			.map((line) => line.trim())
-			.filter((line) => line.length > 0);
-		const events: RawRecordedEvent[] = [];
-		let malformedLineCount = 0;
-		for (const line of lines) {
-			try {
-				const parsed = JSON.parse(line) as unknown;
-				if (
-					typeof parsed === "object" &&
-					parsed !== null &&
-					typeof (parsed as { timestamp?: unknown }).timestamp === "string"
-				) {
-					events.push(parsed as RawRecordedEvent);
+	const absolutePaths = [
+		buildRecordEventsAbsolutePath(repoRoot, recordSessionId),
+		buildLegacyRecordEventsAbsolutePath(repoRoot, recordSessionId),
+	];
+	for (const absolutePath of absolutePaths) {
+		try {
+			const content = await readFile(absolutePath, "utf8");
+			const lines = content
+				.split(/\r?\n/)
+				.map((line) => line.trim())
+				.filter((line) => line.length > 0);
+			const events: RawRecordedEvent[] = [];
+			let malformedLineCount = 0;
+			for (const line of lines) {
+				try {
+					const parsed = JSON.parse(line) as unknown;
+					if (
+						typeof parsed === "object" &&
+						parsed !== null &&
+						typeof (parsed as { timestamp?: unknown }).timestamp === "string"
+					) {
+						events.push(parsed as RawRecordedEvent);
+					}
+				} catch {
+					malformedLineCount += 1;
 				}
-			} catch {
-				malformedLineCount += 1;
 			}
+			if (malformedLineCount > 0) {
+				// eslint-disable-next-line no-console
+				console.warn(`[recording-store] listRawRecordedEvents: ${malformedLineCount} malformed line(s) skipped in session ${recordSessionId}`);
+			}
+			return events.sort((left, right) =>
+				left.timestamp.localeCompare(right.timestamp),
+			);
+		} catch (error: unknown) {
+			if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+				continue;
+			}
+			throw error;
 		}
-		if (malformedLineCount > 0) {
-			// eslint-disable-next-line no-console
-			console.warn(`[recording-store] listRawRecordedEvents: ${malformedLineCount} malformed line(s) skipped in session ${recordSessionId}`);
-		}
-		return events.sort((left, right) =>
-			left.timestamp.localeCompare(right.timestamp),
-		);
-	} catch (error: unknown) {
-		if ((error as NodeJS.ErrnoException).code === "ENOENT") {
-			return [];
-		}
-		throw error;
 	}
+	return [];
 }
 
 export async function loadRecordedSteps(
 	repoRoot: string,
 	recordSessionId: string,
 ): Promise<RecordedStep[]> {
-	const absolutePath = buildRecordedStepsAbsolutePath(repoRoot, recordSessionId);
-	try {
-		const content = await readFile(absolutePath, "utf8");
-		const parsed = JSON.parse(content) as RecordedStep[];
-		return Array.isArray(parsed) ? parsed : [];
-	} catch (error: unknown) {
-		if ((error as NodeJS.ErrnoException).code === "ENOENT") {
-			return [];
+	const absolutePaths = [
+		buildRecordedStepsAbsolutePath(repoRoot, recordSessionId),
+		buildLegacyRecordedStepsAbsolutePath(repoRoot, recordSessionId),
+	];
+	for (const absolutePath of absolutePaths) {
+		try {
+			const content = await readFile(absolutePath, "utf8");
+			const parsed = JSON.parse(content) as RecordedStep[];
+			return Array.isArray(parsed) ? parsed : [];
+		} catch (error: unknown) {
+			if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+				continue;
+			}
+			if (error instanceof SyntaxError) {
+				return [];
+			}
+			throw error;
 		}
-		if (error instanceof SyntaxError) {
-			return [];
-		}
-		throw error;
 	}
+	return [];
 }
 
 export async function persistStartedRecordSession(

@@ -26,14 +26,14 @@ For each run of `Platform Smoke` (`.github/workflows/platform-smoke.yml`):
 
 1. iOS simulator Maestro baseline lane (`flows/samples/ci/ios-settings-smoke.yaml`)
 2. Android emulator Maestro baseline lane (`flows/samples/ci/android-settings-smoke.yaml`)
-3. Uploaded debug artifacts for each lane under `artifacts/platform-smoke/**`
+3. Uploaded debug artifacts for each lane under `output/evidence/platform-smoke/**`
 4. Job summaries that explicitly describe baseline scope vs real-device acceptance scope
 
 For each run of `Real Device Acceptance` (`.github/workflows/real-device-acceptance.yml`):
 
 1. Dry-run baseline (`validate:phase3-samples`) on Ubuntu
 2. Self-hosted macOS real-run matrix + acceptance evidence artifacts
-3. Quality gate: workflow fails when any expected lane is missing/`NO_DATA`, or any lane status is `NO_GO` in `reports/phase-sample-report.json`
+3. Quality gate: workflow fails when any expected lane is missing/`NO_DATA`, or any lane status is `NO_GO` in `output/reports/phase-sample-report.json`
 4. Lane semantics:
     - Phase 1 lanes (`react-native-ios`, `react-native-android`) are acceptance backbone lanes in this workflow.
     - Phase 2 now defines a dedicated React Native Android acceptance entrypoint: `pnpm run validate:phase2-rn-android-acceptance`.

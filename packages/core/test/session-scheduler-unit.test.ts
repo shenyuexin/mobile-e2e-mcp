@@ -22,7 +22,7 @@ function buildSession(sessionId: string, deviceId: string): Session {
     appId: "host.exp.exponent",
     policyProfile: "sample-harness-default",
     startedAt: new Date().toISOString(),
-    artifactsRoot: "artifacts",
+    artifactsRoot: "output/evidence",
     timeline: [],
     profile: "phase1",
     phase: "phase2",
@@ -47,7 +47,7 @@ test("runExclusive releases lock even when task throws", async () => {
     );
 
     // Verify lock directory is cleaned up (no stale lock)
-    const lockDir = path.resolve(repoRoot, "artifacts", "scheduler", ".locks", `${sessionId}.lock`);
+    const lockDir = path.resolve(repoRoot, "output", "evidence", "scheduler", ".locks", `${sessionId}.lock`);
     await assert.rejects(
       () => readdir(lockDir),
       /ENOENT/,
