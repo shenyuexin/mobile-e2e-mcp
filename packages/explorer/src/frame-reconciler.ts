@@ -13,6 +13,40 @@ function isLikelyBundleId(value: string): boolean {
   return value.includes(".") && !value.includes(" ");
 }
 
+function shouldPreserveScrollStateOnReconcile(
+  frame: Frame,
+  snapshot: PageSnapshot,
+  targetAppId: string,
+): boolean {
+  if (!frame.scrollState) {
+    return false;
+  }
+
+  const frameTitle = normalizeTitleForMatch(frame.state.screenTitle);
+  const snapshotTitle = normalizeTitleForMatch(snapshot.screenTitle);
+  if (!frameTitle || !snapshotTitle || frameTitle !== snapshotTitle) {
+    return false;
+  }
+
+  const frameAppId = frame.appId ?? targetAppId;
+  const snapshotAppId = snapshot.appId ?? frameAppId;
+  if (frameAppId !== snapshotAppId) {
+    return false;
+  }
+
+  const framePageContextType = frame.state.pageContextType;
+  const snapshotPageContextType = snapshot.pageContext?.type;
+  if (
+    framePageContextType !== undefined &&
+    snapshotPageContextType !== undefined &&
+    framePageContextType !== snapshotPageContextType
+  ) {
+    return false;
+  }
+
+  return true;
+}
+
 export function findAncestorFrameIndex(
   stack: Frame[],
   snapshot: Pick<PageSnapshot, "screenId" | "screenTitle" | "appId">,
@@ -74,15 +108,20 @@ export function reconcileStackToSnapshot(
     }
 
     const resumedFrame = stack[ancestorFrameIndex];
+    const preserveScrollState = shouldPreserveScrollStateOnReconcile(
+      resumedFrame,
+      snapshot,
+      targetAppId,
+    );
     resumedFrame.state = {
       screenId: snapshot.screenId,
       screenTitle: snapshot.screenTitle,
+      pageContextType: snapshot.pageContext?.type,
       structureHash: hashUiStructure(snapshot.uiTree),
     };
     resumedFrame.appId = snapshot.appId ?? resumedFrame.appId ?? targetAppId;
     resumedFrame.isExternalApp = false;
-    // Invalidate stale scroll state
-    if (resumedFrame.scrollState) {
+    if (resumedFrame.scrollState && !preserveScrollState) {
       console.log(`[FRAME-RECONCILE] Invalidating scrollState at depth=${resumedFrame.depth}`);
       resumedFrame.scrollState = undefined;
     }
@@ -101,6 +140,7 @@ export function reconcileStackToSnapshot(
     rootFrame.state = {
       screenId: snapshot.screenId,
       screenTitle: snapshot.screenTitle,
+      pageContextType: snapshot.pageContext?.type,
       structureHash: hashUiStructure(snapshot.uiTree),
     };
     rootFrame.appId = snapshot.appId ?? rootFrame.appId ?? targetAppId;

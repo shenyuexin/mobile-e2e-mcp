@@ -854,6 +854,107 @@ describe("explore engine recovery", () => {
     );
   });
 
+  it("continues later siblings after a same-page state-changing action resets failure tracking", async () => {
+    const pages = {
+      Settings: makePage("Settings", ["Notifications"]),
+      NotificationsInitial: makePage("Notifications", [
+        "Lock Screen",
+        "Notification Center",
+        "Banners",
+        "Banner Style",
+        "Show Previews",
+        "Notification Grouping",
+        "Settings",
+      ]),
+      NotificationsBannersSelected: makePage("Notifications", [
+        "Lock Screen",
+        "Notification Center",
+        "Banners",
+        "Banner Style",
+        "Show Previews",
+        "Notification Grouping",
+        "Settings",
+        "AAAA Banner State",
+      ]),
+      "Show Previews": makePage("Show Previews", ["Notifications"]),
+      "Notification Grouping": makePage("Notification Grouping", ["Notifications"]),
+    } satisfies Record<string, UiHierarchy>;
+
+    let currentPage:
+      | "Settings"
+      | "Notifications"
+      | "Show Previews"
+      | "Notification Grouping" = "Settings";
+    let notificationsVariant: "initial" | "banners-selected" = "initial";
+    const tapLog: Array<{ page: string; label: string }> = [];
+
+    const currentUi = () => {
+      if (currentPage === "Notifications") {
+        return notificationsVariant === "initial"
+          ? pages.NotificationsInitial
+          : pages.NotificationsBannersSelected;
+      }
+
+      return pages[currentPage];
+    };
+
+    const mcp = withDefaultMcp({
+      launchApp: async () => okResult({}),
+      waitForUiStable: async () => okResult({ stable: true }),
+      inspectUi: async () => okResult({ content: currentUi() }),
+      tapElement: async (args) => {
+        const label = args.contentDesc ?? args.text ?? args.resourceId ?? "unknown";
+        tapLog.push({ page: currentPage, label });
+
+        if (currentPage === "Settings" && label === "Notifications") {
+          currentPage = "Notifications";
+          notificationsVariant = "initial";
+        } else if (currentPage === "Notifications" && label === "Banners") {
+          notificationsVariant = "banners-selected";
+        } else if (currentPage === "Notifications" && label === "Show Previews") {
+          currentPage = "Show Previews";
+        } else if (currentPage === "Notifications" && label === "Notification Grouping") {
+          currentPage = "Notification Grouping";
+        } else if (
+          (currentPage === "Show Previews" || currentPage === "Notification Grouping") &&
+          label === "Notifications"
+        ) {
+          currentPage = "Notifications";
+        }
+
+        return okResult({ tapped: true });
+      },
+      navigateBack: async (args) => {
+        const target = args?.parentPageTitle;
+        if (
+          (currentPage === "Show Previews" || currentPage === "Notification Grouping") &&
+          target === "Notifications"
+        ) {
+          currentPage = "Notifications";
+          return okResult({ navigated: true });
+        }
+        if (currentPage === "Notifications" && target === "Settings") {
+          currentPage = "Settings";
+          return okResult({ navigated: true });
+        }
+        return failedResult("NAVIGATE_BACK_FAILED");
+      },
+      takeScreenshot: async () => okResult({ outputPath: "/tmp/mock.png" }),
+      recoverToKnownState: async () => okResult({ recovered: true }),
+      resetAppState: async () => okResult({ reset: true }),
+      requestManualHandoff: async () => okResult({ handedOff: true }),
+    });
+
+    await explore({ ...createMockConfig(), maxPages: 10, maxDepth: 4 }, mcp);
+
+    const notificationTaps = tapLog
+      .filter((entry) => entry.page === "Notifications")
+      .map((entry) => entry.label);
+
+    assert.equal(notificationTaps.includes("Show Previews"), true);
+    assert.equal(notificationTaps.includes("Notification Grouping"), true);
+  });
+
   it("skips create/add/new editor entries by default while continuing safe siblings", async () => {
     const pages = {
       Settings: makePage("Settings", ["Subtitles & Captioning"]),
