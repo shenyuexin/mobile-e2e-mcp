@@ -1317,6 +1317,7 @@ export async function explore(
 					`${logPrefix} "${element.label}" changed state on "${frame.state.screenTitle ?? "(unknown)"}" ` +
 						`without page transition — updating current frame instead of pushing child`,
 				);
+				recordPageSuccess(circuitBreaker);
 				frame.state.screenId = nextStateSnapshot.screenId;
 				frame.state.structureHash = nextStateStructureHash;
 				transitionLifecycle.transitionCommitted += 1;
