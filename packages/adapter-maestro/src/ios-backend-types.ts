@@ -19,7 +19,7 @@ export interface BackendProbeResult {
  */
 export interface IosExecutionBackend {
   /** Canonical backend identifier used for routing and logging. */
-  readonly backendId: "wda" | "axe" | "simctl" | "devicectl" | "maestro" | "idb";
+  readonly backendId: "wda" | "axe" | "simctl" | "devicectl" | "maestro" | "idb" | "owned-runner";
   /** Human-readable backend name, e.g. "Xcode simctl", "Apple devicectl". */
   readonly backendName: string;
 
