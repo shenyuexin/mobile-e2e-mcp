@@ -29,10 +29,14 @@ export function createCircuitBreaker(
 }
 
 /**
- * Record a successful navigation on the current page.
- * Resets the per-page failure counter.
+ * Record successful traversal progress on the current page.
+ *
+ * Same-frame state changes and gated/visited page handling are valid progress
+ * even when they do not push a new child frame. Reset both counters so those
+ * intentional progress events break the global consecutive-failure streak.
  */
 export function recordPageSuccess(state: CircuitBreakerState): void {
+  state.consecutiveFailedPages = 0;
   state.currentPageFailures = 0;
 }
 
