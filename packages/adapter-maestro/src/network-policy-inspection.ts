@@ -1,4 +1,5 @@
 import { readFile } from "node:fs/promises";
+import { inflateRawSync } from "node:zlib";
 import type {
   InspectNetworkPolicyData,
   InspectNetworkPolicyInput,
@@ -43,6 +44,18 @@ interface IosPolicy {
   allowsArbitraryLoads: boolean;
   exceptionRules: IosExceptionRule[];
   artifactUnsupported: boolean;
+}
+
+interface PolicyFileRead {
+  content?: string;
+  evidence: NetworkPolicyEvidence;
+}
+
+interface ZipEntry {
+  name: string;
+  compressionMethod: number;
+  compressedSize: number;
+  localHeaderOffset: number;
 }
 
 const XML_TRUE = /<true\s*\/>/i;
@@ -104,6 +117,166 @@ async function readOptionalText(pathValue: string | undefined, kind: NetworkPoli
       },
     };
   }
+}
+
+function readUInt16(buffer: Buffer, offset: number): number {
+  return offset + 2 <= buffer.length ? buffer.readUInt16LE(offset) : 0;
+}
+
+function readUInt32(buffer: Buffer, offset: number): number {
+  return offset + 4 <= buffer.length ? buffer.readUInt32LE(offset) : 0;
+}
+
+function findEndOfCentralDirectory(buffer: Buffer): number {
+  const minOffset = Math.max(0, buffer.length - 65_557);
+  for (let offset = buffer.length - 22; offset >= minOffset; offset -= 1) {
+    if (readUInt32(buffer, offset) === 0x06054b50) return offset;
+  }
+  return -1;
+}
+
+function parseZipEntries(buffer: Buffer): ZipEntry[] {
+  const eocdOffset = findEndOfCentralDirectory(buffer);
+  if (eocdOffset < 0) return [];
+
+  const entryCount = readUInt16(buffer, eocdOffset + 10);
+  const centralDirectoryOffset = readUInt32(buffer, eocdOffset + 16);
+  const entries: ZipEntry[] = [];
+  let offset = centralDirectoryOffset;
+
+  for (let index = 0; index < entryCount && offset + 46 <= buffer.length; index += 1) {
+    if (readUInt32(buffer, offset) !== 0x02014b50) break;
+    const compressionMethod = readUInt16(buffer, offset + 10);
+    const compressedSize = readUInt32(buffer, offset + 20);
+    const nameLength = readUInt16(buffer, offset + 28);
+    const extraLength = readUInt16(buffer, offset + 30);
+    const commentLength = readUInt16(buffer, offset + 32);
+    const localHeaderOffset = readUInt32(buffer, offset + 42);
+    const nameStart = offset + 46;
+    const nameEnd = nameStart + nameLength;
+    entries.push({
+      name: buffer.subarray(nameStart, nameEnd).toString("utf8"),
+      compressionMethod,
+      compressedSize,
+      localHeaderOffset,
+    });
+    offset = nameEnd + extraLength + commentLength;
+  }
+
+  return entries;
+}
+
+function extractZipEntry(buffer: Buffer, entry: ZipEntry): Buffer | undefined {
+  const offset = entry.localHeaderOffset;
+  if (readUInt32(buffer, offset) !== 0x04034b50) return undefined;
+  const nameLength = readUInt16(buffer, offset + 26);
+  const extraLength = readUInt16(buffer, offset + 28);
+  const dataStart = offset + 30 + nameLength + extraLength;
+  const dataEnd = dataStart + entry.compressedSize;
+  if (dataEnd > buffer.length) return undefined;
+
+  const compressed = buffer.subarray(dataStart, dataEnd);
+  if (entry.compressionMethod === 0) return compressed;
+  if (entry.compressionMethod === 8) return inflateRawSync(compressed);
+  return undefined;
+}
+
+function xmlTextFromEntry(buffer: Buffer | undefined): string | undefined {
+  if (!buffer) return undefined;
+  const text = buffer.toString("utf8");
+  return /<\?xml|<manifest\b|<network-security-config\b|<plist\b/i.test(text) ? text : undefined;
+}
+
+async function readArtifactEntries(pathValue: string | undefined): Promise<{ entries: Map<string, string>; evidence?: NetworkPolicyEvidence }> {
+  if (!pathValue) return { entries: new Map() };
+  try {
+    const buffer = await readFile(pathValue);
+    const zipEntries = parseZipEntries(buffer);
+    if (zipEntries.length === 0) {
+      return {
+        entries: new Map(),
+        evidence: {
+          kind: "artifact",
+          path: pathValue,
+          status: "unsupported",
+          summary: "Artifact could not be read as a ZIP-based APK/IPA.",
+        },
+      };
+    }
+
+    const entries = new Map<string, string>();
+    for (const entry of zipEntries) {
+      const text = xmlTextFromEntry(extractZipEntry(buffer, entry));
+      if (text) entries.set(entry.name, text);
+    }
+    return {
+      entries,
+      evidence: {
+        kind: "artifact",
+        path: pathValue,
+        status: "read",
+        summary: `Read ZIP artifact metadata from ${pathValue}.`,
+      },
+    };
+  } catch {
+    return {
+      entries: new Map(),
+      evidence: {
+        kind: "artifact",
+        path: pathValue,
+        status: "missing",
+        summary: `Could not read artifact at ${pathValue}.`,
+      },
+    };
+  }
+}
+
+function androidNetworkConfigEntryName(manifestContent: string | undefined): string | undefined {
+  if (!manifestContent) return undefined;
+  const ref = readXmlAttribute(manifestContent, "networkSecurityConfig");
+  const match = ref?.match(/^@xml\/(.+)$/);
+  return match ? `res/xml/${match[1]}.xml` : undefined;
+}
+
+function readArtifactTextEntry(params: {
+  artifactPath: string | undefined;
+  entries: Map<string, string>;
+  entryName: string | undefined;
+  kind: NetworkPolicyEvidence["kind"];
+}): PolicyFileRead {
+  if (!params.artifactPath || !params.entryName) {
+    return {
+      evidence: {
+        kind: params.kind,
+        status: "not_provided",
+        summary: `${params.kind} path was not provided.`,
+      },
+    };
+  }
+  const content = params.entries.get(params.entryName);
+  if (!content) {
+    return {
+      evidence: {
+        kind: params.kind,
+        path: `${params.artifactPath}!${params.entryName}`,
+        status: "unsupported",
+        summary: `${params.kind} was not found as readable XML in the artifact.`,
+      },
+    };
+  }
+  return {
+    content,
+    evidence: {
+      kind: params.kind,
+      path: `${params.artifactPath}!${params.entryName}`,
+      status: "read",
+      summary: `Extracted ${params.kind} from ${params.entryName}.`,
+    },
+  };
+}
+
+function iosInfoPlistEntryName(entries: Map<string, string>): string | undefined {
+  return [...entries.keys()].find((name) => /^Payload\/[^/]+\.app\/Info\.plist$/i.test(name));
 }
 
 function parseAndroidDomainRules(xml: string): AndroidDomainRule[] {
@@ -335,20 +508,28 @@ export async function inspectNetworkPolicyWithMaestro(input: InspectNetworkPolic
   const platform = input.platform;
   const endpoints = normalizeEndpoints(input);
   const evidence: NetworkPolicyEvidence[] = [];
-
-  if (input.artifactPath) {
-    evidence.push({
-      kind: "artifact",
-      path: input.artifactPath,
-      status: "unsupported",
-      summary: "Direct artifact decoding is conditional in this runtime; decoded policy file paths are required for deterministic inspection.",
-    });
-  }
+  const artifact = await readArtifactEntries(input.artifactPath);
+  if (artifact.evidence) evidence.push(artifact.evidence);
 
   let findings: NetworkPolicyEndpointFinding[];
   if (platform === "android") {
-    const manifest = await readOptionalText(input.androidManifestPath, "android_manifest");
-    const networkConfig = await readOptionalText(input.androidNetworkSecurityConfigPath, "android_network_security_config");
+    const manifest = input.androidManifestPath
+      ? await readOptionalText(input.androidManifestPath, "android_manifest")
+      : readArtifactTextEntry({
+        artifactPath: input.artifactPath,
+        entries: artifact.entries,
+        entryName: "AndroidManifest.xml",
+        kind: "android_manifest",
+      });
+    const networkConfigEntry = androidNetworkConfigEntryName(manifest.content);
+    const networkConfig = input.androidNetworkSecurityConfigPath
+      ? await readOptionalText(input.androidNetworkSecurityConfigPath, "android_network_security_config")
+      : readArtifactTextEntry({
+        artifactPath: input.artifactPath,
+        entries: artifact.entries,
+        entryName: networkConfigEntry,
+        kind: "android_network_security_config",
+      });
     evidence.push(manifest.evidence, networkConfig.evidence);
     const policy = parseAndroidPolicy({
       manifestContent: manifest.content,
@@ -358,7 +539,14 @@ export async function inspectNetworkPolicyWithMaestro(input: InspectNetworkPolic
     const refs = evidenceRefsForPlatform(platform, evidence);
     findings = endpoints.map((endpoint) => evaluateAndroidEndpoint(endpoint, policy, refs));
   } else {
-    const plist = await readOptionalText(input.iosInfoPlistPath, "ios_info_plist");
+    const plist = input.iosInfoPlistPath
+      ? await readOptionalText(input.iosInfoPlistPath, "ios_info_plist")
+      : readArtifactTextEntry({
+        artifactPath: input.artifactPath,
+        entries: artifact.entries,
+        entryName: iosInfoPlistEntryName(artifact.entries),
+        kind: "ios_info_plist",
+      });
     evidence.push(plist.evidence);
     const policy = parseIosPolicy({ plistContent: plist.content, artifactPath: input.artifactPath });
     const refs = evidenceRefsForPlatform(platform, evidence);
@@ -379,7 +567,7 @@ export async function inspectNetworkPolicyWithMaestro(input: InspectNetworkPolic
       overallStatus,
       findings,
       evidence,
-      supportLevel: input.artifactPath ? "conditional" : "full",
+      supportLevel: findings.some((finding) => finding.reason === "artifact_decode_unavailable") ? "conditional" : "full",
       limitations: buildLimitations(input),
     },
     nextSuggestions: buildNextSuggestions(platform, findings),

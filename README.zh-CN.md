@@ -239,7 +239,7 @@ Source-of-truth 说明：
 
 `probe_network_readiness`、`inspect_network_policy`
 
-`probe_network_readiness` 检查运行时连通性、DNS、延迟和可选后端可达性。`inspect_network_policy` 使用已解码的 manifest、network-security-config 或 Info.plist 证据，检查 release 配置中普通 HTTP endpoint 是否会被 Android cleartext 或 iOS ATS 策略拦截。它不代理流量，也不修改 App 配置。
+`probe_network_readiness` 检查运行时连通性、DNS、延迟和可选后端可达性。`inspect_network_policy` 使用已解码的 manifest、network-security-config、Info.plist，或可读 APK/IPA ZIP artifact 证据，检查 release 配置中普通 HTTP endpoint 是否会被 Android cleartext 或 iOS ATS 策略拦截。它不代理流量，也不修改 App 配置。
 
 精确签名与输入输出以 `packages/mcp-server/src/server.ts`（工具注册源）为准。
 

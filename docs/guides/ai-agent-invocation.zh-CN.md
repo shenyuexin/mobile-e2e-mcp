@@ -229,8 +229,8 @@
 边界：
 
 - 这是静态 release policy 检查，不是抓包或代理；
-- 优先提供已解码的 `AndroidManifest.xml`、`network_security_config.xml` 或 `Info.plist`；
-- 缺少可读配置时，结果应视为 `unknown`，不能当作已放行。
+- 可以提供已解码的 `AndroidManifest.xml`、`network_security_config.xml`、`Info.plist`，也可以直接提供 ZIP-based APK/IPA artifact；
+- 如果 artifact 内是不可读的二进制 AXML / bplist，结果应视为 `unknown`，不能当作已放行。
 
 ## 4. 推荐工具 vs fallback 工具
 
