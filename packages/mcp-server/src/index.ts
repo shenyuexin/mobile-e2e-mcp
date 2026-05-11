@@ -56,6 +56,7 @@ import { getPageContext } from "./tools/get-page-context.js";
 import { getRecordSessionStatus } from "./tools/get-record-session-status.js";
 import { getScreenSummary } from "./tools/get-screen-summary.js";
 import { getSessionState } from "./tools/get-session-state.js";
+import { inspectNetworkPolicy } from "./tools/inspect-network-policy.js";
 import { inspectUi } from "./tools/inspect-ui.js";
 import { installApp } from "./tools/install-app.js";
 import { launchApp } from "./tools/launch-app.js";
@@ -1082,6 +1083,15 @@ const TOOL_DESCRIPTORS: ReadonlyArray<ToolDescriptor> = [
 		policy: { enforced: true, requiredScopes: ["read"] },
 		session: { required: true, requireResolvedSessionContext: true },
 		audit: { captureResultEvidence: false },
+	}),
+	defineToolDescriptor({
+		name: TOOL_NAMES.inspectNetworkPolicy,
+		description:
+			"Inspect Android cleartext and iOS ATS release policy for provided HTTP endpoints using decoded manifest, network-security-config, or Info.plist evidence.",
+		handler: inspectNetworkPolicy,
+		policy: { enforced: true, requiredScopes: ["read"] },
+		session: { required: false },
+		audit: { captureResultEvidence: true },
 	}),
 	defineToolDescriptor({
 		name: TOOL_NAMES.probeNetworkReadiness,

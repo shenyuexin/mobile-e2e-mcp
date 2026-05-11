@@ -50,6 +50,8 @@ import type {
 	GetSessionStateInput,
 	InspectUiData,
 	InspectUiInput,
+	InspectNetworkPolicyData,
+	InspectNetworkPolicyInput,
 	InstallAppData,
 	InstallAppInput,
 	LaunchAppData,
@@ -212,6 +214,10 @@ export interface MobileE2EMcpToolContractMap {
 	get_page_context: ToolContract<GetPageContextInput, GetPageContextData>;
 	get_screen_summary: ToolContract<GetScreenSummaryInput, GetScreenSummaryData>;
 	get_session_state: ToolContract<GetSessionStateInput, GetSessionStateData>;
+	inspect_network_policy: ToolContract<
+		InspectNetworkPolicyInput,
+		InspectNetworkPolicyData
+	>;
 	inspect_ui: ToolContract<InspectUiInput, InspectUiData>;
 	query_ui: ToolContract<QueryUiInput, QueryUiData>;
 	recover_to_known_state: ToolContract<

@@ -41,6 +41,8 @@ import {
   type GetPageContextData,
   type GetPageContextInput,
   type InspectUiData,
+  type InspectNetworkPolicyData,
+  type InspectNetworkPolicyInput,
   type ResolveUiTargetData,
   type ResolveUiTargetInput,
   type DeviceInfo,
@@ -424,6 +426,9 @@ export { buildInterruptionEvent, decideInterruptionResolution } from "./interrup
 export { buildInterruptionTimelineEvent, buildResumeCheckpoint, hasStateDrift, pickEventSource, summarizeInterruptionDetail } from "./interruption-orchestrator.js";
 export type { InterruptionPolicyContext } from "@mobile-e2e-mcp/core";
 export { classifyDoctorOutcome, isDoctorCriticalFailure } from "./doctor-runtime.js";
+export {
+  inspectNetworkPolicyWithMaestro,
+} from "./network-policy-inspection.js";
 export {
   probeNetworkReadiness,
   classifyNetworkRecoveryStrategy,

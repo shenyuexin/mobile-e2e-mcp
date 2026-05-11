@@ -216,6 +216,22 @@
 
 `list_js_debug_targets -> capture_js_console_logs` 或 `capture_js_network_events`
 
+### 3.12 检查 release HTTP 策略风险
+
+`inspect_network_policy`
+
+适用场景：
+
+- release 包中普通 `http://` 请求失败，但设备网络和后端可达性看起来正常；
+- 需要确认 Android `usesCleartextTraffic` / `network_security_config` 是否允许目标域名；
+- 需要确认 iOS ATS `NSExceptionDomains` 是否允许目标域名。
+
+边界：
+
+- 这是静态 release policy 检查，不是抓包或代理；
+- 优先提供已解码的 `AndroidManifest.xml`、`network_security_config.xml` 或 `Info.plist`；
+- 缺少可读配置时，结果应视为 `unknown`，不能当作已放行。
+
 ## 4. 推荐工具 vs fallback 工具
 
 ### 4.1 交互类

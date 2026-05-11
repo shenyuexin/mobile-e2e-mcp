@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
@@ -68,6 +68,7 @@ test("createServer lists newly added UI tools", () => {
   assert.ok(tools.includes("suggest_known_remediation"));
   assert.ok(tools.includes("get_screen_summary"));
   assert.ok(tools.includes("get_session_state"));
+  assert.ok(tools.includes("inspect_network_policy"));
   assert.ok(tools.includes("query_ui"));
   assert.ok(tools.includes("resolve_ui_target"));
   assert.ok(tools.includes("wait_for_ui"));
@@ -78,6 +79,32 @@ test("createServer lists newly added UI tools", () => {
   assert.ok(tools.includes("tap_element"));
   assert.ok(tools.includes("type_into_element"));
   assert.ok(tools.includes("navigate_back"));
+});
+
+test("server invoke supports inspect_network_policy Android config inspection", async () => {
+  const server = createServer();
+  const sessionId = `server-network-policy-${Date.now()}`;
+  const fixtureDir = path.join(repoRoot, "artifacts", "test-fixtures", sessionId);
+  const manifestPath = path.join(fixtureDir, "AndroidManifest.xml");
+  try {
+    await rm(fixtureDir, { recursive: true, force: true });
+    await mkdir(fixtureDir, { recursive: true });
+    await writeFile(manifestPath, `<manifest><application android:usesCleartextTraffic="true"/></manifest>`, "utf8");
+
+    const result = await server.invoke("inspect_network_policy", {
+      sessionId,
+      platform: "android",
+      urls: ["http://api.example.com/login"],
+      androidManifestPath: manifestPath,
+    });
+
+    assert.equal(result.status, "success");
+    assert.equal(result.reasonCode, "OK");
+    assert.equal(result.data.overallStatus, "allowed");
+    assert.equal(result.data.findings[0]?.matchedRule, "usesCleartextTraffic=true");
+  } finally {
+    await rm(fixtureDir, { recursive: true, force: true });
+  }
 });
 
 test("server invoke supports navigate_back Android dry-run", async () => {
@@ -121,6 +148,7 @@ test("server invoke returns capability discovery profiles", async () => {
   assert.equal(result.data.capabilities.platform, "ios");
   assert.equal(result.data.capabilities.toolCapabilities.find((tool) => tool.toolName === "wait_for_ui")?.supportLevel, "full");
   assert.equal(result.data.capabilities.toolCapabilities.find((tool) => tool.toolName === "scroll_only")?.supportLevel, "full");
+  assert.equal(result.data.capabilities.toolCapabilities.find((tool) => tool.toolName === "inspect_network_policy")?.supportLevel, "full");
   assert.equal(result.data.capabilities.ocrFallback?.deterministicFirst, true);
   assert.equal(result.data.capabilities.ocrFallback?.hostRequirement, "darwin");
   assert.equal(Array.isArray(result.data.capabilities.ocrFallback?.configuredProviders), true);
