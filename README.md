@@ -238,7 +238,7 @@ The server currently exposes **65 tools**. For AI agents, this is the current to
 
 `probe_network_readiness`, `inspect_network_policy`
 
-`probe_network_readiness` checks runtime connectivity, DNS, latency, and optional backend reachability. `inspect_network_policy` checks release configuration risk for plain HTTP endpoints against Android cleartext and iOS ATS policy using decoded manifest, network-security-config, or Info.plist evidence. It does not proxy traffic or mutate app configuration.
+`probe_network_readiness` checks runtime connectivity, DNS, latency, and optional backend reachability. `inspect_network_policy` checks release configuration risk for plain HTTP endpoints against Android cleartext and iOS ATS policy using decoded manifest, network-security-config, Info.plist, or readable APK/IPA ZIP artifact evidence. It does not proxy traffic or mutate app configuration.
 
 For exact signatures and supported inputs/outputs, use `packages/mcp-server/src/server.ts` (the tool registry source of truth).
 
