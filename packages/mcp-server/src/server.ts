@@ -15,6 +15,8 @@ import type {
 	CompareAgainstBaselineInput,
 	CompleteTaskData,
 	CompleteTaskInput,
+	DiagnoseNetworkFailureData,
+	DiagnoseNetworkFailureInput,
 	DescribeCapabilitiesData,
 	DescribeCapabilitiesInput,
   DetectInterruptionData,
@@ -214,6 +216,10 @@ export interface MobileE2EMcpToolContractMap {
 	get_page_context: ToolContract<GetPageContextInput, GetPageContextData>;
 	get_screen_summary: ToolContract<GetScreenSummaryInput, GetScreenSummaryData>;
 	get_session_state: ToolContract<GetSessionStateInput, GetSessionStateData>;
+	diagnose_network_failure: ToolContract<
+		DiagnoseNetworkFailureInput,
+		DiagnoseNetworkFailureData
+	>;
 	inspect_network_policy: ToolContract<
 		InspectNetworkPolicyInput,
 		InspectNetworkPolicyData

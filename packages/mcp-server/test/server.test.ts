@@ -68,6 +68,7 @@ test("createServer lists newly added UI tools", () => {
   assert.ok(tools.includes("suggest_known_remediation"));
   assert.ok(tools.includes("get_screen_summary"));
   assert.ok(tools.includes("get_session_state"));
+  assert.ok(tools.includes("diagnose_network_failure"));
   assert.ok(tools.includes("inspect_network_policy"));
   assert.ok(tools.includes("query_ui"));
   assert.ok(tools.includes("resolve_ui_target"));
@@ -102,6 +103,36 @@ test("server invoke supports inspect_network_policy Android config inspection", 
     assert.equal(result.reasonCode, "OK");
     assert.equal(result.data.overallStatus, "allowed");
     assert.equal(result.data.findings[0]?.matchedRule, "usesCleartextTraffic=true");
+  } finally {
+    await rm(fixtureDir, { recursive: true, force: true });
+  }
+});
+
+test("server invoke supports diagnose_network_failure Android cleartext attribution", async () => {
+  const server = createServer();
+  const sessionId = `server-network-failure-${Date.now()}`;
+  const fixtureDir = path.join(repoRoot, "artifacts", "test-fixtures", sessionId);
+  const manifestPath = path.join(fixtureDir, "AndroidManifest.xml");
+  try {
+    await rm(fixtureDir, { recursive: true, force: true });
+    await mkdir(fixtureDir, { recursive: true });
+    await writeFile(manifestPath, `<manifest><application android:label="Demo"/></manifest>`, "utf8");
+
+    const result = await server.invoke("diagnose_network_failure", {
+      sessionId,
+      platform: "android",
+      releaseHint: "release",
+      failedRequest: {
+        url: "http://api.example.com/login",
+        errorText: "CLEARTEXT communication to api.example.com not permitted",
+      },
+      androidManifestPath: manifestPath,
+    });
+
+    assert.equal(result.status, "success");
+    assert.equal(result.reasonCode, "OK");
+    assert.equal(result.data.classification.reason, "likely_android_cleartext_blocked");
+    assert.equal(result.data.classification.policyRelated, true);
   } finally {
     await rm(fixtureDir, { recursive: true, force: true });
   }
@@ -148,6 +179,7 @@ test("server invoke returns capability discovery profiles", async () => {
   assert.equal(result.data.capabilities.platform, "ios");
   assert.equal(result.data.capabilities.toolCapabilities.find((tool) => tool.toolName === "wait_for_ui")?.supportLevel, "full");
   assert.equal(result.data.capabilities.toolCapabilities.find((tool) => tool.toolName === "scroll_only")?.supportLevel, "full");
+  assert.equal(result.data.capabilities.toolCapabilities.find((tool) => tool.toolName === "diagnose_network_failure")?.supportLevel, "full");
   assert.equal(result.data.capabilities.toolCapabilities.find((tool) => tool.toolName === "inspect_network_policy")?.supportLevel, "full");
   assert.equal(result.data.capabilities.ocrFallback?.deterministicFirst, true);
   assert.equal(result.data.capabilities.ocrFallback?.hostRequirement, "darwin");

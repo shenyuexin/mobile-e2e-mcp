@@ -2109,6 +2109,69 @@ export interface InspectNetworkPolicyData {
   limitations: string[];
 }
 
+// --- Network Failure Policy Diagnosis ---
+
+export type NetworkFailureRequestSource = "js_debug" | "log" | "manual" | "unknown";
+
+export interface NetworkFailureRequest {
+  url?: string;
+  method?: string;
+  status?: number;
+  statusText?: string;
+  errorText?: string;
+  source?: NetworkFailureRequestSource;
+}
+
+export type NetworkFailureReleaseHint = "release" | "debug" | "unknown";
+
+export type NetworkFailureDiagnosisReason =
+  | "likely_android_cleartext_blocked"
+  | "likely_ios_ats_blocked"
+  | "http_allowed_by_policy_failure_elsewhere"
+  | "https_not_cleartext_policy_related"
+  | "http_status_error"
+  | "backend_or_dns_unreachable"
+  | "policy_evidence_missing"
+  | "artifact_decode_unavailable"
+  | "invalid_or_missing_failed_request";
+
+export interface NetworkFailureDiagnosisClassification {
+  reason: NetworkFailureDiagnosisReason;
+  policyRelated: boolean;
+  summary: string;
+}
+
+export interface NetworkFailureReleaseAssessment {
+  releaseHint: NetworkFailureReleaseHint;
+  releaseLike: boolean;
+  source: "release_hint" | "policy_evidence" | "unknown";
+}
+
+export type NetworkFailureDiagnosisConfidence = "high" | "medium" | "low";
+
+export interface DiagnoseNetworkFailureInput {
+  sessionId?: string;
+  platform: Platform;
+  failedRequest?: NetworkFailureRequest;
+  events?: JsNetworkEvent[];
+  artifactPath?: string;
+  androidManifestPath?: string;
+  androidNetworkSecurityConfigPath?: string;
+  iosInfoPlistPath?: string;
+  releaseHint?: NetworkFailureReleaseHint;
+  dryRun?: boolean;
+}
+
+export interface DiagnoseNetworkFailureData {
+  platform: Platform;
+  analyzedRequest?: NetworkFailureRequest;
+  classification: NetworkFailureDiagnosisClassification;
+  confidence: NetworkFailureDiagnosisConfidence;
+  policyInspection?: InspectNetworkPolicyData;
+  releaseAssessment: NetworkFailureReleaseAssessment;
+  evidence: NetworkPolicyEvidence[];
+}
+
 // ─── Navigate Back ────────────────────────────────────────────────────────
 
 /** Target scope for back navigation. */

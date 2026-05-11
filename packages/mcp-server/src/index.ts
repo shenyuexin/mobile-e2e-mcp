@@ -42,6 +42,7 @@ import { compareVisualBaselineTool } from "./tools/compare-visual-baseline.js";
 import { completeTask } from "./tools/complete-task.js";
 import { describeCapabilities } from "./tools/describe-capabilities.js";
 import { detectInterruption } from "./tools/detect-interruption.js";
+import { diagnoseNetworkFailure } from "./tools/diagnose-network-failure.js";
 import { doctor } from "./tools/doctor.js";
 import { endRecordSession } from "./tools/end-record-session.js";
 import { endSession } from "./tools/end-session.js";
@@ -1083,6 +1084,15 @@ const TOOL_DESCRIPTORS: ReadonlyArray<ToolDescriptor> = [
 		policy: { enforced: true, requiredScopes: ["read"] },
 		session: { required: true, requireResolvedSessionContext: true },
 		audit: { captureResultEvidence: false },
+	}),
+	defineToolDescriptor({
+		name: TOOL_NAMES.diagnoseNetworkFailure,
+		description:
+			"Diagnose an observed failed network request and attribute likely Android cleartext or iOS ATS release policy blockers.",
+		handler: diagnoseNetworkFailure,
+		policy: { enforced: true, requiredScopes: ["read"] },
+		session: { required: false },
+		audit: { captureResultEvidence: true },
 	}),
 	defineToolDescriptor({
 		name: TOOL_NAMES.inspectNetworkPolicy,

@@ -60,6 +60,7 @@ test("buildToolList includes the new UI tools", () => {
   const toolNames = tools.map((tool) => tool.name);
 
   assert.ok(toolNames.includes("query_ui"));
+  assert.ok(toolNames.includes("diagnose_network_failure"));
   assert.ok(toolNames.includes("inspect_network_policy"));
   assert.ok(toolNames.includes("capture_js_console_logs"));
   assert.ok(toolNames.includes("capture_js_network_events"));
@@ -116,6 +117,7 @@ test("handleRequest returns stdio initialize payload", async () => {
   assert.equal(typedResult.name, "mobile-e2e-mcp");
   assert.equal(typedResult.protocol, "minimal-stdio-v1");
   assert.ok(typedResult.tools.some((tool) => tool.name === "capture_js_console_logs"));
+  assert.ok(typedResult.tools.some((tool) => tool.name === "diagnose_network_failure"));
   assert.ok(typedResult.tools.some((tool) => tool.name === "inspect_network_policy"));
   assert.ok(typedResult.tools.some((tool) => tool.name === "capture_js_network_events"));
   assert.ok(typedResult.tools.some((tool) => tool.name === "collect_debug_evidence"));

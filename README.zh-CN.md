@@ -21,7 +21,7 @@
 }
 ```
 
-安装后，你将获得 **65 个 MCP 工具** 用于移动端 E2E 自动化，以及内置的 **Explorer** 自动页面遍历能力。
+安装后，你将获得 **66 个 MCP 工具** 用于移动端 E2E 自动化，以及内置的 **Explorer** 自动页面遍历能力。
 
 ## Explorer：自动页面遍历
 
@@ -201,7 +201,7 @@ Source-of-truth 说明：
 
 ## 完整 MCP 工具目录（当前）
 
-当前服务共暴露 **65 个工具**。对于 AI Agent，这是最快建立"可做什么"的入口。
+当前服务共暴露 **66 个工具**。对于 AI Agent，这是最快建立"可做什么"的入口。
 
 ### 1）会话与生命周期
 
@@ -237,9 +237,9 @@ Source-of-truth 说明：
 
 ### 9）网络诊断
 
-`probe_network_readiness`、`inspect_network_policy`
+`probe_network_readiness`、`diagnose_network_failure`、`inspect_network_policy`
 
-`probe_network_readiness` 检查运行时连通性、DNS、延迟和可选后端可达性。`inspect_network_policy` 使用已解码的 manifest、network-security-config、Info.plist，或可读 APK/IPA ZIP artifact 证据，检查 release 配置中普通 HTTP endpoint 是否会被 Android cleartext 或 iOS ATS 策略拦截。它不代理流量，也不修改 App 配置。
+`probe_network_readiness` 检查运行时连通性、DNS、延迟和可选后端可达性。`diagnose_network_failure` 从已观察到的失败请求出发，判断失败是否很可能来自 Android cleartext 或 iOS ATS release 策略拦截。`inspect_network_policy` 保留为底层静态检查器，使用已解码的 manifest、network-security-config、Info.plist，或可读 APK/IPA ZIP artifact 证据，检查普通 HTTP endpoint 是否被策略允许。这些工具不代理流量，也不修改 App 配置。
 
 精确签名与输入输出以 `packages/mcp-server/src/server.ts`（工具注册源）为准。
 
