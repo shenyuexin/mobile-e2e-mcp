@@ -31,7 +31,6 @@ import {
 	decideExplorerPageAction,
 	FailureLog,
 	handleFailure,
-	hasTimedOut,
 	isAndroidExplorerPlatform,
 	isEditorEntryAction,
 	isLowValueLeafAction,
@@ -332,12 +331,17 @@ export async function explore(
 			(candidate) =>
 				candidate.elementIndex >= getCurrentSegmentElements(candidate).length,
 		);
+	const getRemainingRunBudgetMs = (): number =>
+		Math.max(0, config.timeoutMs - (Date.now() - startTime));
+	const isRunTimedOut = (): boolean => getRemainingRunBudgetMs() <= 0;
+	const getBoundedTimeoutMs = (requestedMs: number): number =>
+		Math.min(requestedMs, getRemainingRunBudgetMs());
 
 	// --- DFS main loop ---
 	while (
 		stack.length > 0 &&
 		visited.count < config.maxPages &&
-		!hasTimedOut(config.timeoutMs, startTime) &&
+		!isRunTimedOut() &&
 		!isCircuitOpen(circuitBreaker)
 	) {
 		const frame = stack[stack.length - 1]; // PEEK (don't pop)
@@ -430,7 +434,10 @@ export async function explore(
 							const expectedHomeTitle = frame.state.screenTitle;
 							const expectedHomeStructureHash = frame.state.structureHash;
 							await mcp.launchApp({ appId: config.appId });
-							await mcp.waitForUiStable({ timeoutMs: 3000 });
+							const settleTimeoutMs = getBoundedTimeoutMs(3000);
+							if (settleTimeoutMs > 0) {
+								await mcp.waitForUiStable({ timeoutMs: settleTimeoutMs });
+							}
 
 							const returnSnapshot = await snapshotter.captureSnapshot(config);
 							console.log(
@@ -933,7 +940,10 @@ export async function explore(
 
 		// Retry loop for this element
 		let elementRetries = 0;
-		let elementResult = await tapper.tapAndWait(element, config.timeoutMs);
+		let elementResult = await tapper.tapAndWait(
+			element,
+			getRemainingRunBudgetMs(),
+		);
 
 		while (!elementResult.success) {
 			console.log(
@@ -954,6 +964,10 @@ export async function explore(
 				path: frame.path,
 			});
 
+			if (isRunTimedOut()) {
+				break;
+			}
+
 			const action = handleFailure(
 				elementResult.error,
 				config.failureStrategy,
@@ -965,12 +979,18 @@ export async function explore(
 			}
 			if (action === "retry") {
 				elementRetries++;
-				elementResult = await tapper.tapAndWait(element, config.timeoutMs);
+				elementResult = await tapper.tapAndWait(
+					element,
+					getRemainingRunBudgetMs(),
+				);
 				continue;
 			}
 			if (action === "handoff") {
 				await mcp.requestManualHandoff();
-				elementResult = await tapper.tapAndWait(element, config.timeoutMs);
+				elementResult = await tapper.tapAndWait(
+					element,
+					getRemainingRunBudgetMs(),
+				);
 				if (elementResult.success) break;
 				continue;
 			}
@@ -988,7 +1008,10 @@ export async function explore(
 				console.log(
 					`[EXTERNAL-LINK] Tapped "${element.label}" — waiting 2s for potential app switch...`,
 				);
-				await mcp.waitForUiStable({ timeoutMs: 2000 });
+				const settleTimeoutMs = getBoundedTimeoutMs(2000);
+				if (settleTimeoutMs > 0) {
+					await mcp.waitForUiStable({ timeoutMs: settleTimeoutMs });
+				}
 
 				// Capture snapshot to detect app switching
 				const nextStateSnapshot = await snapshotter.captureSnapshot(config);
@@ -1010,7 +1033,10 @@ export async function explore(
 						`[APP-SWITCH] In external app — immediately launching target app to return...`,
 					);
 					await mcp.launchApp({ appId: config.appId });
-					await mcp.waitForUiStable({ timeoutMs: 2000 });
+					const returnSettleTimeoutMs = getBoundedTimeoutMs(2000);
+					if (returnSettleTimeoutMs > 0) {
+						await mcp.waitForUiStable({ timeoutMs: returnSettleTimeoutMs });
+					}
 					currentAppId = targetAppId; // ← Correct: back to target app
 
 					const returnSnapshot = await snapshotter.captureSnapshot(config);
@@ -1441,15 +1467,20 @@ export async function explore(
 	}
 
 	// --- Generate report ---
+	const timedOut = isRunTimedOut();
+	const circuitOpen = isCircuitOpen(circuitBreaker);
+	const timeoutAbortReason = timedOut
+		? `Exploration timed out after ${config.timeoutMs}ms with ${stack.length} frame(s) still pending`
+		: undefined;
 	const result: ExplorationResult = {
 		visited,
 		failed,
-		aborted: isCircuitOpen(circuitBreaker) || Boolean(recoveryAbortReason),
+		aborted: circuitOpen || Boolean(recoveryAbortReason) || timedOut,
 		abortReason:
 			recoveryAbortReason ??
-			(isCircuitOpen(circuitBreaker)
+			(circuitOpen
 				? `${circuitBreaker.consecutiveFailedPages} consecutive pages with no successful navigation — circuit breaker opened`
-				: undefined),
+				: timeoutAbortReason),
 		sampling:
 			samplingState.appliedPages.size > 0
 				? {

@@ -775,6 +775,61 @@ describe("explore engine recovery", () => {
     assert.equal(lifecycle?.transitionRejected, 1);
   });
 
+  it("marks the run partial when the global exploration deadline is reached", async () => {
+    const originalNow = Date.now;
+    let now = 1_000;
+
+    Date.now = () => now;
+    try {
+      const pages = {
+        Settings: makePage("Settings", ["General", "Accessibility"]),
+        General: makePage("General", []),
+      } satisfies Record<string, UiHierarchy>;
+
+      let currentPage: keyof typeof pages = "Settings";
+      const tapLog: string[] = [];
+
+      const mcp = withDefaultMcp({
+        launchApp: async () => okResult({}),
+        waitForUiStable: async () => okResult({ stable: true }),
+        inspectUi: async () => okResult({ content: pages[currentPage] } as any),
+        tapElement: async (args) => {
+          const label = args.contentDesc ?? args.text ?? args.resourceId ?? "unknown";
+          tapLog.push(label);
+          now += 101;
+
+          if (currentPage === "Settings" && label === "General") {
+            currentPage = "General";
+          }
+
+          return okResult({ tapped: true } as any);
+        },
+        navigateBack: async (args) => {
+          if (currentPage === "General" && args?.parentPageTitle === "Settings") {
+            currentPage = "Settings";
+            return okResult({ navigated: true } as any);
+          }
+          return failedResult("NAVIGATE_BACK_FAILED");
+        },
+        takeScreenshot: async () => okResult({ outputPath: "/tmp/mock.png" } as any),
+        recoverToKnownState: async () => okResult({ recovered: true } as any),
+        resetAppState: async () => okResult({ reset: true } as any),
+        requestManualHandoff: async () => okResult({ handedOff: true } as any),
+      });
+
+      const result = await explore(
+        { ...createMockConfig(), timeoutMs: 100, maxPages: 20 },
+        mcp,
+      );
+
+      assert.equal(result.aborted, true);
+      assert.match(result.abortReason ?? "", /timed out/i);
+      assert.deepEqual(tapLog, ["General"]);
+    } finally {
+      Date.now = originalNow;
+    }
+  });
+
   it("skips remaining siblings on a page after repeated same-screen no-op actions", async () => {
     const pages = {
       Settings: makePage("Settings", ["Screen Time", "Accessibility"]),
