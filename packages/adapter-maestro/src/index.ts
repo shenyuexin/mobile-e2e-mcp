@@ -427,6 +427,9 @@ export { buildInterruptionTimelineEvent, buildResumeCheckpoint, hasStateDrift, p
 export type { InterruptionPolicyContext } from "@mobile-e2e-mcp/core";
 export { classifyDoctorOutcome, isDoctorCriticalFailure } from "./doctor-runtime.js";
 export {
+  diagnoseNetworkFailureWithMaestro,
+} from "./network-failure-diagnosis.js";
+export {
   inspectNetworkPolicyWithMaestro,
 } from "./network-policy-inspection.js";
 export {

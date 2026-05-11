@@ -216,19 +216,41 @@
 
 `list_js_debug_targets -> capture_js_console_logs` 或 `capture_js_network_events`
 
-### 3.12 检查 release HTTP 策略风险
+### 3.12 诊断 release HTTP 策略风险
 
-`inspect_network_policy`
+优先入口：`diagnose_network_failure`
+
+底层静态检查：`inspect_network_policy`
 
 适用场景：
 
 - release 包中普通 `http://` 请求失败，但设备网络和后端可达性看起来正常；
-- 需要确认 Android `usesCleartextTraffic` / `network_security_config` 是否允许目标域名；
-- 需要确认 iOS ATS `NSExceptionDomains` 是否允许目标域名。
+- 已经从 `capture_js_network_events`、日志或人工观察中拿到了失败请求 URL；
+- 需要自动判断 Android `usesCleartextTraffic` / `network_security_config` 或 iOS ATS 是否是失败原因。
+
+推荐调用：
+
+```json
+{
+  "tool": "diagnose_network_failure",
+  "arguments": {
+    "sessionId": "network-failure-demo",
+    "platform": "android",
+    "releaseHint": "release",
+    "artifactPath": "/path/to/app-release.apk",
+    "failedRequest": {
+      "url": "http://api.example.com/login",
+      "errorText": "CLEARTEXT communication to api.example.com not permitted"
+    }
+  }
+}
+```
+
+当只想静态确认某个 domain 是否在白名单中时，再直接调用 `inspect_network_policy`。
 
 边界：
 
-- 这是静态 release policy 检查，不是抓包或代理；
+- 这是失败归因 + 静态 release policy 检查，不是抓包或代理；
 - 可以提供已解码的 `AndroidManifest.xml`、`network_security_config.xml`、`Info.plist`，也可以直接提供 ZIP-based APK/IPA artifact；
 - 如果 artifact 内是不可读的二进制 AXML / bplist，结果应视为 `unknown`，不能当作已放行。
 

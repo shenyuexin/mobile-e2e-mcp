@@ -151,7 +151,7 @@ function buildDiagnosisPacket(params: {
     recommendedNextProbe: params.environmentIssue
       ? "Restore device or Metro inspector availability before relying on summarized evidence."
       : strongestSuspectLayer === "network"
-        ? "Inspect the failing API host, response status, and readiness transition around the action window."
+        ? "Inspect the failing API host, response status, and readiness transition; use diagnose_network_failure when the failed request URL is available."
         : strongestSuspectLayer === "crash"
           ? "Inspect the crash artifact and top crash signal before reading full logs."
           : "Inspect the strongest summarized suspect before escalating to heavier diagnostics.",

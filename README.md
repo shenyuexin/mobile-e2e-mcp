@@ -200,7 +200,7 @@ Tool registry/signature dispatch live in `packages/mcp-server/src/server.ts`, wh
 
 ## Complete MCP Tool Catalog (Current)
 
-The server currently exposes **65 tools**. For AI agents, this is the current tool surface.
+The server currently exposes **66 tools**. For AI agents, this is the current tool surface.
 
 ### 1) Session & lifecycle
 
@@ -236,9 +236,9 @@ The server currently exposes **65 tools**. For AI agents, this is the current to
 
 ### 9) Network diagnostics
 
-`probe_network_readiness`, `inspect_network_policy`
+`probe_network_readiness`, `diagnose_network_failure`, `inspect_network_policy`
 
-`probe_network_readiness` checks runtime connectivity, DNS, latency, and optional backend reachability. `inspect_network_policy` checks release configuration risk for plain HTTP endpoints against Android cleartext and iOS ATS policy using decoded manifest, network-security-config, Info.plist, or readable APK/IPA ZIP artifact evidence. It does not proxy traffic or mutate app configuration.
+`probe_network_readiness` checks runtime connectivity, DNS, latency, and optional backend reachability. `diagnose_network_failure` starts from an observed failed request and attributes likely Android cleartext or iOS ATS release-policy blockers. `inspect_network_policy` remains the lower-level static checker for plain HTTP endpoints using decoded manifest, network-security-config, Info.plist, or readable APK/IPA ZIP artifact evidence. These tools do not proxy traffic or mutate app configuration.
 
 For exact signatures and supported inputs/outputs, use `packages/mcp-server/src/server.ts` (the tool registry source of truth).
 
