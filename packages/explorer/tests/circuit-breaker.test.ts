@@ -4,14 +4,14 @@
  * Tests: closed -> open threshold, success reset, skip-page detection.
  */
 
-import { describe, it } from "node:test";
 import assert from "node:assert/strict";
+import { describe, it } from "node:test";
 import {
   createCircuitBreaker,
-  recordPageSuccess,
-  recordPageFailure,
-  resetCircuit,
   isCircuitOpen,
+  recordPageFailure,
+  recordPageSuccess,
+  resetCircuit,
   shouldSkipPage,
 } from "../src/circuit-breaker.js";
 
@@ -76,14 +76,14 @@ describe("recordPageSuccess", () => {
     assert.equal(cb.currentPageFailures, 0);
   });
 
-  it("does NOT reset consecutiveFailedPages", () => {
+  it("resets consecutiveFailedPages because same-page progress breaks the global failure streak", () => {
     const cb = createCircuitBreaker(3);
     recordPageFailure(cb);
     recordPageFailure(cb);
     assert.equal(cb.consecutiveFailedPages, 2);
 
     recordPageSuccess(cb);
-    assert.equal(cb.consecutiveFailedPages, 2); // unchanged
+    assert.equal(cb.consecutiveFailedPages, 0);
   });
 });
 
@@ -126,6 +126,20 @@ describe("isCircuitOpen", () => {
     }
     assert.equal(isCircuitOpen(cb), true); // 6 >= 6
   });
+
+  it("stays closed when traversal progress interrupts the failure streak", () => {
+    const cb = createCircuitBreaker(3);
+    for (let i = 0; i < 5; i++) {
+      recordPageFailure(cb);
+    }
+    assert.equal(isCircuitOpen(cb), false); // 5 < 6
+
+    recordPageSuccess(cb);
+    recordPageFailure(cb);
+
+    assert.equal(cb.consecutiveFailedPages, 1);
+    assert.equal(isCircuitOpen(cb), false);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -148,12 +162,12 @@ describe("shouldSkipPage", () => {
     assert.equal(shouldSkipPage(cb), true);
   });
 
-  it("resets per-page but keeps consecutive counter", () => {
+  it("resets per-page and global counters after traversal progress", () => {
     const cb = createCircuitBreaker(3);
     recordPageFailure(cb);
     recordPageFailure(cb);
     recordPageSuccess(cb); // resets currentPageFailures
     assert.equal(shouldSkipPage(cb), false);
-    assert.equal(cb.consecutiveFailedPages, 2);
+    assert.equal(cb.consecutiveFailedPages, 0);
   });
 });
