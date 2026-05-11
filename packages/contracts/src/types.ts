@@ -2056,6 +2056,59 @@ export interface NetworkProbeData {
   durationMs: number;
 }
 
+// --- Release Network Policy Inspection ---
+
+export type NetworkPolicyInspectionStatus = "allowed" | "blocked" | "unknown" | "not_applicable";
+
+export type NetworkPolicyFindingReason =
+  | "android_cleartext_permitted"
+  | "android_cleartext_not_permitted"
+  | "ios_ats_allows_http"
+  | "ios_ats_requires_https"
+  | "https_endpoint_not_subject_to_cleartext_policy"
+  | "invalid_endpoint"
+  | "policy_evidence_missing"
+  | "artifact_decode_unavailable";
+
+export interface NetworkPolicyEndpointFinding {
+  endpoint: string;
+  host?: string;
+  scheme?: string;
+  status: NetworkPolicyInspectionStatus;
+  reason: NetworkPolicyFindingReason;
+  matchedRule?: string;
+  evidenceRefs: string[];
+}
+
+export interface NetworkPolicyEvidence {
+  kind: "android_manifest" | "android_network_security_config" | "ios_info_plist" | "artifact";
+  path?: string;
+  status: "read" | "missing" | "unsupported" | "not_provided";
+  summary: string;
+}
+
+export interface InspectNetworkPolicyInput {
+  sessionId: string;
+  platform: Platform;
+  urls?: string[];
+  domains?: string[];
+  artifactPath?: string;
+  androidManifestPath?: string;
+  androidNetworkSecurityConfigPath?: string;
+  iosInfoPlistPath?: string;
+  dryRun?: boolean;
+}
+
+export interface InspectNetworkPolicyData {
+  platform: Platform;
+  checkedEndpoints: string[];
+  overallStatus: NetworkPolicyInspectionStatus;
+  findings: NetworkPolicyEndpointFinding[];
+  evidence: NetworkPolicyEvidence[];
+  supportLevel: "full" | "conditional";
+  limitations: string[];
+}
+
 // ─── Navigate Back ────────────────────────────────────────────────────────
 
 /** Target scope for back navigation. */

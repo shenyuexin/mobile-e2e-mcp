@@ -91,6 +91,7 @@ export const TOOL_NAMES = {
 
   // Validation & network
   validateFlow: "validate_flow",
+  inspectNetworkPolicy: "inspect_network_policy",
   probeNetworkReadiness: "probe_network_readiness",
 
   // Device discovery
