@@ -228,4 +228,33 @@ describe('generateMarkdown', () => {
     assert.ok(md.includes('navigate_back'));
     assert.ok(md.includes('Project-specific wording only'));
   });
+
+  it('includes a detailed sampling report when sampling metadata is present', () => {
+    const pages = [makePage('Fonts', 1, ['General', 'Fonts'])];
+    const modules = inferModules(pages);
+    const md = generateMarkdown(pages, [], modules, mockConfig, {
+      partial: false,
+      durationMs: 5000,
+      sampling: {
+        appliedPages: ['screen-Fonts'],
+        skippedChildren: 2,
+        details: {
+          'screen-Fonts': {
+            screenTitle: 'Fonts',
+            totalChildren: 3,
+            exploredChildren: 1,
+            skippedChildren: 2,
+            exploredLabels: ['Academy Engraved LET'],
+            skippedLabels: ['Al Nile', 'Apple Braille'],
+          },
+        },
+      },
+    });
+
+    assert.ok(md.includes('## Sampling Report'));
+    assert.ok(md.includes('| Sampled Pages | 1 |'));
+    assert.ok(md.includes('| Skipped Children | 2 |'));
+    assert.ok(md.includes('| Fonts | 3 | 1 | 2 | Academy Engraved LET | Al Nile, Apple Braille |'));
+    assert.ok(md.includes('Sampling indicates intentional bounded coverage, not an unexplored traversal failure.'));
+  });
 });

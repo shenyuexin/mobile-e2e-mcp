@@ -19,6 +19,22 @@ export interface MarkdownOpts {
   abortReason?: string;
   /** Total duration in milliseconds. */
   durationMs: number;
+  /** Sampling metadata for high-fanout collection pages. */
+  sampling?: {
+    appliedPages: string[];
+    skippedChildren: number;
+    details?: Record<
+      string,
+      {
+        screenTitle?: string;
+        totalChildren: number;
+        exploredChildren: number;
+        skippedChildren: number;
+        exploredLabels: string[];
+        skippedLabels: string[];
+      }
+    >;
+  };
 }
 
 /** Threshold in milliseconds for marking a page as "slow". */
@@ -75,6 +91,26 @@ export function generateMarkdown(
 	// Page map reference
 	content += `## Page Map\n\n`;
 	content += `See [tree.txt](./tree.txt)\n\n`;
+
+	if (opts.sampling) {
+		content += `## Sampling Report\n\n`;
+		content += `Sampling indicates intentional bounded coverage, not an unexplored traversal failure.\n\n`;
+		content += `| Metric | Value |\n`;
+		content += `|--------|-------|\n`;
+		content += `| Sampled Pages | ${opts.sampling.appliedPages.length} |\n`;
+		content += `| Skipped Children | ${opts.sampling.skippedChildren} |\n\n`;
+
+		const details = opts.sampling.details ?? {};
+		if (Object.keys(details).length > 0) {
+			content += `| Page | Total Children | Explored | Skipped | Explored Labels | Skipped Labels |\n`;
+			content += `|------|----------------|----------|---------|-----------------|----------------|\n`;
+			for (const [screenId, detail] of Object.entries(details)) {
+				const page = detail.screenTitle ?? pages.find((p) => p.screenId === screenId)?.screenTitle ?? screenId;
+				content += `| ${escapeMarkdown(page)} | ${detail.totalChildren} | ${detail.exploredChildren} | ${detail.skippedChildren} | ${escapeMarkdown(formatLabelList(detail.exploredLabels))} | ${escapeMarkdown(formatLabelList(detail.skippedLabels))} |\n`;
+			}
+			content += "\n";
+		}
+	}
 
 	const ruleDecisions = pages
 		.flatMap((page) => [page.ruleDecision, ...(page.ruleDecisions ?? [])])
@@ -166,6 +202,10 @@ function formatDuration(ms: number): string {
 function escapeMarkdown(text: string): string {
   // In table cells, pipe characters need escaping
   return text.replace(/\|/g, '\\|');
+}
+
+function formatLabelList(labels: string[]): string {
+	return labels.length > 0 ? labels.join(", ") : "(none)";
 }
 
 function summarizeRuleDecisionPairs(
