@@ -6,7 +6,7 @@
  */
 
 import assert from "node:assert/strict";
-import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it } from "node:test";
@@ -184,6 +184,41 @@ describe("Pipeline integration", () => {
       }
       rmSync(dir, { recursive: true, force: true });
     }
+  });
+
+  it("includes same-directory log.txt signals in failure review artifacts", async () => {
+    const dir = join(tmpdir(), `explorer-pipeline-log-signals-${Date.now()}`);
+    const runId = "run-with-log-signals";
+    const runDir = join(dir, runId);
+    mkdirSync(runDir, { recursive: true });
+
+    const config = createMockConfig(dir);
+    writeFileSync(
+      join(runDir, "log.txt"),
+      "[BACKTRACK-WARN] method=navigate_back:selector_tap, status=failed, reason=NO_MATCH\n" +
+        "[BACKTRACK-TRACE] method=tap_point_band_back, status=success, reason=OK => success\n",
+      "utf-8",
+    );
+
+    await generateReport([], [], config, {
+      partial: false,
+      durationMs: 1000,
+      runId,
+    });
+
+    const review = JSON.parse(
+      readFileSync(join(runDir, "failure-review.json"), "utf-8"),
+    ) as {
+      logSignals?: {
+        backtrackWarnings: { total: number };
+        backtrackSuccesses: { byMethod: Record<string, number> };
+      };
+    };
+
+    assert.equal(review.logSignals?.backtrackWarnings.total, 1);
+    assert.equal(review.logSignals?.backtrackSuccesses.byMethod.tap_point_band_back, 1);
+
+    rmSync(dir, { recursive: true, force: true });
   });
 
   it("ConfigStore save/load roundtrip with valid config", () => {

@@ -15,6 +15,8 @@ export interface FailureReviewOpts {
   abortReason?: string;
   /** Total duration in milliseconds. */
   durationMs: number;
+  /** Optional raw explorer log text from the run directory. */
+  logText?: string;
 }
 
 export type FailureReviewCategory =
@@ -55,6 +57,33 @@ export interface RuleDecisionContext {
   examples: NonNullable<PageEntry["ruleDecision"]>[];
 }
 
+export interface ExplorerLogSignals {
+  backtrackWarnings: LogSignalCounter;
+  backtrackSuccesses: LogSignalCounter;
+  reasonCodes: Record<string, number>;
+  deviceConnectivity: {
+    usbmuxNotFound: number;
+    coreDeviceProviderMissing: number;
+    connectionRefused: number;
+    ideDisconnected: number;
+    proxyBadGateway: number;
+  };
+  examples: ExplorerLogSignalExample[];
+}
+
+export interface LogSignalCounter {
+  total: number;
+  byMethod: Record<string, number>;
+}
+
+export interface ExplorerLogSignalExample {
+  level: "warn" | "success" | "device";
+  message: string;
+  method?: string;
+  reason?: string;
+  status?: string;
+}
+
 export interface FailureReview {
   appId: string;
   platform: ExplorerConfig["platform"];
@@ -68,17 +97,20 @@ export interface FailureReview {
   patterns: FailureReviewPattern[];
   failedElements: FailureReviewExample[];
   ruleDecisionContext?: RuleDecisionContext;
+  logSignals?: ExplorerLogSignals;
   nextActions: string[];
   artifacts: {
     summary: "summary.json";
     report: "report.md";
     tree: "tree.txt";
     config: "config.json";
+    log?: "log.txt";
   };
 }
 
 const MAX_PATTERN_EXAMPLES = 5;
 const MAX_RULE_EXAMPLES = 10;
+const MAX_LOG_EXAMPLES = 12;
 
 export function generateFailureReviewJson(
   pages: PageEntry[],
@@ -92,6 +124,7 @@ export function generateFailureReviewJson(
   );
   const patterns = groupPatterns(failedElements);
   const ruleDecisionContext = summarizeRuleDecisions(pages);
+  const logSignals = opts.logText ? parseExplorerLogSignals(opts.logText) : undefined;
 
   return {
     appId: config.appId,
@@ -106,14 +139,73 @@ export function generateFailureReviewJson(
     patterns,
     failedElements,
     ...(ruleDecisionContext ? { ruleDecisionContext } : {}),
-    nextActions: buildNextActions(patterns, failures.length, opts),
+    ...(logSignals ? { logSignals } : {}),
+    nextActions: buildNextActions(patterns, failures.length, opts, logSignals),
     artifacts: {
       summary: "summary.json",
       report: "report.md",
       tree: "tree.txt",
       config: "config.json",
+      ...(logSignals ? { log: "log.txt" as const } : {}),
     },
   };
+}
+
+export function parseExplorerLogSignals(logText: string): ExplorerLogSignals {
+  const signals: ExplorerLogSignals = {
+    backtrackWarnings: { total: 0, byMethod: {} },
+    backtrackSuccesses: { total: 0, byMethod: {} },
+    reasonCodes: {},
+    deviceConnectivity: {
+      usbmuxNotFound: 0,
+      coreDeviceProviderMissing: 0,
+      connectionRefused: 0,
+      ideDisconnected: 0,
+      proxyBadGateway: 0,
+    },
+    examples: [],
+  };
+
+  for (const rawLine of logText.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line) {
+      continue;
+    }
+
+    if (line.includes("[BACKTRACK-WARN]")) {
+      const method = extractLogField(line, "method") ?? "unknown";
+      const reason = extractLogField(line, "reason");
+      const status = extractLogField(line, "status");
+      signals.backtrackWarnings.total += 1;
+      increment(signals.backtrackWarnings.byMethod, method);
+      if (reason) {
+        increment(signals.reasonCodes, reason);
+      }
+      pushLogExample(signals, { level: "warn", message: line, method, reason, status });
+      continue;
+    }
+
+    if (line.includes("[BACKTRACK-TRACE]") && isBacktrackSuccessLine(line)) {
+      const method = extractLogField(line, "method") ?? "unknown";
+      const reason = extractLogField(line, "reason");
+      const status = extractLogField(line, "status");
+      signals.backtrackSuccesses.total += 1;
+      increment(signals.backtrackSuccesses.byMethod, method);
+      if (reason && reason !== "OK") {
+        increment(signals.reasonCodes, reason);
+      }
+      pushLogExample(signals, { level: "success", message: line, method, reason, status });
+      continue;
+    }
+
+    const deviceSignal = classifyDeviceConnectivityLine(line);
+    if (deviceSignal) {
+      signals.deviceConnectivity[deviceSignal] += 1;
+      pushLogExample(signals, { level: "device", message: line });
+    }
+  }
+
+  return signals;
 }
 
 export function generateFailureReviewMarkdown(review: FailureReview): string {
@@ -138,6 +230,28 @@ export function generateFailureReviewMarkdown(review: FailureReview): string {
   content += `- [report.md](./${review.artifacts.report})\n`;
   content += `- [tree.txt](./${review.artifacts.tree})\n`;
   content += `- [config.json](./${review.artifacts.config})\n\n`;
+  if (review.artifacts.log) {
+    content += `- [log.txt](./${review.artifacts.log})\n\n`;
+  }
+
+  if (review.logSignals) {
+    content += "## Log Signals\n\n";
+    content += "| Signal | Count |\n";
+    content += "|--------|-------|\n";
+    content += `| Backtrack warnings | ${review.logSignals.backtrackWarnings.total} |\n`;
+    content += `| Backtrack successes | ${review.logSignals.backtrackSuccesses.total} |\n`;
+    content += `| Device connectivity signals | ${sumValues(review.logSignals.deviceConnectivity)} |\n\n`;
+
+    content += "| Backtrack Method | Warnings | Successes |\n";
+    content += "|------------------|----------|-----------|\n";
+    for (const method of uniqueSorted([
+      ...Object.keys(review.logSignals.backtrackWarnings.byMethod),
+      ...Object.keys(review.logSignals.backtrackSuccesses.byMethod),
+    ])) {
+      content += `| ${escapeMarkdown(method)} | ${review.logSignals.backtrackWarnings.byMethod[method] ?? 0} | ${review.logSignals.backtrackSuccesses.byMethod[method] ?? 0} |\n`;
+    }
+    content += "\n";
+  }
 
   if (review.totalFailures === 0) {
     content += "No failures were recorded in this Explorer run.\n";
@@ -273,6 +387,7 @@ function buildNextActions(
   patterns: FailureReviewPattern[],
   totalFailures: number,
   opts: FailureReviewOpts,
+  logSignals?: ExplorerLogSignals,
 ): string[] {
   const actions: string[] = [];
   const categories = new Set(patterns.map((pattern) => pattern.category));
@@ -305,8 +420,80 @@ function buildNextActions(
       "Treat this as a partial run and compare the abort reason with summary.json before making coverage claims.",
     );
   }
+  if (logSignals && logSignals.backtrackWarnings.total > 0) {
+    actions.push(
+      "Use the Log Signals section to separate selector-back failures from successful fallback recovery before changing traversal rules.",
+    );
+  }
+  if ((logSignals?.backtrackSuccesses.byMethod.tap_point_band_back ?? 0) > 0) {
+    actions.push(
+      "tap_point_band_back recovered at least one backtrack; prioritize selector/back-affordance diagnostics before changing the coordinate fallback.",
+    );
+  }
+  if ((logSignals?.reasonCodes.NO_MATCH ?? 0) > 0 || (logSignals?.reasonCodes.AMBIGUOUS_MATCH ?? 0) > 0) {
+    actions.push(
+      "Back selector resolution produced NO_MATCH or AMBIGUOUS_MATCH; inspect the captured UI tree for stable iOS back-button identifiers.",
+    );
+  }
+  if (logSignals && sumValues(logSignals.deviceConnectivity) > 0) {
+    actions.push(
+      "Device connectivity signals were found in log.txt; verify usbmux/libimobiledevice/CoreDevice readiness before treating this as an Explorer traversal failure.",
+    );
+  }
 
   return actions;
+}
+
+function extractLogField(line: string, field: string): string | undefined {
+  const match = new RegExp(`\\b${field}=([^,\\s]+)`).exec(line);
+  return match?.[1]?.replace(/^"|"$/g, "");
+}
+
+function isBacktrackSuccessLine(line: string): boolean {
+  return /\bstatus=success\b/.test(line) || line.includes("=> success");
+}
+
+function classifyDeviceConnectivityLine(
+  line: string,
+): keyof ExplorerLogSignals["deviceConnectivity"] | undefined {
+  const normalized = line.toLowerCase();
+  if (normalized.includes("no connected/matching device found")) {
+    return "usbmuxNotFound";
+  }
+  if (normalized.includes("coredeviceerror") && normalized.includes("no provider was found")) {
+    return "coreDeviceProviderMissing";
+  }
+  if (normalized.includes("connection refused") || normalized.includes("failed to connect")) {
+    return "connectionRefused";
+  }
+  if (normalized.includes("exiting due to ide disconnection")) {
+    return "ideDisconnected";
+  }
+  if (normalized.includes("502 bad gateway")) {
+    return "proxyBadGateway";
+  }
+  return undefined;
+}
+
+function pushLogExample(
+  signals: ExplorerLogSignals,
+  example: ExplorerLogSignalExample,
+): void {
+  if (signals.examples.length < MAX_LOG_EXAMPLES) {
+    signals.examples.push(example);
+  }
+}
+
+function increment(counts: Record<string, number>, key: string): void {
+  counts[key] = (counts[key] ?? 0) + 1;
+}
+
+function uniqueSorted(values: string[]): string[] {
+  return Array.from(new Set(values)).sort((a, b) => a.localeCompare(b));
+}
+
+function sumValues(values: Record<string, number>): number {
+  return Object.values(values).reduce((sum, value) => sum + value, 0);
 }
 
 function countBy<T>(
