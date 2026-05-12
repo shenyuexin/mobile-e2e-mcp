@@ -173,4 +173,59 @@ describe('generateMarkdown', () => {
     assert.ok(md.includes('default.element.help.low-value-skip'));
     assert.ok(md.includes('Help \\| FAQ pages are low value'));
   });
+
+  it('explains rule decisions with summaries, top reasons, and support context', () => {
+    const page = makePage('Settings', 1, ['Settings']);
+    page.ruleDecisions = [
+      {
+        ruleId: 'default.element.help.low-value-skip',
+        category: 'low-value-content',
+        action: 'skip-element',
+        reason: 'Help pages are low value',
+        source: 'default',
+        path: ['Settings', 'Help'],
+        elementLabel: 'Help',
+        supportLevel: 'contract-ready',
+      },
+      {
+        ruleId: 'project.element.faq.low-value-skip',
+        category: 'low-value-content',
+        action: 'skip-element',
+        reason: 'Help pages are low value',
+        source: 'project-config',
+        path: ['Settings', 'FAQ'],
+        elementLabel: 'FAQ',
+        supportLevel: 'experimental',
+        caveat: 'Project-specific wording only',
+      },
+      {
+        ruleId: 'default.page.account.stateful-gate',
+        category: 'stateful-form',
+        action: 'gate-page',
+        reason: 'Account settings can modify user state',
+        source: 'default',
+        path: ['Settings', 'Account'],
+        screenTitle: 'Account',
+        recoveryMethod: 'navigate_back',
+        supportLevel: 'contract-ready',
+      },
+    ];
+    const modules = inferModules([page]);
+    const md = generateMarkdown([page], [], modules, mockConfig, {
+      partial: false,
+      durationMs: 5000,
+    });
+
+    assert.ok(md.includes('Total recorded rule decisions: 3'));
+    assert.ok(md.includes('### Decision Summary'));
+    assert.ok(md.includes('| skip-element | low-value-content | 2 |'));
+    assert.ok(md.includes('| gate-page | stateful-form | 1 |'));
+    assert.ok(md.includes('### Top Skip Reasons'));
+    assert.ok(md.includes('| 2 | skip-element | low-value-content | Help pages are low value |'));
+    assert.ok(md.includes('### Decision Examples'));
+    assert.ok(md.includes('project-config'));
+    assert.ok(md.includes('experimental'));
+    assert.ok(md.includes('navigate_back'));
+    assert.ok(md.includes('Project-specific wording only'));
+  });
 });
