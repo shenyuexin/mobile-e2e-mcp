@@ -58,7 +58,7 @@ Framework lane boundary (current truth):
 
 - Android emulator/device online via `adb devices` (recommended Android 9 / API 28 or newer)
 - `adb` and `pnpm` installed and available in your `PATH`
-- Expo sample app checked in under `examples/rn-login-demo/`
+- A local Expo React Native sample available via `EXPO_PROJECT_ROOT`
 - Expo Go (`host.exp.exponent`) installed on the selected Android device for the RN Phase 02 lane
 - `com.epam.mobitru` installed only when running the Mobitru showcase/native/flutter lanes
 - `ffmpeg` and `ffprobe` installed (required for `publish-showcase-assets-android.sh`)
@@ -75,7 +75,7 @@ Notes:
 
 - If `DEVICE_ID` is unset, both recording wrappers and direct demo TS scripts auto-select the first online Android device.
 - `APK_PATH` is supported by both recording wrappers and by `publish-showcase-assets-android.sh`.
-- Start Expo for the tracked RN sample with `pnpm --dir examples/rn-login-demo start` before running the dedicated Phase 02 acceptance command when using Expo Go.
+- Start Expo for the local RN sample referenced by `EXPO_PROJECT_ROOT` before running the dedicated Phase 02 acceptance command when using Expo Go.
 - `pnpm run validate:phase2-rn-android-acceptance` uses the React Native Android sample flow and writes lane-local artifacts under `output/evidence/phase2-rn-android/**` before regenerating `output/reports/phase-sample-report.*` and `output/reports/acceptance-evidence.*`.
 
 ## Snapshot assets used by README

@@ -3,8 +3,7 @@
   "private": true,
   "packageManager": "pnpm@10.30.3",
   "workspaces": [
-    "packages/*",
-    "examples/rn-login-demo"
+    "packages/*"
   ],
   "scripts": {
     "build": "pnpm -r --if-present build",

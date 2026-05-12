@@ -16,11 +16,6 @@ function main(): void {
   const repoRoot = repoRootFromScript();
 
   const requiredFiles = [
-    "examples/rn-login-demo/package.json",
-    "examples/rn-login-demo/app.json",
-    "examples/rn-login-demo/App.tsx",
-    "examples/rn-login-demo/index.ts",
-    "examples/rn-login-demo/tsconfig.json",
     "scripts/dev/run-phase2-rn-android.sh",
     "flows/samples/react-native/android-login-smoke.yaml",
   ];
@@ -32,15 +27,9 @@ function main(): void {
   const packageJson = readFileSync(path.join(repoRoot, "package.json"), "utf8");
   assert.equal(packageJson.includes('"validate:phase2-rn-android-acceptance"'), true);
 
-  const demoPackageJson = readFileSync(path.join(repoRoot, "examples/rn-login-demo/package.json"), "utf8");
-  assert.equal(demoPackageJson.includes('"expo"'), true);
-  assert.equal(demoPackageJson.includes('"start"'), true);
-
-  const appSource = readFileSync(path.join(repoRoot, "examples/rn-login-demo/App.tsx"), "utf8");
-  assert.equal(appSource.includes('testID="phone-input"'), true);
-  assert.equal(appSource.includes('testID="password-input"'), true);
-  assert.equal(appSource.includes('testID="login-button"'), true);
-  assert.equal(appSource.includes('testID="welcome-home"'), true);
+  const runnerScript = readFileSync(path.join(repoRoot, "scripts/dev/run-phase2-rn-android.sh"), "utf8");
+  assert.equal(runnerScript.includes("EXPO_PROJECT_ROOT"), true);
+  assert.equal(runnerScript.includes("Set EXPO_PROJECT_ROOT to a local Expo React Native sample"), true);
 
   const showcaseReadme = readFileSync(path.join(repoRoot, "docs/showcase/README.md"), "utf8");
   assert.equal(showcaseReadme.includes('validate:phase2-rn-android-acceptance'), true);
