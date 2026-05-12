@@ -5,7 +5,7 @@
  * config snapshot, and index management.
  */
 
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type {
   ExplorerConfig,
@@ -98,7 +98,11 @@ export async function generateReport(
   writeFileSync(join(runDir, 'report.md'), markdown, 'utf-8');
 
   // Generate failure-review artifacts as diagnostic companions to report.md.
-  const failureReview = generateFailureReviewJson(pages, failures, config, opts);
+  const logPath = join(runDir, 'log.txt');
+  const failureReview = generateFailureReviewJson(pages, failures, config, {
+    ...opts,
+    ...(existsSync(logPath) ? { logText: readFileSync(logPath, 'utf-8') } : {}),
+  });
   writeFileSync(join(runDir, 'failure-review.json'), JSON.stringify(failureReview, null, 2), 'utf-8');
   writeFileSync(join(runDir, 'failure-review.md'), generateFailureReviewMarkdown(failureReview), 'utf-8');
 
@@ -141,8 +145,11 @@ export { generateMarkdown } from './markdown.js';
 export {
   generateFailureReviewJson,
   generateFailureReviewMarkdown,
+  parseExplorerLogSignals,
 } from './failure-review.js';
 export type {
+  ExplorerLogSignalExample,
+  ExplorerLogSignals,
   FailureReview,
   FailureReviewCategory,
   FailureReviewOpts,
