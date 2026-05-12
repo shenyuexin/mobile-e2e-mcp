@@ -111,6 +111,7 @@ export function generateMarkdown(
   // Failure report
   if (failures.length > 0) {
     content += `## Alerts\n\n`;
+    content += `See [failure-review.md](./failure-review.md) for grouped diagnostics and next actions.\n\n`;
     content += `### ❌ Failed Pages (${failures.length})\n\n`;
     for (const f of failures) {
       const pathStr = f.path.length > 0 ? f.path.join(' → ') : '(root)';

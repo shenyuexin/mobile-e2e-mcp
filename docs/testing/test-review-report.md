@@ -1,8 +1,11 @@
 # Test Code Review Report
 
 > **Generated:** 2026-04-09
+> **Status sync:** 2026-05-12
 > **Scope:** All 53 test files across `packages/core` (4), `packages/adapter-maestro` (31), `packages/adapter-vision` (3), `packages/mcp-server` (11), and `scripts/` (4)
 > **Method:** Full source-to-test mapping, assertion quality audit, coverage gap analysis
+
+> **Phase 21 sync note:** This audit is retained as historical context. Since it was written, Phase 21 Plan 01 closed the critical empty/thin-test gaps, and Phase 21 Plan 03 added coverage tooling, previously untested-tool coverage, and ajv-backed output-contract validation. Phase 21 Plan 02 medium-path hardening remains tracked separately.
 
 ---
 
@@ -16,7 +19,7 @@
 | `mcp-server` | 11 | HIGH | Excellent dry-run tool coverage; weak on non-dry-run and error paths |
 | `scripts` | 4 | HIGH | Focused, meaningful assertions |
 
-**No fake/trivial tests found** — all test files contain real assertions against actual behavior. However, several files are too thin (1–2 tests) and several critical paths remain untested.
+**Updated status:** the critical empty/thin-test findings below have been remediated by Phase 21 Plan 01. Remaining work should focus on the medium-path error cases tracked by `21-02-PLAN.md`.
 
 ---
 
@@ -81,12 +84,12 @@
 
 | File | Issue |
 |------|-------|
-| **device-runtime-ios.test.ts** | **Completely empty** — only imports, zero test bodies |
-| **action-outcome-startup.test.ts** | 1 test, 1 narrow remediation scenario, weak assertion (regex `.includes()`) |
-| **diagnostics-pull.test.ts** | 3 tests, 3 are "function exists" checks; core functions (`boundedRemoteFileRead`) untestable without mocking |
-| **interruption-classifier.test.ts** | 2 tests (permission_prompt + unknown); many types untested (system_alert, overlay, keyboard, etc.) |
-| **interruption-orchestrator.test.ts** | 1 trivial test |
-| **doctor-runtime.test.ts** | 1 test, only checks that check names exist in an array |
+| **device-runtime-ios.test.ts** | ✅ Remediated in Phase 21 Plan 01 — behavioral parser/runtime-hook coverage added |
+| **action-outcome-startup.test.ts** | ✅ Remediated in Phase 21 Plan 01 — multiple remediation paths covered |
+| **diagnostics-pull.test.ts** | ✅ Remediated in Phase 21 Plan 01 — mocked runner coverage added |
+| **interruption-classifier.test.ts** | ✅ Remediated in Phase 21 Plan 01 — missing interruption types covered |
+| **interruption-orchestrator.test.ts** | ✅ Remediated in Phase 21 Plan 01 — checkpoint/state-drift paths covered |
+| **doctor-runtime.test.ts** | ✅ Remediated in Phase 21 Plan 01 — status/detail assertions added |
 
 ### 2.2 Strong Coverage — Score: HIGH
 
@@ -182,7 +185,7 @@
 | **mcp-stdio-server.test.ts** (1 test) | Good integration test but missing malformed JSON input, unknown methods, process crash |
 | **session-lease.test.ts** (5 tests) | Core semantics tested; missing stale lease recovery, concurrent access races |
 | **session-scheduler.test.ts** (3 tests) | Queue wait type checks are weak (`typeof === "number"` doesn't prove serialization) |
-| **tool-output-contracts.test.ts** (7+ tests) | Custom validator is "minimal subset"; only checks first 3 array items; synthetic payloads not real tool output |
+| **tool-output-contracts.test.ts** (7+ tests) | ✅ Remediated in Phase 21 Plan 03 — ajv-backed schema validation added |
 
 ### 4.3 Weak Coverage — Score: LOW ⚠️
 
@@ -253,7 +256,7 @@ A real JSON Schema validator (e.g., `ajv`) with real tool output snapshots would
 
 ### 6.5 Empty/Placeholder Test File
 
-**`packages/adapter-maestro/test/device-runtime-ios.test.ts`** is completely empty — only imports `test` and `assert` but has zero test bodies. This is a zero-coverage file.
+**Status update:** `packages/adapter-maestro/test/device-runtime-ios.test.ts` is no longer empty. Phase 21 Plan 01 added behavioral coverage for iOS parser, predicate, runtime hook, and attach-target paths.
 
 ### 6.6 Testability Risk: Unmockable Shell Dependencies
 
@@ -308,15 +311,15 @@ However, the following are **weak assertions** that pass trivially:
 
 ### 8.1 Critical (Do First)
 
-1. **Remove or implement `device-runtime-ios.test.ts`** — empty file with zero coverage
-2. **Strengthen `interruption-tools.test.ts`** — currently 1 smoke test with trivial assertions; add per-tool behavioral tests
+1. ✅ **Remove or implement `device-runtime-ios.test.ts`** — completed in Phase 21 Plan 01
+2. ✅ **Strengthen `interruption-tools.test.ts`** — completed in Phase 21 Plan 01
 3. **Add YAML config loading tests to `interruption-policy.test.ts`** — the primary config input mechanism is completely untested
 
 ### 8.2 High Priority
 
 4. **Add error-path tests to core** — corrupt JSON, missing directories, invalid input
 5. **Add non-dry-run integration tests for critical tools** — at least verify command construction for untested tools
-6. **Replace custom JSON Schema validator with `ajv`** — use real tool output snapshots
+6. ✅ **Replace custom JSON Schema validator with `ajv`** — completed in Phase 21 Plan 03
 7. **Add deduplication and capping tests to `failure-memory-store.test.ts`** — the most interesting behaviors are untested
 
 ### 8.3 Medium Priority
@@ -382,13 +385,13 @@ This report's findings have been converted into a 3-plan Phase 21 implementation
 
 | Metric | Pre-Phase 21 | Post-Phase 21 Target |
 |--------|-------------|---------------------|
-| Empty test files | 1 | 0 |
-| LOW-scored test files | 9 | 0 |
+| Empty test files | 1 | 0 achieved for the critical gap file |
+| LOW-scored test files | 9 | Critical gaps remediated; medium-path backlog remains in `21-02-PLAN.md` |
 | MEDIUM-scored test files | 19 | ≤ 10 (only those with inherently limited scope) |
 | Untested MCP tools | 5 | 0 |
 | Fake/trivial assertions | 4 instances | 0 |
-| Coverage tooling | None | c8 with per-package baseline reports |
-| JSON Schema validator | Custom (minimal) | ajv with real snapshots |
+| Coverage tooling | None | c8 baseline recorded in `docs/testing/coverage-baseline.md` |
+| JSON Schema validator | Custom (minimal) | ajv-backed validation landed |
 
 ---
 

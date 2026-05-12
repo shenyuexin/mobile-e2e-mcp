@@ -131,6 +131,8 @@ describe("Pipeline integration", () => {
     const runDir = join(dir, runDirName);
     assert.ok(existsSync(join(runDir, "summary.json")));
     assert.ok(existsSync(join(runDir, "report.md")));
+    assert.ok(existsSync(join(runDir, "failure-review.json")));
+    assert.ok(existsSync(join(runDir, "failure-review.md")));
     assert.ok(existsSync(join(runDir, "tree.txt")));
 
     rmSync(dir, { recursive: true, force: true });

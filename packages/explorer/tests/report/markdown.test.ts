@@ -112,6 +112,7 @@ describe('generateMarkdown', () => {
     });
 
     assert.ok(md.includes('## Alerts'));
+    assert.ok(md.includes('[failure-review.md](./failure-review.md)'));
     assert.ok(md.includes('### ❌ Failed Pages (2)'));
     assert.ok(md.includes('submit-btn'));
     assert.ok(md.includes('cancel-btn'));
