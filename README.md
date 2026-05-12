@@ -41,6 +41,7 @@ Key features:
 - **Circuit breaker**: automatically stops when exploration hits diminishing returns or configured limits
 - **Structured coverage reports**: outputs machine-consumable reports showing which screens and elements were discovered
 - **Rule-based gating**: respects skip-page, skip-element, sampling, and risk-gating rules for safe exploration
+- **Experimental horizontal fallback**: after vertical segments are exhausted, Explorer can probe horizontally scrollable content with bounded page-identity checks
 
 ### Output
 
@@ -50,6 +51,8 @@ Explorer produces a directory of structured artifacts:
 |------|-------------|
 | `tree.txt` | ASCII tree of all discovered pages and navigation paths |
 | `report.md` | Human-readable coverage report with module breakdown |
+| `failure-review.md` | Human-readable failure triage with grouped patterns and suggested next actions |
+| `failure-review.json` | Machine-consumable failure triage summary |
 | `summary.json` | Machine-consumable metrics and page metadata |
 | `config.json` | Runtime configuration and rule settings used for the run |
 

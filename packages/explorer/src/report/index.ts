@@ -15,6 +15,7 @@ import type {
   TransitionLifecycleSummary,
 } from '../types.js';
 import { generateAsciiTree } from './ascii.js';
+import { generateFailureReviewJson, generateFailureReviewMarkdown } from './failure-review.js';
 import { updateIndex } from './index-manager.js';
 import { generateMarkdown } from './markdown.js';
 import { inferModules } from './modules.js';
@@ -57,6 +58,7 @@ export interface ReportOpts {
  * Writes the following to the output directory:
  * - summary.json — structured run data
  * - report.md — human-readable Markdown report
+ * - failure-review.json / failure-review.md — focused failure diagnostics
  * - tree.txt — ASCII tree of discovered pages
  * - config.json — configuration snapshot
  * - Updates index.json in the parent report directory
@@ -95,6 +97,11 @@ export async function generateReport(
   const markdown = generateMarkdown(pages, failures, modules, config, opts);
   writeFileSync(join(runDir, 'report.md'), markdown, 'utf-8');
 
+  // Generate failure-review artifacts as diagnostic companions to report.md.
+  const failureReview = generateFailureReviewJson(pages, failures, config, opts);
+  writeFileSync(join(runDir, 'failure-review.json'), JSON.stringify(failureReview, null, 2), 'utf-8');
+  writeFileSync(join(runDir, 'failure-review.md'), generateFailureReviewMarkdown(failureReview), 'utf-8');
+
   // Generate tree.txt
   const asciiTree = generateAsciiTree(pages, opts.sampling?.details);
   writeFileSync(join(runDir, 'tree.txt'), asciiTree, 'utf-8');
@@ -131,6 +138,16 @@ export type { ModuleGroup } from './modules.js';
 export { generateSummaryJson, generateRunId, countUniquePaths } from './summary.js';
 export type { RunSummary, RunIndexEntry } from './summary.js';
 export { generateMarkdown } from './markdown.js';
+export {
+  generateFailureReviewJson,
+  generateFailureReviewMarkdown,
+} from './failure-review.js';
+export type {
+  FailureReview,
+  FailureReviewCategory,
+  FailureReviewOpts,
+  FailureReviewPattern,
+} from './failure-review.js';
 export { generateMermaidGraph, generateMermaidGraphLargeApp, escapeMermaidLabel, isLargeApp } from './mermaid.js';
 export { generateAsciiTree } from './ascii.js';
 export { updateIndex, loadIndex, findRunById, computeDiff } from './index-manager.js';
