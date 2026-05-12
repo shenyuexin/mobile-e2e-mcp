@@ -81,14 +81,34 @@ export function generateMarkdown(
 		.filter((decision): decision is NonNullable<PageEntry["ruleDecision"]> => decision !== undefined);
 	if (ruleDecisions.length > 0) {
 		content += `## Rule Decisions\n\n`;
-		content += `| Rule | Category | Action | Example | Reason |\n`;
-		content += `|------|----------|--------|---------|--------|\n`;
+		content += `Total recorded rule decisions: ${ruleDecisions.length}\n\n`;
+		content += `These decisions explain intentional non-coverage such as skipped elements, gated pages, sampled collections, and deferred risky actions.\n\n`;
+
+		content += `### Decision Summary\n\n`;
+		content += `| Action | Category | Count |\n`;
+		content += `|--------|----------|-------|\n`;
+		for (const row of summarizeRuleDecisionPairs(ruleDecisions)) {
+			content += `| ${escapeMarkdown(row.action)} | ${escapeMarkdown(row.category)} | ${row.count} |\n`;
+		}
+		content += "\n";
+
+		content += `### Top Skip Reasons\n\n`;
+		content += `| Count | Action | Category | Reason |\n`;
+		content += `|-------|--------|----------|--------|\n`;
+		for (const row of summarizeRuleDecisionReasons(ruleDecisions).slice(0, 10)) {
+			content += `| ${row.count} | ${escapeMarkdown(row.action)} | ${escapeMarkdown(row.category)} | ${escapeMarkdown(row.reason)} |\n`;
+		}
+		content += "\n";
+
+		content += `### Decision Examples\n\n`;
+		content += `| Rule | Source | Support | Action | Example | Reason | Recovery | Caveat |\n`;
+		content += `|------|--------|---------|--------|---------|--------|----------|--------|\n`;
 		for (const decision of ruleDecisions.slice(0, 10)) {
 			const example =
 				decision.elementLabel ??
 				decision.screenTitle ??
 				(decision.path.join(" → ") || "(unknown)");
-			content += `| ${escapeMarkdown(decision.ruleId)} | ${escapeMarkdown(decision.category)} | ${escapeMarkdown(decision.action)} | ${escapeMarkdown(example)} | ${escapeMarkdown(decision.reason)} |\n`;
+			content += `| ${escapeMarkdown(decision.ruleId)} | ${escapeMarkdown(decision.source ?? "unknown")} | ${escapeMarkdown(decision.supportLevel ?? "unspecified")} | ${escapeMarkdown(decision.action)} | ${escapeMarkdown(example)} | ${escapeMarkdown(decision.reason)} | ${escapeMarkdown(decision.recoveryMethod ?? "")} | ${escapeMarkdown(decision.caveat ?? "")} |\n`;
 		}
 		content += "\n";
 	}
@@ -146,4 +166,53 @@ function formatDuration(ms: number): string {
 function escapeMarkdown(text: string): string {
   // In table cells, pipe characters need escaping
   return text.replace(/\|/g, '\\|');
+}
+
+function summarizeRuleDecisionPairs(
+	decisions: NonNullable<PageEntry["ruleDecision"]>[],
+): Array<{ action: string; category: string; count: number }> {
+	const counts = new Map<string, { action: string; category: string; count: number }>();
+	for (const decision of decisions) {
+		const key = `${decision.action}\u0000${decision.category}`;
+		const current = counts.get(key) ?? {
+			action: decision.action,
+			category: decision.category,
+			count: 0,
+		};
+		current.count += 1;
+		counts.set(key, current);
+	}
+	return Array.from(counts.values()).sort(
+		(a, b) =>
+			b.count - a.count ||
+			a.action.localeCompare(b.action) ||
+			a.category.localeCompare(b.category),
+	);
+}
+
+function summarizeRuleDecisionReasons(
+	decisions: NonNullable<PageEntry["ruleDecision"]>[],
+): Array<{ action: string; category: string; reason: string; count: number }> {
+	const counts = new Map<
+		string,
+		{ action: string; category: string; reason: string; count: number }
+	>();
+	for (const decision of decisions) {
+		const key = `${decision.action}\u0000${decision.category}\u0000${decision.reason}`;
+		const current = counts.get(key) ?? {
+			action: decision.action,
+			category: decision.category,
+			reason: decision.reason,
+			count: 0,
+		};
+		current.count += 1;
+		counts.set(key, current);
+	}
+	return Array.from(counts.values()).sort(
+		(a, b) =>
+			b.count - a.count ||
+			a.action.localeCompare(b.action) ||
+			a.category.localeCompare(b.category) ||
+			a.reason.localeCompare(b.reason),
+	);
 }
