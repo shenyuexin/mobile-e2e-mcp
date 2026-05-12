@@ -4,7 +4,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 RUN_COUNT="${1:-1}"
-EXPO_PROJECT_ROOT="${EXPO_PROJECT_ROOT:-$ROOT/examples/rn-login-demo}"
+EXPO_PROJECT_ROOT="${EXPO_PROJECT_ROOT:-}"
 
 export ACCEPTANCE_ENVIRONMENT="${ACCEPTANCE_ENVIRONMENT:-local-self-hosted}"
 export ACCEPTANCE_PHASE="${ACCEPTANCE_PHASE:-Phase 2 RN Android acceptance}"
@@ -17,8 +17,8 @@ export PHASE_REPORT_PLATFORMS="${PHASE_REPORT_PLATFORMS:-react-native-android}"
 export ACCEPTANCE_RUN_METADATA_PATH="${ACCEPTANCE_RUN_METADATA_PATH:-$ROOT/output/reports/phase2-rn-android-run-metadata.json}"
 
 if [ ! -f "$EXPO_PROJECT_ROOT/package.json" ] || [ ! -f "$EXPO_PROJECT_ROOT/App.tsx" ]; then
-  printf 'Phase 2 RN Android sample app is missing under %s.\n' "$EXPO_PROJECT_ROOT" >&2
-  printf 'Expected repo-owned sample files before running acceptance lane.\n' >&2
+  printf 'Phase 2 RN Android sample app is missing.\n' >&2
+  printf 'Set EXPO_PROJECT_ROOT to a local Expo React Native sample before running acceptance.\n' >&2
   exit 1
 fi
 

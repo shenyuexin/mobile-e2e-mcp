@@ -161,7 +161,7 @@ The `elements.ts` file currently has iOS-centric type sets. The following Androi
 
 | App | Type | Available | Suitable |
 |-----|------|-----------|----------|
-| `rn-login-demo` (Expo) | React Native | ✅ (in workspace) | ⚠️ Needs Metro server running |
+| `rn-login-demo` (Expo) | React Native | external local sample | ⚠️ Set `EXPO_PROJECT_ROOT` and keep Metro running |
 | `examples/demo-ios-app` | Native iOS | ❌ (artifact not built) | N/A |
 | `examples/demo-flutter-app` | Flutter | ❌ (artifact not built) | N/A |
 | `com.apple.Preferences` (iOS Settings) | Native iOS | ✅ (system app) | ⚠️ List-based, not Tab Bar |
