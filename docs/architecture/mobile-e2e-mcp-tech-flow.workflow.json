@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "mobile-e2e-mcp Technical Architecture Flow",
+    "subtitle": "AI agent -> MCP policy/session control -> deterministic platform execution -> bounded fallback -> evidence/recovery loop",
+    "output": "docs/architecture/mobile-e2e-mcp-tech-flow.html",
+    "viewBox": [720, 860]
+  },
+  "lanes": [
+    { "id": "client", "label": "Client + Entry" },
+    { "id": "mcp", "label": "MCP Server Gateway" },
+    { "id": "control", "label": "Control Plane" },
+    { "id": "execution", "label": "Execution Plane" },
+    { "id": "device", "label": "Device + Evidence" }
+  ],
+  "nodes": [
+    { "id": "agent", "lane": "client", "col": 0, "type": "external", "label": "AI Agent", "sublabel": "Codex / CLI" },
+    { "id": "tool", "lane": "client", "col": 1, "type": "frontend", "label": "Tool Intent", "sublabel": "typed request" },
+    { "id": "registry", "lane": "mcp", "col": 1, "type": "backend", "label": "Registry", "sublabel": "server.ts" },
+    { "id": "guard", "lane": "mcp", "col": 3, "type": "security", "label": "Policy Guard", "sublabel": "scope check" },
+    { "id": "result", "lane": "mcp", "col": 5, "type": "frontend", "label": "ToolResult", "sublabel": "structured" },
+    { "id": "session", "lane": "control", "col": 0, "type": "database", "label": "Session", "sublabel": "lease + timeline" },
+    { "id": "contracts", "lane": "control", "col": 2, "type": "database", "label": "Contracts", "sublabel": "schemas + codes" },
+    { "id": "router", "lane": "control", "col": 5, "type": "backend", "label": "Router", "sublabel": "platform choice" },
+    { "id": "deterministic", "lane": "execution", "col": 1, "type": "backend", "label": "Deterministic", "sublabel": "ID/tree/text" },
+    { "id": "interrupt", "lane": "execution", "col": 3, "type": "security", "label": "Interrupt", "sublabel": "detect/classify" },
+    { "id": "vision", "lane": "execution", "col": 5, "type": "messagebus", "label": "OCR / CV", "sublabel": "bounded fallback" },
+    { "id": "platforms", "lane": "device", "col": 3, "type": "cloud", "label": "Android / iOS", "sublabel": "ADB AXe WDA" },
+    { "id": "evidence", "lane": "device", "col": 5, "type": "database", "label": "Evidence", "sublabel": "screens logs trees" }
+  ],
+  "edges": [
+    { "from": "agent", "to": "tool", "variant": "default" },
+    { "from": "tool", "to": "registry", "variant": "emphasis", "fromSide": "bottom", "toSide": "top", "route": "drop" },
+    { "from": "registry", "to": "guard", "variant": "security", "fromSide": "right", "toSide": "left", "route": "straight" },
+    { "from": "registry", "to": "session", "variant": "dashed", "fromSide": "bottom", "toSide": "top", "route": "drop-left" },
+    { "from": "guard", "to": "contracts", "variant": "dashed", "fromSide": "bottom", "toSide": "top", "route": "drop" },
+    { "from": "guard", "to": "router", "variant": "emphasis", "fromSide": "bottom", "toSide": "top", "route": "drop" },
+    { "from": "router", "to": "deterministic", "variant": "emphasis", "fromSide": "bottom", "toSide": "top", "route": "drop-left" },
+    { "from": "deterministic", "to": "platforms", "variant": "emphasis", "fromSide": "bottom", "toSide": "top", "route": "drop" },
+    { "from": "platforms", "to": "evidence", "variant": "default", "fromSide": "right", "toSide": "left", "route": "straight" },
+    { "from": "evidence", "to": "result", "variant": "emphasis", "fromSide": "top", "toSide": "bottom", "via": [[625, 538], [700, 538], [700, 300], [625, 300]] },
+    { "from": "deterministic", "to": "interrupt", "variant": "security", "fromSide": "right", "toSide": "left", "route": "straight" },
+    { "from": "interrupt", "to": "vision", "variant": "security", "fromSide": "right", "toSide": "left", "route": "straight" },
+    { "from": "vision", "to": "platforms", "variant": "dashed", "fromSide": "bottom", "toSide": "top", "route": "drop" },
+    { "from": "session", "to": "evidence", "variant": "dashed", "fromSide": "right", "toSide": "left", "via": [[150, 367], [150, 615], [563, 615]] },
+    { "from": "evidence", "to": "router", "variant": "dashed", "fromSide": "top", "toSide": "left", "via": [[625, 538], [552, 538], [552, 367], [571, 367]] }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "Primary Technology Stack",
+      "items": [
+        "TypeScript + pnpm monorepo with packages/contracts, core, adapter-vision, adapter-maestro, explorer, mcp-server",
+        "MCP SDK entrypoint publishes @shenyuexin/mobile-e2e-mcp and exposes typed tool wrappers",
+        "Android uses ADB and UIAutomator; iOS uses AXe, WDA, simctl, and devicectl depending on target"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Decision Flow",
+      "items": [
+        "Tool request is validated against policy profile, session context, and typed contracts before execution",
+        "Router chooses platform/backend by device, framework profile, requested capability, and policy constraints",
+        "Execution must prefer stable IDs, tree, and semantic matching before any OCR/CV path"
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "Evidence + Recovery Loop",
+      "items": [
+        "Every action should preserve status, reasonCode, attempts, artifacts, data, and nextSuggestions",
+        "Screenshots, UI trees, logs, crash signals, performance traces, and replay events attach to the session timeline",
+        "Failures feed interruption handling, attribution, remediation suggestions, checkpoint replay, or manual handoff"
+      ]
+    }
+  ]
+}

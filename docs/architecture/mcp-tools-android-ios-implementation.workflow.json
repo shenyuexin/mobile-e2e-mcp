@@ -1,0 +1,85 @@
+{
+  "schema_version": 1,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "MCP Tools Android / iOS Implementation Principles",
+    "subtitle": "66 MCP tools grouped into key families; clean routing from shared MCP control to Android/iOS execution backends",
+    "output": "docs/architecture/mcp-tools-android-ios-implementation.html",
+    "viewBox": [720, 820]
+  },
+  "lanes": [
+    { "id": "tools", "label": "MCP tool families" },
+    { "id": "control", "label": "Shared decision layer" },
+    { "id": "android", "label": "Android implementation" },
+    { "id": "ios", "label": "iOS implementation" },
+    { "id": "outcome", "label": "Evidence and result" }
+  ],
+  "nodes": [
+    { "id": "toolSurface", "lane": "tools", "col": 0, "type": "frontend", "label": "66 Tools", "sublabel": "session/UI/app", "tag": "families", "width": 96 },
+    { "id": "networkRn", "lane": "tools", "col": 2, "type": "frontend", "label": "Network + RN", "sublabel": "probe, policy, JS debug", "width": 126 },
+    { "id": "contracts", "lane": "control", "col": 1, "type": "database", "label": "Contracts", "sublabel": "typed envelopes", "width": 112 },
+    { "id": "policy", "lane": "control", "col": 3, "type": "security", "label": "Policy + Session", "sublabel": "scope, lease, timeline", "width": 126 },
+    { "id": "router", "lane": "control", "col": 5, "type": "backend", "label": "Adapter Router", "sublabel": "platform + capability", "width": 108 },
+    { "id": "androidUi", "lane": "android", "col": 0, "type": "cloud", "label": "ADB + UIA", "sublabel": "tree + input", "width": 96 },
+    { "id": "androidLife", "lane": "android", "col": 2, "type": "cloud", "label": "ADB Lifecycle", "sublabel": "install, launch, reset", "width": 128 },
+    { "id": "androidObs", "lane": "android", "col": 4, "type": "cloud", "label": "Android Evidence", "sublabel": "screencap, logcat", "width": 134 },
+    { "id": "androidPerf", "lane": "android", "col": 5, "type": "cloud", "label": "Perfetto", "sublabel": "trace capture", "width": 96 },
+    { "id": "iosUi", "lane": "ios", "col": 0, "type": "cloud", "label": "AXe / WDA", "sublabel": "hierarchy + actions", "width": 96 },
+    { "id": "iosLife", "lane": "ios", "col": 2, "type": "cloud", "label": "simctl / devicectl", "sublabel": "install, launch, logs", "width": 142 },
+    { "id": "iosObs", "lane": "ios", "col": 4, "type": "cloud", "label": "iOS Evidence", "sublabel": "logs, crash, shots", "width": 126 },
+    { "id": "iosPerf", "lane": "ios", "col": 5, "type": "cloud", "label": "xctrace", "sublabel": "profiler templates", "width": 96 },
+    { "id": "vision", "lane": "outcome", "col": 1, "type": "messagebus", "label": "Vision Fallback", "sublabel": "bounded OCR/CV", "width": 112 },
+    { "id": "artifacts", "lane": "outcome", "col": 3, "type": "database", "label": "Artifacts", "sublabel": "screens, trees, traces", "width": 126 },
+    { "id": "result", "lane": "outcome", "col": 5, "type": "backend", "label": "ToolResult", "sublabel": "status + reasonCode", "tag": "AI-readable", "width": 108 }
+  ],
+  "edges": [
+    { "from": "toolSurface", "to": "contracts", "variant": "default", "fromSide": "bottom", "toSide": "top", "route": "drop-right" },
+    { "from": "networkRn", "to": "contracts", "variant": "dashed", "fromSide": "bottom", "toSide": "top", "route": "drop-left" },
+    { "from": "contracts", "to": "policy", "variant": "security", "route": "straight" },
+    { "from": "policy", "to": "router", "variant": "emphasis", "route": "straight" },
+    { "from": "router", "to": "androidUi", "variant": "emphasis", "fromSide": "bottom", "toSide": "top", "via": [[625, 292], [88, 292]] },
+    { "from": "router", "to": "androidLife", "variant": "default", "fromSide": "bottom", "toSide": "top", "via": [[625, 284], [300, 284]] },
+    { "from": "router", "to": "androidObs", "variant": "dashed", "fromSide": "bottom", "toSide": "top", "via": [[625, 276], [500, 276]] },
+    { "from": "router", "to": "androidPerf", "variant": "dashed", "fromSide": "bottom", "toSide": "top", "via": [[625, 268]] },
+    { "from": "router", "to": "iosUi", "variant": "emphasis", "fromSide": "bottom", "toSide": "top", "via": [[625, 416], [88, 416]] },
+    { "from": "router", "to": "iosLife", "variant": "default", "fromSide": "bottom", "toSide": "top", "route": "bottom-channel", "channelY": 476 },
+    { "from": "router", "to": "iosObs", "variant": "dashed", "fromSide": "bottom", "toSide": "top", "route": "bottom-channel", "channelY": 490 },
+    { "from": "router", "to": "iosPerf", "variant": "dashed", "fromSide": "bottom", "toSide": "top", "route": "bottom-channel", "channelY": 504 },
+    { "from": "router", "to": "vision", "variant": "security", "fromSide": "bottom", "toSide": "top", "via": [[625, 538], [220, 538]] },
+    { "from": "androidObs", "to": "artifacts", "variant": "emphasis", "fromSide": "bottom", "toSide": "top", "route": "drop" },
+    { "from": "androidPerf", "to": "artifacts", "variant": "dashed", "fromSide": "bottom", "toSide": "top", "route": "drop-left" },
+    { "from": "iosObs", "to": "artifacts", "variant": "emphasis", "fromSide": "left", "toSide": "top", "via": [[430, 491]] },
+    { "from": "iosPerf", "to": "artifacts", "variant": "dashed", "fromSide": "bottom", "toSide": "top", "via": [[625, 558], [412, 558], [412, 589]] },
+    { "from": "vision", "to": "result", "variant": "security", "fromSide": "right", "toSide": "left", "route": "straight" },
+    { "from": "artifacts", "to": "result", "variant": "emphasis", "fromSide": "right", "toSide": "left", "route": "straight" }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "How to Read This",
+      "items": [
+        "Lines show ownership and data direction; detailed command names stay in nodes and cards to avoid label overlap.",
+        "The shared layer validates typed contracts, enforces policy/session scope, then routes by platform and capability.",
+        "The current code constant lists 66 MCP tools; the diagram groups them by implementation path."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Android Backend",
+      "items": [
+        "UI tools use UIAutomator hierarchy first, then ADB input commands for tap, type, back, and swipe.",
+        "Lifecycle and device tools use ADB install, monkey launch, force-stop, pm clear, and adb devices.",
+        "Diagnostics use screencap, logcat, crash buffers, ANR traces, bugreport, screenrecord, and Perfetto."
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "iOS Backend",
+      "items": [
+        "The iOS router auto-selects AXe for simulators and WDA for physical devices unless overridden.",
+        "simctl and devicectl provide lifecycle, install, launch, log, crash, and attach-target support.",
+        "xctrace templates and WDA/AXe artifacts feed the same ToolResult and artifact pipeline."
+      ]
+    }
+  ]
+}
