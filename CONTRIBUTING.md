@@ -11,6 +11,14 @@ pnpm typecheck
 pnpm test
 ```
 
+For probe entrypoint changes, also run:
+
+```bash
+pnpm run validate:probe-dry-run
+```
+
+This validates the Android and iOS simulator probe contracts without requiring a real device or booted simulator.
+
 ## Branching and pull requests
 
 1. Fork the repository and create a focused branch.

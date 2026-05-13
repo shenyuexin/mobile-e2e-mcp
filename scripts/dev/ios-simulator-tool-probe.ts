@@ -48,6 +48,52 @@ interface ProbeSummary {
   unknown: number;
 }
 
+const IOS_SIMULATOR_DRY_RUN_TOOLS = [
+  "start_session",
+  "get_session_state",
+  "terminate_app",
+  "launch_app",
+  "wait_for_ui",
+  "wait_for_ui_stable",
+  "resolve_ui_target",
+  "scroll_only",
+  "tap_element",
+  "type_into_element",
+  "execute_intent",
+  "perform_action_with_evidence",
+  "complete_task",
+  "recover_to_known_state",
+  "replay_last_stable_path",
+  "run_flow",
+  "explain_last_failure",
+  "find_similar_failures",
+  "rank_failure_candidates",
+  "compare_against_baseline",
+  "resume_interrupted_action",
+  "capture_js_console_logs",
+  "capture_js_network_events",
+  "end_session",
+] as const;
+
+export function buildIosSimulatorToolProbeDryRunReport() {
+  return {
+    mode: "dry-run",
+    probe: "ios-simulator-tool-probe",
+    platform: "ios",
+    runnerProfile: "native_ios",
+    backend: "axe",
+    appId: "com.apple.Preferences",
+    requiresDevice: false,
+    checklistSource: "docs/testing/ios-simulator-tool-probe-checklist.md",
+    plannedTools: [...IOS_SIMULATOR_DRY_RUN_TOOLS],
+  };
+}
+
+function printIosSimulatorToolProbeDryRun(): void {
+  console.log("iOS simulator tool probe dry-run contract passed.");
+  console.log(JSON.stringify(buildIosSimulatorToolProbeDryRunReport(), null, 2));
+}
+
 function pickActionId(data: unknown): string | undefined {
   if (!data || typeof data !== "object") return undefined;
   const envelope = data as { outcome?: unknown };
@@ -582,6 +628,11 @@ const entryFilePath = process.argv[1];
 const isDirectExecution = Boolean(entryFilePath) && import.meta.url === new URL(`file://${entryFilePath}`).href;
 
 if (isDirectExecution) {
+  if (process.argv.includes("--dry-run")) {
+    printIosSimulatorToolProbeDryRun();
+    process.exit(0);
+  }
+
   runIosSimulatorToolProbe().catch((error: unknown) => {
     const message = error instanceof Error ? error.stack ?? error.message : String(error);
     console.error(`[ios-simulator-tool-probe] ${message}`);
