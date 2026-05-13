@@ -479,13 +479,11 @@ export async function runAndroidToolProbe(): Promise<void> {
   // Phase 4: Flow / integration
   // ═══════════════════════════════════════════════════════════════
 
-  // ── Step 13: run_flow ─────────────────────────────────────────
-  logStep("run_flow — 运行 flow");
-  push("run_flow", await invoke("run_flow", {
-    sessionId, platform, runnerProfile, deviceId, flowPath, runCount: 1,
-    runnerScript: "scripts/dev/run-phase1-android.sh",
-    env: { ANDROID_REPLAY_BACKEND: "owned-adb" },
-  }), "run android-settings-smoke flow");
+  // ── Step 13: validate_flow ────────────────────────────────────
+  logStep("validate_flow — 验证 flow");
+  push("validate_flow", await invoke("validate_flow", {
+    sessionId, platform, runnerProfile, deviceId, appId, flowPath,
+  }), "validate android-settings-smoke flow without legacy runner");
 
   // ═══════════════════════════════════════════════════════════════
   // Phase 5: Failure context tools

@@ -10,6 +10,12 @@ This folder contains reproducible, real-device demo evidence used by README.
 
 - `docs/showcase/flow-record-replay-demo.md`
 
+## Explorer real-device evidence
+
+- Android physical-device Explorer run: `artifacts/explorer/android-full/2026-04-28T03-38-20/`
+- Evidence summary: Settings app on device `10AEA40Z3Y000R5`, full mode, 45 pages, max depth 4, 0 failures, 33m 50s duration.
+- Key exercised paths: `inspect_ui`, `tap_element`, Android `navigate_back` via system back, external-app boundary recovery, page-context gating, screen-drift reconciliation, and report generation.
+
 ## Record-session demo
 
 - `docs/showcase/record-session-demo.md`
@@ -25,13 +31,19 @@ This folder contains reproducible, real-device demo evidence used by README.
 - Visible interruption + recovery (Android real device):
   - `docs/showcase/videos/m2e-interruption-home-recovery-35s.mp4`
 
-## Repro scripts
+## Current real-device entrypoints
 
-- Happy path script: `pnpm tsx scripts/dev/demo-happy-path-android.ts`
-- Interruption/recovery script: `pnpm tsx scripts/dev/demo-interruption-home-recovery-android.ts`
-- Happy path recording wrapper: `bash scripts/dev/record-demo-happy-path-android.sh`
-- Interruption recording wrapper: `bash scripts/dev/record-demo-interruption-home-recovery-android.sh`
-- One-command publisher (record + curate + refresh assets): `bash scripts/dev/publish-showcase-assets-android.sh`
+- Android Explorer evidence: `artifacts/explorer/android-full/2026-04-28T03-38-20/`
+- Android probe: `pnpm run validate:android-tool-probe`
+- iOS probe: `pnpm run validate:ios-tool-probe`
+
+## Legacy demo scripts
+
+- Happy path script: `pnpm tsx scripts/legacy/dev/demo-happy-path-android.ts`
+- Interruption/recovery script: `pnpm tsx scripts/legacy/dev/demo-interruption-home-recovery-android.ts`
+- Happy path recording wrapper: `bash scripts/legacy/dev/record-demo-happy-path-android.sh`
+- Interruption recording wrapper: `bash scripts/legacy/dev/record-demo-interruption-home-recovery-android.sh`
+- One-command publisher (record + curate + refresh assets): `bash scripts/legacy/dev/publish-showcase-assets-android.sh`
 
 ## CI platform smoke baseline flows
 
@@ -61,22 +73,23 @@ Framework lane boundary (current truth):
 - A local Expo React Native sample available via `EXPO_PROJECT_ROOT`
 - Expo Go (`host.exp.exponent`) installed on the selected Android device for the RN Phase 02 lane
 - `com.epam.mobitru` installed only when running the Mobitru showcase/native/flutter lanes
-- `ffmpeg` and `ffprobe` installed (required for `publish-showcase-assets-android.sh`)
+- `ffmpeg` and `ffprobe` installed (required for the legacy `publish-showcase-assets-android.sh`)
 
 Optional fast install path from this repo before recording:
 
 ```bash
 (cd examples/demo-android-app && ./gradlew assembleDebug)
 APK_PATH=examples/demo-android-app/app/build/outputs/apk/debug/app-debug.apk \
-  bash scripts/dev/record-demo-happy-path-android.sh
+  bash scripts/legacy/dev/record-demo-happy-path-android.sh
 ```
 
 Notes:
 
 - If `DEVICE_ID` is unset, both recording wrappers and direct demo TS scripts auto-select the first online Android device.
-- `APK_PATH` is supported by both recording wrappers and by `publish-showcase-assets-android.sh`.
+- `APK_PATH` is supported by both legacy recording wrappers and by `publish-showcase-assets-android.sh`.
 - Start Expo for the local RN sample referenced by `EXPO_PROJECT_ROOT` before running the dedicated Phase 02 acceptance command when using Expo Go.
 - `pnpm run validate:phase2-rn-android-acceptance` uses the React Native Android sample flow and writes lane-local artifacts under `output/evidence/phase2-rn-android/**` before regenerating `output/reports/phase-sample-report.*` and `output/reports/acceptance-evidence.*`.
+- `pnpm run validate:phase3-real-run` is retained as a legacy sample compatibility matrix. Use Explorer/probe artifacts as the primary real-device proof for the current tool surface.
 
 ## Snapshot assets used by README
 

@@ -13,7 +13,7 @@ case "${1:-}" in
     ;;
   -h|--help)
     cat <<'EOF'
-Usage: bash scripts/dev/cleanup-legacy-output-roots.sh [--delete]
+Usage: bash scripts/legacy/dev/cleanup-legacy-output-roots.sh [--delete]
 
 Default mode is a dry run. It reports legacy local output roots that can be
 removed after the output/ migration. Pass --delete to remove them.

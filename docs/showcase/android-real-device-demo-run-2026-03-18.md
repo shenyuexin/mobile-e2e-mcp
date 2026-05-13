@@ -54,8 +54,8 @@ Curated README-facing videos (tracked under docs):
 
 ### Repeatable scripts
 
-- `pnpm tsx scripts/dev/demo-happy-path-android.ts`
-- `pnpm tsx scripts/dev/demo-interruption-home-recovery-android.ts`
+- `pnpm tsx scripts/legacy/dev/demo-happy-path-android.ts`
+- `pnpm tsx scripts/legacy/dev/demo-interruption-home-recovery-android.ts`
 
 ### Session evidence (example session)
 

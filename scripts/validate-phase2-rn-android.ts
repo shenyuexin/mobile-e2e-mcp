@@ -16,7 +16,7 @@ function main(): void {
   const repoRoot = repoRootFromScript();
 
   const requiredFiles = [
-    "scripts/dev/run-phase2-rn-android.sh",
+    "scripts/dev/run-rn-android-acceptance.sh",
     "flows/samples/react-native/android-login-smoke.yaml",
   ];
 
@@ -27,7 +27,7 @@ function main(): void {
   const packageJson = readFileSync(path.join(repoRoot, "package.json"), "utf8");
   assert.equal(packageJson.includes('"validate:phase2-rn-android-acceptance"'), true);
 
-  const runnerScript = readFileSync(path.join(repoRoot, "scripts/dev/run-phase2-rn-android.sh"), "utf8");
+  const runnerScript = readFileSync(path.join(repoRoot, "scripts/dev/run-rn-android-acceptance.sh"), "utf8");
   assert.equal(runnerScript.includes("EXPO_PROJECT_ROOT"), true);
   assert.equal(runnerScript.includes("Set EXPO_PROJECT_ROOT to a local Expo React Native sample"), true);
 

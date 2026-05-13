@@ -17,19 +17,19 @@
 ### 一键执行脚本
 
 ```bash
-pnpm tsx scripts/dev/demo-happy-path-android.ts
+pnpm tsx scripts/legacy/dev/demo-happy-path-android.ts
 ```
 
 ### 一键录屏脚本（推荐）
 
 ```bash
-bash scripts/dev/record-demo-happy-path-android.sh
+bash scripts/legacy/dev/record-demo-happy-path-android.sh
 ```
 
 ### 一键发布脚本（录制 + 归档 + 刷新素材）
 
 ```bash
-bash scripts/dev/publish-showcase-assets-android.sh
+bash scripts/legacy/dev/publish-showcase-assets-android.sh
 ```
 
 该脚本会自动：
@@ -54,7 +54,7 @@ bash scripts/dev/publish-showcase-assets-android.sh
 - `APP_ID`（默认 `com.epam.mobitru`）
 - `SESSION_ID`（默认自动生成）
 
-发布脚本补充前置（`publish-showcase-assets-android.sh`）：
+发布脚本补充前置（legacy `publish-showcase-assets-android.sh`）：
 
 - 需要本机已安装 `ffmpeg` 与 `ffprobe`
 
@@ -103,13 +103,13 @@ bash scripts/dev/publish-showcase-assets-android.sh
 ### 一键执行脚本
 
 ```bash
-pnpm tsx scripts/dev/demo-interruption-home-recovery-android.ts
+pnpm tsx scripts/legacy/dev/demo-interruption-home-recovery-android.ts
 ```
 
 ### 一键录屏脚本（推荐）
 
 ```bash
-bash scripts/dev/record-demo-interruption-home-recovery-android.sh
+bash scripts/legacy/dev/record-demo-interruption-home-recovery-android.sh
 ```
 
 常用参数同上（`DEVICE_ID / APP_ID / DURATION_SECONDS / OUT_DIR / PREFIX / SESSION_ID`）。
@@ -131,7 +131,7 @@ bash scripts/dev/record-demo-interruption-home-recovery-android.sh
 
 1. Happy Path 主视频：`m2e-happy-path-scroll-pause-40s.mp4`（或新脚本生成同类视频）
 2. Interruption & Recovery 主视频：`docs/showcase/videos/m2e-interruption-home-recovery-35s.mp4`
-3. Interruption & Recovery 复现视频：由 `record-demo-interruption-home-recovery-android.sh` 生成
+3. Interruption & Recovery 复现视频：由 legacy `record-demo-interruption-home-recovery-android.sh` 生成
 4. 关键帧 4-6 张（登录页、首页滚动后、加购后、Orders、Cart、中断恢复前后）
 5. 一段结构化输出 JSON（脚本 stdout，可直接贴到文档）
 6. 两个 GIF 预览：`docs/showcase/assets/happy-preview.gif`、`docs/showcase/assets/interruption-preview.gif`

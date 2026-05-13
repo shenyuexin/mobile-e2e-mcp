@@ -158,7 +158,7 @@
 | 启动会话 | `start_session` | 创建会话记录，带策略画像、平台、设备、应用 |
 | 录制流程 | `start_record_session` → `end_record_session` | `recording-runtime.ts` — 将平台事件映射为可重放动作 |
 | 导出到 Maestro | `export_session_flow` | `recording-mapper.ts` — 将会话动作转换为 Maestro YAML |
-| 运行流程 | `run_flow` | `flow-runtime.ts` — 通过适配器执行 Maestro 流程 |
+| 运行流程 | `run_flow` | `flow-runtime.ts` — Android 真机常用命令回放以 owned-adb 为主路径，Maestro 仅作为边缘命令 fallback |
 | 任务执行 | `execute_intent` / `complete_task` | `task-planner.ts` — 高层意图 → 有界多步动作 |
 | 结束会话 | `end_session` | 关闭会话，输出最终元数据 |
 

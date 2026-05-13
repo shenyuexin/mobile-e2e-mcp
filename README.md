@@ -21,7 +21,7 @@ This repository is a pnpm monorepo that combines MCP tooling, adapter execution,
 }
 ```
 
-Once installed, you get **64 MCP tools** for mobile E2E automation, plus a built-in **Explorer** for automatic page traversal.
+Once installed, you get **66 MCP tools** for mobile E2E automation, plus a built-in **Explorer** for automatic page traversal.
 
 ## Explorer: Automatic Page Traversal
 
@@ -88,7 +88,7 @@ If you're searching for terms like **mobile test harness**, **real-device Androi
 - **Failure-intelligence harness**: reason codes, evidence artifacts, and remediation suggestions
 - **Governance-aware harness**: policy profiles, auditable sessions, and controlled tool surfaces
 - **Explorer harness**: DFS-based automatic page traversal with state graph, circuit breaker, and structured coverage reports *(available via CLI)*
-- **Real-device demo harness**: reproducible scripts + videos for happy path and interruption recovery
+- **Real-device evidence**: Explorer/probe artifacts plus historical videos for happy path and interruption recovery
 
 ## Capability Showcase
 
@@ -98,10 +98,14 @@ If you want a quick hands-on tour before diving into architecture details, start
   - `docs/showcase/videos/m2e-happy-path-scroll-pause-40s.mp4`
 - Visible interruption + recovery video (HOME interruption -> recover_to_known_state -> continue action):
   - `docs/showcase/videos/m2e-interruption-home-recovery-35s.mp4`
-- Repro scripts:
-  - `bash scripts/dev/record-demo-happy-path-android.sh`
-  - `bash scripts/dev/record-demo-interruption-home-recovery-android.sh`
-  - `bash scripts/dev/publish-showcase-assets-android.sh` (record + curate videos + refresh snapshots/GIFs)
+- Current real-device verification:
+  - Android Explorer evidence: `artifacts/explorer/android-full/2026-04-28T03-38-20/`
+  - Android probe entrypoint: `pnpm run validate:android-tool-probe`
+  - iOS probe entrypoint: `pnpm run validate:ios-tool-probe`
+- Historical demo scripts:
+  - `bash scripts/legacy/dev/record-demo-happy-path-android.sh`
+  - `bash scripts/legacy/dev/record-demo-interruption-home-recovery-android.sh`
+  - `bash scripts/legacy/dev/publish-showcase-assets-android.sh` (record + curate videos + refresh snapshots/GIFs)
 - Demo playbook and evidence index:
   - [docs/showcase/README.md](docs/showcase/README.md)
   - [docs/showcase/demo-playbook.zh-CN.md](docs/showcase/demo-playbook.zh-CN.md)
@@ -130,7 +134,7 @@ It is an execution layer that lets AI agents run mobile test actions safely and 
 
 ### Can this harness run on real Android devices?
 
-Yes. This repository includes real-device scripts and recordings under `scripts/dev/*` and `docs/showcase/*`, including happy-path and interruption-recovery demos.
+Yes. Current real-device evidence is centered on Explorer/probe artifacts, with historical showcase scripts under `scripts/legacy/dev/*` and recordings under `docs/showcase/*`.
 
 ### How does interruption recovery work in this harness?
 
@@ -147,6 +151,8 @@ Release-gate mobile regression, flaky-flow triage, AI-driven exploratory checks,
 ### What is the Explorer and when should I use it?
 
 Explorer automatically traverses your app's screens without predefined flows. Use it when you need broad coverage discovery, want to map an unfamiliar app's navigation structure, or need to identify all reachable screens before writing targeted test flows. It is available via the `explore` CLI command.
+
+Android physical-device Explorer evidence is tracked under `artifacts/explorer/android-full/2026-04-28T03-38-20/`: a full Settings traversal completed in 33m 50s with 45 pages, max depth 4, and 0 failures.
 
 ## Appium / Maestro vs This Harness
 

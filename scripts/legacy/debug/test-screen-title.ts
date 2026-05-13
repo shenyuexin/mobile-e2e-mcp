@@ -2,7 +2,7 @@
  * Check what extractScreenTitle returns for Settings home page
  */
 
-import { createServer } from "../packages/mcp-server/src/index.js";
+import { createServer } from "../../../packages/mcp-server/src/index.js";
 
 async function main(): Promise<void> {
   const server = createServer();
