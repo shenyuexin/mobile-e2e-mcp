@@ -2219,6 +2219,8 @@ export interface NavigateBackData {
   fallbackUsed: boolean;
   /** The raw command that was executed (if applicable). */
   command?: string;
+  /** Raw commands attempted when the tool uses a bounded internal retry ladder. */
+  commandHistory?: string[];
   /** Exit code from the underlying process (if applicable). */
   exitCode?: number | null;
   /** Summary of screen state before navigation (if captured). */

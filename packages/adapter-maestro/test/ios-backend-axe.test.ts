@@ -93,6 +93,30 @@ test("buildSwipeCommand returns correct axe swipe command", () => {
   assert.deepEqual(cmd, ["axe", "swipe", "--start-x", "100", "--start-y", "500", "--end-x", "100", "--end-y", "200", "--duration", "0.3", "--udid", "ABCD-1234"]);
 });
 
+test("buildSwipeCommand includes optional timing and sampling controls", () => {
+  const backend = new AxeSimulatorBackend();
+  const cmd = backend.buildSwipeCommand("ABCD-1234", {
+    start: { x: 1, y: 466 },
+    end: { x: 370, y: 466 },
+    durationMs: 700,
+    delta: 4,
+    preDelaySec: 0.15,
+    postDelaySec: 0.35,
+  });
+  assert.deepEqual(cmd, [
+    "axe", "swipe",
+    "--start-x", "1",
+    "--start-y", "466",
+    "--end-x", "370",
+    "--end-y", "466",
+    "--duration", "0.7",
+    "--delta", "4",
+    "--pre-delay", "0.15",
+    "--post-delay", "0.35",
+    "--udid", "ABCD-1234",
+  ]);
+});
+
 test("buildHierarchyCaptureCommand returns correct axe describe-ui command", () => {
   const backend = new AxeSimulatorBackend();
   const cmd = backend.buildHierarchyCaptureCommand("ABCD-1234");

@@ -496,6 +496,32 @@ test("navigate_back iOS edge-swipe builds expected command envelope", async () =
   assert.equal((result.data.command ?? "").length > 0, true);
 });
 
+test("navigate_back iOS edge-swipe uses content-band y when nav bar probe is near top", async () => {
+  const hooks: NavigateBackTestHooks = {
+    iosEdgeSwipeProbe: async () => ({
+      viewportWidth: 400,
+      viewportHeight: 800,
+      navBarCenterY: 96,
+    }),
+    executeSwipeCommand: async () => ({ exitCode: 0, stderr: "", stdout: "" }),
+  };
+
+  setNavigateBackTestHooksForTesting(hooks);
+
+  const result = await navigateBackWithMaestro({
+    sessionId: "test-session",
+    platform: "ios",
+    deviceId: "ios-sim-1",
+    iosStrategy: "edge_swipe",
+    postBackWaitForStable: false,
+  });
+
+  assert.equal(result.status, "success");
+  assert.equal(result.data.executedStrategy, "ios_edge_swipe");
+  assert.match(result.data.command ?? "", /\b400\b/);
+  assert.equal((result.data.command ?? "").includes("96"), false);
+});
+
 test("navigate_back iOS edge-swipe marks no-state-change when page hash unchanged", async () => {
   let summaryCalls = 0;
   const hooks: NavigateBackTestHooks = {
@@ -575,4 +601,95 @@ test("navigate_back iOS edge-swipe marks no-state-change when page hash unchange
   assert.equal(result.data.executedStrategy, "ios_edge_swipe");
   assert.equal(result.data.stateChanged, false);
   assert.equal(result.data.pageTreeHashUnchanged, true);
+  assert.match(result.data.capabilityNote ?? "", /backend-limited/);
+  assert.match(result.nextSuggestions.join("\n"), /known iOS Simulator CLI-swipe limitation/);
+});
+
+test("navigate_back iOS edge-swipe retries bounded gesture variants before no-state-change", async () => {
+  let summaryCalls = 0;
+  let swipeCalls = 0;
+  const commands: string[] = [];
+  const hooks: NavigateBackTestHooks = {
+    iosEdgeSwipeProbe: async () => ({
+      viewportWidth: 400,
+      viewportHeight: 800,
+      navBarCenterY: 96,
+    }),
+    executeSwipeCommand: async (command) => {
+      swipeCalls += 1;
+      commands.push(command.join(" "));
+      return { exitCode: 0, stderr: "", stdout: "" };
+    },
+    waitForUiStable: async () => ({
+      status: "success",
+      reasonCode: REASON_CODES.ok,
+      sessionId: "test",
+      durationMs: 100,
+      attempts: 1,
+      artifacts: [],
+      data: {
+        dryRun: false,
+        runnerProfile: "phase1",
+        stable: true,
+        polls: 2,
+        stableAfterMs: 300,
+        stableFingerprint: "stable",
+        confidence: 0.95,
+        stabilityBasis: "visible-tree",
+        timeoutMs: 5000,
+        intervalMs: 300,
+        consecutiveStable: 2,
+      },
+      nextSuggestions: [],
+    }),
+    getScreenSummary: async (input) => {
+      summaryCalls += 1;
+      return {
+        status: "success",
+        reasonCode: REASON_CODES.ok,
+        sessionId: input.sessionId,
+        durationMs: 1,
+        attempts: 1,
+        artifacts: [],
+        data: {
+          dryRun: false,
+          runnerProfile: input.runnerProfile,
+          outputPath: "/tmp/test.json",
+          command: [],
+          exitCode: 0,
+          supportLevel: "full",
+          summarySource: "ui_only",
+          screenSummary: {
+            appPhase: "catalog" as const,
+            readiness: "ready" as const,
+            blockingSignals: [] as string[],
+            pageIdentity: {
+              treeHash: "same-hash",
+              visibleElementCount: 10,
+              identityConfidence: 0.9,
+            },
+          },
+        },
+        nextSuggestions: [],
+      };
+    },
+  };
+
+  setNavigateBackTestHooksForTesting(hooks);
+
+  const result = await navigateBackWithMaestro({
+    sessionId: "test-session",
+    platform: "ios",
+    deviceId: "ios-sim-1",
+    iosStrategy: "edge_swipe",
+  });
+
+  assert.equal(result.status, "partial");
+  assert.equal(result.reasonCode, REASON_CODES.retryExhaustedNoStateChange);
+  assert.equal(swipeCalls, 4);
+  assert.equal(summaryCalls, 5);
+  assert.match(commands[0], /(--start-x 0|"fromX":0)/);
+  assert.match(commands[0], /(--duration 0\.6|"duration":0\.6)/);
+  assert.equal(result.attempts, 4);
+  assert.deepEqual(result.data.commandHistory, commands);
 });
