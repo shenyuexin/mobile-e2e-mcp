@@ -71,9 +71,30 @@
 
 ### Flow / integration
 
-- run_flow
+- validate_flow
 
-### 最新 Vivo 真机结果（run: `android-tool-probe-1775700510315`）
+### 最新 Android 真机 Explorer 结果（run: `2026-04-28T03-38-20`）
+
+证据：
+
+- `artifacts/explorer/android-full/2026-04-28T03-38-20/log.txt`
+- `artifacts/explorer/android-full/2026-04-28T03-38-20/summary.json`
+- `artifacts/explorer/android-full/2026-04-28T03-38-20/report.md`
+- `artifacts/explorer/android-full/2026-04-28T03-38-20/tree.txt`
+
+汇总：Android physical device `10AEA40Z3Y000R5`，目标 app `com.android.settings`，full mode，45 pages，0 failures，max depth 4，duration 33m 50s。
+
+已在该链路中实跑的关键能力：
+
+- `inspect_ui` 成功返回 Android hierarchy（76 nodes / 14 clickable nodes at entry probe）
+- `tap_element` 在 Settings 多级页面中连续成功
+- `navigate_back` 通过 `android_keyevent` 完成多层 backtrack，`fallbackUsed=false`
+- 外部 app boundary 检测与 system-back recovery 成功返回 Settings
+- form/editor 页面 gating、screen drift reconciliation、report generation 均有日志证据
+
+### 历史 Vivo 真机工具探针结果（run: `android-tool-probe-1775700510315`）
+
+> 这组结果保留为历史回归线索，不再代表当前 Android 真机 Explorer 能力状态。当前 Explorer 真机证据以上面的 `2026-04-28T03-38-20` run 为准。
 
 证据：
 
@@ -102,7 +123,7 @@
 | rank_failure_candidates | ✅ success | OK | 通过 |
 | compare_against_baseline | ✅ success | OK | 本轮已通过 |
 | resume_interrupted_action | ⚠️ partial | TIMEOUT | 恢复后未稳定 |
-| run_flow | ⚠️ partial | UNSUPPORTED_OPERATION | `phase1` profile 仍受限 |
+| run_flow | ⚠️ partial | UNSUPPORTED_OPERATION | 历史结果：当时仍通过 `phase1` runner profile 验证，当前 probe 已改为 `validate_flow` |
 
 ### 当前核心阻塞归类
 
@@ -115,7 +136,7 @@
 4. **历史依赖未满足**
    - `replay_last_stable_path`
 5. **runnerProfile 约束**
-   - `run_flow`
+   - `validate_flow`
 
 ## Conditional Probe Scope（按前置条件启用）
 

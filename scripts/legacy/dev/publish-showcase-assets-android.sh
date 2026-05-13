@@ -106,11 +106,11 @@ extract_frame_safe() {
 
 printf "[publish] Recording happy-path source video...\n"
 DEVICE_ID="$DEVICE_ID" APP_ID="$APP_ID" APK_PATH="$APK_PATH" DURATION_SECONDS="$HAPPY_DURATION_SECONDS" OUT_DIR="$WORK_DIR" PREFIX="$HAPPY_PREFIX" \
-  bash "$ROOT/scripts/dev/record-demo-happy-path-android.sh"
+  bash "$ROOT/scripts/legacy/dev/record-demo-happy-path-android.sh"
 
 printf "[publish] Recording interruption-recovery source video...\n"
 DEVICE_ID="$DEVICE_ID" APP_ID="$APP_ID" APK_PATH="$APK_PATH" DURATION_SECONDS="$INTERRUPTION_DURATION_SECONDS" OUT_DIR="$WORK_DIR" PREFIX="$INTERRUPTION_PREFIX" \
-  bash "$ROOT/scripts/dev/record-demo-interruption-home-recovery-android.sh"
+  bash "$ROOT/scripts/legacy/dev/record-demo-interruption-home-recovery-android.sh"
 
 HAPPY_SOURCE="$(latest_recording_by_prefix "$WORK_DIR" "$HAPPY_PREFIX")"
 INTERRUPTION_SOURCE="$(latest_recording_by_prefix "$WORK_DIR" "$INTERRUPTION_PREFIX")"

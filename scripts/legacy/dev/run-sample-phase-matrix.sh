@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 IOS_RUNS="${1:-5}"
 ANDROID_RUNS="${2:-5}"
 FLUTTER_RUNS="${3:-3}"
@@ -31,19 +31,19 @@ rm -rf \
   "$ROOT/output/evidence/phase3-native-ios" \
   "$ROOT/output/evidence/phase3-native-ios-real-device"
 
-"$ROOT/scripts/dev/run-phase1-ios.sh" "$IOS_RUNS"
-"$ROOT/scripts/dev/run-phase1-android.sh" "$ANDROID_RUNS"
+"$ROOT/scripts/legacy/dev/run-phase1-ios.sh" "$IOS_RUNS"
+"$ROOT/scripts/legacy/dev/run-phase1-android.sh" "$ANDROID_RUNS"
 if [ "${RUN_FLUTTER_ANDROID:-1}" = "1" ]; then
-  "$ROOT/scripts/dev/run-phase3-flutter-android.sh" "$FLUTTER_RUNS"
+  "$ROOT/scripts/legacy/dev/run-phase3-flutter-android.sh" "$FLUTTER_RUNS"
 fi
 if [ "${RUN_NATIVE_ANDROID:-1}" = "1" ]; then
-  "$ROOT/scripts/dev/run-phase3-native-android.sh" "$NATIVE_ANDROID_RUNS"
+  "$ROOT/scripts/legacy/dev/run-phase3-native-android.sh" "$NATIVE_ANDROID_RUNS"
 fi
 if [ "${RUN_NATIVE_IOS:-1}" = "1" ]; then
-  "$ROOT/scripts/dev/run-phase3-native-ios.sh" "$NATIVE_IOS_RUNS"
+  "$ROOT/scripts/legacy/dev/run-phase3-native-ios.sh" "$NATIVE_IOS_RUNS"
 fi
 if [ "${RUN_NATIVE_IOS_REAL_DEVICE:-0}" = "1" ]; then
-  "$ROOT/scripts/dev/run-phase3-native-ios-real-device.sh" "$NATIVE_IOS_REAL_DEVICE_RUNS"
+  "$ROOT/scripts/legacy/dev/run-phase3-native-ios-real-device.sh" "$NATIVE_IOS_REAL_DEVICE_RUNS"
 fi
 python3 "$ROOT/scripts/report/generate-phase-report.py"
 python3 "$ROOT/scripts/report/generate-acceptance-evidence.py"

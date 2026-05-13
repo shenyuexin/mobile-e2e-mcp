@@ -2,7 +2,7 @@
  * Terminate Settings app to ensure clean state before testing.
  */
 
-import { createServer } from "../packages/mcp-server/src/index.js";
+import { createServer } from "../../../packages/mcp-server/src/index.js";
 
 async function main(): Promise<void> {
   const server = createServer();

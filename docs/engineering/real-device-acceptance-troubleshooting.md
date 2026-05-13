@@ -203,6 +203,7 @@ GitHub-hosted runners 无法提供这些硬件访问。
    ```bash
    pnpm run validate:phase3-real-run
    ```
+   这个命令现在保留为历史 sample compatibility matrix；当前工具面的真机证明优先看 Explorer/probe 产物。
 
 2. **使用 cloud device farm**：
    - Firebase Test Lab

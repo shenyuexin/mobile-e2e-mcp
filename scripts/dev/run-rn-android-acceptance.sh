@@ -36,7 +36,7 @@ cat > "$ACCEPTANCE_RUN_METADATA_PATH" <<EOF
 EOF
 
 OUT_DIR="$PHASE2_RN_ANDROID_ARTIFACT_ROOT" \
-  "$ROOT/scripts/dev/run-phase1-android.sh" "$RUN_COUNT"
+  "$ROOT/scripts/legacy/dev/run-phase1-android.sh" "$RUN_COUNT"
 
 python3 "$ROOT/scripts/report/generate-phase-report.py"
 python3 "$ROOT/scripts/report/generate-acceptance-evidence.py"

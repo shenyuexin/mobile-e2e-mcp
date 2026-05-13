@@ -2,7 +2,7 @@
  * Test: Full exploration cycle - terminate, launch, tap, back
  */
 
-import { createServer } from "../packages/mcp-server/src/index.js";
+import { createServer } from "../../../packages/mcp-server/src/index.js";
 
 async function main(): Promise<void> {
   const server = createServer();

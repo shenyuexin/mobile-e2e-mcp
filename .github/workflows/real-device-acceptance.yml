@@ -246,7 +246,7 @@ jobs:
           if [ -f output/reports/phase2-rn-android-run-metadata.json ]; then
             cp output/reports/phase2-rn-android-run-metadata.json output/reports/phase2-rn-android-run-metadata.snapshot.json
           fi
-      - name: Run real-device acceptance matrix
+      - name: Run legacy sample compatibility matrix
         run: pnpm run validate:phase3-real-run
       - name: Enforce real-run quality gate
         run: |
@@ -322,11 +322,12 @@ jobs:
           {
             echo "## Real-device acceptance boundary"
             echo "- Status: **${{ job.status }}**"
-            echo "- Scope: self-hosted acceptance matrix (Phase 1 React Native backbone + Phase 3 Native/Flutter sample-profile paths)"
+            echo "- Scope: self-hosted acceptance plus legacy sample compatibility matrix (Phase 1 React Native backbone + Phase 3 Native/Flutter sample-profile paths)"
             echo "- Dedicated Phase 2 entrypoint: \`pnpm run validate:phase2-rn-android-acceptance\` for the default RN Android lane"
             echo "- Dedicated Phase 2 artifacts: \`output/reports/phase2-rn-android-phase-sample-report.json\`, \`output/reports/phase2-rn-android-acceptance-evidence.json\`, and \`output/evidence/phase2-rn-android/**\`"
             echo "- Gate: fail when expected lanes are \`NO_DATA\`/missing or any lane is \`NO_GO\` in \`output/reports/phase-sample-report.json\`"
-            echo "- Framework-profile lane note: current shared acceptance runner/report path proves Flutter Android lane first; Flutter iOS is outside this shared lane"
+            echo "- Framework-profile lane note: current shared compatibility runner/report path proves Flutter Android lane first; Flutter iOS is outside this shared lane"
+            echo "- Current real-device tool-surface proof: Explorer/probe artifacts are primary; this matrix is retained for historical sample report continuity"
             echo "- Framework-profile status source: \`configs/profiles/native.yaml\` + \`configs/profiles/flutter.yaml\` remain \`validated-sample-baseline\`"
             echo "- Artifact bundle: \`real-device-acceptance-report-${{ github.run_id }}\`"
             echo "- Optional iOS physical-device lane: \`native-ios-real-device\` (enabled via workflow input and UDID-aware env wiring)"

@@ -16,13 +16,13 @@ Legacy `artifacts/` and `reports/` are still gitignored so old local runs do not
 To inspect old local output before deleting it:
 
 ```bash
-bash scripts/dev/cleanup-legacy-output-roots.sh
+bash scripts/legacy/dev/cleanup-legacy-output-roots.sh
 ```
 
 To remove legacy local output after confirming no evidence needs to be preserved:
 
 ```bash
-bash scripts/dev/cleanup-legacy-output-roots.sh --delete
+bash scripts/legacy/dev/cleanup-legacy-output-roots.sh --delete
 ```
 
 The cleanup script only targets the legacy root directories `artifacts/` and `reports/`; it does not touch curated files under `docs/showcase/`.

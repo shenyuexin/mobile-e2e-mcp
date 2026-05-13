@@ -7,11 +7,11 @@ DEVICE_ID="${DEVICE_ID:-}"
 APP_ID="${APP_ID:-com.epam.mobitru}"
 APK_PATH="${APK_PATH:-${NATIVE_ANDROID_APK_PATH:-}}"
 ANDROID_MIN_SDK="${ANDROID_MIN_SDK:-28}"
-DURATION_SECONDS="${DURATION_SECONDS:-35}"
+DURATION_SECONDS="${DURATION_SECONDS:-45}"
 OUT_DIR="${OUT_DIR:-$ROOT/output/evidence/recordings/videos}"
-PREFIX="${PREFIX:-m2e-interruption-recovery-record}"
+PREFIX="${PREFIX:-m2e-happy-path-record}"
 TIMESTAMP="$(date +%Y%m%d-%H%M%S)"
-SESSION_ID="${SESSION_ID:-interruption-recovery-record-${TIMESTAMP}}"
+SESSION_ID="${SESSION_ID:-happy-path-record-${TIMESTAMP}}"
 
 REMOTE_PATH="/sdcard/${PREFIX}-${TIMESTAMP}.mp4"
 LOCAL_PATH="${OUT_DIR}/${PREFIX}-${TIMESTAMP}.mp4"
@@ -58,7 +58,7 @@ verify_android_sdk() {
   sdk="$(printf "%s" "$sdk_raw" | tr -d '\r[:space:]')"
 
   if [ -z "$sdk" ] || [[ ! "$sdk" =~ ^[0-9]+$ ]]; then
-    printf "[interrupt-record] Unable to detect Android SDK version for %s. Continuing anyway.\n" "$DEVICE_ID"
+    printf "[happy-record] Unable to detect Android SDK version for %s. Continuing anyway.\n" "$DEVICE_ID"
     return
   fi
 
@@ -76,7 +76,7 @@ ensure_app_installed() {
       printf "APK_PATH does not exist: %s\n" "$APK_PATH" >&2
       exit 1
     fi
-    printf "[interrupt-record] Installing APK: %s\n" "$APK_PATH"
+    printf "[happy-record] Installing APK: %s\n" "$APK_PATH"
     adb -s "$DEVICE_ID" install -r -d "$APK_PATH" >/dev/null
   fi
 
@@ -99,8 +99,8 @@ fi
 verify_android_sdk
 ensure_app_installed
 
-printf "[interrupt-record] Device=%s Session=%s\n" "$DEVICE_ID" "$SESSION_ID"
-printf "[interrupt-record] Recording to %s\n" "$LOCAL_PATH"
+printf "[happy-record] Device=%s Session=%s\n" "$DEVICE_ID" "$SESSION_ID"
+printf "[happy-record] Recording to %s\n" "$LOCAL_PATH"
 
 adb -s "$DEVICE_ID" shell rm -f "$REMOTE_PATH" >/dev/null 2>&1 || true
 adb -s "$DEVICE_ID" shell screenrecord --time-limit "$DURATION_SECONDS" "$REMOTE_PATH" >"$LOG_PATH" 2>&1 &
@@ -109,21 +109,21 @@ REC_PID=$!
 SCRIPT_EXIT=0
 (
   cd "$ROOT"
-  DEVICE_ID="$DEVICE_ID" APP_ID="$APP_ID" SESSION_ID="$SESSION_ID" pnpm tsx scripts/dev/demo-interruption-home-recovery-android.ts
+  DEVICE_ID="$DEVICE_ID" APP_ID="$APP_ID" SESSION_ID="$SESSION_ID" pnpm tsx scripts/legacy/dev/demo-happy-path-android.ts
 ) || SCRIPT_EXIT=$?
 
 wait "$REC_PID" || true
 
 if adb -s "$DEVICE_ID" pull "$REMOTE_PATH" "$LOCAL_PATH" >/dev/null 2>&1; then
-  printf "[interrupt-record] Pulled video: %s\n" "$LOCAL_PATH"
+  printf "[happy-record] Pulled video: %s\n" "$LOCAL_PATH"
 else
-  printf "[interrupt-record] Failed to pull recording from %s\n" "$REMOTE_PATH" >&2
+  printf "[happy-record] Failed to pull recording from %s\n" "$REMOTE_PATH" >&2
   exit 1
 fi
 
 if [ "$SCRIPT_EXIT" -ne 0 ]; then
-  printf "[interrupt-record] Demo script failed with exit code %s\n" "$SCRIPT_EXIT" >&2
+  printf "[happy-record] Demo script failed with exit code %s\n" "$SCRIPT_EXIT" >&2
   exit "$SCRIPT_EXIT"
 fi
 
-printf "[interrupt-record] Done.\n"
+printf "[happy-record] Done.\n"

@@ -158,7 +158,7 @@
 | Start session | `start_session` | Creates session record with policy profile, platform, device, app |
 | Record flow | `start_record_session` → `end_record_session` | `recording-runtime.ts` — maps platform events to replayable actions |
 | Export to Maestro | `export_session_flow` | `recording-mapper.ts` — converts session actions to Maestro YAML |
-| Run flow | `run_flow` | `flow-runtime.ts` — executes Maestro flow through adapter |
+| Run flow | `run_flow` | `flow-runtime.ts` — Android physical-device common-command replay uses owned-adb primary backend; Maestro remains fallback for edge-case commands |
 | Task execution | `execute_intent` / `complete_task` | `task-planner.ts` — high-level intent → bounded multi-step action |
 | End session | `end_session` | Closes session, emits final metadata |
 

@@ -2,7 +2,7 @@
  * Test: Check how the explorer parses the Settings home page UI tree.
  */
 
-import { createServer } from "../packages/mcp-server/src/index.js";
+import { createServer } from "../../../packages/mcp-server/src/index.js";
 
 async function main(): Promise<void> {
   const server = createServer();

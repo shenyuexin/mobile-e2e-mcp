@@ -1,6 +1,6 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { createServer } from "../../packages/mcp-server/src/index.ts";
+import { createServer } from "../../../packages/mcp-server/src/index.ts";
 
 const execFileAsync = promisify(execFile);
 

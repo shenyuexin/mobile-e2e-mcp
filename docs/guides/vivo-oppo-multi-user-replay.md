@@ -20,12 +20,14 @@ adb -s <DEVICE_ID> shell am get-current-user
 
 ---
 
-## 2) 检查 helper app 是否装在目标用户
+## 2) 仅在需要 Maestro fallback 时检查 helper app
 
 ```bash
 adb -s <DEVICE_ID> shell cmd package list packages --user 0 | grep "dev.mobile.maestro"
 adb -s <DEVICE_ID> shell cmd package list packages --user 0 | grep "dev.mobile.maestro.test"
 ```
+
+常用 Android replay 命令会走 owned-adb 主路径，不需要 helper app。只有当 flow 包含 Maestro 专属命令，或显式设置 `ANDROID_REPLAY_BACKEND=maestro` / `textInputStrategy=maestro` 时，才需要确认 helper app 安装在目标 user 下。
 
 建议同时检查 AUT（例如 Mobitru）是否在 user 0：
 
@@ -51,14 +53,14 @@ APP_ID="com.epam.mobitru" \
 FLOW="/ABS/PATH/TO/your-flow.yaml" \
 DEVICE_ID="<DEVICE_ID>" \
 ANDROID_USER_ID="0" \
-bash scripts/dev/run-phase1-android.sh 1
+bash scripts/legacy/dev/run-phase1-android.sh 1
 ```
 
 说明：
 
-- 脚本会使用 `cmd package list packages --user "$ANDROID_USER_ID"` 检查 helper app；
-- helper 已存在时走 `--no-reinstall-driver`，避免重复安装授权弹窗；
-- 若 helper 缺失会前置失败，不会在回放中途弹安装框。
+- 默认 `ANDROID_REPLAY_BACKEND=auto` 时，常用命令 flow 会优先走 owned-adb；
+- 只有选择 Maestro fallback 时，脚本才需要使用 `cmd package list packages --user "$ANDROID_USER_ID"` 检查 helper app；
+- helper 已存在时走 `--no-reinstall-driver`，避免重复安装授权弹窗；若 fallback 需要 helper 但缺失，会前置失败，不会在回放中途弹安装框。
 
 ### 3.3 用 `run_flow` 显式配置（推荐给 MCP 调用方）
 
@@ -103,7 +105,7 @@ bash scripts/dev/run-phase1-android.sh 1
 
 ## 5) 已集成的 OEM 文本输入 fallback
 
-针对 **vivo/oppo + 多用户/XSpace + flow 中存在文本输入命令** 的场景，`scripts/dev/run-phase1-android.sh` 已支持自动分流到：
+针对 **vivo/oppo + 多用户/XSpace + flow 中存在文本输入命令** 的历史回放场景，legacy `scripts/legacy/dev/run-phase1-android.sh` 已支持自动分流到：
 
 - `scripts/dev/android-oem-text-fallback.ts`
 

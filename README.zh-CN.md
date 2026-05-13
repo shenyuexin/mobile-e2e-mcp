@@ -88,7 +88,7 @@ Explorer 会生成一个包含结构化产物的目录：
 - **Failure-intelligence harness**：失败有原因码、证据产物、候选根因与修复建议
 - **Governance-aware harness**：策略 profile、可审计 session、受控工具面
 - **Explorer harness**：基于 DFS 的自动页面遍历，包含状态图、熔断器与结构化覆盖率报告*（可通过 CLI 使用）*
-- **Real-device demo harness**：有真实可复现脚本与录屏，不是纸面架构
+- **真机证据**：以 Explorer/probe 产物为主，并保留 happy path 与中断恢复历史录屏
 
 ## 能力展示
 
@@ -98,10 +98,14 @@ Explorer 会生成一个包含结构化产物的目录：
   - `docs/showcase/videos/m2e-happy-path-scroll-pause-40s.mp4`
 - 可见中断与恢复录屏（HOME 中断 -> recover_to_known_state -> 继续动作）：
   - `docs/showcase/videos/m2e-interruption-home-recovery-35s.mp4`
-- 一键复现脚本：
-  - `bash scripts/dev/record-demo-happy-path-android.sh`
-  - `bash scripts/dev/record-demo-interruption-home-recovery-android.sh`
-  - `bash scripts/dev/publish-showcase-assets-android.sh`（录制 + 归档视频 + 刷新截图/GIF）
+- 当前真机验证：
+  - Android Explorer 证据：`artifacts/explorer/android-full/2026-04-28T03-38-20/`
+  - Android probe 入口：`pnpm run validate:android-tool-probe`
+  - iOS probe 入口：`pnpm run validate:ios-tool-probe`
+- 历史演示脚本：
+  - `bash scripts/legacy/dev/record-demo-happy-path-android.sh`
+  - `bash scripts/legacy/dev/record-demo-interruption-home-recovery-android.sh`
+  - `bash scripts/legacy/dev/publish-showcase-assets-android.sh`（录制 + 归档视频 + 刷新截图/GIF）
 - 演示说明与证据索引：
   - [docs/showcase/README.md](docs/showcase/README.md)
   - [docs/showcase/demo-playbook.zh-CN.md](docs/showcase/demo-playbook.zh-CN.md)
@@ -130,7 +134,7 @@ Explorer 会生成一个包含结构化产物的目录：
 
 ### 这个 harness 能跑 Android 真机吗？
 
-可以。仓库提供了真机脚本与演示资产，见 `scripts/dev/*` 与 `docs/showcase/*`（包含 happy path 与中断恢复）。
+可以。当前真机证据以 Explorer/probe 产物为主；历史演示脚本保存在 `scripts/legacy/dev/*`，录屏和展示资产见 `docs/showcase/*`。
 
 ### 这个 harness 怎么处理中断恢复？
 
@@ -147,6 +151,8 @@ Explorer 会生成一个包含结构化产物的目录：
 ### 什么是 Explorer，什么时候应该用？
 
 Explorer 可以在没有预定义流程的情况下自动遍历应用页面。当你需要大范围覆盖发现、想 mapping 一个不熟悉的应用导航结构，或在编写定向测试流程前需要先识别所有可达页面时，就可以使用它。通过 `explore` CLI 命令即可调用。
+
+Android 真机 Explorer 证据保存在 `artifacts/explorer/android-full/2026-04-28T03-38-20/`：Settings 全量遍历已完成，耗时 33m 50s，覆盖 45 个页面，最大深度 4，失败数 0。
 
 ## Appium / Maestro 与本 Harness 的关系
 
