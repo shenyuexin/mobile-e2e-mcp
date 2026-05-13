@@ -53,20 +53,37 @@ export class AxeSimulatorBackend implements IosExecutionBackend {
 
   buildSwipeCommand(
     deviceId: string,
-    swipe: { start: { x: number; y: number }; end: { x: number; y: number }; durationMs: number },
+    swipe: {
+      start: { x: number; y: number };
+      end: { x: number; y: number };
+      durationMs: number;
+      delta?: number;
+      preDelaySec?: number;
+      postDelaySec?: number;
+    },
   ): string[] {
     // axe swipe --start-x X1 --start-y Y1 --end-x X2 --end-y Y2 --udid UDID
     // Optional: --duration (seconds)
     const durationSec = (swipe.durationMs / 1000).toFixed(1);
-    return [
+    const command = [
       "axe", "swipe",
       "--start-x", String(swipe.start.x),
       "--start-y", String(swipe.start.y),
       "--end-x", String(swipe.end.x),
       "--end-y", String(swipe.end.y),
       "--duration", durationSec,
-      "--udid", deviceId,
     ];
+    if (typeof swipe.delta === "number") {
+      command.push("--delta", String(swipe.delta));
+    }
+    if (typeof swipe.preDelaySec === "number") {
+      command.push("--pre-delay", String(swipe.preDelaySec));
+    }
+    if (typeof swipe.postDelaySec === "number") {
+      command.push("--post-delay", String(swipe.postDelaySec));
+    }
+    command.push("--udid", deviceId);
+    return command;
   }
 
   buildHierarchyCaptureCommand(deviceId: string): string[] {

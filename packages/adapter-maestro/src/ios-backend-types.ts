@@ -35,7 +35,7 @@ export interface IosExecutionBackend {
   /** Build a swipe command with start/end coordinates and duration. */
   buildSwipeCommand(
     deviceId: string,
-    swipe: { start: { x: number; y: number }; end: { x: number; y: number }; durationMs: number },
+    swipe: { start: { x: number; y: number }; end: { x: number; y: number }; durationMs: number; delta?: number; preDelaySec?: number; postDelaySec?: number },
   ): string[];
   /** Build a hierarchy capture command that returns JSON/XML hierarchy data. */
   buildHierarchyCaptureCommand(deviceId: string): string[];

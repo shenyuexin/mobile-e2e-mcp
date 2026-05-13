@@ -18,6 +18,10 @@
     },
     "fallbackUsed": { "type": "boolean" },
     "command": { "type": ["string", "null"] },
+    "commandHistory": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
     "exitCode": { "type": ["integer", "null"] },
     "preStateSummary": { "type": ["string", "null"] },
     "stateChanged": { "type": ["boolean", "string"] },
