@@ -27,11 +27,7 @@ probe-dry-run:
     - uses: actions/setup-node@v5
     - run: pnpm install --frozen-lockfile
     - run: pnpm build
-    # Validate probe scripts compile and can be invoked
-    - name: Validate iOS probe structure
-      run: pnpm tsx scripts/dev/ios-simulator-tool-probe.ts --dry-run 2>&1 || true
-    - name: Validate Android probe structure
-      run: pnpm tsx scripts/dev/android-tool-probe.ts --dry-run 2>&1 || true
+    - run: pnpm run validate:probe-dry-run
 ```
 
 **成本**：< 1 分钟，无设备依赖
@@ -99,7 +95,7 @@ ios-simulator-smoke:
 
 ## 实施检查清单
 
-- [ ] Phase 1: 添加 dry-run CI job（PR gate）
+- [x] Phase 1: 添加 dry-run CI job（PR gate）
 - [ ] Phase 2: 完成 `findNodeAtPoint` 单元测试
 - [ ] Phase 2: 审查其他平台的类似 bug（Android 是否有 `nodes[0]` 问题？）
 - [ ] Phase 3: 配置 nightly workflow（可选）
@@ -116,9 +112,11 @@ ios-simulator-smoke:
 2. **本地复现**
    ```bash
    # iOS
+   pnpm run validate:probe-dry-run
    pnpm tsx scripts/dev/ios-simulator-tool-probe.ts
    
    # Android
+   pnpm run validate:probe-dry-run
    pnpm tsx scripts/dev/android-tool-probe.ts
    ```
 

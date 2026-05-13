@@ -45,6 +45,51 @@ interface ProbeSummary {
   unknown: number;
 }
 
+const ANDROID_DRY_RUN_TOOLS = [
+  "start_session",
+  "get_session_state",
+  "terminate_app",
+  "launch_app",
+  "wait_for_ui",
+  "resolve_ui_target",
+  "scroll_and_resolve_ui_target",
+  "scroll_only",
+  "tap_element",
+  "type_into_element",
+  "execute_intent",
+  "perform_action_with_evidence",
+  "complete_task",
+  "recover_to_known_state",
+  "replay_last_stable_path",
+  "validate_flow",
+  "explain_last_failure",
+  "find_similar_failures",
+  "rank_failure_candidates",
+  "compare_against_baseline",
+  "resume_interrupted_action",
+  "capture_js_console_logs",
+  "capture_js_network_events",
+  "end_session",
+] as const;
+
+export function buildAndroidToolProbeDryRunReport() {
+  return {
+    mode: "dry-run",
+    probe: "android-tool-probe",
+    platform: "android",
+    runnerProfile: "phase1",
+    appId: "com.android.settings",
+    requiresDevice: false,
+    checklistSource: "docs/testing/android-tool-probe-checklist.md",
+    plannedTools: [...ANDROID_DRY_RUN_TOOLS],
+  };
+}
+
+function printAndroidToolProbeDryRun(): void {
+  console.log("Android tool probe dry-run contract passed.");
+  console.log(JSON.stringify(buildAndroidToolProbeDryRunReport(), null, 2));
+}
+
 function pickActionId(data: unknown): string | undefined {
   if (!data || typeof data !== "object") return undefined;
   const envelope = data as { outcome?: unknown };
@@ -580,6 +625,11 @@ const entryFilePath = process.argv[1];
 const isDirectExecution = Boolean(entryFilePath) && import.meta.url === new URL(`file://${entryFilePath}`).href;
 
 if (isDirectExecution) {
+  if (process.argv.includes("--dry-run")) {
+    printAndroidToolProbeDryRun();
+    process.exit(0);
+  }
+
   runAndroidToolProbe().catch((error: unknown) => {
     const message = error instanceof Error ? error.stack ?? error.message : String(error);
     console.error(`[android-tool-probe] ${message}`);
