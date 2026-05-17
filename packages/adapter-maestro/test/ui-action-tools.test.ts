@@ -768,6 +768,51 @@ test("typeTextWithMaestroTool dry-run uses Maestro command preview for iOS physi
 	);
 });
 
+test("classifyAndroidKeyboardState detects visible and hidden IME dumps", () => {
+	assert.deepEqual(
+		uiActionToolInternals.classifyAndroidKeyboardState(
+			"mInputShown=true\nimeWindowVis=0x1\nmCurId=com.example/.Ime",
+		),
+		{ visibility: "visible", reason: "input_method_visible" },
+	);
+	assert.deepEqual(
+		uiActionToolInternals.classifyAndroidKeyboardState(
+			"mInputShown=false\nimeWindowVis=0x0",
+		),
+		{ visibility: "hidden", reason: "input_method_hidden" },
+	);
+	assert.deepEqual(
+		uiActionToolInternals.classifyAndroidKeyboardState("unrelated dump"),
+		{ visibility: "unknown", reason: "input_method_state_unavailable" },
+	);
+});
+
+test("probeAndroidKeyboardState returns command evidence for input stability", async () => {
+	setExecuteRunnerForTesting(async (command) => ({
+		exitCode: 0,
+		stdout: "mInputShown=true\nimeWindowVis=0x1",
+		stderr: "",
+	}));
+
+	const state = await uiActionToolInternals.probeAndroidKeyboardState({
+		repoRoot: "/tmp/repo",
+		deviceId: "android-1",
+	});
+
+	assert.equal(state.checked, true);
+	assert.equal(state.visibility, "visible");
+	assert.equal(state.reason, "input_method_visible");
+	assert.deepEqual(state.command, [
+		"adb",
+		"-s",
+		"android-1",
+		"shell",
+		"dumpsys",
+		"input_method",
+	]);
+	assert.equal(state.exitCode, 0);
+});
+
 test("tapWithMaestroTool dry-run honors local manual runner backend preview for iOS physical devices", async () => {
 	const previousBackend = process.env.IOS_PHYSICAL_ACTION_BACKEND;
 	try {

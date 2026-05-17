@@ -46,9 +46,15 @@
 
 ### Optimization Gaps
 
+Current truth update: `capture_element_screenshot` and `compare_visual_baseline`
+now exist in the live tool registry, and Explorer failure reviews now attach
+per-failure screenshot/crop visual evidence when snapshot bounds are available.
+The remaining gap is baseline governance and automatic visual comparison inside
+probe/Explorer reports.
+
 | Gap | Severity | Description |
 |-----|----------|-------------|
-| **No element snapshot / visual diff** | High | `query_ui` returns a structural match but no visual baseline. Adding `capture_element_screenshot` (crop to element bounds) enables pixel-diff regression and AI visual verification. Currently the dev must manually compare full-screen screenshots. |
+| **Baseline comparison is not yet probe/explorer-native** | Medium | Explorer failure reviews now attach current screenshot/crop evidence for failed targets, and `capture_element_screenshot` / `compare_visual_baseline` are available as tools. Probe/Explorer reports still do not automatically compare failed target crops against managed baselines or classify visual drift. |
 | **Flat selector priority, no learned ranking** | Medium | `resolve_ui_target` returns all matches with confidence scoring, but does not learn from past successful resolutions. A simple session-scoped "selector effectiveness cache" (resourceId that worked before → higher priority) would reduce ambiguity on repeated runs. |
 | **No accessibility audit pass** | Medium | `inspect_ui` returns raw tree but does not flag missing accessibility labels, zero-size touch targets, or contrast issues. A `audit_accessibility` tool that scans the tree for common a11y violations would double as a developer productivity feature. |
 | **WebView content blind spot** | Medium-High | WebView trees are often incomplete or merged poorly with native tree. Current adapter does not distinguish WebView nodes, making `query_ui` unreliable for hybrid screens. A `detect_webview` + `switch_to_webview_context` lane (via Chrome DevTools Protocol on Android, Safari inspector on iOS) is missing. |
@@ -72,10 +78,16 @@
 
 ### Optimization Gaps
 
+Current truth update: network readiness probing, static release-policy
+inspection, and failed-request policy diagnosis now exist as first-class tools.
+The remaining network gap is closed-loop orchestration: using those signals to
+drive bounded retry/stop decisions during actions rather than only enriching
+post-failure diagnosis.
+
 | Gap | Severity | Description |
 |-----|----------|-------------|
 | **No gesture composition** | High | Real interactions include long-press, drag-and-drop, pinch-to-zoom, multi-finger swipe. Current chain only exposes `tap`, `type`, and the adapter's internal `swipe`. Exposing `long_press`, `drag`, and `multi_swipe` as first-class MCP tools would cover 80%+ of missing gesture scenarios. |
-| **No keyboard state awareness** | Medium | `type_into_element` does not check if soft keyboard is already visible before typing. On Android, this causes double-keyboard overlap and coordinate shifts. A `keyboard_state` probe (visible/hidden/IME type) before type actions would prevent this. |
+| **Keyboard state parity and diagnostics are shallow** | Medium | Android `type_into_element` records IME visibility before and after focus, and stops early when the keyboard remains hidden after focusing the target. Remaining gaps are iOS parity, IME type reporting, and richer focus-cause diagnostics when the keyboard state is ambiguous. |
 | **No haptic/audio feedback verification** | Low | After interaction, some screens rely on haptic or audio cues. No tool captures these signals. Not critical for E2E correctness, but valuable for UX regression. |
 | **iOS physical device action flow generation is opaque** | Medium | `buildIosPhysicalActionFlowPaths` generates Maestro YAML flows for physical devices, but the generated flows are not exposed back to the caller. Returning the generated YAML path in the tool result would let devs inspect and reuse the flow. |
 | **No atomic multi-action composition** | Medium-High | Some interactions require atomic sequences (e.g., pull-to-refresh = swipe down + hold + release). Currently each action is a separate MCP call with full pre/post state capture between them. A `compose_actions` tool that executes N actions atomically (single pre + single post snapshot) would be faster and more accurate for gesture sequences. |
@@ -135,10 +147,15 @@
 
 ### Optimization Gaps
 
+Current truth update: `replay_checkpoint_chain` now exists and is registered as
+a recovery tool. The remaining gap is adoption depth: richer validation,
+real-run evidence, and higher-level orchestration that chooses checkpoint-chain
+replay automatically when it is safer than local retry.
+
 | Gap | Severity | Description |
 |-----|----------|-------------|
 | **No network-aware orchestration** | High | The codebase has `network-anomaly-runtime-architecture.md` documenting the design, but the current `action-orchestrator.ts` only classifies `waiting_network`, `offline_terminal`, and `backend_failed_terminal` as readiness states. It does not actively probe network health, retry with backoff tuned to network type, or suggest network-specific recovery (e.g., toggle airplane mode, switch WiFi/cellular). The network anomaly runtime is documented but not fully implemented. |
-| **No multi-step checkpoint chain** | High | `replay_last_stable_path` replays the *last single* successful action. Real failures often occur mid-flow after N successful steps. A `replay_checkpoint_chain` tool that identifies the last stable checkpoint and replays all subsequent low-risk actions would close the multi-step robustness gap documented in `04-runtime-architecture.md` §7.3. |
+| **Checkpoint-chain replay needs broader evidence** | Medium | `replay_checkpoint_chain` exists for low-risk action chain replay from a stable checkpoint. It still needs broader probe/real-run coverage and stronger automatic selection from failure-remediation paths. |
 | **Historical failure memory is session-scoped** | Medium | `find_similar_failures` matches within the current session's local records. Cross-session, cross-build historical failure patterns are not persisted. A `failure_pattern_index` (e.g., under `.mcp/failures/`) that accumulates failure signatures across runs would enable "this same tap fails on Android 14 every time" detection. |
 | **Recovery strategies are shallow** | Medium | `recover_to_known_state` currently supports: relaunch app, wait_until_ready, and stop on terminal states. Missing: `clear_app_data` as a bounded recovery (high-risk write scope), `navigate_back` to escape wrong screen, `force_permission_grant` for stuck permission dialogs. |
 | **No flakiness scoring** | Medium | There is no mechanism to track "this action fails 30% of the time" across runs. A `flakiness_score` per action type + selector combination would help devs distinguish "broken" from "flaky". |
@@ -164,9 +181,13 @@
 
 ### Optimization Gaps
 
+Current truth update: `validate_flow` exists and is used by probe/sample
+validation paths. The remaining flow gap is generated-flow pre-export
+integration: validating recorded/exported flows before they become CI fixtures.
+
 | Gap | Severity | Description |
 |-----|----------|-------------|
-| **No flow validation before export** | High | `export_session_flow` converts recorded actions to Maestro YAML but does not validate the generated flow against the current app state. A `validate_flow` dry-run that executes each step in the generated flow and reports which steps would fail on the current build would catch drift before CI. |
+| **Flow validation is not wired into export** | Medium | `validate_flow` can validate a flow, but `export_session_flow` does not yet automatically validate generated flow output against the current app state before CI adoption. |
 | **No conditional branching in recorded flows** | Medium | Recorded flows are linear sequences. Real test scenarios need conditionals: "if element X is visible, do Y, else do Z". The `task-planner.ts` has intent-to-action mapping but no conditional logic encoding. Adding `if_visible`, `if_network_ok` branches to the flow format would make exported flows more robust. |
 | **No parallel device execution** | Medium | `run_flow` executes on a single device/session. Regression suites benefit from running the same flow across multiple devices (Android emulator + iOS simulator + real device) in parallel. A `run_flow_parallel` tool that fans out to multiple sessions and aggregates results would multiply throughput. |
 | **No flow versioning / diff** | Low-Medium | Exported flows are written to disk but not versioned. A `diff_flow` tool that compares two versions of a flow YAML and reports added/removed/changed steps would help teams understand what changed in their automation suite. |
@@ -196,10 +217,10 @@ Based on impact × implementation effort, here is the recommended prioritization
 
 | Priority | Gap | Impact | Effort | Target Chain |
 |----------|-----|--------|--------|-------------|
-| P0 | Network-aware orchestration | High | Medium | Failure Analysis |
-| P0 | Multi-step checkpoint chain | High | Medium | Failure Analysis |
-| P0 | No flow validation before export | High | Low | Session & Flow |
-| P0 | Element snapshot / visual diff | High | Low | UI Inspection |
+| P0 | Network-aware orchestration adoption | High | Medium | Failure Analysis |
+| P0 | Probe/Explorer baseline comparison attachment | High | Low-Medium | UI Inspection |
+| P0 | Flow validation before export | High | Low | Session & Flow |
+| P1 | Checkpoint-chain replay evidence hardening | Medium-High | Medium | Failure Analysis |
 | P1 | No gesture composition | High | Medium | UI Interaction |
 | P1 | JS debug lane: Flutter support | High | Medium | Diagnostics |
 | P1 | Historical failure memory (cross-session) | Medium | Medium | Failure Analysis |
@@ -221,7 +242,7 @@ Mapping gaps to the capability maturity levels defined in `03-capability-model.m
 | Maturity Level | Current State | Gap to Close |
 |----------------|--------------|-------------|
 | **L1 (MVP)** ✅ | Device selection, app lifecycle, screenshot, tree, tap/type, basic interruption | Complete |
-| **L2 (Stability)** 🔄 | Partial — flakiness controls, retries, reason codes exist but network-aware orchestration and multi-step replay are missing | P0 gaps above |
+| **L2 (Stability)** 🔄 | Partial — flakiness controls, retries, reason codes, checkpoint-chain replay, visual tools, and network diagnosis exist, but orchestration adoption/evidence depth is still incomplete | P0/P1 gaps above |
 | **L3 (Scale)** ❌ | Not started — multi-device orchestration, parallel sessions, cloud farm integration | Parallel execution, farm adapter |
 | **L4 (Agentic)** ❌ | Not started — goal-to-flow planning, self-healing, automatic bug packets | AI remediation, pipeline DSL, task planner maturity |
 | **L5 (Enterprise)** ❌ | Not started — RBAC, compliance exports, approval workflows | Policy UX, audit trail exports |

@@ -101,6 +101,7 @@ export async function generateReport(
   const logPath = join(runDir, 'log.txt');
   const failureReview = generateFailureReviewJson(pages, failures, config, {
     ...opts,
+    runDir,
     ...(existsSync(logPath) ? { logText: readFileSync(logPath, 'utf-8') } : {}),
   });
   writeFileSync(join(runDir, 'failure-review.json'), JSON.stringify(failureReview, null, 2), 'utf-8');

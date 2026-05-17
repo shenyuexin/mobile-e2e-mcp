@@ -1737,6 +1737,15 @@ export interface TypeIntoElementData {
   commands: string[][];
   exitCode: number | null;
   supportLevel: "full" | "partial";
+  keyboardState?: {
+    checked: boolean;
+    platform: Platform;
+    beforeFocus?: "visible" | "hidden" | "unknown";
+    afterFocus?: "visible" | "hidden" | "unknown";
+    reason?: string;
+    command?: string[];
+    exitCode?: number | null;
+  };
 }
 export type UiOrchestrationStep = "scroll_resolve" | "tap";
 export interface UiOrchestrationStepResult {

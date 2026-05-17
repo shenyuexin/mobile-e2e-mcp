@@ -15,6 +15,7 @@ import type {
 	UiOrchestrationStepResult,
 } from "@mobile-e2e-mcp/contracts";
 import { ACTION_TYPES, REASON_CODES } from "@mobile-e2e-mcp/contracts";
+import { CLI_COMMANDS } from "./constants/cli-commands.js";
 import { evidencePaths } from "./artifact-paths.js";
 import { isIosPhysicalDeviceId } from "./device-runtime.js";
 import {
@@ -24,7 +25,10 @@ import {
 	loadHarnessSelection,
 	resolveRepoPath,
 } from "./harness-config.js";
-import { buildFailureReason } from "./runtime-shared.js";
+import {
+	buildFailureReason,
+	executeRunnerWithTestHooks,
+} from "./runtime-shared.js";
 import { scrollAndResolveUiTargetWithMaestroTool } from "./ui-action-scroll.js";
 // Extracted modules (Phase 19: keep facade under 1500 lines)
 import {
@@ -62,6 +66,109 @@ import {
 
 function isOkReasonCode(reasonCode: ReasonCode): boolean {
 	return reasonCode === REASON_CODES.ok;
+}
+
+type AndroidKeyboardVisibility = "visible" | "hidden" | "unknown";
+
+interface AndroidKeyboardStateClassification {
+	visibility: AndroidKeyboardVisibility;
+	reason: string;
+}
+
+interface AndroidKeyboardStateProbe extends AndroidKeyboardStateClassification {
+	checked: boolean;
+	platform: "android";
+	command: string[];
+	exitCode: number | null;
+}
+
+const ANDROID_KEYBOARD_PROBE_TIMEOUT_MS = 3000;
+
+function buildAndroidKeyboardStateCommand(deviceId: string): string[] {
+	return [
+		CLI_COMMANDS.adb,
+		"-s",
+		deviceId,
+		"shell",
+		"dumpsys",
+		"input_method",
+	];
+}
+
+function classifyAndroidKeyboardState(
+	inputMethodDump: string,
+): AndroidKeyboardStateClassification {
+	const normalized = inputMethodDump.toLowerCase();
+	if (
+		/\bminputshown\s*=\s*true\b/i.test(inputMethodDump) ||
+		/\bmisinputviewshown\s*=\s*true\b/i.test(inputMethodDump) ||
+		/\binputshown\s*=\s*true\b/i.test(inputMethodDump) ||
+		/\bimewindowvis\s*=\s*0x[1-9a-f]/i.test(inputMethodDump)
+	) {
+		return { visibility: "visible", reason: "input_method_visible" };
+	}
+	if (
+		/\bminputshown\s*=\s*false\b/i.test(inputMethodDump) ||
+		/\bmisinputviewshown\s*=\s*false\b/i.test(inputMethodDump) ||
+		/\binputshown\s*=\s*false\b/i.test(inputMethodDump) ||
+		/\bimewindowvis\s*=\s*0x0\b/i.test(inputMethodDump)
+	) {
+		return { visibility: "hidden", reason: "input_method_hidden" };
+	}
+	if (normalized.includes("input method") || normalized.includes("ime")) {
+		return { visibility: "unknown", reason: "input_method_state_ambiguous" };
+	}
+	return { visibility: "unknown", reason: "input_method_state_unavailable" };
+}
+
+async function probeAndroidKeyboardState(params: {
+	repoRoot: string;
+	deviceId: string;
+}): Promise<AndroidKeyboardStateProbe> {
+	const command = buildAndroidKeyboardStateCommand(params.deviceId);
+	const execution = await executeRunnerWithTestHooks(
+		command,
+		params.repoRoot,
+		process.env,
+		{ timeoutMs: ANDROID_KEYBOARD_PROBE_TIMEOUT_MS },
+	);
+	const classification =
+		execution.exitCode === 0
+			? classifyAndroidKeyboardState(execution.stdout)
+			: ({
+					visibility: "unknown",
+					reason: "input_method_probe_failed",
+				} satisfies AndroidKeyboardStateClassification);
+	return {
+		checked: true,
+		platform: "android",
+		command,
+		exitCode: execution.exitCode,
+		...classification,
+	};
+}
+
+async function settleBeforeAndroidKeyboardRecheck(): Promise<void> {
+	await new Promise((resolve) => setTimeout(resolve, 300));
+}
+
+function toTypeIntoKeyboardState(
+	beforeFocus?: AndroidKeyboardStateProbe,
+	afterFocus?: AndroidKeyboardStateProbe,
+): TypeIntoElementData["keyboardState"] | undefined {
+	if (!beforeFocus && !afterFocus) {
+		return undefined;
+	}
+	const latest = afterFocus ?? beforeFocus;
+	return {
+		checked: true,
+		platform: "android",
+		...(beforeFocus ? { beforeFocus: beforeFocus.visibility } : {}),
+		...(afterFocus ? { afterFocus: afterFocus.visibility } : {}),
+		reason: latest?.reason,
+		command: latest?.command,
+		exitCode: latest?.exitCode,
+	};
 }
 
 async function tapResolvedTarget(
@@ -212,6 +319,8 @@ export const uiActionToolInternals = {
 	classifyIosPhysicalStartupFailure,
 	buildIosPhysicalFailureSuggestions,
 	verifyResolvedIosPoint: verifyResolvedIosPointWithHooks,
+	classifyAndroidKeyboardState,
+	probeAndroidKeyboardState,
 };
 
 export async function tapWithMaestroTool(
@@ -953,6 +1062,23 @@ export async function typeIntoElementWithMaestroTool(
 		}
 	}
 
+	let androidKeyboardBeforeFocus: AndroidKeyboardStateProbe | undefined;
+	let androidKeyboardAfterFocus: AndroidKeyboardStateProbe | undefined;
+	if (platform === "android" && !input.dryRun) {
+		const selection = await loadHarnessSelection(
+			repoRoot,
+			platform,
+			runnerProfile,
+			input.harnessConfigPath ?? DEFAULT_HARNESS_CONFIG_PATH,
+		);
+		const deviceId =
+			input.deviceId ?? selection.deviceId ?? buildDefaultDeviceId(platform);
+		androidKeyboardBeforeFocus = await probeAndroidKeyboardState({
+			repoRoot,
+			deviceId,
+		});
+	}
+
 	const focusResult = await tapWithMaestroTool({
 		sessionId: input.sessionId,
 		platform,
@@ -963,16 +1089,7 @@ export async function typeIntoElementWithMaestroTool(
 		y: resolution.resolvedPoint.y,
 		dryRun: input.dryRun,
 	});
-	const typeResult = await typeTextWithMaestroTool({
-		sessionId: input.sessionId,
-		platform,
-		runnerProfile: input.runnerProfile,
-		harnessConfigPath: input.harnessConfigPath,
-		deviceId: input.deviceId,
-		text: input.value,
-		dryRun: input.dryRun,
-	});
-	const commands = [focusResult.data.command, typeResult.data.command];
+	const focusCommand = focusResult.data.command;
 
 	if (focusResult.status === "failed") {
 		return {
@@ -988,13 +1105,78 @@ export async function typeIntoElementWithMaestroTool(
 				query,
 				value: input.value,
 				resolution,
-				commands,
+				commands: [focusCommand],
 				exitCode: focusResult.data.exitCode,
 				supportLevel: resolveResult.data.supportLevel,
+				keyboardState: toTypeIntoKeyboardState(androidKeyboardBeforeFocus),
 			},
 			nextSuggestions: focusResult.nextSuggestions,
 		};
 	}
+
+	if (platform === "android" && !input.dryRun) {
+		const selection = await loadHarnessSelection(
+			repoRoot,
+			platform,
+			runnerProfile,
+			input.harnessConfigPath ?? DEFAULT_HARNESS_CONFIG_PATH,
+		);
+		const deviceId =
+			input.deviceId ?? selection.deviceId ?? buildDefaultDeviceId(platform);
+		androidKeyboardAfterFocus = await probeAndroidKeyboardState({
+			repoRoot,
+			deviceId,
+		});
+		if (androidKeyboardAfterFocus.visibility === "hidden") {
+			await settleBeforeAndroidKeyboardRecheck();
+			androidKeyboardAfterFocus = await probeAndroidKeyboardState({
+				repoRoot,
+				deviceId,
+			});
+		}
+		if (androidKeyboardAfterFocus.visibility === "hidden") {
+			return {
+				status: "partial",
+				reasonCode: REASON_CODES.actionFocusFailed,
+				sessionId: input.sessionId,
+				durationMs: Date.now() - startTime,
+				attempts: resolveResult.attempts + focusResult.attempts + 1,
+				artifacts: resolveResult.artifacts,
+				data: {
+					dryRun: false,
+					runnerProfile,
+					query,
+					value: input.value,
+					resolution,
+					commands: [focusCommand, androidKeyboardAfterFocus.command],
+					exitCode: androidKeyboardAfterFocus.exitCode,
+					supportLevel: resolveResult.data.supportLevel,
+					keyboardState: toTypeIntoKeyboardState(
+						androidKeyboardBeforeFocus,
+						androidKeyboardAfterFocus,
+					),
+				},
+				nextSuggestions: [
+					"The Android keyboard did not appear after focusing the target field. Re-resolve the input field, verify it is editable and enabled, then retry type_into_element.",
+				],
+			};
+		}
+	}
+
+	const typeResult = await typeTextWithMaestroTool({
+		sessionId: input.sessionId,
+		platform,
+		runnerProfile: input.runnerProfile,
+		harnessConfigPath: input.harnessConfigPath,
+		deviceId: input.deviceId,
+		text: input.value,
+		dryRun: input.dryRun,
+	});
+	const commands = [focusCommand, typeResult.data.command];
+	const keyboardState = toTypeIntoKeyboardState(
+		androidKeyboardBeforeFocus,
+		androidKeyboardAfterFocus,
+	);
 
 	if (
 		typeResult.status === "success" &&
@@ -1040,6 +1222,7 @@ export async function typeIntoElementWithMaestroTool(
 					commands: [...commands, verification.command],
 					exitCode: verification.exitCode,
 					supportLevel: resolveResult.data.supportLevel,
+					keyboardState,
 				},
 				nextSuggestions: [
 					"The iOS field could not be re-verified after typing. Refresh the hierarchy, confirm focus stayed on the target field, and retry type_into_element.",
@@ -1068,6 +1251,7 @@ export async function typeIntoElementWithMaestroTool(
 			commands,
 			exitCode: typeResult.data.exitCode,
 			supportLevel: resolveResult.data.supportLevel,
+			keyboardState,
 		},
 		nextSuggestions: typeResult.nextSuggestions,
 	};

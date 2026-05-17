@@ -5,7 +5,9 @@
  * triaged without expanding the full traversal report.
  */
 
-import type { ExplorerConfig, FailureEntry, PageEntry } from "../types.js";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import path from "node:path";
+import type { ExplorerConfig, FailureEntry, PageEntry, UiHierarchy } from "../types.js";
 
 /** Options passed to failure review generation. */
 export interface FailureReviewOpts {
@@ -17,6 +19,8 @@ export interface FailureReviewOpts {
   durationMs: number;
   /** Optional raw explorer log text from the run directory. */
   logText?: string;
+  /** Optional run directory for writing failure visual-evidence artifacts. */
+  runDir?: string;
 }
 
 export type FailureReviewCategory =
@@ -47,6 +51,21 @@ export interface FailureReviewExample {
   errorMessage: string;
   depth: number;
   path: string[];
+  visualEvidence?: FailureVisualEvidence;
+}
+
+export interface FailureVisualEvidence {
+  status: "captured" | "missing_screenshot" | "missing_bounds";
+  screenshotPath?: string;
+  elementCropPath?: string;
+  bounds?: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  };
+  baselineStatus: "not_configured";
+  reason?: string;
 }
 
 export interface RuleDecisionContext {
@@ -119,8 +138,11 @@ export function generateFailureReviewJson(
   opts: FailureReviewOpts,
 ): FailureReview {
   const pagesByScreenId = new Map(pages.map((page) => [page.screenId, page]));
-  const failedElements = failures.map((failure) =>
-    toFailureExample(failure, pagesByScreenId.get(failure.pageScreenId)),
+  const failedElements = failures.map((failure, index) =>
+    toFailureExample(failure, pagesByScreenId.get(failure.pageScreenId), {
+      runDir: opts.runDir,
+      index,
+    }),
   );
   const patterns = groupPatterns(failedElements);
   const ruleDecisionContext = summarizeRuleDecisions(pages);
@@ -277,6 +299,31 @@ export function generateFailureReviewMarkdown(review: FailureReview): string {
     content += "\n";
   }
 
+  const examplesWithVisualEvidence = review.failedElements.filter((example) => example.visualEvidence);
+  if (examplesWithVisualEvidence.length > 0) {
+    content += "## Visual Evidence\n\n";
+    content += "| Page | Element | Status | Screenshot | Element Crop | Bounds | Baseline |\n";
+    content += "|------|---------|--------|------------|--------------|--------|----------|\n";
+    for (const example of examplesWithVisualEvidence) {
+      const evidence = example.visualEvidence;
+      if (!evidence) {
+        continue;
+      }
+      const page = example.screenTitle ?? example.pageScreenId;
+      const screenshot = evidence.screenshotPath
+        ? `[screenshot](${escapeMarkdownLink(evidence.screenshotPath)})`
+        : "";
+      const crop = evidence.elementCropPath
+        ? `[crop](${escapeMarkdownLink(evidence.elementCropPath)})`
+        : "";
+      const bounds = evidence.bounds
+        ? `${evidence.bounds.x},${evidence.bounds.y} ${evidence.bounds.width}x${evidence.bounds.height}`
+        : evidence.reason ?? "";
+      content += `| ${escapeMarkdown(page)} | ${escapeMarkdown(example.elementLabel)} | ${evidence.status} | ${screenshot} | ${crop} | ${escapeMarkdown(bounds)} | ${evidence.baselineStatus} |\n`;
+    }
+    content += "\n";
+  }
+
   if (review.ruleDecisionContext) {
     content += "## Rule Decision Context\n\n";
     content += `Total recorded rule decisions: ${review.ruleDecisionContext.total}\n\n`;
@@ -299,7 +346,15 @@ export function generateFailureReviewMarkdown(review: FailureReview): string {
 function toFailureExample(
   failure: FailureEntry,
   page?: PageEntry,
+  opts?: {
+    runDir?: string;
+    index: number;
+  },
 ): FailureReviewExample {
+  const visualEvidence =
+    opts?.runDir && page
+      ? buildFailureVisualEvidence(failure, page, opts.runDir, opts.index)
+      : undefined;
   return {
     pageScreenId: failure.pageScreenId,
     screenTitle: page?.screenTitle,
@@ -309,7 +364,264 @@ function toFailureExample(
     errorMessage: failure.errorMessage,
     depth: failure.depth,
     path: failure.path,
+    ...(visualEvidence ? { visualEvidence } : {}),
   };
+}
+
+function buildFailureVisualEvidence(
+  failure: FailureEntry,
+  page: PageEntry,
+  runDir: string,
+  index: number,
+): FailureVisualEvidence | undefined {
+  const screenshotPath = page.snapshot?.screenshotPath;
+  if (!screenshotPath) {
+    return {
+      status: "missing_screenshot",
+      baselineStatus: "not_configured",
+      reason: "page snapshot did not include screenshotPath",
+    };
+  }
+
+  const screenshotAbsolutePath = path.isAbsolute(screenshotPath)
+    ? screenshotPath
+    : path.resolve(screenshotPath);
+  if (!existsSync(screenshotAbsolutePath)) {
+    return {
+      status: "missing_screenshot",
+      screenshotPath,
+      baselineStatus: "not_configured",
+      reason: "screenshot file was not found when generating the report",
+    };
+  }
+
+  const bounds = findFailureElementBounds(page, failure.elementLabel);
+  if (!bounds) {
+    return {
+      status: "missing_bounds",
+      screenshotPath: toRunRelativeLink(runDir, screenshotAbsolutePath),
+      baselineStatus: "not_configured",
+      reason: "failed element bounds were not present in the captured UI tree",
+    };
+  }
+
+  const dimensions = readImageDimensions(screenshotAbsolutePath);
+  const clampedBounds = dimensions
+    ? clampBounds(bounds, dimensions.width, dimensions.height)
+    : bounds;
+  if (clampedBounds.width <= 0 || clampedBounds.height <= 0) {
+    return {
+      status: "missing_bounds",
+      screenshotPath: toRunRelativeLink(runDir, screenshotAbsolutePath),
+      baselineStatus: "not_configured",
+      reason: "failed element bounds were outside the screenshot viewport",
+    };
+  }
+
+  const evidenceDir = path.join(runDir, "visual-evidence");
+  mkdirSync(evidenceDir, { recursive: true });
+  const cropFileName = `${String(index + 1).padStart(3, "0")}-${slugify(failure.elementLabel)}.svg`;
+  const cropAbsolutePath = path.join(evidenceDir, cropFileName);
+  const imageHref = toRelativeHref(evidenceDir, screenshotAbsolutePath);
+  const svg = buildCropSvg(imageHref, clampedBounds, dimensions);
+  writeFileSync(cropAbsolutePath, svg, "utf-8");
+
+  return {
+    status: "captured",
+    screenshotPath: toRunRelativeLink(runDir, screenshotAbsolutePath),
+    elementCropPath: toRunRelativeLink(runDir, cropAbsolutePath),
+    bounds: {
+      x: clampedBounds.x,
+      y: clampedBounds.y,
+      width: clampedBounds.width,
+      height: clampedBounds.height,
+    },
+    baselineStatus: "not_configured",
+  };
+}
+
+function findFailureElementBounds(
+  page: PageEntry,
+  elementLabel: string,
+): FailureVisualEvidence["bounds"] | undefined {
+  const expected = normalizeLabel(elementLabel);
+  const nodes = flattenUiTree(page.snapshot?.uiTree);
+  const scored = nodes
+    .map((node) => {
+      const labels = [
+        node.label,
+        node.text,
+        node.contentDesc,
+        node.accessibilityLabel,
+        node.resourceId,
+      ].filter((value): value is string => typeof value === "string" && value.length > 0);
+      const score = labels.reduce((best, label) => Math.max(best, scoreLabel(expected, label)), 0);
+      return { node, score };
+    })
+    .filter((candidate) => candidate.score > 0)
+    .sort((a, b) => b.score - a.score);
+
+  for (const candidate of scored) {
+    const bounds = extractNodeBounds(candidate.node);
+    if (bounds) {
+      return bounds;
+    }
+  }
+  return undefined;
+}
+
+function flattenUiTree(root: UiHierarchy | undefined): UiHierarchy[] {
+  if (!root || typeof root !== "object") {
+    return [];
+  }
+  const nodes: UiHierarchy[] = [root];
+  const children = Array.isArray(root.children)
+    ? root.children
+    : [];
+  for (const child of children) {
+    nodes.push(...flattenUiTree(child));
+  }
+  return nodes;
+}
+
+function scoreLabel(expected: string, rawLabel: string): number {
+  const label = normalizeLabel(rawLabel);
+  if (!expected || !label) {
+    return 0;
+  }
+  if (label === expected) {
+    return 100;
+  }
+  if (label.includes(expected) || expected.includes(label)) {
+    return 50;
+  }
+  return 0;
+}
+
+function normalizeLabel(label: string): string {
+  return label.trim().replace(/\s+/g, " ").toLowerCase();
+}
+
+function extractNodeBounds(node: Record<string, unknown>): FailureVisualEvidence["bounds"] | undefined {
+  const frame = node.frame;
+  if (frame && typeof frame === "object") {
+    const value = frame as Record<string, unknown>;
+    if (
+      typeof value.x === "number" &&
+      typeof value.y === "number" &&
+      typeof value.width === "number" &&
+      typeof value.height === "number"
+    ) {
+      return {
+        x: Math.round(value.x),
+        y: Math.round(value.y),
+        width: Math.round(value.width),
+        height: Math.round(value.height),
+      };
+    }
+  }
+
+  if (typeof node.bounds === "string") {
+    const match = /^\[(\d+),(\d+)\]\[(\d+),(\d+)\]$/.exec(node.bounds);
+    if (match) {
+      const left = Number(match[1]);
+      const top = Number(match[2]);
+      const right = Number(match[3]);
+      const bottom = Number(match[4]);
+      return {
+        x: left,
+        y: top,
+        width: Math.max(0, right - left),
+        height: Math.max(0, bottom - top),
+      };
+    }
+  }
+
+  return undefined;
+}
+
+function clampBounds(
+  bounds: NonNullable<FailureVisualEvidence["bounds"]>,
+  imageWidth: number,
+  imageHeight: number,
+): NonNullable<FailureVisualEvidence["bounds"]> {
+  const x = Math.max(0, Math.min(bounds.x, imageWidth));
+  const y = Math.max(0, Math.min(bounds.y, imageHeight));
+  const right = Math.max(x, Math.min(bounds.x + bounds.width, imageWidth));
+  const bottom = Math.max(y, Math.min(bounds.y + bounds.height, imageHeight));
+  return {
+    x,
+    y,
+    width: right - x,
+    height: bottom - y,
+  };
+}
+
+function readImageDimensions(filePath: string): { width: number; height: number } | undefined {
+  const buffer = readFileSync(filePath);
+  if (
+    buffer.length >= 24 &&
+    buffer[0] === 0x89 &&
+    buffer.toString("ascii", 1, 4) === "PNG"
+  ) {
+    return {
+      width: buffer.readUInt32BE(16),
+      height: buffer.readUInt32BE(20),
+    };
+  }
+
+  if (buffer.length >= 4 && buffer[0] === 0xff && buffer[1] === 0xd8) {
+    let offset = 2;
+    while (offset + 9 < buffer.length) {
+      if (buffer[offset] !== 0xff) {
+        offset += 1;
+        continue;
+      }
+      const marker = buffer[offset + 1];
+      const length = buffer.readUInt16BE(offset + 2);
+      if (marker >= 0xc0 && marker <= 0xc3) {
+        return {
+          height: buffer.readUInt16BE(offset + 5),
+          width: buffer.readUInt16BE(offset + 7),
+        };
+      }
+      offset += 2 + length;
+    }
+  }
+
+  return undefined;
+}
+
+function buildCropSvg(
+  imageHref: string,
+  bounds: NonNullable<FailureVisualEvidence["bounds"]>,
+  dimensions?: { width: number; height: number },
+): string {
+  const imageWidth = dimensions?.width ?? bounds.x + bounds.width;
+  const imageHeight = dimensions?.height ?? bounds.y + bounds.height;
+  return [
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${bounds.width}" height="${bounds.height}" viewBox="0 0 ${bounds.width} ${bounds.height}">`,
+    `  <image href="${escapeXml(imageHref)}" x="${-bounds.x}" y="${-bounds.y}" width="${imageWidth}" height="${imageHeight}" />`,
+    "</svg>",
+    "",
+  ].join("\n");
+}
+
+function toRelativeHref(fromDir: string, targetPath: string): string {
+  return path.relative(fromDir, targetPath).split(path.sep).join("/");
+}
+
+function toRunRelativeLink(runDir: string, targetPath: string): string {
+  return path.relative(runDir, targetPath).split(path.sep).join("/");
+}
+
+function slugify(value: string): string {
+  const slug = value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 48);
+  return slug || "element";
 }
 
 function groupPatterns(examples: FailureReviewExample[]): FailureReviewPattern[] {
@@ -517,4 +829,16 @@ function formatDuration(ms: number): string {
 
 function escapeMarkdown(text: string): string {
   return text.replace(/\|/g, "\\|");
+}
+
+function escapeMarkdownLink(text: string): string {
+  return text.replace(/\)/g, "%29").replace(/\(/g, "%28");
+}
+
+function escapeXml(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
 }
