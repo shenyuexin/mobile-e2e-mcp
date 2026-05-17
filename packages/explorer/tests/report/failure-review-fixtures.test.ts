@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
-import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { describe, it } from "node:test";
+import { Jimp } from "jimp";
 import {
+	attachFailureReviewVisualBaselineComparisons,
 	generateFailureReviewJson,
 	generateFailureReviewMarkdown,
 	parseExplorerLogSignals,
@@ -193,5 +195,129 @@ describe("failure review fixture pack", () => {
 			/<svg[\s\S]*<image /,
 		);
 		assert.match(generateFailureReviewMarkdown(review), /## Visual Evidence/);
+	});
+
+	it("compares failed element crops against managed visual baselines when present", async () => {
+		const tmpDir = mkdtempSync(path.join(os.tmpdir(), "explorer-visual-baseline-"));
+		const screenshotPath = path.join(tmpDir, "screen.png");
+		const screenshot = new Jimp({ width: 10, height: 10, color: 0xff0000ff });
+		// @ts-expect-error Jimp v1.x write returns a promise in runtime.
+		await screenshot.write(screenshotPath);
+		const baselineDir = path.join(
+			path.dirname(tmpDir),
+			"baselines",
+			"com-android-settings",
+			"network",
+		);
+		mkdirSync(baselineDir, { recursive: true });
+		const baseline = new Jimp({ width: 6, height: 6, color: 0xff0000ff });
+		// @ts-expect-error Jimp v1.x write returns a promise in runtime.
+		await baseline.write(path.join(baselineDir, "sims.png"));
+
+		const pageEntry = page("network", "Network", 1);
+		pageEntry.snapshot = {
+			screenId: "network",
+			screenTitle: "Network",
+			uiTree: {
+				clickable: false,
+				enabled: true,
+				scrollable: false,
+				children: [
+					{
+						text: "SIMs",
+						clickable: true,
+						enabled: true,
+						scrollable: false,
+						bounds: "[1,2][7,8]",
+					},
+				],
+			},
+			clickableElements: [],
+			screenshotPath,
+			capturedAt: "2026-05-17T00:00:00.000Z",
+			arrivedFrom: null,
+			viaElement: null,
+			depth: 1,
+			loadTimeMs: 10,
+			stabilityScore: 1,
+		};
+
+		const review = generateFailureReviewJson(
+			[pageEntry],
+			[failure("network", "TAP_FAILED", "SIMs")],
+			fixtureConfig,
+			{ partial: false, durationMs: 5_000, runDir: tmpDir },
+		);
+
+		await attachFailureReviewVisualBaselineComparisons(review, [pageEntry], fixtureConfig, {
+			runDir: tmpDir,
+		});
+
+		const evidence = review.failedElements[0]?.visualEvidence;
+		assert.equal(evidence?.baselineStatus, "compared");
+		assert.equal(evidence?.comparison?.passed, true);
+		assert.ok(evidence?.elementCropPath?.endsWith(".png"));
+		assert.match(generateFailureReviewMarkdown(review), /passed 0%/);
+	});
+
+	it("emits baseline candidate crops when managed baselines are missing", async () => {
+		const tmpRoot = mkdtempSync(path.join(os.tmpdir(), "explorer-baseline-candidate-"));
+		const tmpDir = path.join(tmpRoot, "run");
+		mkdirSync(tmpDir, { recursive: true });
+		const screenshotPath = path.join(tmpDir, "screen.png");
+		const screenshot = new Jimp({ width: 10, height: 10, color: 0x00ff00ff });
+		// @ts-expect-error Jimp v1.x write returns a promise in runtime.
+		await screenshot.write(screenshotPath);
+
+		const pageEntry = page("network", "Network", 1);
+		pageEntry.snapshot = {
+			screenId: "network",
+			screenTitle: "Network",
+			uiTree: {
+				clickable: false,
+				enabled: true,
+				scrollable: false,
+				children: [
+					{
+						text: "SIMs",
+						clickable: true,
+						enabled: true,
+						scrollable: false,
+						bounds: "[1,2][7,8]",
+					},
+				],
+			},
+			clickableElements: [],
+			screenshotPath,
+			capturedAt: "2026-05-17T00:00:00.000Z",
+			arrivedFrom: null,
+			viaElement: null,
+			depth: 1,
+			loadTimeMs: 10,
+			stabilityScore: 1,
+		};
+
+		const review = generateFailureReviewJson(
+			[pageEntry],
+			[failure("network", "TAP_FAILED", "SIMs")],
+			fixtureConfig,
+			{ partial: false, durationMs: 5_000, runDir: tmpDir },
+		);
+
+		await attachFailureReviewVisualBaselineComparisons(review, [pageEntry], fixtureConfig, {
+			runDir: tmpDir,
+		});
+
+		const evidence = review.failedElements[0]?.visualEvidence;
+		assert.equal(evidence?.baselineStatus, "missing");
+		assert.ok(evidence?.baselinePath?.endsWith("baselines/com-android-settings/network/sims.png"));
+		assert.ok(evidence?.baselineCandidatePath?.startsWith("visual-evidence/baseline-candidates/"));
+		assert.ok(existsSync(path.join(tmpDir, evidence?.baselineCandidatePath ?? "")));
+		assert.match(generateFailureReviewMarkdown(review), /candidate/);
+		assert.ok(
+			generateFailureReviewMarkdown(review).includes(
+				"baselines/com-android-settings/network/sims.png",
+			),
+		);
 	});
 });

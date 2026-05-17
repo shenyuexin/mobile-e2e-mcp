@@ -15,7 +15,11 @@ import type {
   TransitionLifecycleSummary,
 } from '../types.js';
 import { generateAsciiTree } from './ascii.js';
-import { generateFailureReviewJson, generateFailureReviewMarkdown } from './failure-review.js';
+import {
+  attachFailureReviewVisualBaselineComparisons,
+  generateFailureReviewJson,
+  generateFailureReviewMarkdown,
+} from './failure-review.js';
 import { updateIndex } from './index-manager.js';
 import { generateMarkdown } from './markdown.js';
 import { inferModules } from './modules.js';
@@ -103,6 +107,9 @@ export async function generateReport(
     ...opts,
     runDir,
     ...(existsSync(logPath) ? { logText: readFileSync(logPath, 'utf-8') } : {}),
+  });
+  await attachFailureReviewVisualBaselineComparisons(failureReview, pages, config, {
+    runDir,
   });
   writeFileSync(join(runDir, 'failure-review.json'), JSON.stringify(failureReview, null, 2), 'utf-8');
   writeFileSync(join(runDir, 'failure-review.md'), generateFailureReviewMarkdown(failureReview), 'utf-8');

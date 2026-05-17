@@ -11,7 +11,9 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@mobile-e2e-mcp/contracts": "workspace:*"
+    "@mobile-e2e-mcp/adapter-vision": "workspace:*",
+    "@mobile-e2e-mcp/contracts": "workspace:*",
+    "jimp": "^1.6.0"
   },
   "devDependencies": {
     "tsup": "^8.0.0",

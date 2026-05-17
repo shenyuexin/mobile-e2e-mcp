@@ -66,9 +66,15 @@ importers:
 
   packages/explorer:
     dependencies:
+      '@mobile-e2e-mcp/adapter-vision':
+        specifier: workspace:*
+        version: link:../adapter-vision
       '@mobile-e2e-mcp/contracts':
         specifier: workspace:*
         version: link:../contracts
+      jimp:
+        specifier: ^1.6.0
+        version: 1.6.1
     devDependencies:
       tsup:
         specifier: ^8.0.0

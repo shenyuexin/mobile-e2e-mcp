@@ -48,11 +48,12 @@
 
 当前事实更新：`capture_element_screenshot` 与 `compare_visual_baseline`
 已经进入 live tool registry，Explorer 失败复盘也会在 snapshot bounds 可用时为失败项附加
-当前 screenshot/crop 视觉证据。剩余差距是 baseline 治理，以及在 probe/Explorer 报告中自动做视觉对比。
+当前 screenshot/crop 视觉证据，并在存在匹配 baseline 图片时自动做 managed-baseline 对比。
+剩余差距是人工提升之后的 baseline 生命周期治理：过期策略、评审元数据，以及更广的 probe 接入。
 
 | 差距 | 优先级 | 说明 |
 |-----|--------|------|
-| **Baseline 对比尚未成为 probe/Explorer 原生输出** | 中 | Explorer 失败复盘已为失败目标附加当前 screenshot/crop 证据，`capture_element_screenshot` 与 `compare_visual_baseline` 也已可用。但 probe/Explorer 报告还不会自动把失败目标 crop 与受管理 baseline 对比，或分类视觉漂移原因。 |
+| **Baseline 生命周期治理仍较浅** | 中 | Explorer 失败复盘已为失败目标附加当前 screenshot/crop 证据，在存在 managed baseline 时自动比较失败目标 crop，并提供 review-first 的缺失 baseline 提升脚本。剩余工作是过期策略、更丰富的评审元数据，以及更广的 probe 接入。 |
 | **选择器优先级扁平，无学习排序** | 中 | `resolve_ui_target` 返回所有匹配项并打分，但不会从过去的成功解析中学习。一个简单的会话级"选择器效果缓存"（曾经有效的 resourceId → 提高优先级）可以减少重复运行时的歧义。 |
 | **无障碍审计缺失** | 中 | `inspect_ui` 返回原始树，但不标记缺失的无障碍标签、零尺寸触摸区域或对比度问题。增加 `audit_accessibility` 工具扫描树中常见的无障碍违规，同时可以作为开发者生产力功能。 |
 | **WebView 内容盲区** | 中高 | WebView 树往往不完整，或者与原生树合并不佳。当前适配器不区分 WebView 节点，导致 `query_ui` 在混合屏幕上不可靠。缺少 `detect_webview` + `switch_to_webview_context` 通道（通过 Chrome DevTools Protocol on Android、Safari inspector on iOS）。 |
@@ -210,7 +211,7 @@
 | 优先级 | 差距 | 影响 | 成本 | 目标链路 |
 |--------|------|------|------|----------|
 | P0 | 网络感知编排落地 | 高 | 中 | 失败分析 |
-| P0 | Probe/Explorer baseline 对比挂载 | 高 | 低中 | UI 检查 |
+| P1 | Probe/Explorer baseline 生命周期治理 | 中高 | 中 | UI 检查 |
 | P0 | 导出前流程验证 | 高 | 低 | 会话与流程 |
 | P1 | 检查点链重放证据强化 | 中高 | 中 | 失败分析 |
 | P1 | 手势组合 | 高 | 中 | UI 交互 |

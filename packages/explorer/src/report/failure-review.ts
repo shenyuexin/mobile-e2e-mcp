@@ -7,6 +7,9 @@
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import { compareVisualBaseline } from "@mobile-e2e-mcp/adapter-vision";
+import type { VisualDiffData } from "@mobile-e2e-mcp/contracts";
+import { Jimp } from "jimp";
 import type { ExplorerConfig, FailureEntry, PageEntry, UiHierarchy } from "../types.js";
 
 /** Options passed to failure review generation. */
@@ -21,6 +24,8 @@ export interface FailureReviewOpts {
   logText?: string;
   /** Optional run directory for writing failure visual-evidence artifacts. */
   runDir?: string;
+  /** Optional visual diff threshold percentage. */
+  visualBaselineThreshold?: number;
 }
 
 export type FailureReviewCategory =
@@ -55,7 +60,7 @@ export interface FailureReviewExample {
 }
 
 export interface FailureVisualEvidence {
-  status: "captured" | "missing_screenshot" | "missing_bounds";
+  status: "captured" | "missing_screenshot" | "missing_bounds" | "compare_error";
   screenshotPath?: string;
   elementCropPath?: string;
   bounds?: {
@@ -64,7 +69,11 @@ export interface FailureVisualEvidence {
     width: number;
     height: number;
   };
-  baselineStatus: "not_configured";
+  baselineStatus: "not_configured" | "missing" | "compared" | "error";
+  baselinePath?: string;
+  baselineCandidatePath?: string;
+  diffPath?: string;
+  comparison?: Pick<VisualDiffData, "pixelDiffPercent" | "threshold" | "passed">;
   reason?: string;
 }
 
@@ -74,6 +83,94 @@ export interface RuleDecisionContext {
   byCategory: Record<string, number>;
   byAction: Record<string, number>;
   examples: NonNullable<PageEntry["ruleDecision"]>[];
+}
+
+export async function attachFailureReviewVisualBaselineComparisons(
+  review: FailureReview,
+  pages: PageEntry[],
+  config: ExplorerConfig,
+  opts: Required<Pick<FailureReviewOpts, "runDir">> &
+    Pick<FailureReviewOpts, "visualBaselineThreshold">,
+): Promise<FailureReview> {
+  const pagesByScreenId = new Map(pages.map((page) => [page.screenId, page]));
+  for (const example of review.failedElements) {
+    const page = pagesByScreenId.get(example.pageScreenId);
+    const evidence = example.visualEvidence;
+    if (!page || !evidence || evidence.status !== "captured" || !evidence.bounds) {
+      continue;
+    }
+
+    const screenshotAbsolutePath = resolveRunLinkedPath(opts.runDir, evidence.screenshotPath);
+    if (!screenshotAbsolutePath || !existsSync(screenshotAbsolutePath)) {
+      evidence.status = "missing_screenshot";
+      evidence.baselineStatus = "missing";
+      evidence.reason = "screenshot file was not found before visual baseline comparison";
+      continue;
+    }
+
+    const currentCropAbsolutePath = path.join(
+      opts.runDir,
+      "visual-evidence",
+      `${String(review.failedElements.indexOf(example) + 1).padStart(3, "0")}-${slugify(example.elementLabel)}.png`,
+    );
+    try {
+      await writePngCrop(screenshotAbsolutePath, currentCropAbsolutePath, evidence.bounds);
+      evidence.elementCropPath = toRunRelativeLink(opts.runDir, currentCropAbsolutePath);
+    } catch (error) {
+      evidence.status = "compare_error";
+      evidence.baselineStatus = "error";
+      evidence.reason = error instanceof Error ? error.message : String(error);
+      continue;
+    }
+
+    const baselineAbsolutePath = resolveFailureBaselinePath(
+      opts.runDir,
+      config,
+      example.pageScreenId,
+      example.elementLabel,
+    );
+    evidence.baselinePath = toRunRelativeLink(opts.runDir, baselineAbsolutePath);
+    if (!existsSync(baselineAbsolutePath)) {
+      const baselineCandidateAbsolutePath = resolveFailureBaselineCandidatePath(
+        opts.runDir,
+        config,
+        example.pageScreenId,
+        example.elementLabel,
+      );
+      await writePngCrop(screenshotAbsolutePath, baselineCandidateAbsolutePath, evidence.bounds);
+      evidence.baselineCandidatePath = toRunRelativeLink(
+        opts.runDir,
+        baselineCandidateAbsolutePath,
+      );
+      evidence.baselineStatus = "missing";
+      evidence.reason =
+        "managed visual baseline was not found; review the candidate crop before promoting it to baselinePath";
+      continue;
+    }
+
+    try {
+      const diff = await compareVisualBaseline({
+        baselinePath: baselineAbsolutePath,
+        currentPath: currentCropAbsolutePath,
+        threshold: opts.visualBaselineThreshold,
+      });
+      evidence.baselineStatus = "compared";
+      evidence.comparison = {
+        pixelDiffPercent: diff.result.pixelDiffPercent,
+        threshold: diff.result.threshold,
+        passed: diff.result.passed,
+      };
+      if (diff.result.diffPath) {
+        evidence.diffPath = toRunRelativeLink(opts.runDir, diff.result.diffPath);
+      }
+    } catch (error) {
+      evidence.status = "compare_error";
+      evidence.baselineStatus = "error";
+      evidence.reason = error instanceof Error ? error.message : String(error);
+    }
+  }
+
+  return review;
 }
 
 export interface ExplorerLogSignals {
@@ -302,8 +399,8 @@ export function generateFailureReviewMarkdown(review: FailureReview): string {
   const examplesWithVisualEvidence = review.failedElements.filter((example) => example.visualEvidence);
   if (examplesWithVisualEvidence.length > 0) {
     content += "## Visual Evidence\n\n";
-    content += "| Page | Element | Status | Screenshot | Element Crop | Bounds | Baseline |\n";
-    content += "|------|---------|--------|------------|--------------|--------|----------|\n";
+    content += "| Page | Element | Status | Screenshot | Element Crop | Bounds | Baseline | Candidate | Diff |\n";
+    content += "|------|---------|--------|------------|--------------|--------|----------|-----------|------|\n";
     for (const example of examplesWithVisualEvidence) {
       const evidence = example.visualEvidence;
       if (!evidence) {
@@ -319,7 +416,17 @@ export function generateFailureReviewMarkdown(review: FailureReview): string {
       const bounds = evidence.bounds
         ? `${evidence.bounds.x},${evidence.bounds.y} ${evidence.bounds.width}x${evidence.bounds.height}`
         : evidence.reason ?? "";
-      content += `| ${escapeMarkdown(page)} | ${escapeMarkdown(example.elementLabel)} | ${evidence.status} | ${screenshot} | ${crop} | ${escapeMarkdown(bounds)} | ${evidence.baselineStatus} |\n`;
+      const baseline =
+        evidence.baselinePath && evidence.baselineStatus !== "missing"
+          ? `[${formatBaselineStatus(evidence)}](${escapeMarkdownLink(evidence.baselinePath)})`
+          : formatBaselineStatus(evidence);
+      const candidate = evidence.baselineCandidatePath
+        ? `[candidate](${escapeMarkdownLink(evidence.baselineCandidatePath)}) -> \`${escapeMarkdown(evidence.baselinePath ?? "")}\``
+        : "";
+      const diff = evidence.diffPath
+        ? `[diff](${escapeMarkdownLink(evidence.diffPath)})`
+        : "";
+      content += `| ${escapeMarkdown(page)} | ${escapeMarkdown(example.elementLabel)} | ${evidence.status} | ${screenshot} | ${crop} | ${escapeMarkdown(bounds)} | ${baseline} | ${candidate} | ${diff} |\n`;
     }
     content += "\n";
   }
@@ -438,6 +545,66 @@ function buildFailureVisualEvidence(
     },
     baselineStatus: "not_configured",
   };
+}
+
+async function writePngCrop(
+  screenshotPath: string,
+  outputPath: string,
+  bounds: NonNullable<FailureVisualEvidence["bounds"]>,
+): Promise<void> {
+  const fullImage = await Jimp.read(screenshotPath);
+  const clamped = clampBounds(bounds, fullImage.bitmap.width, fullImage.bitmap.height);
+  const croppedImage = fullImage.clone();
+  croppedImage.crop({
+    x: clamped.x,
+    y: clamped.y,
+    w: clamped.width,
+    h: clamped.height,
+  });
+  mkdirSync(path.dirname(outputPath), { recursive: true });
+  // @ts-expect-error Jimp v1.x write returns a promise in runtime.
+  await croppedImage.write(outputPath);
+}
+
+function resolveFailureBaselinePath(
+  runDir: string,
+  config: ExplorerConfig,
+  pageScreenId: string,
+  elementLabel: string,
+): string {
+  return path.join(
+    path.dirname(runDir),
+    "baselines",
+    slugify(config.appId),
+    slugify(pageScreenId),
+    `${slugify(elementLabel)}.png`,
+  );
+}
+
+function resolveFailureBaselineCandidatePath(
+  runDir: string,
+  config: ExplorerConfig,
+  pageScreenId: string,
+  elementLabel: string,
+): string {
+  return path.join(
+    runDir,
+    "visual-evidence",
+    "baseline-candidates",
+    slugify(config.appId),
+    slugify(pageScreenId),
+    `${slugify(elementLabel)}.png`,
+  );
+}
+
+function resolveRunLinkedPath(
+  runDir: string,
+  linkedPath: string | undefined,
+): string | undefined {
+  if (!linkedPath) {
+    return undefined;
+  }
+  return path.isAbsolute(linkedPath) ? linkedPath : path.resolve(runDir, linkedPath);
 }
 
 function findFailureElementBounds(
@@ -622,6 +789,14 @@ function slugify(value: string): string {
     .replace(/^-+|-+$/g, "")
     .slice(0, 48);
   return slug || "element";
+}
+
+function formatBaselineStatus(evidence: FailureVisualEvidence): string {
+  if (evidence.baselineStatus !== "compared" || !evidence.comparison) {
+    return evidence.baselineStatus;
+  }
+  const verdict = evidence.comparison.passed ? "passed" : "failed";
+  return `${verdict} ${evidence.comparison.pixelDiffPercent}%`;
 }
 
 function groupPatterns(examples: FailureReviewExample[]): FailureReviewPattern[] {

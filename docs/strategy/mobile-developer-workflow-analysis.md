@@ -48,13 +48,14 @@
 
 Current truth update: `capture_element_screenshot` and `compare_visual_baseline`
 now exist in the live tool registry, and Explorer failure reviews now attach
-per-failure screenshot/crop visual evidence when snapshot bounds are available.
-The remaining gap is baseline governance and automatic visual comparison inside
-probe/Explorer reports.
+per-failure screenshot/crop visual evidence plus managed-baseline comparisons
+when a matching baseline image exists. The remaining gap is baseline lifecycle
+governance beyond manual promotion: expiry, review policy, and broader probe
+rollout for those images.
 
 | Gap | Severity | Description |
 |-----|----------|-------------|
-| **Baseline comparison is not yet probe/explorer-native** | Medium | Explorer failure reviews now attach current screenshot/crop evidence for failed targets, and `capture_element_screenshot` / `compare_visual_baseline` are available as tools. Probe/Explorer reports still do not automatically compare failed target crops against managed baselines or classify visual drift. |
+| **Baseline lifecycle governance is shallow** | Medium | Explorer failure reviews attach current screenshot/crop evidence, compare failed target crops against managed baselines when available, and expose a review-first promotion script for missing baselines. Remaining lifecycle work is expiry policy, richer review metadata, and broader probe rollout. |
 | **Flat selector priority, no learned ranking** | Medium | `resolve_ui_target` returns all matches with confidence scoring, but does not learn from past successful resolutions. A simple session-scoped "selector effectiveness cache" (resourceId that worked before → higher priority) would reduce ambiguity on repeated runs. |
 | **No accessibility audit pass** | Medium | `inspect_ui` returns raw tree but does not flag missing accessibility labels, zero-size touch targets, or contrast issues. A `audit_accessibility` tool that scans the tree for common a11y violations would double as a developer productivity feature. |
 | **WebView content blind spot** | Medium-High | WebView trees are often incomplete or merged poorly with native tree. Current adapter does not distinguish WebView nodes, making `query_ui` unreliable for hybrid screens. A `detect_webview` + `switch_to_webview_context` lane (via Chrome DevTools Protocol on Android, Safari inspector on iOS) is missing. |
@@ -218,7 +219,7 @@ Based on impact × implementation effort, here is the recommended prioritization
 | Priority | Gap | Impact | Effort | Target Chain |
 |----------|-----|--------|--------|-------------|
 | P0 | Network-aware orchestration adoption | High | Medium | Failure Analysis |
-| P0 | Probe/Explorer baseline comparison attachment | High | Low-Medium | UI Inspection |
+| P1 | Probe/Explorer baseline lifecycle governance | Medium-High | Medium | UI Inspection |
 | P0 | Flow validation before export | High | Low | Session & Flow |
 | P1 | Checkpoint-chain replay evidence hardening | Medium-High | Medium | Failure Analysis |
 | P1 | No gesture composition | High | Medium | UI Interaction |
