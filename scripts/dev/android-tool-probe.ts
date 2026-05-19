@@ -1,6 +1,17 @@
 import { mkdir, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { dirname } from "node:path";
 import { createServer } from "../../packages/mcp-server/src/index.ts";
+import {
+  buildProbeArtifactPaths,
+  buildToolProbeReport,
+  inferObservedEffect,
+  pickActionId,
+  type ProbeRecord,
+  reclassifyObservedEffects,
+  renderToolProbeMarkdown,
+  type ToolResultLike,
+  validateToolProbeReportContract,
+} from "./tool-probe-report-contract.ts";
 
 // ═══════════════════════════════════════════════════════════════════
 // Android Tool Probe — Step-by-step flow with expected page state
@@ -13,37 +24,6 @@ import { createServer } from "../../packages/mcp-server/src/index.ts";
 //
 // 如果工具失败，先核对"预期页面"与实际屏幕是否一致。页面不一致是绝大多数失败的根因。
 // ═══════════════════════════════════════════════════════════════════
-
-type ResultStatus = "success" | "failed" | "partial";
-
-interface ToolResultLike {
-  status: ResultStatus;
-  reasonCode?: string;
-  nextSuggestions?: string[];
-  data?: unknown;
-}
-
-interface ProbeRecord {
-  tool: string;
-  status: ResultStatus;
-  reasonCode?: string;
-  note?: string;
-  next?: string;
-  actionId?: string;
-  observedEffect?: "observed" | "possible" | "not_observed" | "unknown";
-  observedEvidence?: string;
-}
-
-interface ProbeSummary {
-  total: number;
-  success: number;
-  partial: number;
-  failed: number;
-  observed: number;
-  possible: number;
-  notObserved: number;
-  unknown: number;
-}
 
 const ANDROID_DRY_RUN_TOOLS = [
   "start_session",
@@ -90,78 +70,6 @@ function printAndroidToolProbeDryRun(): void {
   console.log(JSON.stringify(buildAndroidToolProbeDryRunReport(), null, 2));
 }
 
-function pickActionId(data: unknown): string | undefined {
-  if (!data || typeof data !== "object") return undefined;
-  const envelope = data as { outcome?: unknown };
-  if (!envelope.outcome || typeof envelope.outcome !== "object") return undefined;
-  const outcome = envelope.outcome as { actionId?: unknown };
-  return typeof outcome.actionId === "string" ? outcome.actionId : undefined;
-}
-
-function summarize(records: ProbeRecord[]): ProbeSummary {
-  return {
-    total: records.length,
-    success: records.filter((r) => r.status === "success").length,
-    partial: records.filter((r) => r.status === "partial").length,
-    failed: records.filter((r) => r.status === "failed").length,
-    observed: records.filter((r) => r.observedEffect === "observed").length,
-    possible: records.filter((r) => r.observedEffect === "possible").length,
-    notObserved: records.filter((r) => r.observedEffect === "not_observed").length,
-    unknown: records.filter((r) => r.observedEffect === "unknown").length,
-  };
-}
-
-function inferObservedEffect(tool: string, result: ToolResultLike, records: ProbeRecord[]): Pick<ProbeRecord, "observedEffect" | "observedEvidence"> {
-  const laterUiVisibilityEvidence = records.some((r) =>
-    ["wait_for_ui", "resolve_ui_target", "tap_element", "type_into_element"].includes(r.tool)
-    && ["success", "partial"].includes(r.status),
-  );
-
-  if (result.status === "success") return { observedEffect: "observed", observedEvidence: "tool contract passed" };
-  if (tool === "launch_app" && laterUiVisibilityEvidence) return { observedEffect: "observed", observedEvidence: "later UI probe reached Settings hierarchy" };
-  if (tool === "wait_for_ui" && result.status === "partial") return { observedEffect: "observed", observedEvidence: "UI polling ran but target wait did not close" };
-  if (tool === "resolve_ui_target" && result.status === "partial") return { observedEffect: "observed", observedEvidence: "target resolution saw live UI but did not find selector" };
-  if (["execute_intent", "perform_action_with_evidence", "complete_task", "resume_interrupted_action"].includes(tool)
-    && ["OCR_NO_MATCH", "OCR_AMBIGUOUS_TARGET", "TIMEOUT", "INTERRUPTION_RESOLUTION_FAILED"].includes(result.reasonCode ?? "")) {
-    return { observedEffect: "possible", observedEvidence: "action likely dispatched but post-action verification did not close the loop" };
-  }
-  if (["scroll_and_resolve_ui_target", "tap_element", "type_into_element"].includes(tool) && result.reasonCode === "ADAPTER_ERROR") {
-    return { observedEffect: "unknown", observedEvidence: "adapter-level failure prevents proving device interaction" };
-  }
-  if (result.status === "partial") return { observedEffect: "possible", observedEvidence: "partial result — some runtime progress but not closed contract" };
-  if (result.status === "failed") return { observedEffect: "not_observed", observedEvidence: "no reliable evidence of intended device effect" };
-  return { observedEffect: "unknown", observedEvidence: "no inference rule matched" };
-}
-
-function reclassifyObservedEffects(records: ProbeRecord[]): ProbeRecord[] {
-  return records.map((record, index) => {
-    const priorAndLater = records.filter((_, i) => i !== index);
-    const observed = inferObservedEffect(record.tool, { status: record.status, reasonCode: record.reasonCode, nextSuggestions: record.next ? [record.next] : undefined }, priorAndLater);
-    return { ...record, observedEffect: observed.observedEffect, observedEvidence: observed.observedEvidence };
-  });
-}
-
-function toMarkdown(params: {
-  runId: string; sessionId: string; deviceId: string; platform: string;
-  runnerProfile: string; appId: string; flowPath: string;
-  summary: ProbeSummary; records: ProbeRecord[];
-}): string {
-  return [
-    "# Android Tool Probe Report", "",
-    `- Run: ${params.runId}`, `- Session: ${params.sessionId}`, `- Device: ${params.deviceId}`,
-    `- Platform: ${params.platform}`, `- Runner Profile: ${params.runnerProfile}`,
-    `- App: ${params.appId}`, `- Flow: ${params.flowPath}`, "",
-    `- Total: ${params.summary.total}`, `- Success: ${params.summary.success}`,
-    `- Partial: ${params.summary.partial}`, `- Failed: ${params.summary.failed}`,
-    `- Observed: ${params.summary.observed}`, `- Possible: ${params.summary.possible}`,
-    `- Not observed: ${params.summary.notObserved}`, `- Unknown: ${params.summary.unknown}`, "",
-    "| Tool | Verdict | Observed effect | Reason | Note |",
-    "|---|---|---|---|---|",
-    ...params.records.map((r) => `| ${r.tool} | ${r.status} | ${r.observedEffect ?? "unknown"} | ${r.reasonCode ?? ""} | ${r.note ?? ""} |`),
-    "",
-  ].join("\n");
-}
-
 async function stabilize(ms = 2000) {
   await new Promise((r) => setTimeout(r, ms));
 }
@@ -181,10 +89,9 @@ export async function runAndroidToolProbe(): Promise<void> {
   const flowPath = process.env.M2E_FLOW_PATH ?? "flows/samples/generated/android-settings-smoke.yaml";
   const checklistSource = process.env.M2E_CHECKLIST_PATH ?? "docs/testing/android-tool-probe-checklist.md";
 
-  const artifactsDir = join("output", "evidence", "probes", "android-tool-probe", runId);
-  const reportsDir = "output/reports";
-  await mkdir(artifactsDir, { recursive: true });
-  await mkdir(reportsDir, { recursive: true });
+  const artifactPaths = buildProbeArtifactPaths({ probe: "android-tool-probe", runId });
+  await mkdir(dirname(artifactPaths.artifactJsonPath), { recursive: true });
+  await mkdir(dirname(artifactPaths.latestJsonPath), { recursive: true });
 
   const records: ProbeRecord[] = [];
 
@@ -598,26 +505,23 @@ export async function runAndroidToolProbe(): Promise<void> {
   // 报告生成
   // ═══════════════════════════════════════════════════════════════
   const classifiedRecords = reclassifyObservedEffects(records);
-  const summary = summarize(classifiedRecords);
-  const report = {
-    runId, checklistSource, sessionId, deviceId, platform, runnerProfile, appId, flowPath,
-    summary, records: classifiedRecords,
-  };
+  const report = buildToolProbeReport({
+    runId, probe: "android-tool-probe", checklistSource, sessionId, deviceId, platform, runnerProfile, appId, flowPath,
+    records: classifiedRecords, artifacts: artifactPaths,
+  });
+  const reportIssues = validateToolProbeReportContract(report);
+  if (reportIssues.length > 0) throw new Error(`Probe report contract failed: ${reportIssues.join("; ")}`);
+  const markdown = renderToolProbeMarkdown(report, "Android Tool Probe Report");
 
-  const artifactJsonPath = join(artifactsDir, "report.json");
-  const artifactMdPath = join(artifactsDir, "summary.md");
-  const latestJsonPath = join(reportsDir, "android-tool-probe.json");
-  const latestMdPath = join(reportsDir, "android-tool-probe.md");
-
-  await writeFile(artifactJsonPath, JSON.stringify(report, null, 2), "utf8");
-  await writeFile(artifactMdPath, toMarkdown({ runId, sessionId, deviceId, platform, runnerProfile, appId, flowPath, summary, records: classifiedRecords }), "utf8");
-  await writeFile(latestJsonPath, JSON.stringify(report, null, 2), "utf8");
-  await writeFile(latestMdPath, toMarkdown({ runId, sessionId, deviceId, platform, runnerProfile, appId, flowPath, summary, records: classifiedRecords }), "utf8");
+  await writeFile(artifactPaths.artifactJsonPath, JSON.stringify(report, null, 2), "utf8");
+  await writeFile(artifactPaths.artifactMdPath, markdown, "utf8");
+  await writeFile(artifactPaths.latestJsonPath, JSON.stringify(report, null, 2), "utf8");
+  await writeFile(artifactPaths.latestMdPath, markdown, "utf8");
 
   log(`\n═══ 探针完成 ═══`);
-  log(`总计: ${summary.total} | 成功: ${summary.success} | 部分: ${summary.partial} | 失败: ${summary.failed}`);
+  log(`总计: ${report.summary.total} | 成功: ${report.summary.success} | 部分: ${report.summary.partial} | 失败: ${report.summary.failed}`);
   console.log(JSON.stringify({
-    runId, sessionId, summary, artifactJsonPath, artifactMdPath, latestJsonPath, latestMdPath,
+    runId, sessionId, summary: report.summary, ...artifactPaths,
   }, null, 2));
 }
 

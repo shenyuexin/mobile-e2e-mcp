@@ -41,6 +41,7 @@
     "agent-prompts:check": "tsx scripts/agent-prompts/sync-agent-policy-prompts.ts --check",
     "test:agent-prompts": "tsx --test scripts/agent-prompts/sync-agent-policy-prompts.test.ts",
     "test:probe-ci-gate": "tsx --test scripts/validate-probe-ci-gate.test.ts",
+    "test:probe-report-contract": "tsx --test scripts/dev/tool-probe-report-contract.test.ts",
     "test:explorer-baseline-scripts": "tsx --test scripts/explorer/*.test.ts",
     "explorer:promote-baseline": "tsx scripts/explorer/promote-visual-baseline.ts",
     "mcp:dev": "pnpm build && pnpm --filter @shenyuexin/mobile-e2e-mcp dev",
