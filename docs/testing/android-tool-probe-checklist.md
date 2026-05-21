@@ -84,6 +84,14 @@
 
 汇总：Android physical device `10AEA40Z3Y000R5`，目标 app `com.android.settings`，full mode，45 pages，0 failures，max depth 4，duration 33m 50s。
 
+证据契约可通过以下命令离线校验：
+
+```bash
+pnpm run validate:explorer-android-evidence -- --min-pages 45 --min-depth 4
+```
+
+校验项包括 artifact 文件完整性、`config.json` / `summary.json` 指标、entry `inspect_ui` probe、Explorer runner identity、外部 app boundary detection 与 system-back recovery 日志，以及 `report.md` 中的平台和失败数。
+
 已在该链路中实跑的关键能力：
 
 - `inspect_ui` 成功返回 Android hierarchy（76 nodes / 14 clickable nodes at entry probe）

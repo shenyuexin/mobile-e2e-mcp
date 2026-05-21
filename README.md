@@ -154,6 +154,8 @@ Explorer automatically traverses your app's screens without predefined flows. Us
 
 Android physical-device Explorer evidence is tracked under `artifacts/explorer/android-full/2026-04-28T03-38-20/`: a full Settings traversal completed in 33m 50s with 45 pages, max depth 4, and 0 failures.
 
+Validate that evidence offline with `pnpm run validate:explorer-android-evidence -- --min-pages 45 --min-depth 4`.
+
 ## Appium / Maestro vs This Harness
 
 | Dimension | Appium / Maestro | Mobile E2E MCP Harness |

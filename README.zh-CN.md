@@ -154,6 +154,8 @@ Explorer 可以在没有预定义流程的情况下自动遍历应用页面。�
 
 Android 真机 Explorer 证据保存在 `artifacts/explorer/android-full/2026-04-28T03-38-20/`：Settings 全量遍历已完成，耗时 33m 50s，覆盖 45 个页面，最大深度 4，失败数 0。
 
+可用 `pnpm run validate:explorer-android-evidence -- --min-pages 45 --min-depth 4` 离线校验这组证据。
+
 ## Appium / Maestro 与本 Harness 的关系
 
 | 维度 | Appium / Maestro | Mobile E2E MCP Harness |

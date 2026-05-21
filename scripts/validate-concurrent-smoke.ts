@@ -24,6 +24,8 @@ async function runCli(cliArgs: string[], allowFailureExit = false): Promise<unkn
     "--filter",
     "@shenyuexin/mobile-e2e-mcp",
     "exec",
+    "node",
+    "--import",
     "tsx",
     "src/dev-cli.ts",
     ...cliArgs,
@@ -38,21 +40,49 @@ async function runCli(cliArgs: string[], allowFailureExit = false): Promise<unkn
 
     let stdout = "";
     let stderr = "";
+    let settled = false;
+    let jsonResolutionTimer: ReturnType<typeof setTimeout> | undefined;
+    const settle = (callback: () => void): void => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeout);
+      if (jsonResolutionTimer) clearTimeout(jsonResolutionTimer);
+      callback();
+    };
+    const timeout = setTimeout(() => {
+      child.kill("SIGTERM");
+      const jsonPayload = extractJsonPayload(stdout);
+      if (jsonPayload !== undefined) {
+        settle(() => resolve(jsonPayload));
+        return;
+      }
+      settle(() => reject(new Error(`CLI command timed out: ${stderr || stdout || commandArgs.join(" ")}`)));
+    }, 30000);
 
     child.stdout.on("data", (chunk: Buffer | string) => {
       stdout += chunk.toString();
+      if (!settled && !jsonResolutionTimer && extractJsonPayload(stdout) !== undefined) {
+        jsonResolutionTimer = setTimeout(() => {
+          const jsonPayload = extractJsonPayload(stdout);
+          if (jsonPayload === undefined) return;
+          child.kill("SIGTERM");
+          settle(() => resolve(jsonPayload));
+        }, 100);
+      }
     });
     child.stderr.on("data", (chunk: Buffer | string) => {
       stderr += chunk.toString();
     });
-    child.on("error", reject);
+    child.on("error", (error) => {
+      settle(() => reject(error));
+    });
     child.on("close", (code) => {
       const jsonPayload = extractJsonPayload(stdout);
       if (code === 0 || (allowFailureExit && jsonPayload !== undefined)) {
-        resolve(jsonPayload ?? stdout);
+        settle(() => resolve(jsonPayload ?? stdout));
         return;
       }
-      reject(new Error(`CLI command failed (${String(code)}): ${stderr || stdout}`));
+      settle(() => reject(new Error(`CLI command failed (${String(code)}): ${stderr || stdout}`)));
     });
   });
 

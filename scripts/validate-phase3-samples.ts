@@ -64,6 +64,8 @@ async function runCli(cliArgs: string[]): Promise<unknown> {
     "--filter",
     "@shenyuexin/mobile-e2e-mcp",
     "exec",
+    "node",
+    "--import",
     "tsx",
     "src/dev-cli.ts",
     ...cliArgs,
@@ -78,20 +80,54 @@ async function runCli(cliArgs: string[]): Promise<unknown> {
 
     let stdout = "";
     let stderr = "";
+    let settled = false;
+    let jsonResolutionTimer: ReturnType<typeof setTimeout> | undefined;
+    const extractCurrentJson = (): string | undefined => {
+      const trimmed = stdout.trim();
+      const firstBrace = trimmed.indexOf("{");
+      const lastBrace = trimmed.lastIndexOf("}");
+      return firstBrace >= 0 && lastBrace >= firstBrace ? trimmed.slice(firstBrace, lastBrace + 1) : undefined;
+    };
+    const settle = (callback: () => void): void => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeout);
+      if (jsonResolutionTimer) clearTimeout(jsonResolutionTimer);
+      callback();
+    };
+    const timeout = setTimeout(() => {
+      child.kill("SIGTERM");
+      const jsonPayload = extractCurrentJson();
+      if (jsonPayload !== undefined) {
+        settle(() => resolve(jsonPayload));
+        return;
+      }
+      settle(() => reject(new Error(`CLI command timed out: ${stderr || stdout || commandArgs.join(" ")}`)));
+    }, 30000);
 
     child.stdout.on("data", (chunk: Buffer | string) => {
       stdout += chunk.toString();
+      if (!settled && !jsonResolutionTimer && extractCurrentJson() !== undefined) {
+        jsonResolutionTimer = setTimeout(() => {
+          const jsonPayload = extractCurrentJson();
+          if (jsonPayload === undefined) return;
+          child.kill("SIGTERM");
+          settle(() => resolve(jsonPayload));
+        }, 100);
+      }
     });
     child.stderr.on("data", (chunk: Buffer | string) => {
       stderr += chunk.toString();
     });
-    child.on("error", reject);
+    child.on("error", (error) => {
+      settle(() => reject(error));
+    });
     child.on("close", (code) => {
       if (code === 0) {
-        resolve(stdout);
+        settle(() => resolve(stdout));
         return;
       }
-      reject(new Error(`CLI command failed (${String(code)}): ${stderr || stdout}`));
+      settle(() => reject(new Error(`CLI command failed (${String(code)}): ${stderr || stdout}`)));
     });
   });
 
