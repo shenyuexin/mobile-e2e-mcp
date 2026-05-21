@@ -21,7 +21,7 @@ import type {
 	ToolStatus,
 } from "@mobile-e2e-mcp/contracts";
 import { coreEvidencePaths, legacyCoreEvidencePaths } from "./output-paths.js";
-import { persistSessionArtifacts } from "./session-record-store.js";
+import { loadSessionRecord, persistSessionArtifacts } from "./session-record-store.js";
 
 export interface PersistedActionRecord {
 	actionId: string;
@@ -83,6 +83,24 @@ function buildLegacyActionsRootAbsolutePath(repoRoot: string): string {
 
 function buildLegacyActionRecordAbsolutePath(repoRoot: string, actionId: string): string {
 	return path.resolve(repoRoot, buildLegacyActionRecordRelativePath(actionId));
+}
+
+function parseActionIdFromArtifactPath(artifactPath: string): string | undefined {
+	const normalized = artifactPath.replace(/\\/g, "/");
+	for (const root of [coreEvidencePaths.actions(), legacyCoreEvidencePaths.actions()]) {
+		const prefix = `${root}/`;
+		if (!normalized.startsWith(prefix) || !normalized.endsWith(".json")) {
+			continue;
+		}
+		const actionId = path.posix.basename(normalized, ".json");
+		try {
+			assertSafeId(actionId);
+			return actionId;
+		} catch {
+			return undefined;
+		}
+	}
+	return undefined;
 }
 
 async function writeJsonFile(absolutePath: string, value: unknown): Promise<void> {
@@ -185,6 +203,28 @@ export async function listActionRecordsForSession(
 	repoRoot: string,
 	sessionId: string,
 ): Promise<PersistedActionRecord[]> {
+	const sessionRecord = await loadSessionRecord(repoRoot, sessionId);
+	const manifestActionIds = sessionRecord?.artifacts
+		.map(parseActionIdFromArtifactPath)
+		.filter((actionId): actionId is string => Boolean(actionId));
+	if (manifestActionIds && manifestActionIds.length > 0) {
+		const records = (
+			await Promise.all(
+				Array.from(new Set(manifestActionIds)).map((actionId) =>
+					loadActionRecord(repoRoot, actionId),
+				),
+			)
+		).filter(
+			(record): record is PersistedActionRecord =>
+				record !== undefined && record.sessionId === sessionId,
+		);
+		if (records.length > 0) {
+			return records.sort((left, right) =>
+				right.updatedAt.localeCompare(left.updatedAt),
+			);
+		}
+	}
+
 	const seenActionIds = new Set<string>();
 	const records = [
 		...(await listActionRecordsFromRoot(

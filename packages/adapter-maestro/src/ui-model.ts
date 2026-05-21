@@ -7,6 +7,7 @@ import type {
   InspectUiSummary,
   QueryUiSelector,
   ReasonCode,
+  ScrollOnlyContainerBounds,
   UiBounds,
   UiPoint,
   UiScrollDirection,
@@ -871,8 +872,22 @@ export function buildScrollOnlySwipeCoordinates(
   durationMs: number,
   startRatio?: number,
   endRatio?: number,
+  containerBounds?: ScrollOnlyContainerBounds,
 ): UiSwipeCoordinates {
-  const viewport = detectViewportBounds(nodes);
+  const viewport = containerBounds
+    ? {
+        left: containerBounds.x,
+        top: containerBounds.y,
+        right: containerBounds.x + containerBounds.width,
+        bottom: containerBounds.y + containerBounds.height,
+        width: containerBounds.width,
+        height: containerBounds.height,
+        center: {
+          x: containerBounds.x + containerBounds.width / 2,
+          y: containerBounds.y + containerBounds.height / 2,
+        },
+      }
+    : detectViewportBounds(nodes);
 
   if (startRatio !== undefined && endRatio !== undefined) {
     // Precision mode: use explicit ratios

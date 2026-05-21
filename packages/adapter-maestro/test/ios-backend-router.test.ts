@@ -6,9 +6,19 @@ import {
 	setBackendForTesting,
 } from "../src/ios-backend-router.js";
 import type { IosExecutionBackend } from "../src/ios-backend-types.js";
+import { resetExecuteRunnerForTesting, setExecuteRunnerForTesting } from "../src/runtime-shared.js";
+
+test.beforeEach(() => {
+	setExecuteRunnerForTesting(async (command) => ({
+		exitCode: 0,
+		stdout: `${command.join(" ")} available\n`,
+		stderr: "",
+	}));
+});
 
 test.afterEach(() => {
 	resetForTesting();
+	resetExecuteRunnerForTesting();
 });
 
 test("selectBackend selects axe for simulator UDID", () => {

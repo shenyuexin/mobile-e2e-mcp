@@ -10,7 +10,7 @@ import { IOS_CONDITIONAL_GROUP_FRONTIER, IOS_CONDITIONAL_TOOL_FRONTIER, buildCap
 import { extractIosSimulatorProcessId } from "../src/device-runtime-ios.ts";
 import { buildAndroidPerformancePlan, buildIosPerformancePlan, resolveAndroidPerformancePlanStrategy, resolveTraceProcessorPath } from "../src/performance-runtime.ts";
 import { buildIosExportInspectionManifest, buildPerformanceNextSuggestions, parseTraceProcessorTsv, summarizeAndroidPerformance, summarizeIosPerformance } from "../src/performance-model.ts";
-import { buildFailureReason } from "../src/runtime-shared.ts";
+import { buildFailureReason, resetExecuteRunnerForTesting, setExecuteRunnerForTesting } from "../src/runtime-shared.ts";
 
 const fixtureRoot = path.resolve(import.meta.dirname, "fixtures", "performance");
 
@@ -596,6 +596,11 @@ test("buildPerformanceNextSuggestions uses richer memory and hotspot guidance", 
 test("runDoctor includes an explicit iOS performance recommendation check", async () => {
   const originalSimUdid = process.env.SIM_UDID;
   delete process.env.SIM_UDID;
+  setExecuteRunnerForTesting(async (command) => ({
+    exitCode: 0,
+    stdout: `${command.join(" ")} available\n`,
+    stderr: "",
+  }));
   try {
     const result = await runDoctor({ includeUnavailable: true });
     const checkNames = result.data.checks.map((check) => check.name);
@@ -605,6 +610,7 @@ test("runDoctor includes an explicit iOS performance recommendation check", asyn
     );
     assert.equal(Array.isArray(result.data.guidance), true);
   } finally {
+    resetExecuteRunnerForTesting();
     if (originalSimUdid !== undefined) {
       process.env.SIM_UDID = originalSimUdid;
     }

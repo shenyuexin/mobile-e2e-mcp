@@ -10,6 +10,7 @@ import type {
   ScrollAndResolveUiTargetData,
   ScrollAndResolveUiTargetInput,
   ScrollOnlyData,
+  ScrollOnlyContainerBounds,
   ScrollOnlyInput,
   ScrollOnlyGestureMode,
   ToolResult,
@@ -393,7 +394,37 @@ type NormalizedScrollGesture = {
   mode: "default" | "precision";
   startRatio?: number;
   endRatio?: number;
+  containerBounds?: ScrollOnlyContainerBounds;
 };
+
+function normalizeScrollOnlyContainerBounds(
+  bounds: ScrollOnlyInput["gesture"]["containerBounds"],
+): ScrollOnlyContainerBounds | string | undefined {
+  if (bounds === undefined) return undefined;
+  const entries: Array<[keyof ScrollOnlyContainerBounds, number]> = [
+    ["x", bounds.x],
+    ["y", bounds.y],
+    ["width", bounds.width],
+    ["height", bounds.height],
+  ];
+
+  for (const [field, value] of entries) {
+    if (typeof value !== "number" || !Number.isFinite(value)) {
+      return `containerBounds.${field} must be a finite number. Got: ${String(value)}.`;
+    }
+  }
+  if (bounds.x < 0) return `containerBounds.x must be >= 0. Got: ${bounds.x}.`;
+  if (bounds.y < 0) return `containerBounds.y must be >= 0. Got: ${bounds.y}.`;
+  if (bounds.width <= 0) return `containerBounds.width must be > 0. Got: ${bounds.width}.`;
+  if (bounds.height <= 0) return `containerBounds.height must be > 0. Got: ${bounds.height}.`;
+
+  return {
+    x: Math.round(bounds.x),
+    y: Math.round(bounds.y),
+    width: Math.round(bounds.width),
+    height: Math.round(bounds.height),
+  };
+}
 
 /**
  * Normalize scroll_only input into a single internal gesture model.
@@ -412,6 +443,11 @@ function normalizeScrollOnlyGesture(input: ScrollOnlyInput): NormalizedScrollGes
   const validDirs: Array<"up" | "down" | "left" | "right"> = ["up", "down", "left", "right"];
   if (!validDirs.includes(gesture.direction)) {
     return `gesture.direction must be one of: up, down, left, right. Got: "${gesture.direction}".`;
+  }
+
+  const containerBounds = normalizeScrollOnlyContainerBounds(gesture.containerBounds);
+  if (typeof containerBounds === "string") {
+    return containerBounds;
   }
 
   // Validate ratios
@@ -438,12 +474,25 @@ function normalizeScrollOnlyGesture(input: ScrollOnlyInput): NormalizedScrollGes
       mode: "precision" as const,
       startRatio: s,
       endRatio: e,
+      containerBounds,
     };
   }
 
   return {
     direction: gesture.direction,
     mode: "default" as const,
+    containerBounds,
+  };
+}
+
+function buildScrollOnlyGestureApplied(gesture: NormalizedScrollGesture): ScrollOnlyData["gestureApplied"] {
+  return {
+    direction: gesture.direction,
+    startRatio: gesture.startRatio,
+    endRatio: gesture.endRatio,
+    mode: gesture.mode,
+    coordinateScope: gesture.containerBounds ? "container" : "viewport",
+    containerBoundsApplied: gesture.containerBounds,
   };
 }
 
@@ -484,6 +533,7 @@ export async function scrollOnlyWithMaestroTool(
           startRatio: undefined,
           endRatio: undefined,
           mode: "default",
+          coordinateScope: "viewport",
         },
       },
       nextSuggestions: [`Invalid scroll gesture configuration: ${normalized}`],
@@ -512,12 +562,7 @@ export async function scrollOnlyWithMaestroTool(
         commandHistory: [],
         exitCode: null,
         supportLevel: "partial",
-        gestureApplied: {
-          direction: normalized.direction,
-          startRatio: normalized.startRatio,
-          endRatio: normalized.endRatio,
-          mode: normalized.mode,
-        },
+        gestureApplied: buildScrollOnlyGestureApplied(normalized),
       },
       nextSuggestions: [buildMissingPlatformSuggestion("scroll_only")],
     };
@@ -560,12 +605,7 @@ export async function scrollOnlyWithMaestroTool(
         commandHistory: [],
         exitCode: null,
         supportLevel: "partial",
-        gestureApplied: {
-          direction: normalized.direction,
-          startRatio: normalized.startRatio,
-          endRatio: normalized.endRatio,
-          mode: normalized.mode,
-        },
+        gestureApplied: buildScrollOnlyGestureApplied(normalized),
       },
       nextSuggestions: ["Provide a deviceId or update the harness configuration."],
     };
@@ -579,6 +619,7 @@ export async function scrollOnlyWithMaestroTool(
       swipeDurationMs,
       normalized.startRatio,
       normalized.endRatio,
+      normalized.containerBounds,
     );
     const previewCommand = runtimeHooks.buildSwipeCommand(deviceId, previewSwipe);
 
@@ -598,12 +639,7 @@ export async function scrollOnlyWithMaestroTool(
         commandHistory: [previewCommand],
         exitCode: 0,
         supportLevel: "full",
-        gestureApplied: {
-          direction: normalized.direction,
-          startRatio: normalized.startRatio,
-          endRatio: normalized.endRatio,
-          mode: normalized.mode,
-        },
+        gestureApplied: buildScrollOnlyGestureApplied(normalized),
       },
       nextSuggestions: [
         normalized.mode === "precision"
@@ -643,6 +679,7 @@ export async function scrollOnlyWithMaestroTool(
       swipeDurationMs,
       normalized.startRatio,
       normalized.endRatio,
+      normalized.containerBounds,
     );
     const swipeCommand = runtimeHooks.buildSwipeCommand(deviceId, swipe);
 
@@ -682,12 +719,7 @@ export async function scrollOnlyWithMaestroTool(
       commandHistory,
       exitCode: lastExitCode,
       supportLevel: "full",
-      gestureApplied: {
-        direction: normalized.direction,
-        startRatio: normalized.startRatio,
-        endRatio: normalized.endRatio,
-        mode: normalized.mode,
-      },
+      gestureApplied: buildScrollOnlyGestureApplied(normalized),
     },
     nextSuggestions:
       lastExitCode === 0

@@ -35,7 +35,7 @@ import {
 } from "./performance-runtime.js";
 import {
 	type CommandExecution,
-	executeRunner,
+	executeRunnerWithTestHooks as executeRunner,
 	shellEscape,
 } from "./runtime-shared.js";
 import {
@@ -79,6 +79,7 @@ async function checkCommandVersion(
 			[command, ...args],
 			repoRoot,
 			process.env,
+			{ timeoutMs: DEFAULT_DEVICE_COMMAND_TIMEOUT_MS },
 		);
 		return result.exitCode === 0
 			? summarizeInfoCheck(
@@ -148,6 +149,7 @@ export async function checkAdbReverseMappings(
 			["adb", "-s", deviceId, "reverse", "--list"],
 			repoRoot,
 			process.env,
+			{ timeoutMs: DEFAULT_DEVICE_COMMAND_TIMEOUT_MS },
 		);
 		if (result.exitCode !== 0) {
 			return summarizeInfoCheck(
@@ -244,6 +246,7 @@ async function collectRuntimeStateChecks(
 			],
 			repoRoot,
 			process.env,
+			{ timeoutMs: DEFAULT_DEVICE_COMMAND_TIMEOUT_MS },
 		);
 		checks.push(
 			summarizeInfoCheck(
@@ -277,6 +280,7 @@ async function collectRuntimeStateChecks(
 			],
 			repoRoot,
 			process.env,
+			{ timeoutMs: DEFAULT_DEVICE_COMMAND_TIMEOUT_MS },
 		);
 		checks.push(
 			summarizeInfoCheck(
@@ -662,6 +666,7 @@ async function collectInstallStateChecks(
 			],
 			repoRoot,
 			process.env,
+			{ timeoutMs: DEFAULT_DEVICE_COMMAND_TIMEOUT_MS },
 		);
 		checks.push({
 			name: "native_android install state",
@@ -697,6 +702,7 @@ async function collectInstallStateChecks(
 			],
 			repoRoot,
 			process.env,
+			{ timeoutMs: DEFAULT_DEVICE_COMMAND_TIMEOUT_MS },
 		);
 		checks.push({
 			name: "flutter_android install state",
@@ -730,6 +736,7 @@ async function collectInstallStateChecks(
 			],
 			repoRoot,
 			process.env,
+			{ timeoutMs: DEFAULT_DEVICE_COMMAND_TIMEOUT_MS },
 		);
 		checks.push({
 			name: "native_ios install state",
@@ -984,6 +991,7 @@ export async function runDoctorWithMaestro(
 			buildIdbCommand(["list-targets"]),
 			repoRoot,
 			process.env,
+			{ timeoutMs: DEFAULT_DEVICE_COMMAND_TIMEOUT_MS },
 		);
 		const targetUdid = process.env.SIM_UDID ?? DEFAULT_IOS_SIMULATOR_UDID;
 		checks.push(

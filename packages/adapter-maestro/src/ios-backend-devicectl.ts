@@ -2,6 +2,8 @@ import { CLI_COMMANDS } from "./constants/cli-commands.js";
 import type { IosExecutionBackend, BackendProbeResult } from "./ios-backend-types.js";
 import { executeRunner } from "./runtime-shared.js";
 
+const BACKEND_PROBE_TIMEOUT_MS = 5000;
+
 /**
  * IosExecutionBackend for iOS physical devices using xcrun devicectl.
  *
@@ -26,7 +28,7 @@ export class DevicectlPhysicalBackend implements IosExecutionBackend {
 
   async probeAvailability(repoRoot: string): Promise<BackendProbeResult> {
     try {
-      const result = await executeRunner([CLI_COMMANDS.xcrun, "devicectl", "help"], repoRoot, process.env);
+      const result = await executeRunner([CLI_COMMANDS.xcrun, "devicectl", "help"], repoRoot, process.env, { timeoutMs: BACKEND_PROBE_TIMEOUT_MS });
       if (result.exitCode !== 0) {
         return { available: false, error: `xcrun devicectl help failed: ${result.stderr.trim()}` };
       }

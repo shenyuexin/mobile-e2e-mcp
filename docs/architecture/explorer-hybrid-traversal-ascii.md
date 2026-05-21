@@ -57,7 +57,10 @@ Scroll discovery note:
   - Horizontal swipe discovery is experimental and single-axis:
       after vertical segments are exhausted, Explorer may run one bounded
       left-swipe probe; if page identity changes, the horizontal path is disabled.
-  - Horizontal fallback is full-screen best-effort, not container-targeted.
+  - Horizontal fallback uses detected container bounds when the UI tree exposes
+    valid bounds; otherwise it remains bounded by page-identity checks and can
+    disable itself rather than assuming a full-screen swipe hit the intended
+    container.
 
 
 Guards (always-on):

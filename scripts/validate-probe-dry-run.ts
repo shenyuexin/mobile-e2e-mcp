@@ -25,7 +25,7 @@ function extractJsonPayload(raw: string): string {
 
 async function runProbeDryRun(repoRoot: string, scriptPath: string): Promise<{ stdout: string; report: ProbeDryRunReport }> {
   const stdout = await new Promise<string>((resolve, reject) => {
-    const child = spawn("pnpm", ["exec", "tsx", scriptPath, "--dry-run"], {
+    const child = spawn("pnpm", ["exec", "node", "--import", "tsx", scriptPath, "--dry-run"], {
       cwd: repoRoot,
       env: process.env,
       stdio: ["ignore", "pipe", "pipe"],

@@ -61,6 +61,13 @@ rollout for those images.
 | **WebView content blind spot** | Medium-High | WebView trees are often incomplete or merged poorly with native tree. Current adapter does not distinguish WebView nodes, making `query_ui` unreliable for hybrid screens. A `detect_webview` + `switch_to_webview_context` lane (via Chrome DevTools Protocol on Android, Safari inspector on iOS) is missing. |
 | **Scroll heuristics are generic** | Low-Medium | `scroll_and_resolve_ui_target` scrolls containers but does not know scroll direction hints from the action intent. Passing `scrollDirection` and `maxScrollAttempts` from the caller would reduce overscroll on known layouts. |
 
+Current truth update: `scroll_only` now accepts optional
+`gesture.containerBounds` for container-targeted coordinates. Explorer horizontal
+discovery uses detected horizontal container bounds when valid bounds are present
+in the UI tree; when bounds are missing or invalid, the horizontal path remains
+bounded by page-identity checks and can still disable itself instead of assuming
+the full-screen swipe hit the intended container.
+
 ---
 
 ## 3. UI Interaction

@@ -39,7 +39,7 @@ import {
   buildExecutionEvidence,
   buildFailureReason,
   countNonEmptyLines,
-  executeRunner,
+  executeRunnerWithTestHooks as executeRunner,
   normalizePositiveInteger,
   toRelativePath,
 } from "./runtime-shared.js";
@@ -332,7 +332,7 @@ export async function listAvailableDevices(repoRoot: string, includeUnavailable 
   let reasonCode: ReasonCode = REASON_CODES.ok;
   const nextSuggestions: string[] = [];
   try {
-    const adbResult = await executeRunner(["adb", "devices"], repoRoot, process.env);
+    const adbResult = await executeRunner(["adb", "devices"], repoRoot, process.env, { timeoutMs: DEFAULT_DEVICE_COMMAND_TIMEOUT_MS });
     androidDevices = adbResult.exitCode === 0 ? parseAdbDevices(adbResult.stdout, includeUnavailable).map((device) => ({ ...device, capabilities: buildCapabilityProfile("android", null) })) : [];
     if (adbResult.exitCode !== 0) {
       status = "partial"; reasonCode = REASON_CODES.deviceUnavailable; nextSuggestions.push("adb is unavailable or returned an error while listing Android devices.");
@@ -341,12 +341,12 @@ export async function listAvailableDevices(repoRoot: string, includeUnavailable 
     status = "partial"; reasonCode = REASON_CODES.deviceUnavailable; nextSuggestions.push("adb is unavailable in the current environment.");
   }
   try {
-    const iosResult = await executeRunner(["xcrun", "simctl", "list", "devices", "available", "--json"], repoRoot, process.env);
+    const iosResult = await executeRunner(["xcrun", "simctl", "list", "devices", "available", "--json"], repoRoot, process.env, { timeoutMs: DEFAULT_DEVICE_COMMAND_TIMEOUT_MS });
     const simulatorDevices = iosResult.exitCode === 0 ? parseIosDevices(iosResult.stdout, includeUnavailable) : [];
     if (iosResult.exitCode !== 0) { status = "partial"; if (reasonCode === REASON_CODES.ok) reasonCode = REASON_CODES.deviceUnavailable; nextSuggestions.push("xcrun simctl returned an error while listing iOS simulators."); }
     let physicalDevices: DeviceInfo[] = [];
     try {
-      const xctraceResult = await executeRunner(["xcrun", "xctrace", "list", "devices"], repoRoot, process.env);
+      const xctraceResult = await executeRunner(["xcrun", "xctrace", "list", "devices"], repoRoot, process.env, { timeoutMs: DEFAULT_DEVICE_COMMAND_TIMEOUT_MS });
       const xctraceDevices = xctraceResult.exitCode === 0 ? parseIosXctraceDevices(xctraceResult.stdout, true) : [];
       if (xctraceResult.exitCode !== 0) {
         status = "partial";
@@ -355,7 +355,7 @@ export async function listAvailableDevices(repoRoot: string, includeUnavailable 
       }
       let devicectlDevices: DeviceInfo[] = [];
       try {
-        const devicectlResult = await executeRunner(["xcrun", "devicectl", "list", "devices"], repoRoot, process.env);
+        const devicectlResult = await executeRunner(["xcrun", "devicectl", "list", "devices"], repoRoot, process.env, { timeoutMs: DEFAULT_DEVICE_COMMAND_TIMEOUT_MS });
         devicectlDevices = devicectlResult.exitCode === 0 ? parseIosDevicectlDevices(devicectlResult.stdout, true) : [];
         if (devicectlResult.exitCode !== 0) {
           status = "partial";

@@ -909,6 +909,43 @@ test("scrollOnlyWithMaestro dry-run with horizontal right + precision", async ()
   assert.equal(result.data.gestureApplied.endRatio, 0.9);
 });
 
+test("scrollOnlyWithMaestro dry-run reports container coordinate scope", async () => {
+  const result = await scrollOnlyWithMaestro({
+    sessionId: "test-scroll-container-dry-run",
+    platform: "android",
+    deviceId: "device-1",
+    gesture: {
+      direction: "left",
+      containerBounds: { x: 100, y: 400, width: 300, height: 120 },
+    },
+    swipeDurationMs: 250,
+    dryRun: true,
+  });
+
+  assert.equal(result.status, "success");
+  assert.equal(result.data.gestureApplied.coordinateScope, "container");
+  assert.deepEqual(result.data.gestureApplied.containerBoundsApplied, { x: 100, y: 400, width: 300, height: 120 });
+  assert.ok(JSON.stringify(result.data.commandHistory).includes("325"));
+  assert.ok(JSON.stringify(result.data.commandHistory).includes("175"));
+});
+
+test("scrollOnlyWithMaestro rejects invalid container bounds", async () => {
+  const result = await scrollOnlyWithMaestro({
+    sessionId: "test-scroll-container-invalid",
+    platform: "android",
+    deviceId: "device-1",
+    gesture: {
+      direction: "left",
+      containerBounds: { x: 100, y: 400, width: 0, height: 120 },
+    },
+    dryRun: true,
+  });
+
+  assert.equal(result.status, "failed");
+  assert.equal(result.reasonCode, REASON_CODES.configurationError);
+  assert.match(result.nextSuggestions?.[0] ?? "", /containerBounds/);
+});
+
 test("buildScrollOnlySwipeCoordinates generates correct geometry", () => {
   const coords = buildScrollOnlySwipeCoordinates([], "up", 250);
   assert.ok(coords.start.y > coords.end.y, "up: start y should be below end y");
@@ -923,6 +960,46 @@ test("buildScrollOnlySwipeCoordinates generates correct geometry", () => {
 
   const precisionCoords = buildScrollOnlySwipeCoordinates([], "up", 250, 0.8, 0.3);
   assert.ok(precisionCoords.start.y > precisionCoords.end.y, "precision up: start below end");
+});
+
+test("buildScrollOnlySwipeCoordinates keeps viewport geometry when container bounds are omitted", () => {
+  const coords = buildScrollOnlySwipeCoordinates([], "left", 250);
+
+  assert.deepEqual(coords, {
+    start: { x: 810, y: 960 },
+    end: { x: 270, y: 960 },
+    durationMs: 250,
+  });
+});
+
+test("buildScrollOnlySwipeCoordinates anchors horizontal gestures inside container bounds", () => {
+  const coords = buildScrollOnlySwipeCoordinates([], "left", 250, undefined, undefined, {
+    x: 100,
+    y: 400,
+    width: 300,
+    height: 120,
+  });
+
+  assert.deepEqual(coords, {
+    start: { x: 325, y: 460 },
+    end: { x: 175, y: 460 },
+    durationMs: 250,
+  });
+});
+
+test("buildScrollOnlySwipeCoordinates anchors vertical gestures inside container bounds", () => {
+  const coords = buildScrollOnlySwipeCoordinates([], "up", 250, undefined, undefined, {
+    x: 20,
+    y: 200,
+    width: 200,
+    height: 600,
+  });
+
+  assert.deepEqual(coords, {
+    start: { x: 120, y: 650 },
+    end: { x: 120, y: 350 },
+    durationMs: 250,
+  });
 });
 
 test("buildCapabilityProfile stays honest across Android and iOS UI action support", () => {

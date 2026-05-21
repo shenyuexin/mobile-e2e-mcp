@@ -77,10 +77,13 @@ export function buildFailureReason(stderr: string, exitCode: number | null): Rea
 
 export async function executeRunner(command: string[], repoRoot: string, env: NodeJS.ProcessEnv, options: CommandExecutionOptions = {}): Promise<CommandExecution> {
   return new Promise((resolve, reject) => {
+    const hasTimeout = typeof options.timeoutMs === "number";
+    const useProcessGroup = hasTimeout && process.platform !== "win32";
     const child = spawn(command[0], command.slice(1), {
       cwd: repoRoot,
       env,
       stdio: ["ignore", "pipe", "pipe"],
+      detached: useProcessGroup,
     });
 
     let stdout = "";
@@ -122,7 +125,11 @@ export async function executeRunner(command: string[], repoRoot: string, env: No
       timeout = setTimeout(() => {
         stderr += `${stderr.endsWith("\n") || stderr.length === 0 ? "" : "\n"}Command timed out after ${String(timeoutMs)}ms`;
         try {
-          child.kill("SIGKILL");
+          if (useProcessGroup && child.pid !== undefined) {
+            process.kill(-child.pid, "SIGKILL");
+          } else {
+            child.kill("SIGKILL");
+          }
         } catch {
         }
         finish(() => resolve({ exitCode: null, stdout, stderr }));

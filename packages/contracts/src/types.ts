@@ -1829,12 +1829,21 @@ export interface ScrollAndResolveUiTargetData {
 }
 
 /** Structured gesture descriptor for scroll_only. Direction is the finger-swipe direction. */
+export interface ScrollOnlyContainerBounds {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 export interface ScrollOnlyGesture {
   direction: "up" | "down" | "left" | "right";
   /** Start position as a ratio of the viewport (0-1). Must be provided with endRatio. */
   startRatio?: number;
   /** End position as a ratio of the viewport (0-1). Must be provided with startRatio. */
   endRatio?: number;
+  /** Optional gesture coordinate container. When present, ratios/default anchors are relative to this rectangle. */
+  containerBounds?: ScrollOnlyContainerBounds;
 }
 
 /** How the scroll_only runtime resolved the gesture input. */
@@ -1874,6 +1883,8 @@ export interface ScrollOnlyData {
     startRatio?: number;
     endRatio?: number;
     mode: ScrollOnlyGestureMode;
+    coordinateScope?: "viewport" | "container";
+    containerBoundsApplied?: ScrollOnlyContainerBounds;
   };
 }
 export type AndroidTextInputStrategy = "auto" | "maestro" | "oem_fallback";

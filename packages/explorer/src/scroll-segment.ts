@@ -5,6 +5,7 @@
  * frames or register state graph transitions.
  */
 
+import type { ScrollOnlyContainerBounds } from "@mobile-e2e-mcp/contracts";
 import { findClickableElements, flattenTree, prioritizeElements } from "./element-prioritizer.js";
 import { buildRuleDecisionEntry } from "./engine-helpers.js";
 import { resolveExplorerPlatformHooks } from "./explorer-platform.js";
@@ -225,6 +226,61 @@ function detectPageSnapStrategy(candidates: HorizontalContainerInfo[]): "page-sn
   return candidates.some(c => c.type === "page-snap") ? "page-snap" : "continuous-scroll";
 }
 
+function parseContainerBoundsFromNode(node: UiHierarchy): ScrollOnlyContainerBounds | undefined {
+  const rawBounds = node.bounds;
+  if (typeof rawBounds === "string") {
+    const match = /^\[(\d+),(\d+)\]\[(\d+),(\d+)\]$/.exec(rawBounds);
+    if (!match) return undefined;
+    const left = Number(match[1]);
+    const top = Number(match[2]);
+    const right = Number(match[3]);
+    const bottom = Number(match[4]);
+    const width = right - left;
+    const height = bottom - top;
+    return width > 0 && height > 0 ? { x: left, y: top, width, height } : undefined;
+  }
+
+  if (rawBounds && typeof rawBounds === "object") {
+    const record = rawBounds as Record<string, unknown>;
+    const x = typeof record.x === "number" ? record.x : undefined;
+    const y = typeof record.y === "number" ? record.y : undefined;
+    const width = typeof record.width === "number" ? record.width : undefined;
+    const height = typeof record.height === "number" ? record.height : undefined;
+    if (x !== undefined && y !== undefined && width !== undefined && height !== undefined && width > 0 && height > 0) {
+      return { x, y, width, height };
+    }
+
+    const left = typeof record.left === "number" ? record.left : undefined;
+    const top = typeof record.top === "number" ? record.top : undefined;
+    const right = typeof record.right === "number" ? record.right : undefined;
+    const bottom = typeof record.bottom === "number" ? record.bottom : undefined;
+    if (left !== undefined && top !== undefined && right !== undefined && bottom !== undefined && right > left && bottom > top) {
+      return { x: left, y: top, width: right - left, height: bottom - top };
+    }
+  }
+
+  return undefined;
+}
+
+function pickHorizontalContainerBounds(candidates: HorizontalContainerInfo[]): ScrollOnlyContainerBounds | undefined {
+  const order: Record<HorizontalContainerInfo["confidence"], number> = { high: 3, medium: 2, low: 1 };
+  return candidates
+    .map((candidate) => ({ candidate, bounds: parseContainerBoundsFromNode(candidate.node) }))
+    .filter((entry): entry is { candidate: HorizontalContainerInfo; bounds: ScrollOnlyContainerBounds } => Boolean(entry.bounds))
+    .sort((a, b) => (order[b.candidate.confidence] ?? 0) - (order[a.candidate.confidence] ?? 0))[0]?.bounds;
+}
+
+function buildScrollOnlyArgs(
+  direction: "up" | "down" | "left" | "right",
+  normalized: ReturnType<typeof normalizeScrollState>,
+): { direction: "up" | "down" | "left" | "right"; distance: "medium"; containerBounds?: ScrollOnlyContainerBounds } {
+  return {
+    direction,
+    distance: "medium",
+    ...(normalized.axis === "horizontal" && normalized.containerBounds ? { containerBounds: normalized.containerBounds } : {}),
+  };
+}
+
 export function detectHorizontalScrollables(uiTree: UiHierarchy): HorizontalContainerInfo[] {
   const allNodes = flattenTree(uiTree);
   const results: HorizontalContainerInfo[] = [];
@@ -284,7 +340,12 @@ export async function performBoundedProbe(
     appId: config.appId,
   });
 
-  const scrollResult = await mcp.scrollOnly({ direction: "left", distance: "medium" });
+  const containerBounds = pickHorizontalContainerBounds(candidates);
+  const scrollResult = await mcp.scrollOnly({
+    direction: "left",
+    distance: "medium",
+    ...(containerBounds ? { containerBounds } : {}),
+  });
   if (scrollResult.status !== "success" && scrollResult.status !== "partial") {
     console.log(`[SCROLL-PROBE] Horizontal probe scroll failed: ${scrollResult.reasonCode}`);
     return {
@@ -396,6 +457,7 @@ export function startHorizontalScrollState(
 ): void {
   const candidates = detectHorizontalScrollables(snapshot.uiTree);
   const strategy = detectPageSnapStrategy(candidates);
+  const containerBounds = pickHorizontalContainerBounds(candidates);
 
   frame.scrollState = {
     enabled: true,
@@ -411,6 +473,7 @@ export function startHorizontalScrollState(
     maxSegments: DEFAULT_MAX_SEGMENTS,
     restoreAttempts: 0,
     maxRestoreAttempts: DEFAULT_MAX_RESTORE_ATTEMPTS,
+    ...(containerBounds ? { containerBounds } : {}),
   };
 
   console.log(
@@ -580,7 +643,7 @@ export async function discoverNextSegment(
 
   const platformHooks = resolveExplorerPlatformHooks(config.platform);
 
-  const scrollResult = await mcp.scrollOnly({ direction: normalized.forwardDirection as "up" | "down" | "left" | "right", distance: "medium" });
+  const scrollResult = await mcp.scrollOnly(buildScrollOnlyArgs(normalized.forwardDirection as "up" | "down" | "left" | "right", normalized));
   if (scrollResult.status !== "success" && scrollResult.status !== "partial") {
     console.log(`[SCROLL-SEGMENT] scrollOnly failed: ${scrollResult.reasonCode}`);
     return { success: false, isLastSegment: true };
@@ -692,7 +755,7 @@ export async function restoreSegment(
   if (normalized.axis === "horizontal") {
     // Reset to origin by scrolling in the restore direction N times
     for (let i = 0; i < ss.segmentIndex; i++) {
-      const scrollResult = await mcp.scrollOnly({ direction: normalized.restoreDirection as "up" | "down" | "left" | "right", distance: "medium" });
+      const scrollResult = await mcp.scrollOnly(buildScrollOnlyArgs(normalized.restoreDirection as "up" | "down" | "left" | "right", normalized));
       if (scrollResult.status !== "success" && scrollResult.status !== "partial") {
         return false;
       }
@@ -700,7 +763,7 @@ export async function restoreSegment(
     }
     // Then scroll forward segmentIndex times to reach the target
     for (let i = 0; i < ss.segmentIndex; i++) {
-      const scrollResult = await mcp.scrollOnly({ direction: normalized.forwardDirection as "up" | "down" | "left" | "right", distance: "medium" });
+      const scrollResult = await mcp.scrollOnly(buildScrollOnlyArgs(normalized.forwardDirection as "up" | "down" | "left" | "right", normalized));
       if (scrollResult.status !== "success" && scrollResult.status !== "partial") {
         return false;
       }

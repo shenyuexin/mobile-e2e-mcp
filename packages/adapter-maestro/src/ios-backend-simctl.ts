@@ -1,6 +1,8 @@
 import type { IosExecutionBackend, BackendProbeResult } from "./ios-backend-types.js";
 import { executeRunnerWithTestHooks } from "./runtime-shared.js";
 
+const BACKEND_PROBE_TIMEOUT_MS = 5000;
+
 export class SimctlSimulatorBackend implements IosExecutionBackend {
   readonly backendId = "simctl" as const;
   readonly backendName = "Xcode simctl";
@@ -15,7 +17,7 @@ export class SimctlSimulatorBackend implements IosExecutionBackend {
 
   async probeAvailability(repoRoot: string): Promise<BackendProbeResult> {
     try {
-      const result = await executeRunnerWithTestHooks(["xcrun", "simctl", "help"], repoRoot, process.env);
+      const result = await executeRunnerWithTestHooks(["xcrun", "simctl", "help"], repoRoot, process.env, { timeoutMs: BACKEND_PROBE_TIMEOUT_MS });
       if (result.exitCode !== 0) {
         return { available: false, error: `xcrun simctl help failed: ${result.stderr.trim()}` };
       }

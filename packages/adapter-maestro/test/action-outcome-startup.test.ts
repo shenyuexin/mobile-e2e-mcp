@@ -3,11 +3,56 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import test from "node:test";
 import { REASON_CODES } from "@mobile-e2e-mcp/contracts";
-import { persistActionRecord, recordFailureSignature, recordBaselineEntry } from "@mobile-e2e-mcp/core";
+import {
+  appendSessionTimelineEvent,
+  persistActionRecord,
+  persistStartedSession,
+  recordFailureSignature,
+  recordBaselineEntry,
+  type PersistedActionRecord,
+} from "@mobile-e2e-mcp/core";
 import { suggestKnownRemediationWithMaestro } from "../src/index.ts";
 import { resolveRepoPath } from "../src/harness-config.js";
 
 const repoRoot = resolveRepoPath();
+const startedSessions = new Set<string>();
+
+async function ensureStartedSession(sessionId: string): Promise<void> {
+  if (startedSessions.has(sessionId)) return;
+  await persistStartedSession(repoRoot, {
+    sessionId,
+    platform: "android",
+    deviceId: "test-device",
+    appId: "com.example.test",
+    policyProfile: "test",
+    startedAt: new Date().toISOString(),
+    artifactsRoot: "output/evidence",
+    timeline: [],
+  });
+  startedSessions.add(sessionId);
+}
+
+async function persistAttributableActionRecord(record: PersistedActionRecord): Promise<void> {
+  await ensureStartedSession(record.sessionId);
+  const persisted = await persistActionRecord(repoRoot, record);
+  const artifactRefs = persisted.relativePath ? [persisted.relativePath] : [];
+  await appendSessionTimelineEvent(
+    repoRoot,
+    record.sessionId,
+    {
+      eventId: record.actionId,
+      timestamp: new Date().toISOString(),
+      type: "action_outcome_recorded",
+      detail: `${record.outcome.actionType} -> ${record.outcome.outcome}`,
+      eventType: "action_outcome",
+      actionId: record.actionId,
+      layer: "action",
+      summary: `${record.outcome.actionType} -> ${record.outcome.outcome}`,
+      artifactRefs,
+    },
+    artifactRefs,
+  );
+}
 
 test("suggestKnownRemediationWithMaestro prioritizes signing guidance for iOS signature preflight evidence", async () => {
   const sessionId = `known-remediation-ios-signature-${Date.now()}`;
@@ -33,7 +78,7 @@ test("suggestKnownRemediationWithMaestro prioritizes signing guidance for iOS si
     "utf8",
   );
 
-  await persistActionRecord(repoRoot, {
+  await persistAttributableActionRecord({
     actionId,
     sessionId,
     intent: { actionType: "type_into_element", text: "Email", value: "demo@example.com" },
@@ -87,7 +132,7 @@ test("suggestKnownRemediationWithMaestro detects permission interruption from bl
     "utf8",
   );
 
-  await persistActionRecord(repoRoot, {
+  await persistAttributableActionRecord({
     actionId,
     sessionId,
     intent: { actionType: "tap_element", text: "Allow", value: "" },
@@ -155,7 +200,7 @@ test("suggestKnownRemediationWithMaestro detects network layer issues from offli
     "utf8",
   );
 
-  await persistActionRecord(repoRoot, {
+  await persistAttributableActionRecord({
     actionId,
     sessionId,
     intent: { actionType: "tap_element", text: "Login", value: "" },
@@ -227,7 +272,7 @@ test("suggestKnownRemediationWithMaestro populates skillGuidance when attributio
     "utf8",
   );
 
-  await persistActionRecord(repoRoot, {
+  await persistAttributableActionRecord({
     actionId,
     sessionId,
     intent: { actionType: "launch_app", appId: "com.example.demo" },
@@ -295,7 +340,7 @@ test("suggestKnownRemediationWithMaestro includes indexed remediation from failu
     "utf8",
   );
 
-  await persistActionRecord(repoRoot, {
+  await persistAttributableActionRecord({
     actionId,
     sessionId,
     intent: { actionType: "tap_element", text: "Submit", value: "" },
@@ -387,7 +432,7 @@ test("suggestKnownRemediationWithMaestro includes similar-failures hint when mat
     "utf8",
   );
 
-  await persistActionRecord(repoRoot, {
+  await persistAttributableActionRecord({
     actionId,
     sessionId,
     intent: { actionType: "tap_element", text: "Login", value: "" },
@@ -472,7 +517,7 @@ test("suggestKnownRemediationWithMaestro includes baseline-divergence hint when 
     "utf8",
   );
 
-  await persistActionRecord(repoRoot, {
+  await persistAttributableActionRecord({
     actionId: baselineActionId,
     sessionId,
     intent: { actionType: "tap_element", text: "Submit", value: "" },
@@ -528,7 +573,7 @@ test("suggestKnownRemediationWithMaestro includes baseline-divergence hint when 
     "utf8",
   );
 
-  await persistActionRecord(repoRoot, {
+  await persistAttributableActionRecord({
     actionId: currentActionId,
     sessionId,
     intent: { actionType: "tap_element", text: "Submit", value: "" },

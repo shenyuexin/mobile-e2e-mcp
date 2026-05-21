@@ -1,6 +1,19 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { runDoctorWithMaestro } from "../src/doctor-runtime.js";
+import { resetExecuteRunnerForTesting, setExecuteRunnerForTesting } from "../src/runtime-shared.js";
+
+test.beforeEach(() => {
+  setExecuteRunnerForTesting(async (command) => ({
+    exitCode: 0,
+    stdout: `${command.join(" ")} available\n`,
+    stderr: "",
+  }));
+});
+
+test.afterEach(() => {
+  resetExecuteRunnerForTesting();
+});
 
 test("runDoctorWithMaestro returns structured result with checks array", async () => {
   const result = await runDoctorWithMaestro({});

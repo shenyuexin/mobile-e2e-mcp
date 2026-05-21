@@ -1087,6 +1087,7 @@ describe("scroll-segment: startHorizontalScrollState", () => {
   it("detects page-snap strategy for ViewPager containers", () => {
     const uiTree: UiHierarchy = {
       className: "androidx.viewpager.widget.ViewPager",
+      bounds: "[100,400][400,520]",
       clickable: false,
       enabled: true,
       scrollable: true,
@@ -1116,6 +1117,7 @@ describe("scroll-segment: startHorizontalScrollState", () => {
     assert.equal(frame.scrollState.restoreDirection, "right");
     assert.equal(frame.scrollState.strategy, "page-snap");
     assert.equal(frame.scrollState.supportLevel, "experimental");
+    assert.deepEqual(frame.scrollState.containerBounds, { x: 100, y: 400, width: 300, height: 120 });
   });
 });
 
@@ -1180,6 +1182,53 @@ describe("scroll-segment: performBoundedProbe", () => {
     assert.equal(probeResult.enabled, true);
     assert.equal(probeResult.newElementCount, 1);
     assert.equal(probeResult.confidence, "high");
+  });
+
+  it("passes detected container bounds to the horizontal probe scroll", async () => {
+    const frame = makeProbeFrame("com.test.app::unknown::Settings");
+    const postProbeTree: UiHierarchy = {
+      className: "Application",
+      packageName: "com.test.app",
+      clickable: false,
+      enabled: true,
+      scrollable: false,
+      children: [
+        { className: "android.widget.TextView", text: "Settings", clickable: false, enabled: true, scrollable: false, children: [] },
+        { className: "Button", text: "NewButton", contentDesc: "NewButton", clickable: true, enabled: true, scrollable: false, children: [] },
+      ],
+    };
+    const scrollArgs: unknown[] = [];
+    const mcp = {
+      scrollOnly: async (args: unknown) => {
+        scrollArgs.push(args);
+        return okResult({ swipesPerformed: 1 } as any);
+      },
+      waitForUiStable: async () => okResult({ stable: true } as any),
+      inspectUi: async () => okResult({ content: postProbeTree } as any),
+    } as unknown as McpToolInterface;
+
+    await performBoundedProbe(mcp, frame, createMockConfig(), [
+      {
+        node: {
+          className: "android.widget.HorizontalScrollView",
+          bounds: "[100,400][400,520]",
+          clickable: false,
+          enabled: true,
+          scrollable: true,
+          children: [],
+        },
+        confidence: "high",
+        platform: "android",
+      },
+    ]);
+
+    assert.deepEqual(scrollArgs, [
+      {
+        direction: "left",
+        distance: "medium",
+        containerBounds: { x: 100, y: 400, width: 300, height: 120 },
+      },
+    ]);
   });
 
   it("disables horizontal scroll when fingerprint changes", async () => {
@@ -1299,6 +1348,82 @@ describe("scroll-segment: discoverNextSegment horizontal", () => {
     assert.equal(result.success, true);
     assert.deepEqual(scrollDirections, ["left"]);
   });
+
+  it("reuses horizontal container bounds when discovering the next segment", async () => {
+    const seg0Tree = makeScrollablePage("Settings", ["Bluetooth"]);
+    const seg1Tree = makeScrollablePage("Settings", ["Apps"]);
+    const snapshot0 = makeSnapshot(seg0Tree, "Settings", "com.test.app");
+    const frame: Frame = {
+      state: { screenId: "screen-1", screenTitle: "Settings" },
+      depth: 0,
+      path: [],
+      elementIndex: 1,
+      elements: [],
+      scrollState: {
+        enabled: true,
+        axis: "horizontal",
+        forwardDirection: "left",
+        restoreDirection: "right",
+        containerBounds: { x: 100, y: 400, width: 300, height: 120 },
+        segmentIndex: 0,
+        segments: [[]],
+        seenKeys: new Set<string>(),
+        pageFingerprint: computePageFingerprint(snapshot0),
+        maxSegments: 10,
+        restoreAttempts: 0,
+        maxRestoreAttempts: 3,
+      },
+    };
+
+    const scrollArgs: unknown[] = [];
+    const mcp = {
+      scrollOnly: async (args: unknown) => {
+        scrollArgs.push(args);
+        return okResult({ swipesPerformed: 1 } as any);
+      },
+      waitForUiStable: async () => okResult({ stable: true } as any),
+      inspectUi: async () => okResult({ content: seg1Tree } as any),
+    } as unknown as McpToolInterface;
+
+    const result = await discoverNextSegment(mcp, frame, createMockConfig());
+    assert.equal(result.success, true);
+    assert.deepEqual(scrollArgs, [
+      {
+        direction: "left",
+        distance: "medium",
+        containerBounds: { x: 100, y: 400, width: 300, height: 120 },
+      },
+    ]);
+  });
+
+  it("does not pass container bounds for vertical scroll discovery", async () => {
+    const seg0Tree = makeScrollablePage("Settings", ["Bluetooth"]);
+    const seg1Tree = makeScrollablePage("Settings", ["Apps"]);
+    const snapshot0 = makeSnapshot(seg0Tree, "Settings", "com.test.app");
+    const frame: Frame = {
+      state: { screenId: "screen-1", screenTitle: "Settings" },
+      depth: 0,
+      path: [],
+      elementIndex: 1,
+      elements: [],
+    };
+    initScrollState(frame, snapshot0, createMockConfig());
+    assert.ok(frame.scrollState);
+
+    const scrollArgs: unknown[] = [];
+    const mcp = {
+      scrollOnly: async (args: unknown) => {
+        scrollArgs.push(args);
+        return okResult({ swipesPerformed: 1 } as any);
+      },
+      waitForUiStable: async () => okResult({ stable: true } as any),
+      inspectUi: async () => okResult({ content: seg1Tree } as any),
+    } as unknown as McpToolInterface;
+
+    const result = await discoverNextSegment(mcp, frame, createMockConfig());
+    assert.equal(result.success, true);
+    assert.deepEqual(scrollArgs, [{ direction: "up", distance: "medium" }]);
+  });
 });
 
 describe("scroll-segment: restoreSegment horizontal", () => {
@@ -1367,6 +1492,74 @@ describe("scroll-segment: restoreSegment horizontal", () => {
     const result = await restoreSegment(mcp, frame, createMockConfig());
     assert.equal(result, true);
     assert.deepEqual(scrollDirections, ["right", "right", "left", "left"]);
+  });
+
+  it("reuses horizontal container bounds during restore", async () => {
+    const seg0 = [{ label: "Tab1", selector: { text: "Tab1" }, elementType: "Button" }];
+    const seg1 = [{ label: "Tab2", selector: { text: "Tab2" }, elementType: "Button" }];
+
+    const frame: Frame = {
+      state: { screenId: "s1", screenTitle: "Gallery" },
+      depth: 0,
+      path: [],
+      elementIndex: 0,
+      elements: [],
+      scrollState: {
+        enabled: true,
+        axis: "horizontal",
+        forwardDirection: "left",
+        restoreDirection: "right",
+        containerBounds: { x: 100, y: 400, width: 300, height: 120 },
+        segmentIndex: 1,
+        segments: [seg0, seg1],
+        seenKeys: new Set(["Tab1", "Tab2"]),
+        pageFingerprint: "fp",
+        maxSegments: 10,
+        restoreAttempts: 0,
+        maxRestoreAttempts: 3,
+      },
+    };
+
+    let inspectCall = 0;
+    const scrollArgs: unknown[] = [];
+    const mcp = {
+      inspectUi: async () => {
+        inspectCall += 1;
+        const label = inspectCall === 1 ? "Tab1" : "Tab2";
+        return okResult({
+          content: {
+            className: "Application",
+            packageName: "com.test.app",
+            clickable: false,
+            enabled: true,
+            scrollable: false,
+            children: [
+              { className: "Button", text: label, clickable: true, enabled: true, scrollable: false, children: [] },
+            ],
+          },
+        } as any);
+      },
+      scrollOnly: async (args: unknown) => {
+        scrollArgs.push(args);
+        return okResult({ swipesPerformed: 1 } as any);
+      },
+      waitForUiStable: async () => okResult({ stable: true } as any),
+    } as unknown as McpToolInterface;
+
+    const result = await restoreSegment(mcp, frame, createMockConfig());
+    assert.equal(result, true);
+    assert.deepEqual(scrollArgs, [
+      {
+        direction: "right",
+        distance: "medium",
+        containerBounds: { x: 100, y: 400, width: 300, height: 120 },
+      },
+      {
+        direction: "left",
+        distance: "medium",
+        containerBounds: { x: 100, y: 400, width: 300, height: 120 },
+      },
+    ]);
   });
 });
 

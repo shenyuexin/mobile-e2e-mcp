@@ -5,7 +5,7 @@
  * Types must be stable and well-documented.
  */
 
-import type { PageContext } from "@mobile-e2e-mcp/contracts";
+import type { PageContext, ScrollOnlyContainerBounds } from "@mobile-e2e-mcp/contracts";
 import type { ExplorerRuleAction, ExplorerRuleCategory, ExplorerRuleConfig, ExplorerRuleSource, ExplorerRuleSupportLevel } from "./rules/rule-types.js";
 
 // ---------------------------------------------------------------------------
@@ -194,7 +194,7 @@ export interface UiHierarchy {
 	clickable: boolean;
 	enabled: boolean;
 	scrollable: boolean;
-	bounds?: string;
+	bounds?: string | { x: number; y: number; width: number; height: number } | { left: number; top: number; right: number; bottom: number };
 	/** Child nodes in the UI tree. */
 	children?: UiHierarchy[];
 	/** iOS-specific: accessibility label. */
@@ -396,6 +396,8 @@ export interface Frame {
 		strategy?: "continuous-scroll" | "page-snap";
 		/** Support maturity level for this scroll capability. Default: `"stable"`. */
 		supportLevel?: "stable" | "experimental";
+		/** Optional coordinate container for horizontal scroll gestures. */
+		containerBounds?: ScrollOnlyContainerBounds;
 	};
 }
 

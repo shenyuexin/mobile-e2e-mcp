@@ -20,6 +20,7 @@ import type {
   RequestManualHandoffData,
   GetScreenSummaryData,
   TapData,
+  ScrollOnlyContainerBounds,
   ScrollOnlyData,
 } from "@mobile-e2e-mcp/contracts";
 import { resolveExplorerPlatformHooks } from "./explorer-platform.js";
@@ -68,7 +69,7 @@ export interface McpToolInterface {
   requestManualHandoff(): Promise<ToolResult<RequestManualHandoffData>>;
   getScreenSummary(): Promise<ToolResult<GetScreenSummaryData>>;
   tap(args: { x: number; y: number }): Promise<ToolResult<TapData>>;
-  scrollOnly(args: { direction: "up" | "down" | "left" | "right"; distance?: "short" | "medium" | "long" }): Promise<ToolResult<ScrollOnlyData>>;
+  scrollOnly(args: { direction: "up" | "down" | "left" | "right"; distance?: "short" | "medium" | "long"; containerBounds?: ScrollOnlyContainerBounds }): Promise<ToolResult<ScrollOnlyData>>;
 }
 
 /** Shape of an object that has an invoke method (MobileE2EMcpServer). */
@@ -136,7 +137,7 @@ export function createMcpAdapter(
     scrollOnly: (args) =>
       invoke("scroll_only", {
         ...baseInput(),
-        gesture: { direction: args.direction },
+        gesture: { direction: args.direction, ...(args.containerBounds ? { containerBounds: args.containerBounds } : {}) },
         count: 1,
         settleDelayMs: 2000,
       }) as Promise<ToolResult<ScrollOnlyData>>,

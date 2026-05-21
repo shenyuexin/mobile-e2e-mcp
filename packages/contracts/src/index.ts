@@ -259,6 +259,7 @@ export type {
 	ScrollAndTapElementData,
 	ScrollAndTapElementInput,
 	ScrollOnlyData,
+	ScrollOnlyContainerBounds,
 	ScrollOnlyGesture,
 	ScrollOnlyGestureMode,
 	ScrollOnlyInput,

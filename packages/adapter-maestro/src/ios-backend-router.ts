@@ -46,6 +46,8 @@ const VALID_BACKENDS = new Set<BackendId>([
 	"owned-runner",
 ]);
 
+const BACKEND_PROBE_TIMEOUT_MS = 5000;
+
 function isValidBackendId(value: string): value is BackendId {
 	return VALID_BACKENDS.has(value as BackendId);
 }
@@ -170,6 +172,7 @@ export class IosBackendRouter {
 				["maestro", "--version"],
 				repoRoot,
 				process.env,
+				{ timeoutMs: BACKEND_PROBE_TIMEOUT_MS },
 			);
 			if (result.exitCode !== 0) {
 				return {

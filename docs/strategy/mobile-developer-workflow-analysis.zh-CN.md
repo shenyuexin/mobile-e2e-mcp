@@ -59,6 +59,12 @@
 | **WebView 内容盲区** | 中高 | WebView 树往往不完整，或者与原生树合并不佳。当前适配器不区分 WebView 节点，导致 `query_ui` 在混合屏幕上不可靠。缺少 `detect_webview` + `switch_to_webview_context` 通道（通过 Chrome DevTools Protocol on Android、Safari inspector on iOS）。 |
 | **滚动启发式过于通用** | 低中 | `scroll_and_resolve_ui_target` 滚动容器但不知道动作意图中的滚动方向提示。从调用方传入 `scrollDirection` 和 `maxScrollAttempts` 可以减少已知布局下的过度滚动。 |
 
+当前事实更新：`scroll_only` 现在支持可选
+`gesture.containerBounds`，用于把滑动坐标限定在指定容器内。Explorer
+横向发现会在 UI 树提供有效 bounds 时使用检测到的横向容器 bounds；当
+bounds 缺失或无效时，横向路径仍由页面身份检查约束，并可以主动禁用，
+而不是假设全屏滑动一定命中了目标容器。
+
 ---
 
 ## 3. UI 交互操作

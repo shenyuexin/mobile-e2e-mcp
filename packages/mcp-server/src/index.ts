@@ -807,7 +807,7 @@ const TOOL_DESCRIPTORS: ReadonlyArray<ToolDescriptor> = [
 	defineToolDescriptor({
 		name: TOOL_NAMES.scrollOnly,
 		description:
-			"Perform scroll gestures without target resolution. Use with wait_for_ui and resolve_ui_target for explicit control.",
+			"Perform scroll gestures without target resolution. Supports optional gesture.containerBounds for container-targeted coordinates; use with wait_for_ui and resolve_ui_target for explicit control.",
 		handler: scrollOnly,
 		policy: { enforced: true, requiredScopes: ["write"] },
 		session: { required: true, requireResolvedSessionContext: true },

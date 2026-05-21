@@ -117,6 +117,60 @@ test("action record discovery prefers output/evidence over legacy duplicates", a
   }
 });
 
+test("action record discovery uses session artifact manifest for current sessions", async () => {
+  const repoRoot = await makeRepoRoot();
+  const sessionId = "manifest-action-session";
+  const current: PersistedActionRecord = {
+    actionId: "manifest-current-action",
+    sessionId,
+    outcome: {
+      actionId: "manifest-current-action",
+      actionType: "tap_element",
+      resolutionStrategy: "deterministic",
+      preState: { appPhase: "ready", readiness: "ready", blockingSignals: [] },
+      postState: { appPhase: "ready", readiness: "ready", blockingSignals: [] },
+      stateChanged: false,
+      fallbackUsed: false,
+      retryCount: 0,
+      confidence: 1,
+      outcome: "success",
+    },
+    evidenceDelta: {},
+    evidence: [],
+    lowLevelStatus: "success",
+    lowLevelReasonCode: "OK",
+    updatedAt: "2026-01-01T00:00:00.000Z",
+  };
+  const unlistedLegacy: PersistedActionRecord = {
+    ...current,
+    actionId: "manifest-unlisted-legacy-action",
+    outcome: { ...current.outcome, actionId: "manifest-unlisted-legacy-action" },
+    updatedAt: "2026-01-01T00:00:02.000Z",
+  };
+
+  try {
+    await writeJson(path.resolve(repoRoot, coreEvidencePaths.actions(), `${current.actionId}.json`), current);
+    await writeJson(path.resolve(repoRoot, legacyCoreEvidencePaths.actions(), `${unlistedLegacy.actionId}.json`), unlistedLegacy);
+    await writeJson(path.resolve(repoRoot, coreEvidencePaths.sessions(), `${sessionId}.json`), {
+      session: {
+        sessionId,
+        platform: "android",
+        runnerProfile: "phase1",
+        startedAt: "2026-01-01T00:00:00.000Z",
+        timeline: [],
+      },
+      closed: false,
+      artifacts: [path.posix.join(coreEvidencePaths.actions(), `${current.actionId}.json`)],
+      updatedAt: "2026-01-01T00:00:03.000Z",
+    });
+
+    const records = await listActionRecordsForSession(repoRoot, sessionId);
+    assert.deepEqual(records.map((record) => record.actionId), ["manifest-current-action"]);
+  } finally {
+    await rm(repoRoot, { recursive: true, force: true });
+  }
+});
+
 test("listLeases includes legacy artifacts/leases records", async () => {
   const repoRoot = await makeRepoRoot();
   const lease: DeviceLease = {
