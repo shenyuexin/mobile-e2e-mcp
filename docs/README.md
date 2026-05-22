@@ -12,6 +12,8 @@ This directory contains all documentation for mobile-e2e-mcp.
 | [showcase/](./showcase/) | Reproducible real-device demo evidence |
 | [strategy/](./strategy/) | Differentiation strategy and ecosystem landscape |
 | [engineering/](./engineering/) | Durable implementation guidance for contributors |
+| [testing/](./testing/) | Probe checklists, coverage baseline, and test review notes |
+| [validation/](./validation/) | Historical cross-platform validation findings and result summaries |
 | [templates/](./templates/) | Reusable templates for ADRs, bug packets, phase charters, etc. |
 
 ## Quick Links
@@ -24,6 +26,7 @@ This directory contains all documentation for mobile-e2e-mcp.
 4. [Golden Path](./guides/golden-path.md) — first-run closed loop
 5. [AI Agent Invocation](./guides/ai-agent-invocation.zh-CN.md) — tool selection guide (zh-CN)
 6. [Agent Policy Prompt Sync](./guides/agent-policy-prompt-sync.md) — repo-owned prompt policy sources and OpenCode runtime sync
+7. [CI Evidence and Boundary Guide](./showcase/ci-evidence.md) — CI jobs, artifacts, proof levels, and real-device boundary
 
 ### Architecture
 
@@ -43,3 +46,11 @@ This directory contains all documentation for mobile-e2e-mcp.
 1. [AI-First Capability Expansion](./engineering/ai-first-capability-expansion-guideline.md) — how to add new capabilities correctly
 2. [Explorer Rule Registry](./engineering/explorer-rule-registry.zh-CN.md) — how to add, disable, override, validate, and report Explorer traversal rules (zh-CN)
 3. [Output Directory Layout](./engineering/output-directory-layout.md) — runtime evidence/report roots and legacy cleanup guidance
+
+### Testing And Evidence
+
+1. [CI Evidence and Boundary Guide](./showcase/ci-evidence.md) — current CI proof levels, artifacts, and limitations
+2. [Android Tool Probe Checklist](./testing/android-tool-probe-checklist.md) — Android probe scope plus current Android Explorer physical-device evidence
+3. [iOS Tool Probe Checklist](./testing/ios-tool-probe-checklist.md) — iOS probe scope and operational notes
+4. [Probe Evidence Contract](./engineering/probe-evidence-contract.md) — JSON/Markdown probe report schema and validation commands
+5. [Explorer Visual Baselines](./guides/explorer-visual-baselines.md) — failure-review visual baseline workflow

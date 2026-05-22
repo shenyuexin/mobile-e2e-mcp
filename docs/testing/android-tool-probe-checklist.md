@@ -211,5 +211,5 @@ pnpm run validate:explorer-android-evidence -- --min-pages 45 --min-depth 4
 
 ## 脚本入口
 
-- 正式入口: `pnpm validate:android-tool-probe`
+- 正式入口: `pnpm run validate:android-tool-probe`
 - 兼容入口: `pnpm exec tsx tmp-tool-verification.ts`

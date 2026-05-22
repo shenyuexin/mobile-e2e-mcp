@@ -118,4 +118,4 @@
 
 ## 脚本入口
 
-- 正式入口: `pnpm validate:ios-tool-probe`
+- 正式入口: `pnpm run validate:ios-tool-probe`

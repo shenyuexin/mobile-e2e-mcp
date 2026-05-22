@@ -34,6 +34,7 @@ This folder contains reproducible, real-device demo evidence used by README.
 ## Current real-device entrypoints
 
 - Android Explorer evidence: `artifacts/explorer/android-full/2026-04-28T03-38-20/`
+- Android Explorer evidence gate: `pnpm run validate:explorer-android-evidence -- --min-pages 45 --min-depth 4`
 - Android probe: `pnpm run validate:android-tool-probe`
 - iOS probe: `pnpm run validate:ios-tool-probe`
 
@@ -53,9 +54,20 @@ This folder contains reproducible, real-device demo evidence used by README.
 These flows are used by `.github/workflows/platform-smoke.yml` to keep simulator/emulator wiring visible in CI.
 They intentionally validate baseline toolchain execution only, and do not replace real-device acceptance evidence.
 
+## CI evidence jobs
+
+- `CI / dry-run-smoke`: runs `pnpm test:smoke` for deterministic dry-run contracts.
+- `CI / explorer-evidence`: validates the committed Android physical-device Explorer artifact contract and uploads `ci-android-explorer-evidence-<run_id>`.
+- `CI / probe-dry-run`: validates Android + iOS simulator probe dry-run metadata without requiring devices.
+- `Platform Smoke`: runs simulator/emulator baseline Maestro flows.
+- `Real Device Acceptance`: runs self-hosted acceptance lanes and report quality gates.
+
+See `docs/showcase/ci-evidence.md` for the current proof levels and boundaries.
+
 ## Evidence contract and proof levels
 
 - Smoke proof (`pnpm test:smoke`, dry-run validators, Ubuntu CI): verifies deterministic contracts and dry-run behavior, not real-device fidelity.
+- Explorer evidence proof (`CI / explorer-evidence`): verifies the committed Android physical-device Explorer artifact remains present and internally consistent; it does not rerun a device.
 - Platform smoke proof (`.github/workflows/platform-smoke.yml`): verifies simulator/emulator baseline wiring only.
 - Acceptance proof (`.github/workflows/real-device-acceptance.yml`): self-hosted real-run artifacts plus quality gate on `output/reports/phase-sample-report.json`.
 

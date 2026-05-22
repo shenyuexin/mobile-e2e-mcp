@@ -1,16 +1,18 @@
 # Probe 脚本作为 CI 质量门禁提案
 
+> Current status: Phase 1 dry-run gate has been implemented in `.github/workflows/ci.yml` as `probe-dry-run` via `pnpm run validate:probe-dry-run`. Treat the YAML below as historical design context unless updating the current workflow.
+
 ## 背景
 
 `ios-simulator-tool-probe.ts` 和 `android-tool-probe.ts` 是最直接的端到端验证工具，覆盖了 MCP 工具链的完整调用路径：
 
 - UI 层级解析 → 元素定位 → 点击/输入 → 状态验证 → 错误恢复
 
-当前这些脚本**仅在本地手动运行**，不在 CI 门禁中。这导致 iOS `verifyResolvedPoint` bug 直到用户手动 probe 才被发现。
+早期这些脚本**仅在本地手动运行**，不在 CI 门禁中。这导致 iOS `verifyResolvedPoint` bug 直到用户手动 probe 才被发现。当前 CI 已经包含 device-free dry-run gate；真实设备/模拟器 probe 仍作为手动或平台 runner 证据。
 
 ## 提案
 
-### Phase 1：Dry-run 门禁（立即启用）
+### Phase 1：Dry-run 门禁（已启用）
 
 在 PR gate CI 中添加 probe dry-run 检查，验证：
 - 脚本可执行、无编译错误
@@ -64,7 +66,7 @@ ios-simulator-smoke:
         xcrun simctl boot "iPhone 16" || true
         xcrun simctl launch booted com.apple.Preferences || true
     - name: Run iOS simulator probe
-      run: pnpm tsx scripts/dev/ios-simulator-tool-probe.ts
+      run: pnpm run validate:ios-tool-probe
       env:
         M2E_DEVICE_ID: "$(xcrun simctl list devices json | jq -r '.devices[\"com.apple.CoreSimulator.SimRuntime.iOS-18-0\"][] | select(.name==\"iPhone 16\") | .udid')"
       timeout-minutes: 15
@@ -113,11 +115,11 @@ ios-simulator-smoke:
    ```bash
    # iOS
    pnpm run validate:probe-dry-run
-   pnpm tsx scripts/dev/ios-simulator-tool-probe.ts
+   pnpm run validate:ios-tool-probe
    
    # Android
    pnpm run validate:probe-dry-run
-   pnpm tsx scripts/dev/android-tool-probe.ts
+   pnpm run validate:android-tool-probe
    ```
 
 3. **常见失败原因**

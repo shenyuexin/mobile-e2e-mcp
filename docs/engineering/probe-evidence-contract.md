@@ -48,5 +48,5 @@ Real-device or simulator probe runs remain manual acceptance evidence:
 
 ```bash
 pnpm run validate:android-tool-probe
-pnpm exec tsx scripts/dev/ios-simulator-tool-probe.ts
+pnpm run validate:ios-tool-probe
 ```
