@@ -57,7 +57,7 @@ export function buildAndroidToolProbeDryRunReport() {
     mode: "dry-run",
     probe: "android-tool-probe",
     platform: "android",
-    runnerProfile: "phase1",
+    runnerProfile: "native_android",
     appId: "com.android.settings",
     requiresDevice: false,
     checklistSource: "docs/testing/android-tool-probe-checklist.md",
@@ -84,7 +84,7 @@ export async function runAndroidToolProbe(): Promise<void> {
   const sessionId = process.env.M2E_SESSION_ID ?? `tool-checklist-${now}`;
   const deviceId = process.env.M2E_DEVICE_ID ?? "10AEA40Z3Y000R5";
   const platform = "android" as const;
-  const runnerProfile = (process.env.M2E_RUNNER_PROFILE ?? "phase1") as "phase1";
+  const runnerProfile = process.env.M2E_RUNNER_PROFILE ?? "native_android";
   const appId = process.env.M2E_APP_ID ?? "com.android.settings";
   const flowPath = process.env.M2E_FLOW_PATH ?? "flows/samples/generated/android-settings-smoke.yaml";
   const checklistSource = process.env.M2E_CHECKLIST_PATH ?? "docs/testing/android-tool-probe-checklist.md";
