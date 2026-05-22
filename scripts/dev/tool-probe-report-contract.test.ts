@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { buildAndroidToolProbeDryRunReport } from "./android-tool-probe.ts";
+import { buildAndroidResumeCheckpoint, buildAndroidToolProbeDryRunReport } from "./android-tool-probe.ts";
 import { buildIosSimulatorToolProbeDryRunReport } from "./ios-simulator-tool-probe.ts";
 import {
   buildProbeArtifactPaths,
@@ -80,6 +80,24 @@ describe("tool probe report contract", () => {
     assert.equal(iosSimulator.requiresDevice, false);
     assert.ok(android.plannedTools.includes("validate_flow"));
     assert.ok(iosSimulator.plannedTools.includes("run_flow"));
+  });
+
+  it("builds a stable Android resume checkpoint for Settings and Bluetooth pages", () => {
+    const checkpoint = buildAndroidResumeCheckpoint({
+      sessionId: "fixture-session",
+      platform: "android",
+      actionId: "fixture-action",
+      createdAt: "2026-05-22T00:00:00.000Z",
+    });
+
+    assert.equal(checkpoint.actionId, "fixture-action");
+    assert.equal(checkpoint.actionType, "wait_for_ui");
+    assert.equal(checkpoint.selector?.text, "Bluetooth");
+    assert.equal(checkpoint.params?.text, "Bluetooth");
+    assert.equal(checkpoint.params?.waitUntil, "visible");
+    assert.equal(checkpoint.params?.intervalMs, 500);
+    assert.equal(checkpoint.params?.timeoutMs, 8000);
+    assert.notEqual(checkpoint.selector?.text, "Wi-Fi");
   });
 
   it("reports contract drift as validation issues", () => {

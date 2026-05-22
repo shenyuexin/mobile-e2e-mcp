@@ -52,6 +52,28 @@ const ANDROID_DRY_RUN_TOOLS = [
   "end_session",
 ] as const;
 
+export function buildAndroidResumeCheckpoint(params: {
+  sessionId: string;
+  platform: "android";
+  actionId: string;
+  createdAt?: string;
+}) {
+  return {
+    actionId: params.actionId,
+    sessionId: params.sessionId,
+    platform: params.platform,
+    actionType: "wait_for_ui" as const,
+    selector: { text: "Bluetooth" },
+    params: {
+      text: "Bluetooth",
+      waitUntil: "visible",
+      timeoutMs: 8000,
+      intervalMs: 500,
+    },
+    createdAt: params.createdAt ?? new Date().toISOString(),
+  };
+}
+
 export function buildAndroidToolProbeDryRunReport() {
   return {
     mode: "dry-run",
@@ -469,16 +491,15 @@ export async function runAndroidToolProbe(): Promise<void> {
 
   // ── Step 19: resume_interrupted_action ────────────────────────
   logStep("resume_interrupted_action — 恢复中断操作");
+  const resumeCheckpointActionId = successfulActionId ?? failedActionId ?? `checkpoint-${Date.now()}`;
   push("resume_interrupted_action", await invoke("resume_interrupted_action", {
     sessionId, platform, runnerProfile, deviceId, appId,
-    checkpoint: {
-      actionId: failedActionId ?? `checkpoint-${Date.now()}`,
-      sessionId, platform, actionType: "wait_for_ui",
-      selector: { text: "Wi-Fi" },
-      params: { text: "Wi-Fi", waitUntil: "visible", timeoutMs: 1500, intervalMs: 300 },
-      createdAt: new Date().toISOString(),
-    },
-  }), "resume synthetic checkpoint");
+    checkpoint: buildAndroidResumeCheckpoint({
+      sessionId,
+      platform,
+      actionId: resumeCheckpointActionId,
+    }),
+  }), "resume stable Bluetooth checkpoint");
 
   // ═══════════════════════════════════════════════════════════════
   // Phase 6: JS debug tools (out-of-scope without Metro)
