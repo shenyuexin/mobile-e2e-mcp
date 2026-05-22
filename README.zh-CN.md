@@ -100,7 +100,7 @@ Explorer 会生成一个包含结构化产物的目录：
   - `docs/showcase/videos/m2e-interruption-home-recovery-35s.mp4`
 - 当前真机验证：
   - Android Explorer 证据：`artifacts/explorer/android-full/2026-04-28T03-38-20/`
-  - Android probe 入口：`pnpm run validate:android-tool-probe`
+  - Android probe 入口：`pnpm run validate:android-tool-probe`（最新 Vivo V2405A 真机结果：19/23 success、1 partial、3 个预期/诊断类失败；核心 UI action 链路已通过）
   - iOS probe 入口：`pnpm run validate:ios-tool-probe`
 - 历史演示脚本：
   - `bash scripts/legacy/dev/record-demo-happy-path-android.sh`
@@ -134,7 +134,7 @@ Explorer 会生成一个包含结构化产物的目录：
 
 ### 这个 harness 能跑 Android 真机吗？
 
-可以。当前真机证据以 Explorer/probe 产物为主；历史演示脚本保存在 `scripts/legacy/dev/*`，录屏和展示资产见 `docs/showcase/*`。
+可以。当前真机证据以 Explorer/probe 产物为主；历史演示脚本保存在 `scripts/legacy/dev/*`，录屏和展示资产见 `docs/showcase/*`。最新 Android Vivo probe 使用 `native_android` 跑通了 Settings 核心 UI action 链路；少数诊断/负向路径在缺少 Metro 等前置条件时不会全绿。
 
 ### 这个 harness 怎么处理中断恢复？
 
