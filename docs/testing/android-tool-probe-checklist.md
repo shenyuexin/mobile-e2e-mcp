@@ -100,16 +100,16 @@ pnpm run validate:explorer-android-evidence -- --min-pages 45 --min-depth 4
 - 外部 app boundary 检测与 system-back recovery 成功返回 Settings
 - form/editor 页面 gating、screen drift reconciliation、report generation 均有日志证据
 
-### 最新 Vivo 真机工具探针结果（run: `android-tool-probe-1779446821618`）
+### 最新 Vivo 真机工具探针结果（run: `android-tool-probe-1779493114956`）
 
 证据：
 
-- `output/evidence/probes/android-tool-probe/android-tool-probe-1779446821618/report.json`
-- `output/evidence/probes/android-tool-probe/android-tool-probe-1779446821618/summary.md`
+- `output/evidence/probes/android-tool-probe/android-tool-probe-1779493114956/report.json`
+- `output/evidence/probes/android-tool-probe/android-tool-probe-1779493114956/summary.md`
 - `output/reports/android-tool-probe.json`
 - `output/reports/android-tool-probe.md`
 
-汇总：Vivo V2405A (`10AEA40Z3Y000R5`)，目标 app `com.android.settings`，runner profile `native_android`，`success=19 / partial=1 / failed=3`。
+汇总：Vivo V2405A (`10AEA40Z3Y000R5`)，目标 app `com.android.settings`，runner profile `native_android`，`success=20 / partial=0 / failed=3`。
 
 已通过的核心真机链路：
 
@@ -130,6 +130,7 @@ pnpm run validate:explorer-android-evidence -- --min-pages 45 --min-depth 4
 - `find_similar_failures`
 - `rank_failure_candidates`
 - `compare_against_baseline`
+- `resume_interrupted_action`
 - `end_session`
 
 未全绿项说明：
@@ -137,7 +138,6 @@ pnpm run validate:explorer-android-evidence -- --min-pages 45 --min-depth 4
 | Tool | Result | Reason | Notes |
 |---|---|---|---|
 | perform_action_with_evidence(failure) | failed | OCR_NO_MATCH | 故意构造失败上下文，用于验证 failure intelligence 链路 |
-| resume_interrupted_action | partial | TIMEOUT | synthetic checkpoint 恢复后未闭环，属于恢复链路待继续强化项 |
 | capture_js_console_logs | failed | CONFIGURATION_ERROR | 无 Metro/JS debug target 时预期失败 |
 | capture_js_network_events | failed | CONFIGURATION_ERROR | 无 Metro/JS debug target 时预期失败 |
 

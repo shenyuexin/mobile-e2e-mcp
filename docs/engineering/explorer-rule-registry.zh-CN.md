@@ -180,7 +180,17 @@ Explorer rule registry 把遍历中的“跳过、采样、门控、延后执行
 }
 ```
 
-### 5.6 受控沙箱允许破坏性动作
+### 5.6 Android Settings safe-smoke 默认边界
+
+Android smoke 模式内置了 `default.android.safe-smoke.sensitive-settings.page-gate` 与
+`default.android.safe-smoke.sensitive-settings.element-skip`。它们只在 `mode=smoke`
+且平台为 `android-emulator` / `android-device` 时生效，用于阻止无人值守探索进入
+账号、SIM/移动网络、隐私/安全、开发者选项、支付等真机敏感区域。
+
+这些规则不会改变 `scoped` / `full` 模式的既有语义；如果项目需要更深入覆盖，应显式选择
+更高探索模式或通过 `rules.defaults.disabledRuleIds` 关闭对应规则。
+
+### 5.7 受控沙箱允许破坏性动作
 
 ```json
 {

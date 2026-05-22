@@ -100,7 +100,7 @@ If you want a quick hands-on tour before diving into architecture details, start
   - `docs/showcase/videos/m2e-interruption-home-recovery-35s.mp4`
 - Current real-device verification:
   - Android Explorer evidence: `artifacts/explorer/android-full/2026-04-28T03-38-20/`
-  - Android probe entrypoint: `pnpm run validate:android-tool-probe` (latest Vivo V2405A run: 19/23 success, 1 partial, 3 expected/diagnostic failures; core UI action path passed)
+  - Android probe entrypoint: `pnpm run validate:android-tool-probe` (latest Vivo V2405A run: 20/23 success, 0 partial, 3 expected diagnostic failures; core UI and interruption-resume paths passed)
   - iOS probe entrypoint: `pnpm run validate:ios-tool-probe`
 - Historical demo scripts:
   - `bash scripts/legacy/dev/record-demo-happy-path-android.sh`
@@ -134,7 +134,7 @@ It is an execution layer that lets AI agents run mobile test actions safely and 
 
 ### Can this harness run on real Android devices?
 
-Yes. Current real-device evidence is centered on Explorer/probe artifacts, with historical showcase scripts under `scripts/legacy/dev/*` and recordings under `docs/showcase/*`. The latest Android Vivo probe verified the core Settings UI action path with `native_android`; a few diagnostic/negative-path checks remain intentionally non-green unless their prerequisites, such as Metro, are present.
+Yes. Current real-device evidence is centered on Explorer/probe artifacts, with historical showcase scripts under `scripts/legacy/dev/*` and recordings under `docs/showcase/*`. The latest Android Vivo probe verified the core Settings UI action path and `resume_interrupted_action` with `native_android`; a few diagnostic/negative-path checks remain intentionally non-green unless their prerequisites, such as Metro, are present.
 
 ### How does interruption recovery work in this harness?
 

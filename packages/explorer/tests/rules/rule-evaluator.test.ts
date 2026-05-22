@@ -101,6 +101,57 @@ describe("rule evaluator", () => {
 		);
 	});
 
+	it("gates Android safe-smoke sensitive Settings pages and elements", () => {
+		const rules = registry({ platform: "android-device", mode: "smoke" });
+		for (const screenTitle of [
+			"SIMs & mobile network",
+			"vivo account",
+			"Privacy",
+			"Security",
+			"Developer options",
+			"Payment methods",
+		]) {
+			const decision = evaluatePageRules(rules, {
+				path: ["Settings", screenTitle],
+				depth: 1,
+				mode: "smoke",
+				platform: "android-device",
+				snapshot: snapshot({ screenTitle }),
+			});
+			assert.ok(decision.matched, `${screenTitle} should be gated`);
+			assert.ok(
+				[
+					"default.android.network.sims-mobile-network.page-skip",
+					"default.android.safe-smoke.sensitive-settings.page-gate",
+				].includes(decision.ruleId ?? ""),
+				`${screenTitle} matched unexpected rule ${decision.ruleId ?? "(none)"}`,
+			);
+		}
+
+		for (const label of [
+			"SIMs & mobile network",
+			"vivo account, vivo Cloud, Find Devices, and more",
+			"Privacy",
+			"Security",
+			"Developer options",
+			"Payment methods",
+		]) {
+			const decision = evaluateElementRules(rules, {
+				path: ["Settings"],
+				depth: 0,
+				mode: "smoke",
+				platform: "android-device",
+				snapshot: snapshot({ screenTitle: "Settings" }),
+				element: element(label),
+			});
+			assert.equal(
+				decision.ruleId,
+				"default.android.safe-smoke.sensitive-settings.element-skip",
+				`${label} should be skipped by safe-smoke element rule`,
+			);
+		}
+	});
+
 	it("matches Help/FAQ element skips", () => {
 		const rules = registry();
 		assert.equal(

@@ -32,6 +32,8 @@ describe("default explorer rules", () => {
 			"default.ios.fonts.system-fonts.smoke-sampling",
 			"default.android.bluetooth.other-devices.page-skip",
 			"default.android.network.sims-mobile-network.page-skip",
+			"default.android.safe-smoke.sensitive-settings.page-gate",
+			"default.android.safe-smoke.sensitive-settings.element-skip",
 			"default.element.help.low-value-skip",
 			"default.element.faq.low-value-skip",
 			"default.owner-package.bbk-account.external-app-gate",
