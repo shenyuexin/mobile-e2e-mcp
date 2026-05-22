@@ -13,12 +13,16 @@ This page is the fixed entry for CI execution evidence referenced by `README.md`
 For each run of `CI` (`.github/workflows/ci.yml`):
 
 1. Job logs for `unit-and-typecheck` and `dry-run-smoke`
-2. Probe dry-run contract validation for Android + iOS simulator probe scripts
-3. Uploaded metadata artifacts:
+2. Dedicated `explorer-evidence` job that validates the committed Android physical-device Explorer artifact contract
+3. Probe dry-run contract validation for Android + iOS simulator probe scripts
+4. Uploaded metadata artifacts:
    - `ci-unit-typecheck-metadata`
    - `ci-dry-run-smoke-metadata`
+   - `ci-explorer-evidence-metadata`
    - `ci-probe-dry-run-metadata`
-4. Job-level step summary with:
+5. Uploaded Explorer evidence report artifact:
+   - `ci-android-explorer-evidence-<run_id>`
+6. Job-level step summary with:
    - job status
    - run URL
    - artifact names
@@ -45,6 +49,7 @@ For each run of `Real Device Acceptance` (`.github/workflows/real-device-accepta
 ## CI boundary (important)
 
 - Ubuntu CI validates **buildability, type-safety, and smoke-level tool behavior**.
+- `explorer-evidence` is an offline contract check over the committed Android physical-device Explorer artifact. It validates artifact presence, app/platform/mode, pages/depth/failure metrics, entry probe evidence, and app-switch recovery logs. It does not rerun a phone.
 - Probe dry-run validates Android + iOS simulator probe structure without device dependencies.
 - Platform smoke validates simulator/emulator toolchain baseline only.
 - Ubuntu CI and platform smoke do **not** fully prove real-device execution fidelity.
