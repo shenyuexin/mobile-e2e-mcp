@@ -48,7 +48,7 @@ output/showcase/governed-agent-mobile-control-preflight/<run-id>/
 ```
 
 It checks Android device selection, runner capability metadata, and the expected read-only policy boundary before any live proof action is attempted.
-If any readiness check fails, the command still writes `preflight.json` and `report.md`, then exits non-zero.
+If any readiness check fails, the command still writes `preflight.json` and `report.md` with remediation hints, then exits non-zero.
 
 ## What This Proves
 

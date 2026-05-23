@@ -7,6 +7,7 @@ interface PreflightCheck {
   name: string;
   status: "pass" | "fail" | "warn";
   summary: string;
+  hints?: string[];
   details?: Record<string, unknown>;
 }
 
@@ -80,6 +81,7 @@ function renderMarkdown(report: PreflightReport): string {
       "",
       `- Status: ${check.status}`,
       `- Summary: ${check.summary}`,
+      check.hints && check.hints.length > 0 ? `- Hints: ${check.hints.join(" | ")}` : undefined,
       check.details ? `- Details: \`${JSON.stringify(check.details)}\`` : undefined,
       "",
     ].filter((line): line is string => Boolean(line)).join("\n")),
@@ -114,6 +116,13 @@ async function runPreflight(): Promise<PreflightReport> {
       : requestedDeviceId
         ? "The requested Android device was not found or is unavailable."
         : "No available Android device was found.",
+    hints: selectedDeviceId ? [] : [
+      "Run `adb devices -l` and confirm the device is listed as `device`, not `unauthorized` or `offline`.",
+      requestedDeviceId
+        ? "Check that `M2E_DEVICE_ID` exactly matches the adb device id."
+        : "Set `M2E_DEVICE_ID=<device-id>` when multiple devices are attached or auto-selection is ambiguous.",
+      "If this command runs inside a sandboxed agent, allow local adb/USB access and rerun the preflight.",
+    ],
     details: {
       requestedDeviceId: requestedDeviceId ?? null,
       selectedDeviceId: selectedDeviceId ?? null,
@@ -130,6 +139,10 @@ async function runPreflight(): Promise<PreflightReport> {
     summary: capabilityStatus === "success"
       ? "The selected runner profile exposes Android capability metadata."
       : "Android capability metadata could not be described for the selected runner profile.",
+    hints: capabilityStatus === "success" ? [] : [
+      "Use the default `M2E_RUNNER_PROFILE=native_android` unless validating another tracked profile.",
+      "Run the dry proof first with `pnpm run proof:governed-agent-mobile-control` to confirm the local MCP server wiring.",
+    ],
     details: {
       runnerProfile,
       status: capabilityStatus,
@@ -141,6 +154,9 @@ async function runPreflight(): Promise<PreflightReport> {
     name: "policy_boundary",
     status: "pass",
     summary: "The live proof uses the read-only policy profile and should deny interactive actions with POLICY_DENIED.",
+    hints: [
+      "A passing preflight means the live proof should inspect the screen first, then block the tap action under read-only policy.",
+    ],
     details: {
       policyProfile: "read-only",
       expectedDeniedAction: "perform_action_with_evidence/tap_element",
@@ -175,7 +191,11 @@ async function main(): Promise<void> {
     outputDir: path.relative(root, outputDir),
     ready: report.ready,
     selectedDeviceId: report.selectedDeviceId ?? null,
-    checks: report.checks.map((check) => ({ name: check.name, status: check.status })),
+    checks: report.checks.map((check) => ({
+      name: check.name,
+      status: check.status,
+      hints: check.hints ?? [],
+    })),
   }, null, 2));
 
   if (!report.ready) {

@@ -96,6 +96,13 @@ runner_capabilities: pass
 policy_boundary: pass
 ```
 
+The preflight was rerun after adding remediation hints:
+
+```text
+sandbox path: ready=false, android_device=fail, hints include adb devices, M2E_DEVICE_ID, and sandboxed adb/USB access
+vivo path: ready=true, selectedDeviceId=10AEA40Z3Y000R5, android_device=pass, runner_capabilities=pass, policy_boundary=pass
+```
+
 ## Tracked Evidence Validation
 
 ```bash

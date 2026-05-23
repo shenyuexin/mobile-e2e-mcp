@@ -10,6 +10,7 @@ pnpm run proof:governed-agent-mobile-control:live
 ```
 
 The preflight uses existing MCP tools to check Android device selection, runner capability metadata, and the expected `read-only` policy boundary before any live proof action is attempted.
+When readiness fails, it now writes remediation hints into both the terminal JSON summary and the generated report so first-time users can distinguish missing adb visibility, wrong `M2E_DEVICE_ID`, and sandboxed USB access.
 
 The live proof uses existing MCP tools only. It selects an Android device, starts a `read-only` session, captures live UI evidence, verifies that an interactive action is blocked with structured `POLICY_DENIED`, asks for governance guidance, and writes a timestamped bundle under:
 
