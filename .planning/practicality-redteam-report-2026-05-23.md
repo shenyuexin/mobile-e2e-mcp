@@ -184,8 +184,10 @@ Do not expand the tool catalog first. The project already has enough capability 
 - one first-30-minute quickstart path that does not depend on maintainer knowledge
 - one reliability/evidence loop that turns impressive artifacts into repeatable trust
 
-The following phases convert this report into roadmap work:
+The following revised phases convert this report into stricter roadmap work:
 
-- Phase 33: Killer Demo Validation
-- Phase 34: Adoption Friction Reduction
-- Phase 35: Reliability and Differentiation Evidence
+- Phase 33: Existence Scenario Validation
+- Phase 34: Alternative Kill Test
+- Phase 35: Wedge Selection
+
+Revision note: after review, the next work should not start with adoption polish. It should first test whether the project has real usage scenarios, then try to kill those scenarios with existing alternatives, and only then choose a narrow wedge.

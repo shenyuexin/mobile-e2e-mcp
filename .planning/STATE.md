@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Practicality red-team analysis added follow-on phases 33-35 for product proof, adoption, and reliability evidence
+stopped_at: Phase 33 existence scenario validation completed; Phase 34 alternative kill test is next
 last_updated: "2026-05-19T00:00:00.000Z"
-last_activity: 2026-05-23 -- project practicality red-team report created and roadmap follow-on phases 33-35 added
+last_activity: 2026-05-23 -- phase 33 completed scenario validation and selected candidates for Phase 34 kill testing
 progress:
   total_phases: 3
   completed_phases: 1
@@ -27,8 +27,8 @@ See: .planning/PROJECT.md (updated 2026-03-28)
 
 Phase: probe evidence contract hardening
 Plan: stabilize generated probe report JSON/Markdown through shared helpers and fixture-backed validation without requiring devices.
-Status: Explorer failure review/reporting is on main, Android physical-device Explorer evidence exists at `artifacts/explorer/android-full/2026-04-28T03-38-20/`, historical phase/demo/debug scripts live under `scripts/legacy/`, `validate:probe-dry-run` is CI-gated, probe reports use the shared `tool-probe-report/v1` contract, and the next productization push is now framed by practicality red-team phases 33-35.
-Last activity: 2026-05-23 -- `.planning/practicality-redteam-report-2026-05-23.md` captured the project red-team analysis and `.planning/phases/33-*`, `34-*`, and `35-*` were added as future optimization plans.
+Status: Explorer failure review/reporting is on main, Android physical-device Explorer evidence exists at `artifacts/explorer/android-full/2026-04-28T03-38-20/`, historical phase/demo/debug scripts live under `scripts/legacy/`, `validate:probe-dry-run` is CI-gated, probe reports use the shared `tool-probe-report/v1` contract, and Phase 33 has narrowed the next product question to three candidate usage scenarios.
+Last activity: 2026-05-23 -- Phase 33 kept AI-safe mobile device control as the strongest candidate, narrowed failure intelligence to an augmentation layer, kept/narrowed Explorer as coverage discovery, and discarded broad mobile E2E replacement as the primary scenario.
 
 Progress: [█████████░] 86%
 
@@ -144,9 +144,9 @@ Recent decisions affecting current work:
 - Android physical-device Explorer proof exists at `artifacts/explorer/android-full/2026-04-28T03-38-20/` with 45 pages and 0 failures.
 - Probe dry-run CI gate and script cleanup are on main; historical phase/demo/debug scripts live under `scripts/legacy/`.
 - Phase 31 completed locally: probe report JSON/Markdown now share `tool-probe-report/v1`, fixture-backed validation, and documented artifact layout.
-- Phase 33 planned: killer demo validation to prove one realistic before/after workflow against existing mobile automation alternatives.
-- Phase 34 planned: first-30-minute adoption path and clearer current/legacy proof boundaries.
-- Phase 35 planned: repeated-run reliability and differentiation evidence before further capability expansion.
+- Phase 33 completed: existence scenario validation identified AI-safe mobile device control, failure intelligence augmentation, and Explorer coverage discovery as candidates for Phase 34 kill testing; broad mobile E2E replacement was discarded as the primary scenario.
+- Phase 34 planned: alternative kill test to try solving surviving scenarios with existing tools plus small scripts and discard weak scenarios.
+- Phase 35 planned: wedge selection to choose one narrow primary entry point and demote other capabilities to supporting/deferred roles.
 
 ### Planning Hygiene Notes
 
@@ -162,5 +162,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-05-23
-Stopped at: Practicality red-team analysis added follow-on phases 33-35 for product proof, adoption, and reliability evidence
+Stopped at: Phase 33 existence scenario validation completed; Phase 34 alternative kill test is next
 Resume file: .planning/ROADMAP.md

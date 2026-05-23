@@ -31,6 +31,7 @@ Plans:
 - Phase 22: first-class `navigate_back` capability completed (`22-SUMMARY.md`).
 - Phase 28: Explorer rule registry completed (`28-01-SUMMARY.md`).
 - Phase 29: Explorer horizontal swipe discovery MVP completed (`29-01-SUMMARY.md`).
+- Phase 33: existence scenario validation completed (`33-01-SUMMARY.md`).
 - Explorer failure review/reporting landed in local commits `aa8cc94` through `cb62a82`, with failure artifacts, log signals, rule decision reporting, and markdown sampling.
 - Android physical-device Explorer evidence is tracked at `artifacts/explorer/android-full/2026-04-28T03-38-20/` (45 pages, max depth 4, 0 failures).
 - Script cleanup moved historical phase/demo/debug runners under `scripts/legacy/`; current real-device direction is Explorer/probe first, with legacy runners kept as compatibility artifacts.
@@ -78,7 +79,6 @@ Plans:
 ## Future Candidates
 
 - Phase 32: Container-Targeted Scroll (requires MCP contract extension for bounds/selector)
-- Phase 33: Killer Demo Validation (prove one realistic before/after workflow against existing mobile automation alternatives)
-- Phase 34: Adoption Friction Reduction (define a first-30-minute proof path and make current vs legacy evidence boundaries obvious)
-- Phase 35: Reliability and Differentiation Evidence (add repeated-run proof and select reliability investments from measured gaps)
+- Phase 34: Alternative Kill Test (try to solve each surviving scenario with existing tools plus small scripts and discard weak scenarios)
+- Phase 35: Wedge Selection (choose one narrow primary wedge and demote other capabilities to supporting/deferred roles)
 - Phase 36: Interleaved Scroll Axis Priority (requires validation data from Phase 29)
