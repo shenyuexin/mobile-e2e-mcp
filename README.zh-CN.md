@@ -123,6 +123,7 @@ Explorer 会生成一个包含结构化产物的目录：
   - iOS probe 入口：`pnpm run validate:ios-tool-probe`
 - 受治理控制 proof：
   - `pnpm run proof:governed-agent-mobile-control`
+  - `pnpm run proof:governed-agent-mobile-control:preflight`（检查 Android live proof 前置条件）
   - `pnpm run proof:governed-agent-mobile-control:live`（需要 Android 设备/模拟器）
   - `pnpm run validate:governed-control-evidence`
   - [docs/showcase/governed-agent-mobile-control.md](docs/showcase/governed-agent-mobile-control.md)

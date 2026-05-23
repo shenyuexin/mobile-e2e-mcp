@@ -61,6 +61,7 @@
     "validate:tool-output-contracts": "tsx scripts/validate-tool-output-contracts.ts",
     "validate:governed-control-evidence": "node --import tsx scripts/showcase/validate-governed-control-evidence.ts",
     "proof:governed-agent-mobile-control": "node --import tsx scripts/showcase/governed-agent-mobile-control-proof.ts",
+    "proof:governed-agent-mobile-control:preflight": "node --import tsx scripts/showcase/governed-agent-mobile-control-preflight.ts",
     "proof:governed-agent-mobile-control:live": "node --import tsx scripts/showcase/governed-agent-mobile-control-live-proof.ts"
   },
   "devDependencies": {

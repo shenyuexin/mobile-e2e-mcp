@@ -77,6 +77,25 @@ remediationAvailable: true
 
 The generated report recorded `inspect_ui` success with `totalNodes=93` and `clickableNodes=53`, followed by `perform_action_with_evidence` returning `POLICY_DENIED` and `suggest_known_remediation` returning `OK`.
 
+## Vivo Preflight Verification
+
+```bash
+pnpm run proof:governed-agent-mobile-control:preflight
+```
+
+Sandbox result: generated a report and failed the `android_device` check because the sandbox could not see the attached USB device.
+
+After allowing local adb/USB access, the same command passed:
+
+```text
+output/showcase/governed-agent-mobile-control-preflight/2026-05-23T12-04-17-683Z
+ready: true
+selectedDeviceId: 10AEA40Z3Y000R5
+android_device: pass
+runner_capabilities: pass
+policy_boundary: pass
+```
+
 ## Tracked Evidence Validation
 
 ```bash

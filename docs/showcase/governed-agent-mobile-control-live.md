@@ -13,6 +13,12 @@ list_devices -> describe_capabilities -> start_session(read-only) -> inspect_ui 
 Connect an Android device or emulator that appears in `adb devices`, then run:
 
 ```bash
+pnpm run proof:governed-agent-mobile-control:preflight
+```
+
+If preflight is ready, capture the live proof:
+
+```bash
 pnpm run proof:governed-agent-mobile-control:live
 ```
 
@@ -34,6 +40,15 @@ Expected files:
 - `live-proof.json` — machine-readable step results, selected device, verdict, and evidence flags.
 - `report.md` — human-readable proof summary.
 - `inspect-ui.xml` — live Android hierarchy capture when a device is available and `inspect_ui` succeeds.
+
+The preflight command writes a separate timestamped bundle under:
+
+```text
+output/showcase/governed-agent-mobile-control-preflight/<run-id>/
+```
+
+It checks Android device selection, runner capability metadata, and the expected read-only policy boundary before any live proof action is attempted.
+If any readiness check fails, the command still writes `preflight.json` and `report.md`, then exits non-zero.
 
 ## What This Proves
 

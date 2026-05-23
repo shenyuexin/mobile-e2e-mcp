@@ -123,6 +123,7 @@ If you want a quick hands-on tour before diving into architecture details, start
   - iOS probe entrypoint: `pnpm run validate:ios-tool-probe`
 - Governed-control proof:
   - `pnpm run proof:governed-agent-mobile-control`
+  - `pnpm run proof:governed-agent-mobile-control:preflight` (checks Android live-proof readiness)
   - `pnpm run proof:governed-agent-mobile-control:live` (requires an Android device/emulator)
   - `pnpm run validate:governed-control-evidence`
   - [docs/showcase/governed-agent-mobile-control.md](docs/showcase/governed-agent-mobile-control.md)
