@@ -4,9 +4,9 @@
 [![Platform Smoke (iOS sim + Android emulator)](https://github.com/shenyuexin/mobile-e2e-mcp/actions/workflows/platform-smoke.yml/badge.svg?branch=main)](https://github.com/shenyuexin/mobile-e2e-mcp/actions/workflows/platform-smoke.yml)
 [![Real Device Acceptance (self-hosted)](https://img.shields.io/badge/Real%20Device%20Acceptance-self--hosted%20manual-0A66C2)](https://github.com/shenyuexin/mobile-e2e-mcp/actions/workflows/real-device-acceptance.yml)
 
-> AI-first mobile E2E orchestration for Android and iOS platform adapters, with React Native and Flutter framework profiles layered on top, deterministic-first execution, bounded visual fallback, and governance-aware automation.
+> AI-safe mobile device control via MCP: a policy-guarded, session-oriented mobile automation harness for AI agents, with deterministic-first Android/iOS execution, bounded visual fallback, and evidence-rich outcomes.
 
-This repository is a pnpm monorepo that combines MCP tooling, adapter execution, and architecture docs for a scalable mobile E2E platform.
+This repository is a pnpm monorepo that combines MCP tooling, adapter execution, and architecture docs for AI agents that need to inspect, act on, and debug mobile apps without turning raw device commands into ungoverned side effects.
 
 ## Quick Start
 
@@ -21,7 +21,26 @@ This repository is a pnpm monorepo that combines MCP tooling, adapter execution,
 }
 ```
 
-Once installed, you get **66 MCP tools** for mobile E2E automation, plus a built-in **Explorer** for automatic page traversal.
+Once installed, you get **66 MCP tools** for governed mobile automation, plus a built-in **Explorer** for automatic page traversal.
+
+## Core Wedge: Governed Agent Control
+
+The strongest use case for this project is not "replace every mobile E2E framework." It is: give an AI agent a safer control plane for mobile devices.
+
+Compared with a thin `adb` or platform-command wrapper, this harness adds:
+
+- **Policy boundaries**: actions are checked against policy profiles before execution.
+- **Auditable sessions**: actions run inside session, lease, audit, and evidence context.
+- **Capability disclosure**: agents can query supported platforms and boundaries before acting.
+- **Structured outcomes**: failures, denials, and evidence are machine-consumable instead of log-only.
+
+Reproduce the dry-run proof:
+
+```bash
+pnpm run proof:governed-agent-mobile-control
+```
+
+The proof writes a timestamped bundle under `output/showcase/governed-agent-mobile-control/<run-id>/` and verifies that a read-only session blocks an interactive action with structured `POLICY_DENIED`. See [Governed Agent Mobile Control Proof](docs/showcase/governed-agent-mobile-control.md).
 
 ## Explorer: Automatic Page Traversal
 
@@ -74,11 +93,11 @@ This repo contains both:
 1. **Executable implementation** (MCP server, adapters, contracts, core orchestration), and
 2. **Architecture and delivery knowledge base** (design principles, capability model, phased rollout docs).
 
-If you only remember one thing: this project is designed as a **mobile orchestration layer for AI agents**, not a single-framework test runner.
+If you only remember one thing: this project is designed as a **governed mobile control layer for AI agents**, not a single-framework test runner.
 
 ## Mobile E2E Harness Positioning
 
-This project is an **AI mobile E2E harness**: a policy-aware, session-oriented, deterministic-first execution harness for real-device mobile automation.
+This project is an **AI mobile E2E harness**: a policy-aware, session-oriented, deterministic-first execution harness for mobile automation where an AI agent needs controlled action, evidence, and support-boundary clarity.
 
 If you're searching for terms like **mobile test harness**, **real-device Android test harness**, **AI automation harness**, or **mobile CI harness**, this repository is built for that exact workflow.
 
@@ -102,6 +121,9 @@ If you want a quick hands-on tour before diving into architecture details, start
   - Android Explorer evidence: `artifacts/explorer/android-full/2026-04-28T03-38-20/`
   - Android probe entrypoint: `pnpm run validate:android-tool-probe` (latest Vivo V2405A run: 20/23 success, 0 partial, 3 expected diagnostic failures; core UI and interruption-resume paths passed)
   - iOS probe entrypoint: `pnpm run validate:ios-tool-probe`
+- Governed-control proof:
+  - `pnpm run proof:governed-agent-mobile-control`
+  - [docs/showcase/governed-agent-mobile-control.md](docs/showcase/governed-agent-mobile-control.md)
 - Historical demo scripts:
   - `bash scripts/legacy/dev/record-demo-happy-path-android.sh`
   - `bash scripts/legacy/dev/record-demo-interruption-home-recovery-android.sh`
@@ -146,7 +168,7 @@ Not necessarily. It is better understood as an orchestration harness that can co
 
 ### Which scenarios are the best fit?
 
-Release-gate mobile regression, flaky-flow triage, AI-driven exploratory checks, and real-device CI workflows that require auditable, evidence-rich outcomes.
+AI agents that need safe mobile device access, release-gate mobile regression, flaky-flow triage, AI-driven exploratory checks, and real-device CI workflows that require auditable, evidence-rich outcomes.
 
 ### What is the Explorer and when should I use it?
 

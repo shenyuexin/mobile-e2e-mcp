@@ -4,9 +4,9 @@
 [![Platform Smoke（iOS 模拟器 + Android 模拟器）](https://github.com/shenyuexin/mobile-e2e-mcp/actions/workflows/platform-smoke.yml/badge.svg?branch=main)](https://github.com/shenyuexin/mobile-e2e-mcp/actions/workflows/platform-smoke.yml)
 [![Real Device Acceptance（self-hosted）](https://img.shields.io/badge/Real%20Device%20Acceptance-self--hosted%20manual-0A66C2)](https://github.com/shenyuexin/mobile-e2e-mcp/actions/workflows/real-device-acceptance.yml)
 
-> 面向 AI Agent 的移动端 E2E 编排层，覆盖 Android / iOS / React Native / Flutter，强调确定性优先、有边界视觉兜底与治理约束。
+> 通过 MCP 给 AI Agent 提供安全的移动设备控制层：以 policy、session、evidence 为核心，覆盖 Android / iOS 确定性优先执行、有边界视觉兜底与可审计结果。
 
-本仓库是一个 pnpm monorepo，组合了 MCP 工具层、执行适配层与架构文档，用于构建可扩展的移动端 E2E 平台。
+本仓库是一个 pnpm monorepo，组合了 MCP 工具层、执行适配层与架构文档，用于让 AI Agent 在检查、操作和排障移动应用时，不必直接依赖不可治理的裸设备命令。
 
 ## 快速开始
 
@@ -21,7 +21,26 @@
 }
 ```
 
-安装后，你将获得 **66 个 MCP 工具** 用于移动端 E2E 自动化，以及内置的 **Explorer** 自动页面遍历能力。
+安装后，你将获得 **66 个 MCP 工具** 用于受治理的移动端自动化，以及内置的 **Explorer** 自动页面遍历能力。
+
+## 核心切入点：受治理的 Agent 控制
+
+这个项目最强的使用场景不是“替代所有移动端 E2E 框架”，而是：给 AI Agent 一个更安全的移动设备控制平面。
+
+相比很薄的 `adb` 或平台命令 wrapper，这个 harness 补上的是：
+
+- **策略边界**：动作执行前会先经过 policy profile 校验。
+- **可审计 session**：动作被放进 session、lease、audit、evidence 语境里。
+- **能力边界披露**：Agent 可以在行动前查询平台支持范围与限制。
+- **结构化结果**：失败、拒绝、证据不是纯日志，而是机器可消费结果。
+
+可以复跑 dry-run proof：
+
+```bash
+pnpm run proof:governed-agent-mobile-control
+```
+
+该 proof 会在 `output/showcase/governed-agent-mobile-control/<run-id>/` 下生成带时间戳的证据包，并验证 read-only session 会用结构化 `POLICY_DENIED` 阻止交互动作。详见 [Governed Agent Mobile Control Proof](docs/showcase/governed-agent-mobile-control.md)。
 
 ## Explorer：自动页面遍历
 
@@ -73,12 +92,12 @@ Explorer 会生成一个包含结构化产物的目录：
 1. **可执行实现**（MCP server、adapters、contracts、core 编排能力）
 2. **架构与交付知识库**（设计原则、能力模型、阶段规划文档）
 
-如果只记住一句话：它是一个**给 AI Agent 用的移动端编排层**，不是单一框架的测试 runner。
+如果只记住一句话：它是一个**给 AI Agent 用的受治理移动控制层**，不是单一框架的测试 runner。
 
 ## Mobile E2E Harness 定位
 
 这个项目可以理解为一个 **AI mobile E2E harness（面向 AI 的移动端执行编排层）**：
-它不是单纯执行动作，而是提供策略约束、会话治理、确定性优先执行路径与结构化证据输出。
+它不是单纯执行动作，而是在 AI Agent 需要操作移动设备时提供策略约束、会话治理、确定性优先执行路径与结构化证据输出。
 
 如果你在搜索这些关键词：**mobile test harness / Android test harness / AI automation harness / mobile CI harness**，本仓库就是为这类需求设计的。
 
@@ -102,6 +121,9 @@ Explorer 会生成一个包含结构化产物的目录：
   - Android Explorer 证据：`artifacts/explorer/android-full/2026-04-28T03-38-20/`
   - Android probe 入口：`pnpm run validate:android-tool-probe`（最新 Vivo V2405A 真机结果：20/23 success、0 partial、3 个预期诊断类失败；核心 UI action 与中断恢复链路已通过）
   - iOS probe 入口：`pnpm run validate:ios-tool-probe`
+- 受治理控制 proof：
+  - `pnpm run proof:governed-agent-mobile-control`
+  - [docs/showcase/governed-agent-mobile-control.md](docs/showcase/governed-agent-mobile-control.md)
 - 历史演示脚本：
   - `bash scripts/legacy/dev/record-demo-happy-path-android.sh`
   - `bash scripts/legacy/dev/record-demo-interruption-home-recovery-android.sh`
@@ -146,7 +168,7 @@ Explorer 会生成一个包含结构化产物的目录：
 
 ### 哪些场景最适合这个 harness？
 
-发布门禁回归（release-gate）、脆弱流程排障、AI 驱动探索式检查、以及需要审计证据的真机 CI 场景。
+需要安全移动设备访问的 AI Agent、发布门禁回归（release-gate）、脆弱流程排障、AI 驱动探索式检查、以及需要审计证据的真机 CI 场景。
 
 ### 什么是 Explorer，什么时候应该用？
 
