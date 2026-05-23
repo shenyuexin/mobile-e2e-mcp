@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 35 wedge selection completed; Phase 36 governed-agent proof is next
+stopped_at: Phase 36 governed-agent proof implemented; choose next wedge follow-up
 last_updated: "2026-05-19T00:00:00.000Z"
-last_activity: 2026-05-23 -- phase 35 selected AI-safe mobile device control via MCP as the primary wedge
+last_activity: 2026-05-23 -- phase 36 implemented a governed-agent proof runner for the selected AI-safe mobile control wedge
 progress:
   total_phases: 3
   completed_phases: 1
@@ -27,8 +27,8 @@ See: .planning/PROJECT.md (updated 2026-03-28)
 
 Phase: probe evidence contract hardening
 Plan: stabilize generated probe report JSON/Markdown through shared helpers and fixture-backed validation without requiring devices.
-Status: Explorer failure review/reporting is on main, Android physical-device Explorer evidence exists at `artifacts/explorer/android-full/2026-04-28T03-38-20/`, historical phase/demo/debug scripts live under `scripts/legacy/`, `validate:probe-dry-run` is CI-gated, probe reports use the shared `tool-probe-report/v1` contract, and Phase 35 has selected the next product wedge.
-Last activity: 2026-05-23 -- Phase 35 selected AI-safe mobile device control via MCP as the primary wedge, kept Explorer as a secondary/proof layer, treated failure intelligence as supporting, and recommended Phase 36 governed-agent proof.
+Status: Explorer failure review/reporting is on main, Android physical-device Explorer evidence exists at `artifacts/explorer/android-full/2026-04-28T03-38-20/`, historical phase/demo/debug scripts live under `scripts/legacy/`, `validate:probe-dry-run` is CI-gated, probe reports use the shared `tool-probe-report/v1` contract, and Phase 36 now provides a repeatable governed-agent proof for the selected product wedge.
+Last activity: 2026-05-23 -- Phase 36 added `pnpm run proof:governed-agent-mobile-control`, generating a proof bundle that demonstrates structured `POLICY_DENIED` handling under read-only policy and records governance-denial remediation as a residual gap.
 
 Progress: [█████████░] 86%
 
@@ -147,7 +147,7 @@ Recent decisions affecting current work:
 - Phase 33 completed: existence scenario validation identified AI-safe mobile device control, failure intelligence augmentation, and Explorer coverage discovery as candidates for Phase 34 kill testing; broad mobile E2E replacement was discarded as the primary scenario.
 - Phase 34 completed: alternative kill test ranked AI-safe mobile device control strongest, Explorer coverage discovery second, failure intelligence as supporting, and generic mobile E2E replacement discarded.
 - Phase 35 completed: wedge selection chose AI-safe mobile device control via MCP as the primary wedge; Explorer is secondary/proof layer and failure intelligence is supporting.
-- Phase 36 planned: governed agent mobile control proof should produce the 7-day proof artifact before any README repositioning.
+- Phase 36 completed: governed agent mobile control proof now produces a timestamped dry-run proof bundle before any README repositioning.
 
 ### Planning Hygiene Notes
 

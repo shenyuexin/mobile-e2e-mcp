@@ -58,7 +58,8 @@
     "release:mcp:checklist": "tsx scripts/release/release-checklist.ts",
     "release:mcp:checklist:dry-run": "tsx scripts/release/release-checklist.ts --dry-run",
     "validate:architecture-guardrails": "tsx scripts/validate-architecture-guardrails.ts",
-    "validate:tool-output-contracts": "tsx scripts/validate-tool-output-contracts.ts"
+    "validate:tool-output-contracts": "tsx scripts/validate-tool-output-contracts.ts",
+    "proof:governed-agent-mobile-control": "node --import tsx scripts/showcase/governed-agent-mobile-control-proof.ts"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",

@@ -34,6 +34,7 @@ Plans:
 - Phase 33: existence scenario validation completed (`33-01-SUMMARY.md`).
 - Phase 34: alternative kill test completed (`34-01-SUMMARY.md`).
 - Phase 35: wedge selection completed (`35-01-SUMMARY.md`).
+- Phase 36: governed agent mobile control proof completed (`36-01-SUMMARY.md`).
 - Explorer failure review/reporting landed in local commits `aa8cc94` through `cb62a82`, with failure artifacts, log signals, rule decision reporting, and markdown sampling.
 - Android physical-device Explorer evidence is tracked at `artifacts/explorer/android-full/2026-04-28T03-38-20/` (45 pages, max depth 4, 0 failures).
 - Script cleanup moved historical phase/demo/debug runners under `scripts/legacy/`; current real-device direction is Explorer/probe first, with legacy runners kept as compatibility artifacts.
@@ -81,5 +82,4 @@ Plans:
 ## Future Candidates
 
 - Phase 32: Container-Targeted Scroll (requires MCP contract extension for bounds/selector)
-- Phase 36: Governed Agent Mobile Control Proof (produce the 7-day proof artifact for AI-safe mobile device control via MCP)
 - Phase 37: Interleaved Scroll Axis Priority (requires validation data from Phase 29)

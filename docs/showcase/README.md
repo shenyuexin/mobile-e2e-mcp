@@ -6,6 +6,10 @@ This folder contains reproducible, real-device demo evidence used by README.
 
 - `docs/showcase/failure-intelligence-demo.md`
 
+## Governed agent mobile control proof
+
+- `docs/showcase/governed-agent-mobile-control.md`
+
 ## Flow record/replay demo
 
 - `docs/showcase/flow-record-replay-demo.md`
