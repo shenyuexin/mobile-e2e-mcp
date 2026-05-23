@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 33 existence scenario validation completed; Phase 34 alternative kill test is next
+stopped_at: Phase 35 wedge selection completed; Phase 36 governed-agent proof is next
 last_updated: "2026-05-19T00:00:00.000Z"
-last_activity: 2026-05-23 -- phase 33 completed scenario validation and selected candidates for Phase 34 kill testing
+last_activity: 2026-05-23 -- phase 35 selected AI-safe mobile device control via MCP as the primary wedge
 progress:
   total_phases: 3
   completed_phases: 1
@@ -27,8 +27,8 @@ See: .planning/PROJECT.md (updated 2026-03-28)
 
 Phase: probe evidence contract hardening
 Plan: stabilize generated probe report JSON/Markdown through shared helpers and fixture-backed validation without requiring devices.
-Status: Explorer failure review/reporting is on main, Android physical-device Explorer evidence exists at `artifacts/explorer/android-full/2026-04-28T03-38-20/`, historical phase/demo/debug scripts live under `scripts/legacy/`, `validate:probe-dry-run` is CI-gated, probe reports use the shared `tool-probe-report/v1` contract, and Phase 33 has narrowed the next product question to three candidate usage scenarios.
-Last activity: 2026-05-23 -- Phase 33 kept AI-safe mobile device control as the strongest candidate, narrowed failure intelligence to an augmentation layer, kept/narrowed Explorer as coverage discovery, and discarded broad mobile E2E replacement as the primary scenario.
+Status: Explorer failure review/reporting is on main, Android physical-device Explorer evidence exists at `artifacts/explorer/android-full/2026-04-28T03-38-20/`, historical phase/demo/debug scripts live under `scripts/legacy/`, `validate:probe-dry-run` is CI-gated, probe reports use the shared `tool-probe-report/v1` contract, and Phase 35 has selected the next product wedge.
+Last activity: 2026-05-23 -- Phase 35 selected AI-safe mobile device control via MCP as the primary wedge, kept Explorer as a secondary/proof layer, treated failure intelligence as supporting, and recommended Phase 36 governed-agent proof.
 
 Progress: [█████████░] 86%
 
@@ -145,8 +145,9 @@ Recent decisions affecting current work:
 - Probe dry-run CI gate and script cleanup are on main; historical phase/demo/debug scripts live under `scripts/legacy/`.
 - Phase 31 completed locally: probe report JSON/Markdown now share `tool-probe-report/v1`, fixture-backed validation, and documented artifact layout.
 - Phase 33 completed: existence scenario validation identified AI-safe mobile device control, failure intelligence augmentation, and Explorer coverage discovery as candidates for Phase 34 kill testing; broad mobile E2E replacement was discarded as the primary scenario.
-- Phase 34 planned: alternative kill test to try solving surviving scenarios with existing tools plus small scripts and discard weak scenarios.
-- Phase 35 planned: wedge selection to choose one narrow primary entry point and demote other capabilities to supporting/deferred roles.
+- Phase 34 completed: alternative kill test ranked AI-safe mobile device control strongest, Explorer coverage discovery second, failure intelligence as supporting, and generic mobile E2E replacement discarded.
+- Phase 35 completed: wedge selection chose AI-safe mobile device control via MCP as the primary wedge; Explorer is secondary/proof layer and failure intelligence is supporting.
+- Phase 36 planned: governed agent mobile control proof should produce the 7-day proof artifact before any README repositioning.
 
 ### Planning Hygiene Notes
 
@@ -162,5 +163,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-05-23
-Stopped at: Phase 33 existence scenario validation completed; Phase 34 alternative kill test is next
+Stopped at: Phase 35 wedge selection completed; Phase 36 governed-agent proof is next
 Resume file: .planning/ROADMAP.md
