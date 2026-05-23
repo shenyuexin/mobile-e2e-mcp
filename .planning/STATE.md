@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-03-28)
 Phase: probe evidence contract hardening
 Plan: stabilize generated probe report JSON/Markdown through shared helpers and fixture-backed validation without requiring devices.
 Status: Explorer failure review/reporting is on main, Android physical-device Explorer evidence exists at `artifacts/explorer/android-full/2026-04-28T03-38-20/`, historical phase/demo/debug scripts live under `scripts/legacy/`, `validate:probe-dry-run` is CI-gated, probe reports use the shared `tool-probe-report/v1` contract, and Phase 36 now provides a repeatable governed-agent proof for the selected product wedge.
-Last activity: 2026-05-23 -- Phase 36 added `pnpm run proof:governed-agent-mobile-control`, generating a proof bundle that demonstrates structured `POLICY_DENIED` handling under read-only policy and records governance-denial remediation as a residual gap.
+Last activity: 2026-05-23 -- Phase 36 added `pnpm run proof:governed-agent-mobile-control`, generated a proof bundle for structured `POLICY_DENIED` handling under read-only policy, and then closed the governance-denial guidance gap in `suggest_known_remediation`.
 
 Progress: [█████████░] 86%
 

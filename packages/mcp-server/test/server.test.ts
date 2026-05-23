@@ -1268,6 +1268,48 @@ test("server invoke denies tap under a read-only session policy", async () => {
   }
 });
 
+test("server invoke suggests governance next steps after read-only policy denial", async () => {
+  const server = createServer();
+  const sessionId = `server-read-only-remediation-${Date.now()}`;
+  await cleanupSessionArtifact(sessionId);
+
+  try {
+    const startResult = await server.invoke("start_session", {
+      sessionId,
+      platform: "android",
+      deviceId: buildTestDeviceId(sessionId),
+      profile: "phase1",
+      policyProfile: "read-only",
+    });
+    assert.equal(startResult.status, "success");
+
+    const denied = await server.invoke("perform_action_with_evidence", {
+      sessionId,
+      platform: "android",
+      dryRun: true,
+      action: {
+        actionType: "tap_element",
+        contentDesc: "Settings",
+      },
+    });
+    assert.equal(denied.status, "failed");
+    assert.equal(denied.reasonCode, "POLICY_DENIED");
+
+    const remediation = await server.invoke("suggest_known_remediation", {
+      sessionId,
+      platform: "android",
+    });
+
+    assert.equal(remediation.status, "success");
+    assert.equal(remediation.reasonCode, "OK");
+    assert.equal(remediation.data.found, true);
+    assert.equal(remediation.data.remediation.some((item) => item.includes("read-only")), true);
+    assert.equal(remediation.nextSuggestions.some((item) => item.includes("policyProfile")), true);
+  } finally {
+    await cleanupSessionArtifact(sessionId);
+  }
+});
+
 test("server invoke denies scroll_only under a read-only session policy", async () => {
   const server = createServer();
   const sessionId = `server-read-only-scroll-${Date.now()}`;

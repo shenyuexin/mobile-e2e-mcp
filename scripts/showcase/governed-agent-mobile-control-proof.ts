@@ -173,7 +173,7 @@ function buildComparison(baseline: BaselineWrapperProof, harness: HarnessProof) 
       "Policy denial is a machine-readable tool result, not a log convention.",
       "Session start/end produce persisted evidence references.",
       "Capabilities are queried before action, so support boundaries are explicit.",
-      "The proof exposes where generic failure-remediation does not yet cover governance denials.",
+      "Governance-denial guidance is available as a structured tool result for downstream agent planning.",
     ],
     baselineMissingGovernance: baseline.missingGovernance,
     harnessPolicyDenied: harness.policyDenied,

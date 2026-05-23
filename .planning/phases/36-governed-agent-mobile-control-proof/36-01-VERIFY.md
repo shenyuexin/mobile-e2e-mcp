@@ -24,4 +24,4 @@ Result: PASS.
 
 - The proof command may require a non-sandboxed run in this environment because `tsx` creates an IPC pipe.
 - The proof is dry-run only. It validates control-plane value, not live-device fidelity.
-- `suggest_known_remediation` currently returns a non-OK result for the policy-denial path; this is captured as a residual product gap in the generated comparison.
+- `suggest_known_remediation` now returns governance-specific next steps for the policy-denial path after the follow-up optimization.

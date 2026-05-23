@@ -21,7 +21,7 @@ This is real implementation work, not only planning. It makes the wedge reviewab
 pnpm run proof:governed-agent-mobile-control
 ```
 
-The proof also surfaced one useful product gap: `suggest_known_remediation` is currently a generic failure-remediation path and does not automatically turn policy denial into governance-specific next-action guidance. The report records this as a residual gap instead of overstating it as complete.
+The proof originally surfaced one useful product gap: `suggest_known_remediation` treated policy denial as missing generic failure context. The follow-up optimization now returns governance-specific next-action guidance for non-default policy profiles, so the generated proof can show both structured denial and structured guidance.
 
 ## Changed Files
 
@@ -32,4 +32,4 @@ The proof also surfaced one useful product gap: `suggest_known_remediation` is c
 
 ## Next Step
 
-Use this proof output to decide whether Phase 37 should implement governance-denial guidance, README positioning, or a narrow real-device variant of the same proof.
+Use this proof output to decide whether the next product step should be README proof publishing, richer policy-profile documentation, or a narrow real-device variant of the same proof.

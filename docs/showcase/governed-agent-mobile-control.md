@@ -10,7 +10,7 @@ describe_capabilities -> start_session(read-only) -> perform_action_with_evidenc
 
 The expected harness result is a structured `POLICY_DENIED` response for the interactive action. That is the point: an agent gets a machine-readable governance boundary instead of a raw command log.
 
-The remediation step is intentionally kept in the proof chain as a boundary check. If policy denial is not converted into a normal failure record, the report records that as a residual gap instead of treating remediation as proven.
+The remediation step is intentionally kept in the proof chain as a boundary check. For policy-denied sessions, the harness returns governance-specific next steps instead of treating the denial as a generic UI failure.
 
 ## Run
 
@@ -37,7 +37,7 @@ Expected files:
 - The harness can return policy denial as a structured tool result.
 - The run is tied to a session with persisted evidence references.
 - Capability boundaries are queried before action.
-- The current generic failure-remediation path is not the same as governance-denial guidance, so the proof surfaces that product gap explicitly.
+- Policy-denied sessions can still return agent-consumable governance guidance: keep inspecting, request approval, or restart with an explicit policy profile.
 
 ## Boundary
 

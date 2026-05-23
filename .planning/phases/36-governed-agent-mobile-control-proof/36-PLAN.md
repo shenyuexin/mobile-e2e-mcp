@@ -22,5 +22,5 @@ Turn the selected Phase 35 wedge, AI-safe mobile device control via MCP, into a 
 
 - Run `pnpm run proof:governed-agent-mobile-control`.
 - Confirm the generated `harness-run.json` records `policyDenied: true`.
-- Confirm `comparison.json` captures residual gaps instead of overstating the remediation path.
+- Confirm `comparison.json` captures residual gaps when present instead of overstating the remediation path.
 - Run JSON/script syntax and whitespace checks before commit.

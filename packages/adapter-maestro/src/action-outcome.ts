@@ -42,6 +42,8 @@ import { resolveRepoPath } from "./harness-config.js";
 import { evidencePaths } from "./artifact-paths.js";
 import { buildSkillGuidedRemediation } from "./readiness-guidance.js";
 
+const DEFAULT_POLICY_PROFILE = "sample-harness-default";
+
 interface IosStartupExecutionEvidence {
   startupPhase?: string;
   primaryFailurePhase?: string;
@@ -105,6 +107,38 @@ function buildIosStartupPhaseRemediation(evidence?: IosStartupExecutionEvidence)
     return ["iOS runner execution failed post-dispatch: inspect execution artifact command/stderr and rerun once root cause is addressed."];
   }
   return [];
+}
+
+function buildPolicyProfileRemediation(
+  input: SuggestKnownRemediationInput,
+  policyProfile?: string,
+): ToolResult<SuggestKnownRemediationData> | undefined {
+  if (!policyProfile || policyProfile === DEFAULT_POLICY_PROFILE) {
+    return undefined;
+  }
+
+  const remediation = [
+    `The current session uses policy profile '${policyProfile}', so interactive mobile actions may be intentionally denied before a normal action failure is recorded.`,
+    "If the action is intended, start a new session with an explicit policyProfile that allows the required action scope.",
+    "If the policy boundary is correct, downgrade to inspect/query tools or request manual approval instead of retrying the denied action.",
+  ];
+
+  return {
+    status: "success",
+    reasonCode: REASON_CODES.ok,
+    sessionId: input.sessionId,
+    durationMs: 0,
+    attempts: 1,
+    artifacts: [],
+    data: {
+      found: true,
+      remediation,
+    },
+    nextSuggestions: [
+      `Review whether policyProfile '${policyProfile}' is the intended boundary for this agent task.`,
+      "Use inspect_ui/query_ui for read-only investigation, or restart the session with a more permissive policyProfile before invoking interactive tools.",
+    ],
+  };
 }
 
 function parseIosStartupExecutionEvidenceMarkdown(markdown: string): IosStartupExecutionEvidence {
@@ -742,8 +776,14 @@ export async function compareAgainstBaselineWithMaestro(
 export async function suggestKnownRemediationWithMaestro(
   input: SuggestKnownRemediationInput,
 ): Promise<ToolResult<SuggestKnownRemediationData>> {
+  const repoRoot = resolveRepoPath();
+  const sessionRecord = await loadSessionRecord(repoRoot, input.sessionId);
   const explained = await explainLastFailureWithMaestro({ sessionId: input.sessionId });
   if (explained.status === "failed") {
+    const policyRemediation = buildPolicyProfileRemediation(input, sessionRecord?.session.policyProfile);
+    if (policyRemediation) {
+      return policyRemediation;
+    }
     return {
       status: "failed",
       reasonCode: explained.reasonCode,
@@ -757,8 +797,6 @@ export async function suggestKnownRemediationWithMaestro(
   }
   const similar = await findSimilarFailuresWithMaestro({ sessionId: input.sessionId, actionId: input.actionId });
   const baseline = await compareAgainstBaselineWithMaestro({ sessionId: input.sessionId, actionId: input.actionId });
-  const repoRoot = resolveRepoPath();
-  const sessionRecord = await loadSessionRecord(repoRoot, input.sessionId);
   const failureIndex = await loadFailureIndex(repoRoot);
   const actionId = input.actionId ?? explained.data.actionId ?? similar.data.actionId ?? baseline.data.actionId;
   const actionRecord = actionId ? await loadActionRecord(repoRoot, actionId) : undefined;
