@@ -12,6 +12,8 @@ The expected harness result is a structured `POLICY_DENIED` response for the int
 
 The remediation step is intentionally kept in the proof chain as a boundary check. For policy-denied sessions, the harness returns governance-specific next steps instead of treating the denial as a generic UI failure.
 
+For profile selection and escalation guidance, see [Policy Profiles](../guides/policy-profiles.md).
+
 ## Run
 
 ```bash

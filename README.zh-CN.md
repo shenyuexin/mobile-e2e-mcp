@@ -309,6 +309,7 @@ Source-of-truth 说明：
 
 - `configs/policies/*.yaml`
 - `configs/profiles/*.yaml`
+- [Policy profile 使用指南](docs/guides/policy-profiles.zh-CN.md)
 
 ## 非目标（避免误解）
 
@@ -322,6 +323,7 @@ Source-of-truth 说明：
 - [README.md](README.md) — English overview
 - [docs/README.md](docs/README.md) — 对外文档总索引与公开边界
 - [docs/guides/ai-agent-invocation.zh-CN.md](docs/guides/ai-agent-invocation.zh-CN.md) — AI Agent 调用真相源与默认工具链
+- [docs/guides/policy-profiles.zh-CN.md](docs/guides/policy-profiles.zh-CN.md) — policy profile 使用方式与权限升级边界
 - [docs/engineering/ai-first-capability-expansion-guideline.md](docs/engineering/ai-first-capability-expansion-guideline.md) — AI-first harness 能力扩展规则
 - [docs/architecture/overview.md](docs/architecture/overview.md) — 目标/范围/原则
 - [docs/architecture/architecture.md](docs/architecture/architecture.md) — 参考架构

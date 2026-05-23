@@ -25,8 +25,9 @@ This directory contains all documentation for mobile-e2e-mcp.
 3. [WDA Setup (iOS physical)](./guides/wda-setup.md) — WebDriverAgent build and connection
 4. [Golden Path](./guides/golden-path.md) — first-run closed loop
 5. [AI Agent Invocation](./guides/ai-agent-invocation.zh-CN.md) — tool selection guide (zh-CN)
-6. [Agent Policy Prompt Sync](./guides/agent-policy-prompt-sync.md) — repo-owned prompt policy sources and OpenCode runtime sync
-7. [CI Evidence and Boundary Guide](./showcase/ci-evidence.md) — CI jobs, artifacts, proof levels, and real-device boundary
+6. [Policy Profiles](./guides/policy-profiles.md) — governed agent profile selection and escalation boundaries
+7. [Agent Policy Prompt Sync](./guides/agent-policy-prompt-sync.md) — repo-owned prompt policy sources and OpenCode runtime sync
+8. [CI Evidence and Boundary Guide](./showcase/ci-evidence.md) — CI jobs, artifacts, proof levels, and real-device boundary
 
 ### Architecture
 

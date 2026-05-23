@@ -309,6 +309,7 @@ Key policy/config locations:
 
 - `configs/policies/*.yaml`
 - `configs/profiles/*.yaml`
+- [Policy profile guide](docs/guides/policy-profiles.md)
 
 ## Non-Goals (Important for Correct Expectations)
 
@@ -322,6 +323,7 @@ Key policy/config locations:
 - [README.zh-CN.md](README.zh-CN.md) — Chinese overview
 - [docs/README.md](docs/README.md) — public documentation index and publication policy
 - [docs/guides/ai-agent-invocation.zh-CN.md](docs/guides/ai-agent-invocation.zh-CN.md) — canonical AI-agent invocation guide
+- [docs/guides/policy-profiles.md](docs/guides/policy-profiles.md) — policy profile usage and escalation boundaries
 - [docs/engineering/ai-first-capability-expansion-guideline.md](docs/engineering/ai-first-capability-expansion-guideline.md) — feature expansion rules for AI-first harness capabilities
 - [docs/architecture/overview.md](docs/architecture/overview.md) — goals/scope/principles
 - [docs/architecture/architecture.md](docs/architecture/architecture.md) — reference architecture
