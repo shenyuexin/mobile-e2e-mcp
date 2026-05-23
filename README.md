@@ -123,7 +123,9 @@ If you want a quick hands-on tour before diving into architecture details, start
   - iOS probe entrypoint: `pnpm run validate:ios-tool-probe`
 - Governed-control proof:
   - `pnpm run proof:governed-agent-mobile-control`
+  - `pnpm run proof:governed-agent-mobile-control:live` (requires an Android device/emulator)
   - [docs/showcase/governed-agent-mobile-control.md](docs/showcase/governed-agent-mobile-control.md)
+  - [docs/showcase/governed-agent-mobile-control-live.md](docs/showcase/governed-agent-mobile-control-live.md)
 - Historical demo scripts:
   - `bash scripts/legacy/dev/record-demo-happy-path-android.sh`
   - `bash scripts/legacy/dev/record-demo-interruption-home-recovery-android.sh`

@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 36 governed-agent proof implemented; choose next wedge follow-up
+stopped_at: Phase 37 live governed-control proof entrypoint implemented; Android device run remains manual
 last_updated: "2026-05-19T00:00:00.000Z"
-last_activity: 2026-05-23 -- phase 36 implemented a governed-agent proof runner for the selected AI-safe mobile control wedge
+last_activity: 2026-05-23 -- phase 37 added a live Android governed-control proof entrypoint with explicit no-device handling
 progress:
   total_phases: 3
   completed_phases: 1
@@ -27,8 +27,8 @@ See: .planning/PROJECT.md (updated 2026-03-28)
 
 Phase: probe evidence contract hardening
 Plan: stabilize generated probe report JSON/Markdown through shared helpers and fixture-backed validation without requiring devices.
-Status: Explorer failure review/reporting is on main, Android physical-device Explorer evidence exists at `artifacts/explorer/android-full/2026-04-28T03-38-20/`, historical phase/demo/debug scripts live under `scripts/legacy/`, `validate:probe-dry-run` is CI-gated, probe reports use the shared `tool-probe-report/v1` contract, and Phase 36 now provides a repeatable governed-agent proof for the selected product wedge.
-Last activity: 2026-05-23 -- Phase 36 added `pnpm run proof:governed-agent-mobile-control`, generated a proof bundle for structured `POLICY_DENIED` handling under read-only policy, and then closed the governance-denial guidance gap in `suggest_known_remediation`.
+Status: Explorer failure review/reporting is on main, Android physical-device Explorer evidence exists at `artifacts/explorer/android-full/2026-04-28T03-38-20/`, historical phase/demo/debug scripts live under `scripts/legacy/`, `validate:probe-dry-run` is CI-gated, probe reports use the shared `tool-probe-report/v1` contract, and Phase 37 now provides a live Android governed-control proof entrypoint for the selected product wedge.
+Last activity: 2026-05-23 -- Phase 37 added `pnpm run proof:governed-agent-mobile-control:live`; current environment verified the explicit `DEVICE_UNAVAILABLE` path, and an Android device run remains the next manual evidence step.
 
 Progress: [█████████░] 86%
 

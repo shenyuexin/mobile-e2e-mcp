@@ -123,7 +123,9 @@ Explorer 会生成一个包含结构化产物的目录：
   - iOS probe 入口：`pnpm run validate:ios-tool-probe`
 - 受治理控制 proof：
   - `pnpm run proof:governed-agent-mobile-control`
+  - `pnpm run proof:governed-agent-mobile-control:live`（需要 Android 设备/模拟器）
   - [docs/showcase/governed-agent-mobile-control.md](docs/showcase/governed-agent-mobile-control.md)
+  - [docs/showcase/governed-agent-mobile-control-live.md](docs/showcase/governed-agent-mobile-control-live.md)
 - 历史演示脚本：
   - `bash scripts/legacy/dev/record-demo-happy-path-android.sh`
   - `bash scripts/legacy/dev/record-demo-interruption-home-recovery-android.sh`

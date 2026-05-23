@@ -9,6 +9,7 @@ This folder contains reproducible, real-device demo evidence used by README.
 ## Governed agent mobile control proof
 
 - `docs/showcase/governed-agent-mobile-control.md`
+- `docs/showcase/governed-agent-mobile-control-live.md`
 
 ## Flow record/replay demo
 

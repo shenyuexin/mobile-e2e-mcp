@@ -14,6 +14,8 @@ The remediation step is intentionally kept in the proof chain as a boundary chec
 
 For profile selection and escalation guidance, see [Policy Profiles](../guides/policy-profiles.md).
 
+For the live Android companion proof, see [Governed Agent Mobile Control Live Proof](./governed-agent-mobile-control-live.md).
+
 ## Run
 
 ```bash
