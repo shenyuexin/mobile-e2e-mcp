@@ -45,10 +45,34 @@ The generated `live-proof.json` reported:
 }
 ```
 
-## Remaining Manual Verification
+## Vivo Physical-Device Verification
 
-Run without `M2E_LIVE_PROOF_ALLOW_NO_DEVICE` on a host with an Android device or emulator. Expected success verdict:
+The live proof was rerun without `M2E_LIVE_PROOF_ALLOW_NO_DEVICE` after allowing `adb` to access the attached vivo device outside the sandbox:
+
+```bash
+adb devices -l
+```
+
+Result:
 
 ```text
-live_governed_control_observed
+10AEA40Z3Y000R5 device usb:1-1 product:PD2405M model:V2405A device:PD2405 transport_id:2
 ```
+
+```bash
+pnpm run proof:governed-agent-mobile-control:live
+```
+
+Result: PASS.
+
+```text
+output/showcase/governed-agent-mobile-control-live/2026-05-23T08-56-47-448Z
+verdict: live_governed_control_observed
+deviceId: 10AEA40Z3Y000R5
+sessionId: governed-agent-live-1779526617573
+inspectedScreen: true
+policyDenied: true
+remediationAvailable: true
+```
+
+The generated report recorded `inspect_ui` success with `totalNodes=93` and `clickableNodes=53`, followed by `perform_action_with_evidence` returning `POLICY_DENIED` and `suggest_known_remediation` returning `OK`.

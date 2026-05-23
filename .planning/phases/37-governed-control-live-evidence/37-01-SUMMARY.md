@@ -16,7 +16,7 @@ output/showcase/governed-agent-mobile-control-live/<run-id>/
 
 ## Current Evidence
 
-In the current environment no Android device was available, so verification exercised the explicit no-device path:
+Initial verification exercised the explicit no-device path:
 
 ```text
 verdict: device_unavailable
@@ -24,6 +24,18 @@ reasonCode: DEVICE_UNAVAILABLE
 ```
 
 This is intentional: the script does not fake live evidence. It records a clear unavailable-device proof bundle unless a real Android device or emulator is attached.
+
+A follow-up vivo physical-device run completed successfully:
+
+```text
+runId: 2026-05-23T08-56-47-448Z
+deviceId: 10AEA40Z3Y000R5
+model: V2405A
+verdict: live_governed_control_observed
+inspect_ui: success, totalNodes=93, clickableNodes=53
+perform_action_with_evidence: POLICY_DENIED
+suggest_known_remediation: OK
+```
 
 ## Changed Files
 
@@ -35,4 +47,4 @@ This is intentional: the script does not fake live evidence. It records a clear 
 
 ## Next Step
 
-Run the live proof on an Android device and archive the resulting `live_governed_control_observed` bundle as showcase evidence.
+Decide whether to promote the vivo live proof bundle into tracked showcase evidence, or keep it as local run evidence under `output/`.
