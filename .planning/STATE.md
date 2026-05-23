@@ -27,8 +27,8 @@ See: .planning/PROJECT.md (updated 2026-03-28)
 
 Phase: probe evidence contract hardening
 Plan: stabilize generated probe report JSON/Markdown through shared helpers and fixture-backed validation without requiring devices.
-Status: Explorer failure review/reporting is on main, Android physical-device Explorer evidence exists at `artifacts/explorer/android-full/2026-04-28T03-38-20/`, historical phase/demo/debug scripts live under `scripts/legacy/`, `validate:probe-dry-run` is CI-gated, probe reports use the shared `tool-probe-report/v1` contract, and Phase 37 now has a passing vivo physical-device governed-control proof for the selected product wedge.
-Last activity: 2026-05-23 -- Phase 37 live proof passed on vivo V2405A (`10AEA40Z3Y000R5`): `inspect_ui` captured 93 nodes / 53 clickable nodes, read-only policy returned `POLICY_DENIED`, and `suggest_known_remediation` returned `OK`.
+Status: Explorer failure review/reporting is on main, Android physical-device Explorer evidence exists at `artifacts/explorer/android-full/2026-04-28T03-38-20/`, historical phase/demo/debug scripts live under `scripts/legacy/`, `validate:probe-dry-run` is CI-gated, probe reports use the shared `tool-probe-report/v1` contract, and Phase 37 now has tracked vivo physical-device governed-control evidence for the selected product wedge.
+Last activity: 2026-05-23 -- Phase 37 live proof passed on vivo V2405A and was promoted into compact tracked evidence at `docs/showcase/evidence/governed-control-vivo-2026-05-23/`; full UI hierarchy remains local-only.
 
 Progress: [█████████░] 86%
 

@@ -124,8 +124,10 @@ Explorer 会生成一个包含结构化产物的目录：
 - 受治理控制 proof：
   - `pnpm run proof:governed-agent-mobile-control`
   - `pnpm run proof:governed-agent-mobile-control:live`（需要 Android 设备/模拟器）
+  - `pnpm run validate:governed-control-evidence`
   - [docs/showcase/governed-agent-mobile-control.md](docs/showcase/governed-agent-mobile-control.md)
   - [docs/showcase/governed-agent-mobile-control-live.md](docs/showcase/governed-agent-mobile-control-live.md)
+  - [docs/showcase/evidence/governed-control-vivo-2026-05-23/report.md](docs/showcase/evidence/governed-control-vivo-2026-05-23/report.md)
 - 历史演示脚本：
   - `bash scripts/legacy/dev/record-demo-happy-path-android.sh`
   - `bash scripts/legacy/dev/record-demo-interruption-home-recovery-android.sh`

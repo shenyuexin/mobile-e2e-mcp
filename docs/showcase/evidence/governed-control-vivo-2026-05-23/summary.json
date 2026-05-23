@@ -1,0 +1,65 @@
+{
+  "schema": "governed-control-live-evidence/v1",
+  "capturedAt": "2026-05-23T08:56:47.450Z",
+  "sourceRunId": "2026-05-23T08-56-47-448Z",
+  "sourceOutputDir": "output/showcase/governed-agent-mobile-control-live/2026-05-23T08-56-47-448Z",
+  "platform": "android",
+  "runnerProfile": "native_android",
+  "appId": "com.android.settings",
+  "device": {
+    "model": "V2405A",
+    "product": "PD2405M",
+    "device": "PD2405",
+    "deviceIdRedacted": "10AEA40Z3Y***R5"
+  },
+  "session": {
+    "sessionIdRedacted": "governed-agent-live-1779526617573",
+    "policyProfile": "read-only"
+  },
+  "verdict": "live_governed_control_observed",
+  "checks": {
+    "deviceDetected": true,
+    "inspectedScreen": true,
+    "policyDenied": true,
+    "remediationAvailable": true
+  },
+  "inspectUi": {
+    "status": "success",
+    "reasonCode": "OK",
+    "contentLength": 35174,
+    "totalNodes": 93,
+    "clickableNodes": 53
+  },
+  "screenSummary": {
+    "status": "success",
+    "reasonCode": "OK",
+    "summarySource": "ui_and_debug_signals",
+    "appPhase": "catalog",
+    "readiness": "unknown",
+    "stateConfidence": 0.7
+  },
+  "policyDeniedStep": {
+    "tool": "perform_action_with_evidence",
+    "status": "failed",
+    "reasonCode": "POLICY_DENIED"
+  },
+  "remediationStep": {
+    "tool": "suggest_known_remediation",
+    "status": "success",
+    "reasonCode": "OK"
+  },
+  "trackedArtifacts": [
+    "summary.json",
+    "report.md"
+  ],
+  "excludedArtifacts": [
+    {
+      "path": "inspect-ui.xml",
+      "reason": "Full UI hierarchy can contain device/app text and is kept in local output only."
+    },
+    {
+      "path": "output/evidence/**",
+      "reason": "Runtime session, audit, lease, log, and crash artifacts are local evidence outputs, not compact showcase fixtures."
+    }
+  ]
+}

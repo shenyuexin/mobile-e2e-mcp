@@ -124,8 +124,10 @@ If you want a quick hands-on tour before diving into architecture details, start
 - Governed-control proof:
   - `pnpm run proof:governed-agent-mobile-control`
   - `pnpm run proof:governed-agent-mobile-control:live` (requires an Android device/emulator)
+  - `pnpm run validate:governed-control-evidence`
   - [docs/showcase/governed-agent-mobile-control.md](docs/showcase/governed-agent-mobile-control.md)
   - [docs/showcase/governed-agent-mobile-control-live.md](docs/showcase/governed-agent-mobile-control-live.md)
+  - [docs/showcase/evidence/governed-control-vivo-2026-05-23/report.md](docs/showcase/evidence/governed-control-vivo-2026-05-23/report.md)
 - Historical demo scripts:
   - `bash scripts/legacy/dev/record-demo-happy-path-android.sh`
   - `bash scripts/legacy/dev/record-demo-interruption-home-recovery-android.sh`

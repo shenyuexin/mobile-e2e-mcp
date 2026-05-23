@@ -10,6 +10,7 @@ This folder contains reproducible, real-device demo evidence used by README.
 
 - `docs/showcase/governed-agent-mobile-control.md`
 - `docs/showcase/governed-agent-mobile-control-live.md`
+- Tracked vivo evidence: `docs/showcase/evidence/governed-control-vivo-2026-05-23/`
 
 ## Flow record/replay demo
 

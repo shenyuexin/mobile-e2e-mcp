@@ -47,4 +47,4 @@ suggest_known_remediation: OK
 
 ## Next Step
 
-Decide whether to promote the vivo live proof bundle into tracked showcase evidence, or keep it as local run evidence under `output/`.
+The vivo live proof has been promoted into compact tracked showcase evidence under `docs/showcase/evidence/governed-control-vivo-2026-05-23/`, with full UI hierarchy and runtime artifacts kept out of git.

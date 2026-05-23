@@ -43,6 +43,19 @@ Expected files:
 - `suggest_known_remediation` returns governance-specific next steps after the denial.
 - Session/audit/evidence artifacts are preserved for review.
 
+## Verified Evidence
+
+The latest tracked physical-device evidence is summarized at:
+
+- [governed-control-vivo-2026-05-23/report.md](./evidence/governed-control-vivo-2026-05-23/report.md)
+- [governed-control-vivo-2026-05-23/summary.json](./evidence/governed-control-vivo-2026-05-23/summary.json)
+
+Validate it offline:
+
+```bash
+pnpm run validate:governed-control-evidence
+```
+
 ## Boundary
 
 This proof does not install or launch an app by default. It inspects the current Android screen and then attempts a policy-denied action that should not execute. It proves live read-only observation plus governed action mediation, not full business-flow fidelity.

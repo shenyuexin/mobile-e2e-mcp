@@ -76,3 +76,11 @@ remediationAvailable: true
 ```
 
 The generated report recorded `inspect_ui` success with `totalNodes=93` and `clickableNodes=53`, followed by `perform_action_with_evidence` returning `POLICY_DENIED` and `suggest_known_remediation` returning `OK`.
+
+## Tracked Evidence Validation
+
+```bash
+pnpm run validate:governed-control-evidence
+```
+
+Result: PASS. The tracked summary preserves the vivo proof verdict and compact evidence metrics without committing the full UI hierarchy.
