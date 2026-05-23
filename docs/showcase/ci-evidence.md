@@ -15,14 +15,15 @@ For each run of `CI` (`.github/workflows/ci.yml`):
 1. Job logs for `unit-and-typecheck` and `dry-run-smoke`
 2. Dedicated `explorer-evidence` job that validates the committed Android physical-device Explorer artifact contract
 3. Probe dry-run contract validation for Android + iOS simulator probe scripts
-4. Uploaded metadata artifacts:
+4. `dry-run-smoke` also validates the committed vivo governed-control evidence contract through `pnpm run validate:governed-control-evidence`
+5. Uploaded metadata artifacts:
    - `ci-unit-typecheck-metadata`
    - `ci-dry-run-smoke-metadata`
    - `ci-explorer-evidence-metadata`
    - `ci-probe-dry-run-metadata`
-5. Uploaded Explorer evidence report artifact:
+6. Uploaded Explorer evidence report artifact:
    - `ci-android-explorer-evidence-<run_id>`
-6. Job-level step summary with:
+7. Job-level step summary with:
    - job status
    - run URL
    - artifact names
@@ -50,6 +51,7 @@ For each run of `Real Device Acceptance` (`.github/workflows/real-device-accepta
 
 - Ubuntu CI validates **buildability, type-safety, and smoke-level tool behavior**.
 - `explorer-evidence` is an offline contract check over the committed Android physical-device Explorer artifact. It validates artifact presence, app/platform/mode, pages/depth/failure metrics, entry probe evidence, and app-switch recovery logs. It does not rerun a phone.
+- `validate:governed-control-evidence` is an offline contract check over the committed compact vivo governed-control evidence. It validates that live inspection, read-only policy denial, and structured remediation were observed together. It does not rerun a phone.
 - Probe dry-run validates Android + iOS simulator probe structure without device dependencies.
 - Platform smoke validates simulator/emulator toolchain baseline only.
 - Ubuntu CI and platform smoke do **not** fully prove real-device execution fidelity.
@@ -59,6 +61,7 @@ For each run of `Real Device Acceptance` (`.github/workflows/real-device-accepta
 - `validate:phase3-real-run` remains a compatibility wrapper for historical sample lanes. It is useful for report continuity, but Explorer/probe artifacts are the current primary real-device tool-surface proof.
 - Real-device confidence should be validated through Explorer/probe artifacts first, then historical showcase assets when reviewing demos:
   - `artifacts/explorer/android-full/2026-04-28T03-38-20/` for Android physical-device Explorer evidence
+  - `docs/showcase/evidence/governed-control-vivo-2026-05-23/` plus `pnpm run validate:governed-control-evidence` for governed-control vivo evidence
   - `pnpm run validate:android-tool-probe` and `pnpm run validate:ios-tool-probe`
   - `real-device-acceptance` workflow artifacts and summaries
   - `docs/showcase/README.md`

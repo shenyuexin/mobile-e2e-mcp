@@ -62,7 +62,7 @@ They intentionally validate baseline toolchain execution only, and do not replac
 
 ## CI evidence jobs
 
-- `CI / dry-run-smoke`: runs `pnpm test:smoke` for deterministic dry-run contracts.
+- `CI / dry-run-smoke`: runs `pnpm test:smoke` for deterministic dry-run contracts and the committed governed-control vivo evidence contract.
 - `CI / explorer-evidence`: validates the committed Android physical-device Explorer artifact contract and uploads `ci-android-explorer-evidence-<run_id>`.
 - `CI / probe-dry-run`: validates Android + iOS simulator probe dry-run metadata without requiring devices.
 - `Platform Smoke`: runs simulator/emulator baseline Maestro flows.
@@ -74,6 +74,7 @@ See `docs/showcase/ci-evidence.md` for the current proof levels and boundaries.
 
 - Smoke proof (`pnpm test:smoke`, dry-run validators, Ubuntu CI): verifies deterministic contracts and dry-run behavior, not real-device fidelity.
 - Explorer evidence proof (`CI / explorer-evidence`): verifies the committed Android physical-device Explorer artifact remains present and internally consistent; it does not rerun a device.
+- Governed-control evidence proof (`pnpm run validate:governed-control-evidence`): verifies the committed compact vivo evidence still proves live inspection, read-only policy denial, and structured remediation together; it does not rerun a device.
 - Platform smoke proof (`.github/workflows/platform-smoke.yml`): verifies simulator/emulator baseline wiring only.
 - Acceptance proof (`.github/workflows/real-device-acceptance.yml`): self-hosted real-run artifacts plus quality gate on `output/reports/phase-sample-report.json`.
 
