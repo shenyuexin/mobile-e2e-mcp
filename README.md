@@ -125,10 +125,14 @@ If you want a quick hands-on tour before diving into architecture details, start
   - `pnpm run proof:governed-agent-mobile-control`
   - `pnpm run proof:governed-agent-mobile-control:preflight` (checks Android live-proof readiness)
   - `pnpm run proof:governed-agent-mobile-control:live` (requires an Android device/emulator)
+  - `pnpm run proof:governed-business-app-workflow` (installs/launches the demo app, then switches to read-only governed agent observation)
   - `pnpm run validate:governed-control-evidence`
+  - `pnpm run validate:governed-business-app-evidence`
   - [docs/showcase/governed-agent-mobile-control.md](docs/showcase/governed-agent-mobile-control.md)
   - [docs/showcase/governed-agent-mobile-control-live.md](docs/showcase/governed-agent-mobile-control-live.md)
+  - [docs/showcase/governed-business-app-workflow.md](docs/showcase/governed-business-app-workflow.md)
   - [docs/showcase/evidence/governed-control-vivo-2026-05-23/report.md](docs/showcase/evidence/governed-control-vivo-2026-05-23/report.md)
+  - [docs/showcase/evidence/governed-business-app-vivo-2026-05-24/report.md](docs/showcase/evidence/governed-business-app-vivo-2026-05-24/report.md)
 - Historical demo scripts:
   - `bash scripts/legacy/dev/record-demo-happy-path-android.sh`
   - `bash scripts/legacy/dev/record-demo-interruption-home-recovery-android.sh`

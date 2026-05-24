@@ -10,8 +10,11 @@ This folder contains reproducible, real-device demo evidence used by README.
 
 - `docs/showcase/governed-agent-mobile-control.md`
 - `docs/showcase/governed-agent-mobile-control-live.md`
+- `docs/showcase/governed-business-app-workflow.md`
 - Live preflight: `pnpm run proof:governed-agent-mobile-control:preflight`
+- Business app workflow: `pnpm run proof:governed-business-app-workflow`
 - Tracked vivo evidence: `docs/showcase/evidence/governed-control-vivo-2026-05-23/`
+- Tracked business app vivo evidence: `docs/showcase/evidence/governed-business-app-vivo-2026-05-24/`
 
 ## Flow record/replay demo
 
@@ -76,6 +79,7 @@ See `docs/showcase/ci-evidence.md` for the current proof levels and boundaries.
 - Smoke proof (`pnpm test:smoke`, dry-run validators, Ubuntu CI): verifies deterministic contracts and dry-run behavior, not real-device fidelity.
 - Explorer evidence proof (`CI / explorer-evidence`): verifies the committed Android physical-device Explorer artifact remains present and internally consistent; it does not rerun a device.
 - Governed-control evidence proof (`pnpm run validate:governed-control-evidence`): verifies the committed compact vivo evidence still proves live inspection, read-only policy denial, and structured remediation together; it does not rerun a device.
+- Business-app governed workflow proof (`pnpm run validate:governed-business-app-evidence`): verifies the committed compact vivo evidence still proves setup launch, read-only business app inspection, policy denial, and governance remediation together; it does not rerun a device.
 - Platform smoke proof (`.github/workflows/platform-smoke.yml`): verifies simulator/emulator baseline wiring only.
 - Acceptance proof (`.github/workflows/real-device-acceptance.yml`): self-hosted real-run artifacts plus quality gate on `output/reports/phase-sample-report.json`.
 

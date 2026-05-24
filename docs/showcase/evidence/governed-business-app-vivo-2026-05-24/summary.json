@@ -1,0 +1,80 @@
+{
+  "schema": "governed-business-app-workflow-evidence/v1",
+  "capturedAt": "2026-05-24T01:09:04.302Z",
+  "sourceRunId": "2026-05-24T01-09-04-299Z",
+  "sourceOutputDir": "output/showcase/governed-business-app-workflow/2026-05-24T01-09-04-299Z",
+  "platform": "android",
+  "runnerProfile": "native_android",
+  "appId": "com.epam.mobitru",
+  "apkPath": "examples/demo-android-app/app/build/outputs/apk/debug/app-debug.apk",
+  "device": {
+    "model": "V2405A",
+    "product": "PD2405M",
+    "deviceIdRedacted": "10AEA40Z3Y***R5"
+  },
+  "sessions": {
+    "setupPolicyProfile": "sample-harness-default",
+    "readOnlyPolicyProfile": "read-only",
+    "setupSessionIdRedacted": "business-app-setup-1779584947076",
+    "readOnlySessionIdRedacted": "business-app-readonly-1779584947076"
+  },
+  "verdict": "business_app_governed_workflow_observed",
+  "checks": {
+    "deviceDetected": true,
+    "appArtifactAvailable": true,
+    "setupSessionStarted": true,
+    "setupLaunched": true,
+    "readOnlySessionStarted": true,
+    "inspectedScreen": true,
+    "policyDenied": true,
+    "remediationAvailable": true
+  },
+  "setup": {
+    "installSkipped": true,
+    "installSkipReason": "App was already installed on the selected vivo device for the verified rerun.",
+    "launchApp": {
+      "status": "success",
+      "reasonCode": "OK"
+    }
+  },
+  "inspectUi": {
+    "status": "success",
+    "reasonCode": "OK",
+    "contentLength": 11279,
+    "totalNodes": 30,
+    "clickableNodes": 6
+  },
+  "screenSummary": {
+    "status": "success",
+    "reasonCode": "OK",
+    "summarySource": "ui_and_debug_signals",
+    "appPhase": "authentication",
+    "readiness": "unknown",
+    "stateConfidence": 0.7
+  },
+  "policyDeniedStep": {
+    "tool": "perform_action_with_evidence",
+    "attemptedText": "Login",
+    "status": "failed",
+    "reasonCode": "POLICY_DENIED"
+  },
+  "remediationStep": {
+    "tool": "suggest_known_remediation",
+    "status": "success",
+    "reasonCode": "OK"
+  },
+  "trackedArtifacts": [
+    "summary.json",
+    "report.md"
+  ],
+  "excludedArtifacts": [
+    {
+      "path": "business-app-inspect-ui.xml",
+      "reason": "Full UI hierarchy can contain app/device text and is kept in local output only."
+    },
+    {
+      "path": "output/evidence/**",
+      "reason": "Runtime session, audit, lease, log, and crash artifacts are local evidence outputs, not compact showcase fixtures."
+    }
+  ]
+}
