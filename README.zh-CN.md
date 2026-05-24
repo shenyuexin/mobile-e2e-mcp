@@ -122,6 +122,7 @@ Explorer 会生成一个包含结构化产物的目录：
   - Android probe 入口：`pnpm run validate:android-tool-probe`（最新 Vivo V2405A 真机结果：20/23 success、0 partial、3 个预期诊断类失败；核心 UI action 与中断恢复链路已通过）
   - iOS probe 入口：`pnpm run validate:ios-tool-probe`
 - 受治理控制 proof：
+  - `pnpm run quickstart:governed-control`（首次运行 readiness 与下一步命令指南）
   - `pnpm run proof:governed-agent-mobile-control`
   - `pnpm run proof:governed-agent-mobile-control:preflight`（检查 Android live proof 前置条件）
   - `pnpm run proof:governed-agent-mobile-control:live`（需要 Android 设备/模拟器）
@@ -132,6 +133,7 @@ Explorer 会生成一个包含结构化产物的目录：
   - [docs/showcase/governed-agent-mobile-control.md](docs/showcase/governed-agent-mobile-control.md)
   - [docs/showcase/governed-agent-mobile-control-live.md](docs/showcase/governed-agent-mobile-control-live.md)
   - [docs/showcase/governed-business-app-workflow.md](docs/showcase/governed-business-app-workflow.md)
+  - [docs/showcase/governed-quickstart.md](docs/showcase/governed-quickstart.md)
   - [docs/showcase/evidence/governed-control-vivo-2026-05-23/report.md](docs/showcase/evidence/governed-control-vivo-2026-05-23/report.md)
   - [docs/showcase/evidence/governed-business-app-vivo-2026-05-24/report.md](docs/showcase/evidence/governed-business-app-vivo-2026-05-24/report.md)
   - [docs/showcase/evidence/governed-business-app-vivo-2026-05-24/comparison.md](docs/showcase/evidence/governed-business-app-vivo-2026-05-24/comparison.md)

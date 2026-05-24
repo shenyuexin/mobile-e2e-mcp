@@ -122,6 +122,7 @@ If you want a quick hands-on tour before diving into architecture details, start
   - Android probe entrypoint: `pnpm run validate:android-tool-probe` (latest Vivo V2405A run: 20/23 success, 0 partial, 3 expected diagnostic failures; core UI and interruption-resume paths passed)
   - iOS probe entrypoint: `pnpm run validate:ios-tool-probe`
 - Governed-control proof:
+  - `pnpm run quickstart:governed-control` (first-run readiness and next-command guide)
   - `pnpm run proof:governed-agent-mobile-control`
   - `pnpm run proof:governed-agent-mobile-control:preflight` (checks Android live-proof readiness)
   - `pnpm run proof:governed-agent-mobile-control:live` (requires an Android device/emulator)
@@ -132,6 +133,7 @@ If you want a quick hands-on tour before diving into architecture details, start
   - [docs/showcase/governed-agent-mobile-control.md](docs/showcase/governed-agent-mobile-control.md)
   - [docs/showcase/governed-agent-mobile-control-live.md](docs/showcase/governed-agent-mobile-control-live.md)
   - [docs/showcase/governed-business-app-workflow.md](docs/showcase/governed-business-app-workflow.md)
+  - [docs/showcase/governed-quickstart.md](docs/showcase/governed-quickstart.md)
   - [docs/showcase/evidence/governed-control-vivo-2026-05-23/report.md](docs/showcase/evidence/governed-control-vivo-2026-05-23/report.md)
   - [docs/showcase/evidence/governed-business-app-vivo-2026-05-24/report.md](docs/showcase/evidence/governed-business-app-vivo-2026-05-24/report.md)
   - [docs/showcase/evidence/governed-business-app-vivo-2026-05-24/comparison.md](docs/showcase/evidence/governed-business-app-vivo-2026-05-24/comparison.md)

@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 39 business app alternative comparison completed
+stopped_at: Phase 40 governed quickstart readiness completed
 last_updated: "2026-05-19T00:00:00.000Z"
-last_activity: 2026-05-24 -- phase 39 business app alternative comparison grounded in vivo evidence
+last_activity: 2026-05-24 -- phase 40 governed quickstart readiness added
 progress:
   total_phases: 3
   completed_phases: 1
@@ -27,8 +27,8 @@ See: .planning/PROJECT.md (updated 2026-03-28)
 
 Phase: probe evidence contract hardening
 Plan: stabilize generated probe report JSON/Markdown through shared helpers and fixture-backed validation without requiring devices.
-Status: Explorer failure review/reporting is on main, Android physical-device Explorer evidence exists at `artifacts/explorer/android-full/2026-04-28T03-38-20/`, historical phase/demo/debug scripts live under `scripts/legacy/`, `validate:probe-dry-run` is CI-gated, probe reports use the shared `tool-probe-report/v1` contract, and Phase 39 now has an evidence-grounded adb/Maestro/harness comparison for the governed business app workflow.
-Last activity: 2026-05-24 -- Phase 39 added `comparison.md/json` beside the governed business app vivo evidence and wired `validate:governed-business-app-comparison` into smoke to keep the positioning narrow and evidence-backed.
+Status: Explorer failure review/reporting is on main, Android physical-device Explorer evidence exists at `artifacts/explorer/android-full/2026-04-28T03-38-20/`, historical phase/demo/debug scripts live under `scripts/legacy/`, `validate:probe-dry-run` is CI-gated, probe reports use the shared `tool-probe-report/v1` contract, and Phase 40 now has a single governed-control quickstart readiness lane for first-run evaluation.
+Last activity: 2026-05-24 -- Phase 40 added `quickstart:governed-control`, producing JSON/Markdown readiness artifacts that distinguish live-ready, offline-ready, and blocked setup states.
 
 Progress: [█████████░] 86%
 

@@ -62,6 +62,7 @@
     "validate:governed-control-evidence": "node --import tsx scripts/showcase/validate-governed-control-evidence.ts",
     "validate:governed-business-app-evidence": "node --import tsx scripts/showcase/validate-governed-business-app-evidence.ts",
     "validate:governed-business-app-comparison": "node --import tsx scripts/showcase/validate-governed-business-app-comparison.ts",
+    "quickstart:governed-control": "node --import tsx scripts/showcase/governed-quickstart-readiness.ts",
     "proof:governed-agent-mobile-control": "node --import tsx scripts/showcase/governed-agent-mobile-control-proof.ts",
     "proof:governed-agent-mobile-control:preflight": "node --import tsx scripts/showcase/governed-agent-mobile-control-preflight.ts",
     "proof:governed-agent-mobile-control:live": "node --import tsx scripts/showcase/governed-agent-mobile-control-live-proof.ts",

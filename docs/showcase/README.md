@@ -8,10 +8,12 @@ This folder contains reproducible, real-device demo evidence used by README.
 
 ## Governed agent mobile control proof
 
+- `docs/showcase/governed-quickstart.md`
 - `docs/showcase/governed-agent-mobile-control.md`
 - `docs/showcase/governed-agent-mobile-control-live.md`
 - `docs/showcase/governed-business-app-workflow.md`
 - Live preflight: `pnpm run proof:governed-agent-mobile-control:preflight`
+- Quickstart readiness: `pnpm run quickstart:governed-control`
 - Business app workflow: `pnpm run proof:governed-business-app-workflow`
 - Tracked vivo evidence: `docs/showcase/evidence/governed-control-vivo-2026-05-23/`
 - Tracked business app vivo evidence: `docs/showcase/evidence/governed-business-app-vivo-2026-05-24/`
