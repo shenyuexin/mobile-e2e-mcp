@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 38 business app governed workflow completed on vivo physical device
+stopped_at: Phase 39 business app alternative comparison completed
 last_updated: "2026-05-19T00:00:00.000Z"
-last_activity: 2026-05-24 -- phase 38 business app governed workflow passed on vivo V2405A
+last_activity: 2026-05-24 -- phase 39 business app alternative comparison grounded in vivo evidence
 progress:
   total_phases: 3
   completed_phases: 1
@@ -27,8 +27,8 @@ See: .planning/PROJECT.md (updated 2026-03-28)
 
 Phase: probe evidence contract hardening
 Plan: stabilize generated probe report JSON/Markdown through shared helpers and fixture-backed validation without requiring devices.
-Status: Explorer failure review/reporting is on main, Android physical-device Explorer evidence exists at `artifacts/explorer/android-full/2026-04-28T03-38-20/`, historical phase/demo/debug scripts live under `scripts/legacy/`, `validate:probe-dry-run` is CI-gated, probe reports use the shared `tool-probe-report/v1` contract, and Phase 38 now has tracked vivo physical-device evidence for a governed workflow against the demo business app.
-Last activity: 2026-05-24 -- Phase 38 business app workflow passed on vivo V2405A: setup launched `com.epam.mobitru`, read-only inspection captured app UI, business action `Login` was denied with `POLICY_DENIED`, remediation returned `OK`, and compact evidence was added at `docs/showcase/evidence/governed-business-app-vivo-2026-05-24/`.
+Status: Explorer failure review/reporting is on main, Android physical-device Explorer evidence exists at `artifacts/explorer/android-full/2026-04-28T03-38-20/`, historical phase/demo/debug scripts live under `scripts/legacy/`, `validate:probe-dry-run` is CI-gated, probe reports use the shared `tool-probe-report/v1` contract, and Phase 39 now has an evidence-grounded adb/Maestro/harness comparison for the governed business app workflow.
+Last activity: 2026-05-24 -- Phase 39 added `comparison.md/json` beside the governed business app vivo evidence and wired `validate:governed-business-app-comparison` into smoke to keep the positioning narrow and evidence-backed.
 
 Progress: [█████████░] 86%
 

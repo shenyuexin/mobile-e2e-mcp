@@ -75,9 +75,11 @@ The latest tracked physical-device evidence is summarized at:
 
 - [governed-business-app-vivo-2026-05-24/report.md](./evidence/governed-business-app-vivo-2026-05-24/report.md)
 - [governed-business-app-vivo-2026-05-24/summary.json](./evidence/governed-business-app-vivo-2026-05-24/summary.json)
+- [governed-business-app-vivo-2026-05-24/comparison.md](./evidence/governed-business-app-vivo-2026-05-24/comparison.md)
 
 Validate it offline:
 
 ```bash
 pnpm run validate:governed-business-app-evidence
+pnpm run validate:governed-business-app-comparison
 ```

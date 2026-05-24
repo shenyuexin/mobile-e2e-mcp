@@ -37,6 +37,7 @@ Plans:
 - Phase 36: governed agent mobile control proof completed (`36-01-SUMMARY.md`).
 - Phase 37: governed control live evidence entrypoint completed (`37-01-SUMMARY.md`).
 - Phase 38: business app governed workflow proof completed (`38-01-SUMMARY.md`).
+- Phase 39: business app alternative comparison completed (`39-01-SUMMARY.md`).
 - Explorer failure review/reporting landed in local commits `aa8cc94` through `cb62a82`, with failure artifacts, log signals, rule decision reporting, and markdown sampling.
 - Android physical-device Explorer evidence is tracked at `artifacts/explorer/android-full/2026-04-28T03-38-20/` (45 pages, max depth 4, 0 failures).
 - Script cleanup moved historical phase/demo/debug runners under `scripts/legacy/`; current real-device direction is Explorer/probe first, with legacy runners kept as compatibility artifacts.

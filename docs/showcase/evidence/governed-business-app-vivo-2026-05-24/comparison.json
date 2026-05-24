@@ -1,0 +1,99 @@
+{
+  "schema": "governed-business-app-comparison/v1",
+  "sourceEvidence": "docs/showcase/evidence/governed-business-app-vivo-2026-05-24/summary.json",
+  "scenario": {
+    "appId": "com.epam.mobitru",
+    "screenPhase": "authentication",
+    "agentIntent": "Inspect a business app screen, then attempt the Login action.",
+    "risk": "The action is interactive and may change app state, so an AI agent should not execute it under read-only policy."
+  },
+  "verdict": "harness_shows_distinct_agent_safety_value",
+  "alternatives": [
+    {
+      "name": "ad-hoc adb wrapper",
+      "canDo": [
+        "launch the app with an adb command",
+        "tap coordinates or issue input events",
+        "capture stdout/stderr when explicitly implemented"
+      ],
+      "cannotProveFromThisEvidence": [
+        "policy-bound denial before the tap",
+        "session-scoped audit trail",
+        "agent-readable remediation after denial",
+        "structured pre-action UI state summary"
+      ],
+      "adoptionTradeoff": "Fast to build, but governance remains convention-based and easy for agents to bypass."
+    },
+    {
+      "name": "Maestro flow",
+      "canDo": [
+        "launch the app",
+        "tap a visible Login target",
+        "produce pass/fail flow output"
+      ],
+      "cannotProveFromThisEvidence": [
+        "read-only agent policy separating observation from action",
+        "machine-readable POLICY_DENIED before an action executes",
+        "governance-specific next suggestions for an AI agent"
+      ],
+      "adoptionTradeoff": "Excellent for deterministic scripted flows, but not a governance control plane for autonomous agent actions."
+    },
+    {
+      "name": "mobile-e2e-mcp governed harness",
+      "canDo": [
+        "prepare the app in a setup session",
+        "switch the agent-facing session to read-only",
+        "inspect live business UI before action",
+        "block the Login action with structured POLICY_DENIED",
+        "return governance remediation through suggest_known_remediation"
+      ],
+      "evidenceBackedSignals": [
+        "setupLaunched=true",
+        "inspectedScreen=true",
+        "policyDenied=true",
+        "remediationAvailable=true",
+        "screenSummary.appPhase=authentication",
+        "inspectUi.totalNodes=30",
+        "inspectUi.clickableNodes=6"
+      ],
+      "adoptionTradeoff": "Higher setup cost than a simple wrapper, but provides a safer agent-facing workflow when device control needs auditability."
+    }
+  ],
+  "decisionMatrix": [
+    {
+      "dimension": "Fast one-off manual automation",
+      "adbWrapper": "strong",
+      "maestroFlow": "strong",
+      "governedHarness": "acceptable"
+    },
+    {
+      "dimension": "AI agent read-only observation",
+      "adbWrapper": "weak",
+      "maestroFlow": "weak",
+      "governedHarness": "strong"
+    },
+    {
+      "dimension": "Preventing side effects under read-only policy",
+      "adbWrapper": "weak",
+      "maestroFlow": "weak",
+      "governedHarness": "strong"
+    },
+    {
+      "dimension": "Machine-consumable governance result",
+      "adbWrapper": "weak",
+      "maestroFlow": "weak",
+      "governedHarness": "strong"
+    },
+    {
+      "dimension": "Developer familiarity and ecosystem maturity",
+      "adbWrapper": "strong",
+      "maestroFlow": "strong",
+      "governedHarness": "emerging"
+    }
+  ],
+  "proofBoundaries": [
+    "This comparison does not claim Maestro or Appium are worse flow runners.",
+    "This comparison only claims distinct value for AI-facing policy, session, evidence, and remediation control.",
+    "The proof stops at policy denial; it does not validate full business-flow completion."
+  ]
+}
