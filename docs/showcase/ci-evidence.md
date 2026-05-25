@@ -56,7 +56,7 @@ For each run of `Real Device Acceptance` (`.github/workflows/real-device-accepta
 - `validate:governed-business-app-comparison` is an offline grounding check for the adb/Maestro/harness comparison. It keeps the comparison tied to tracked evidence and prevents broad replacement claims.
 - `validate:governed-policy-escalation-evidence` is an offline contract check over the committed dry-run escalation evidence. It validates read-only denial, governance remediation, and interactive retry semantics, but it does not prove physical-device launch fidelity.
 - `validate:governed-evidence-brief` is an offline grounding check for the compact developer/AI-facing brief. It keeps the current practical-use verdict tied to tracked Settings evidence, business-app evidence, and the comparison boundary.
-- `validate:governed-pr-evidence-summary` is an offline drift check for the PR-ready Markdown/JSON evidence summary generated from the governed evidence brief.
+- `test:governed-pr-evidence-summary` verifies the generator can be imported without write/log side effects and keeps the compact PR comment sections stable. `validate:governed-pr-evidence-summary` is the offline drift check for the PR-ready Markdown/JSON evidence summary generated from the governed evidence brief.
 - Probe dry-run validates Android + iOS simulator probe structure without device dependencies.
 - Platform smoke validates simulator/emulator toolchain baseline only.
 - Ubuntu CI and platform smoke do **not** fully prove real-device execution fidelity.

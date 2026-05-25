@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 43 governed PR evidence summary completed
+stopped_at: Phase 44 governed PR summary hardening completed
 last_updated: "2026-05-25T00:00:00.000Z"
-last_activity: 2026-05-25 -- phase 43 governed PR evidence summary added
+last_activity: 2026-05-25 -- phase 44 governed PR summary hardening added
 progress:
   total_phases: 3
   completed_phases: 1
@@ -27,8 +27,8 @@ See: .planning/PROJECT.md (updated 2026-03-28)
 
 Phase: probe evidence contract hardening
 Plan: stabilize generated probe report JSON/Markdown through shared helpers and fixture-backed validation without requiring devices.
-Status: Explorer failure review/reporting is on main, Android physical-device Explorer evidence exists at `artifacts/explorer/android-full/2026-04-28T03-38-20/`, historical phase/demo/debug scripts live under `scripts/legacy/`, `validate:probe-dry-run` is CI-gated, probe reports use the shared `tool-probe-report/v1` contract, and Phase 43 now has a PR-ready governed evidence summary generated from the compact brief.
-Last activity: 2026-05-25 -- Phase 43 added `generate:governed-pr-evidence-summary` and `validate:governed-pr-evidence-summary`, so review-ready Markdown/JSON evidence fails smoke if it drifts from the brief.
+Status: Explorer failure review/reporting is on main, Android physical-device Explorer evidence exists at `artifacts/explorer/android-full/2026-04-28T03-38-20/`, historical phase/demo/debug scripts live under `scripts/legacy/`, `validate:probe-dry-run` is CI-gated, probe reports use the shared `tool-probe-report/v1` contract, and Phase 44 hardens the PR summary generator for import-safe CI/GitHub reuse.
+Last activity: 2026-05-25 -- Phase 44 added `test:governed-pr-evidence-summary`, covering import side effects and PR comment rendering before the drift validator runs in smoke.
 
 Progress: [█████████░] 86%
 
