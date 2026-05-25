@@ -41,6 +41,7 @@ Plans:
 - Phase 40: governed quickstart readiness completed (`40-01-SUMMARY.md`).
 - Phase 41: governed evidence brief completed (`41-01-SUMMARY.md`).
 - Phase 42: governed policy escalation proof completed (`42-01-SUMMARY.md`).
+- Phase 43: governed PR evidence summary completed (`43-01-SUMMARY.md`).
 - Explorer failure review/reporting landed in local commits `aa8cc94` through `cb62a82`, with failure artifacts, log signals, rule decision reporting, and markdown sampling.
 - Android physical-device Explorer evidence is tracked at `artifacts/explorer/android-full/2026-04-28T03-38-20/` (45 pages, max depth 4, 0 failures).
 - Script cleanup moved historical phase/demo/debug runners under `scripts/legacy/`; current real-device direction is Explorer/probe first, with legacy runners kept as compatibility artifacts.

@@ -22,6 +22,7 @@ This folder contains reproducible, real-device demo evidence used by README.
 - Business app alternative comparison: `docs/showcase/evidence/governed-business-app-vivo-2026-05-24/comparison.md`
 - Policy escalation dry-run evidence: `docs/showcase/evidence/governed-policy-escalation-dry-run-2026-05-25/`
 - Governed evidence brief: `docs/showcase/evidence/governed-control-brief/brief.md`
+- Governed PR evidence summary: `docs/showcase/evidence/governed-control-brief/pr-comment.md`
 
 ## Flow record/replay demo
 
@@ -90,6 +91,7 @@ See `docs/showcase/ci-evidence.md` for the current proof levels and boundaries.
 - Business-app comparison proof (`pnpm run validate:governed-business-app-comparison`): verifies the committed comparison stays grounded in the business-app evidence and keeps the Appium/Maestro/adb boundary narrow.
 - Policy escalation proof (`pnpm run validate:governed-policy-escalation-evidence`): verifies the dry-run escalation evidence still shows read-only denial, governance remediation, and interactive retry without claiming live-device fidelity.
 - Governed evidence brief proof (`pnpm run validate:governed-evidence-brief`): verifies the compact brief stays grounded in the tracked Settings evidence, business-app evidence, and alternative comparison.
+- Governed PR evidence summary proof (`pnpm run validate:governed-pr-evidence-summary`): verifies the PR-ready Markdown/JSON summary stays generated from the governed evidence brief.
 - Platform smoke proof (`.github/workflows/platform-smoke.yml`): verifies simulator/emulator baseline wiring only.
 - Acceptance proof (`.github/workflows/real-device-acceptance.yml`): self-hosted real-run artifacts plus quality gate on `output/reports/phase-sample-report.json`.
 

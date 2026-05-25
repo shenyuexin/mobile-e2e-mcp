@@ -1,0 +1,39 @@
+{
+  "schema": "governed-pr-evidence-summary/v1",
+  "sourceBrief": "docs/showcase/evidence/governed-control-brief/brief.json",
+  "intendedSurface": "pull_request_comment",
+  "title": "Governed mobile control evidence",
+  "verdict": "practical_for_agent_governed_observation_and_action_mediation",
+  "positioning": "AI-safe mobile device control via MCP",
+  "evidenceCardIds": [
+    "settings-live-governed-control",
+    "business-app-readonly-workflow",
+    "alternative-comparison",
+    "policy-escalation-dry-run"
+  ],
+  "evidenceVerdicts": [
+    "live_governed_control_observed",
+    "business_app_governed_workflow_observed",
+    "harness_shows_distinct_agent_safety_value",
+    "policy_escalation_retry_dry_run_observed"
+  ],
+  "commands": [
+    "pnpm run quickstart:governed-control",
+    "pnpm run validate:governed-control-evidence",
+    "pnpm run validate:governed-business-app-evidence",
+    "pnpm run validate:governed-business-app-comparison",
+    "pnpm run validate:governed-policy-escalation-evidence",
+    "pnpm run validate:governed-evidence-brief",
+    "pnpm run validate:governed-pr-evidence-summary"
+  ],
+  "boundaries": [
+    "does not replace Appium, Maestro, Detox, XCTest, or Espresso as mature flow runners",
+    "does not prove full business-flow completion from login through transaction",
+    "does not prove equal Android and iOS real-device parity for every tool"
+  ],
+  "nextProofGaps": [
+    "live policy escalation after denial",
+    "automated PR comment publishing",
+    "iOS parity for governed-control proof"
+  ]
+}

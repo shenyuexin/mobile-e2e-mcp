@@ -191,12 +191,13 @@ export async function validateGovernedEvidenceBrief(): Promise<void> {
   assert.ok(hasCommand(brief, "pnpm run validate:governed-business-app-comparison"));
   assert.ok(hasCommand(brief, "pnpm run validate:governed-policy-escalation-evidence"));
   assert.ok(hasCommand(brief, "pnpm run validate:governed-evidence-brief"));
+  assert.ok(hasCommand(brief, "pnpm run validate:governed-pr-evidence-summary"));
   assert.ok(hasCommand(brief, "pnpm run proof:governed-business-app-workflow"));
   assert.ok(hasCommand(brief, "M2E_POLICY_ESCALATION_DRY_RUN=1 pnpm run proof:governed-policy-escalation"));
   assert.ok(hasCommand(brief, "pnpm run proof:governed-policy-escalation"));
 
   assert.ok(brief.remainingProofGaps?.some((gap) => gap.gap === "live policy escalation after denial"));
-  assert.ok(brief.remainingProofGaps?.some((gap) => gap.gap === "PR/comment consumption surface"));
+  assert.ok(brief.remainingProofGaps?.some((gap) => gap.gap === "automated PR comment publishing"));
   assert.ok(brief.remainingProofGaps?.some((gap) => gap.gap === "iOS parity for governed-control proof"));
 }
 

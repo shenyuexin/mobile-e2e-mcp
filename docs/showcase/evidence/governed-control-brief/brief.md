@@ -37,6 +37,7 @@ pnpm run validate:governed-business-app-evidence
 pnpm run validate:governed-business-app-comparison
 pnpm run validate:governed-policy-escalation-evidence
 pnpm run validate:governed-evidence-brief
+pnpm run validate:governed-pr-evidence-summary
 ```
 
 For live Android proof readiness:
@@ -50,7 +51,7 @@ pnpm run proof:governed-policy-escalation
 ## Remaining Proof Gaps
 
 1. Live policy escalation after denial: repeat the dry-run escalation contract on a physical device and track compact live evidence.
-2. PR/comment consumption surface: generate a compact review summary that an AI agent can attach to a PR.
+2. Automated PR comment publishing: validate and publish the governed PR evidence summary as a PR comment from CI or release tooling.
 3. iOS parity: prove the same governed-control semantics on iOS simulator or device.
 
 ## Practicality Boundary

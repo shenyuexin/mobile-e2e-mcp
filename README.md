@@ -133,12 +133,14 @@ If you want a quick hands-on tour before diving into architecture details, start
   - `pnpm run validate:governed-business-app-comparison`
   - `pnpm run validate:governed-policy-escalation-evidence`
   - `pnpm run validate:governed-evidence-brief`
+  - `pnpm run validate:governed-pr-evidence-summary`
   - [docs/showcase/governed-agent-mobile-control.md](docs/showcase/governed-agent-mobile-control.md)
   - [docs/showcase/governed-agent-mobile-control-live.md](docs/showcase/governed-agent-mobile-control-live.md)
   - [docs/showcase/governed-business-app-workflow.md](docs/showcase/governed-business-app-workflow.md)
   - [docs/showcase/governed-policy-escalation.md](docs/showcase/governed-policy-escalation.md)
   - [docs/showcase/governed-quickstart.md](docs/showcase/governed-quickstart.md)
   - [docs/showcase/evidence/governed-control-brief/brief.md](docs/showcase/evidence/governed-control-brief/brief.md)
+  - [docs/showcase/evidence/governed-control-brief/pr-comment.md](docs/showcase/evidence/governed-control-brief/pr-comment.md)
   - [docs/showcase/evidence/governed-control-vivo-2026-05-23/report.md](docs/showcase/evidence/governed-control-vivo-2026-05-23/report.md)
   - [docs/showcase/evidence/governed-business-app-vivo-2026-05-24/report.md](docs/showcase/evidence/governed-business-app-vivo-2026-05-24/report.md)
   - [docs/showcase/evidence/governed-business-app-vivo-2026-05-24/comparison.md](docs/showcase/evidence/governed-business-app-vivo-2026-05-24/comparison.md)

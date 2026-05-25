@@ -120,6 +120,10 @@
       "purpose": "validate this brief against the source evidence"
     },
     {
+      "command": "pnpm run validate:governed-pr-evidence-summary",
+      "purpose": "validate the PR-ready Markdown/JSON summary generated from this brief"
+    },
+    {
       "command": "pnpm run proof:governed-agent-mobile-control:preflight",
       "purpose": "check Android live-proof prerequisites before using a real device"
     },
@@ -143,9 +147,9 @@
       "fastestProof": "Run pnpm run proof:governed-policy-escalation with an Android device visible in adb, then track a compact live evidence summary."
     },
     {
-      "gap": "PR/comment consumption surface",
-      "whyItMatters": "The value for AI agents increases when evidence can be pasted or summarized directly in code review and CI handoff.",
-      "fastestProof": "Generate a compact markdown/JSON summary suitable for PR comments from the existing evidence bundle."
+      "gap": "automated PR comment publishing",
+      "whyItMatters": "The project now has a PR-ready evidence summary, but CI still does not automatically attach it to review threads.",
+      "fastestProof": "Add a workflow or release script path that validates and publishes the governed PR evidence summary as a PR comment."
     },
     {
       "gap": "iOS parity for governed-control proof",
