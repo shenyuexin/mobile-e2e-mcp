@@ -130,10 +130,12 @@ Explorer 会生成一个包含结构化产物的目录：
   - `pnpm run validate:governed-control-evidence`
   - `pnpm run validate:governed-business-app-evidence`
   - `pnpm run validate:governed-business-app-comparison`
+  - `pnpm run validate:governed-evidence-brief`
   - [docs/showcase/governed-agent-mobile-control.md](docs/showcase/governed-agent-mobile-control.md)
   - [docs/showcase/governed-agent-mobile-control-live.md](docs/showcase/governed-agent-mobile-control-live.md)
   - [docs/showcase/governed-business-app-workflow.md](docs/showcase/governed-business-app-workflow.md)
   - [docs/showcase/governed-quickstart.md](docs/showcase/governed-quickstart.md)
+  - [docs/showcase/evidence/governed-control-brief/brief.md](docs/showcase/evidence/governed-control-brief/brief.md)
   - [docs/showcase/evidence/governed-control-vivo-2026-05-23/report.md](docs/showcase/evidence/governed-control-vivo-2026-05-23/report.md)
   - [docs/showcase/evidence/governed-business-app-vivo-2026-05-24/report.md](docs/showcase/evidence/governed-business-app-vivo-2026-05-24/report.md)
   - [docs/showcase/evidence/governed-business-app-vivo-2026-05-24/comparison.md](docs/showcase/evidence/governed-business-app-vivo-2026-05-24/comparison.md)

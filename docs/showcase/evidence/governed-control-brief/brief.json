@@ -1,0 +1,125 @@
+{
+  "schema": "governed-control-brief/v1",
+  "curatedAt": "2026-05-25",
+  "positioning": {
+    "primaryWedge": "AI-safe mobile device control via MCP",
+    "currentVerdict": "practical_for_agent_governed_observation_and_action_mediation",
+    "bestFitUsers": [
+      "AI agents that need to inspect mobile UI before acting",
+      "mobile developers evaluating agent-driven device control",
+      "teams that need auditable policy boundaries around automation side effects"
+    ],
+    "notClaiming": [
+      "does not replace Appium, Maestro, Detox, XCTest, or Espresso as mature flow runners",
+      "does not prove full business-flow completion from login through transaction",
+      "does not prove equal Android and iOS real-device parity for every tool"
+    ]
+  },
+  "sourceEvidence": [
+    "docs/showcase/evidence/governed-control-vivo-2026-05-23/summary.json",
+    "docs/showcase/evidence/governed-business-app-vivo-2026-05-24/summary.json",
+    "docs/showcase/evidence/governed-business-app-vivo-2026-05-24/comparison.json"
+  ],
+  "evidenceCards": [
+    {
+      "id": "settings-live-governed-control",
+      "source": "docs/showcase/evidence/governed-control-vivo-2026-05-23/summary.json",
+      "proofLevel": "real_device_compact_evidence",
+      "appId": "com.android.settings",
+      "platform": "android",
+      "deviceModel": "V2405A",
+      "verdict": "live_governed_control_observed",
+      "observedSignals": [
+        "deviceDetected=true",
+        "inspectedScreen=true",
+        "policyDenied=true",
+        "remediationAvailable=true",
+        "inspectUi.totalNodes=93",
+        "inspectUi.clickableNodes=53",
+        "policyDeniedStep.reasonCode=POLICY_DENIED"
+      ],
+      "practicalMeaning": "The harness can inspect a live Android screen and refuse an interactive action under read-only policy with an agent-readable denial."
+    },
+    {
+      "id": "business-app-readonly-workflow",
+      "source": "docs/showcase/evidence/governed-business-app-vivo-2026-05-24/summary.json",
+      "proofLevel": "real_device_compact_evidence",
+      "appId": "com.epam.mobitru",
+      "platform": "android",
+      "deviceModel": "V2405A",
+      "verdict": "business_app_governed_workflow_observed",
+      "observedSignals": [
+        "setupLaunched=true",
+        "inspectedScreen=true",
+        "policyDenied=true",
+        "remediationAvailable=true",
+        "screenSummary.appPhase=authentication",
+        "inspectUi.totalNodes=30",
+        "inspectUi.clickableNodes=6",
+        "policyDeniedStep.attemptedText=Login",
+        "policyDeniedStep.reasonCode=POLICY_DENIED"
+      ],
+      "practicalMeaning": "A setup session can prepare an app, then a read-only agent session can inspect the business UI while policy blocks a state-changing Login action."
+    },
+    {
+      "id": "alternative-comparison",
+      "source": "docs/showcase/evidence/governed-business-app-vivo-2026-05-24/comparison.json",
+      "proofLevel": "evidence_grounded_comparison",
+      "verdict": "harness_shows_distinct_agent_safety_value",
+      "observedSignals": [
+        "policy-bound denial before action",
+        "session-scoped audit/evidence context",
+        "agent-readable remediation",
+        "explicit non-replacement boundary for Maestro/Appium"
+      ],
+      "practicalMeaning": "The narrow differentiation is not better tapping; it is a governance control plane for AI agents that should observe first and act only when policy allows it."
+    }
+  ],
+  "recommendedCommands": [
+    {
+      "command": "pnpm run quickstart:governed-control",
+      "purpose": "show first-run readiness and the next proof command for the current machine"
+    },
+    {
+      "command": "pnpm run validate:governed-control-evidence",
+      "purpose": "validate the committed live Settings governed-control compact evidence"
+    },
+    {
+      "command": "pnpm run validate:governed-business-app-evidence",
+      "purpose": "validate the committed business-app governed workflow compact evidence"
+    },
+    {
+      "command": "pnpm run validate:governed-business-app-comparison",
+      "purpose": "validate that the adb/Maestro/harness comparison stays evidence-grounded"
+    },
+    {
+      "command": "pnpm run validate:governed-evidence-brief",
+      "purpose": "validate this brief against the source evidence"
+    },
+    {
+      "command": "pnpm run proof:governed-agent-mobile-control:preflight",
+      "purpose": "check Android live-proof prerequisites before using a real device"
+    },
+    {
+      "command": "pnpm run proof:governed-business-app-workflow",
+      "purpose": "rerun the real-device business-app governed workflow proof"
+    }
+  ],
+  "remainingProofGaps": [
+    {
+      "gap": "policy escalation after denial",
+      "whyItMatters": "Developers need to see the path from safe refusal to approved retry, not just refusal.",
+      "fastestProof": "Add a real-device proof that denies Login under read-only, switches to an explicit approval profile, retries, and records both outcomes."
+    },
+    {
+      "gap": "PR/comment consumption surface",
+      "whyItMatters": "The value for AI agents increases when evidence can be pasted or summarized directly in code review and CI handoff.",
+      "fastestProof": "Generate a compact markdown/JSON summary suitable for PR comments from the existing evidence bundle."
+    },
+    {
+      "gap": "iOS parity for governed-control proof",
+      "whyItMatters": "Mobile teams will discount the project if the governance story is Android-only for too long.",
+      "fastestProof": "Create the smallest iOS simulator or real-device governed-control proof with matching policy-denial semantics."
+    }
+  ]
+}

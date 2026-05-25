@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 40 governed quickstart readiness completed
-last_updated: "2026-05-19T00:00:00.000Z"
-last_activity: 2026-05-24 -- phase 40 governed quickstart readiness added
+stopped_at: Phase 41 governed evidence brief completed
+last_updated: "2026-05-25T00:00:00.000Z"
+last_activity: 2026-05-25 -- phase 41 governed evidence brief added
 progress:
   total_phases: 3
   completed_phases: 1
@@ -27,8 +27,8 @@ See: .planning/PROJECT.md (updated 2026-03-28)
 
 Phase: probe evidence contract hardening
 Plan: stabilize generated probe report JSON/Markdown through shared helpers and fixture-backed validation without requiring devices.
-Status: Explorer failure review/reporting is on main, Android physical-device Explorer evidence exists at `artifacts/explorer/android-full/2026-04-28T03-38-20/`, historical phase/demo/debug scripts live under `scripts/legacy/`, `validate:probe-dry-run` is CI-gated, probe reports use the shared `tool-probe-report/v1` contract, and Phase 40 now has a single governed-control quickstart readiness lane for first-run evaluation.
-Last activity: 2026-05-24 -- Phase 40 added `quickstart:governed-control`, producing JSON/Markdown readiness artifacts that distinguish live-ready, offline-ready, and blocked setup states.
+Status: Explorer failure review/reporting is on main, Android physical-device Explorer evidence exists at `artifacts/explorer/android-full/2026-04-28T03-38-20/`, historical phase/demo/debug scripts live under `scripts/legacy/`, `validate:probe-dry-run` is CI-gated, probe reports use the shared `tool-probe-report/v1` contract, and Phase 41 now has a compact governed evidence brief for first practical-use review.
+Last activity: 2026-05-25 -- Phase 41 added `validate:governed-evidence-brief`, keeping the current governed-control practical-use verdict grounded in tracked Settings evidence, business-app evidence, and the alternative comparison.
 
 Progress: [█████████░] 86%
 
