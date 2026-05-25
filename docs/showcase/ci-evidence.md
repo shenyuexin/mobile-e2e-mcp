@@ -15,7 +15,7 @@ For each run of `CI` (`.github/workflows/ci.yml`):
 1. Job logs for `unit-and-typecheck` and `dry-run-smoke`
 2. Dedicated `explorer-evidence` job that validates the committed Android physical-device Explorer artifact contract
 3. Probe dry-run contract validation for Android + iOS simulator probe scripts
-4. `dry-run-smoke` also validates committed vivo governed-control evidence contracts and the compact governed evidence brief through `pnpm run validate:governed-control-evidence`, `pnpm run validate:governed-business-app-evidence`, `pnpm run validate:governed-business-app-comparison`, and `pnpm run validate:governed-evidence-brief`
+4. `dry-run-smoke` also validates committed governed-control evidence contracts and the compact governed evidence brief through `pnpm run validate:governed-control-evidence`, `pnpm run validate:governed-business-app-evidence`, `pnpm run validate:governed-business-app-comparison`, `pnpm run validate:governed-policy-escalation-evidence`, and `pnpm run validate:governed-evidence-brief`
 5. Uploaded metadata artifacts:
    - `ci-unit-typecheck-metadata`
    - `ci-dry-run-smoke-metadata`
@@ -54,6 +54,7 @@ For each run of `Real Device Acceptance` (`.github/workflows/real-device-accepta
 - `validate:governed-control-evidence` is an offline contract check over the committed compact vivo governed-control evidence. It validates that live inspection, read-only policy denial, and structured remediation were observed together. It does not rerun a phone.
 - `validate:governed-business-app-evidence` is an offline contract check over the committed compact vivo business-app evidence. It validates that setup launch, read-only app inspection, policy denial, and structured remediation were observed together. It does not rerun a phone.
 - `validate:governed-business-app-comparison` is an offline grounding check for the adb/Maestro/harness comparison. It keeps the comparison tied to tracked evidence and prevents broad replacement claims.
+- `validate:governed-policy-escalation-evidence` is an offline contract check over the committed dry-run escalation evidence. It validates read-only denial, governance remediation, and interactive retry semantics, but it does not prove physical-device launch fidelity.
 - `validate:governed-evidence-brief` is an offline grounding check for the compact developer/AI-facing brief. It keeps the current practical-use verdict tied to tracked Settings evidence, business-app evidence, and the comparison boundary.
 - Probe dry-run validates Android + iOS simulator probe structure without device dependencies.
 - Platform smoke validates simulator/emulator toolchain baseline only.
@@ -66,6 +67,7 @@ For each run of `Real Device Acceptance` (`.github/workflows/real-device-accepta
   - `artifacts/explorer/android-full/2026-04-28T03-38-20/` for Android physical-device Explorer evidence
   - `docs/showcase/evidence/governed-control-vivo-2026-05-23/` plus `pnpm run validate:governed-control-evidence` for governed-control vivo evidence
   - `docs/showcase/evidence/governed-business-app-vivo-2026-05-24/` plus `pnpm run validate:governed-business-app-evidence` and `pnpm run validate:governed-business-app-comparison` for governed business-app vivo evidence
+  - `docs/showcase/evidence/governed-policy-escalation-dry-run-2026-05-25/` plus `pnpm run validate:governed-policy-escalation-evidence` for policy escalation dry-run evidence
   - `docs/showcase/evidence/governed-control-brief/brief.md` plus `pnpm run validate:governed-evidence-brief` for the current practical-use evidence brief
   - `pnpm run validate:android-tool-probe` and `pnpm run validate:ios-tool-probe`
   - `real-device-acceptance` workflow artifacts and summaries

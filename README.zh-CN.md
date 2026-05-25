@@ -127,18 +127,22 @@ Explorer 会生成一个包含结构化产物的目录：
   - `pnpm run proof:governed-agent-mobile-control:preflight`（检查 Android live proof 前置条件）
   - `pnpm run proof:governed-agent-mobile-control:live`（需要 Android 设备/模拟器）
   - `pnpm run proof:governed-business-app-workflow`（安装/启动 demo app，然后切到 read-only 受治理观察）
+  - `pnpm run proof:governed-policy-escalation`（read-only 下拒绝，再切到 interactive policy 重试）
   - `pnpm run validate:governed-control-evidence`
   - `pnpm run validate:governed-business-app-evidence`
   - `pnpm run validate:governed-business-app-comparison`
+  - `pnpm run validate:governed-policy-escalation-evidence`
   - `pnpm run validate:governed-evidence-brief`
   - [docs/showcase/governed-agent-mobile-control.md](docs/showcase/governed-agent-mobile-control.md)
   - [docs/showcase/governed-agent-mobile-control-live.md](docs/showcase/governed-agent-mobile-control-live.md)
   - [docs/showcase/governed-business-app-workflow.md](docs/showcase/governed-business-app-workflow.md)
+  - [docs/showcase/governed-policy-escalation.md](docs/showcase/governed-policy-escalation.md)
   - [docs/showcase/governed-quickstart.md](docs/showcase/governed-quickstart.md)
   - [docs/showcase/evidence/governed-control-brief/brief.md](docs/showcase/evidence/governed-control-brief/brief.md)
   - [docs/showcase/evidence/governed-control-vivo-2026-05-23/report.md](docs/showcase/evidence/governed-control-vivo-2026-05-23/report.md)
   - [docs/showcase/evidence/governed-business-app-vivo-2026-05-24/report.md](docs/showcase/evidence/governed-business-app-vivo-2026-05-24/report.md)
   - [docs/showcase/evidence/governed-business-app-vivo-2026-05-24/comparison.md](docs/showcase/evidence/governed-business-app-vivo-2026-05-24/comparison.md)
+  - [docs/showcase/evidence/governed-policy-escalation-dry-run-2026-05-25/report.md](docs/showcase/evidence/governed-policy-escalation-dry-run-2026-05-25/report.md)
 - 历史演示脚本：
   - `bash scripts/legacy/dev/record-demo-happy-path-android.sh`
   - `bash scripts/legacy/dev/record-demo-interruption-home-recovery-android.sh`

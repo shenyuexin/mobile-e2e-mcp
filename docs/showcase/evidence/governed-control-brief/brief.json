@@ -18,7 +18,8 @@
   "sourceEvidence": [
     "docs/showcase/evidence/governed-control-vivo-2026-05-23/summary.json",
     "docs/showcase/evidence/governed-business-app-vivo-2026-05-24/summary.json",
-    "docs/showcase/evidence/governed-business-app-vivo-2026-05-24/comparison.json"
+    "docs/showcase/evidence/governed-business-app-vivo-2026-05-24/comparison.json",
+    "docs/showcase/evidence/governed-policy-escalation-dry-run-2026-05-25/summary.json"
   ],
   "evidenceCards": [
     {
@@ -73,6 +74,24 @@
         "explicit non-replacement boundary for Maestro/Appium"
       ],
       "practicalMeaning": "The narrow differentiation is not better tapping; it is a governance control plane for AI agents that should observe first and act only when policy allows it."
+    },
+    {
+      "id": "policy-escalation-dry-run",
+      "source": "docs/showcase/evidence/governed-policy-escalation-dry-run-2026-05-25/summary.json",
+      "proofLevel": "dry_run_policy_contract_evidence",
+      "appId": "com.android.settings",
+      "platform": "android",
+      "verdict": "policy_escalation_retry_dry_run_observed",
+      "observedSignals": [
+        "executionMode=dry-run",
+        "readOnlyPolicyProfile=read-only",
+        "interactivePolicyProfile=interactive",
+        "action.actionType=launch_app",
+        "readOnlyDeniedStep.reasonCode=POLICY_DENIED",
+        "interactiveRetryStep.reasonCode=OK",
+        "interactiveRetryStep.lowLevelReasonCode=OK"
+      ],
+      "practicalMeaning": "The same agent intent can be refused under read-only policy, remediated, then retried through an explicit interactive session without changing tool code or bypassing governance."
     }
   ],
   "recommendedCommands": [
@@ -93,6 +112,10 @@
       "purpose": "validate that the adb/Maestro/harness comparison stays evidence-grounded"
     },
     {
+      "command": "pnpm run validate:governed-policy-escalation-evidence",
+      "purpose": "validate the committed dry-run policy-escalation evidence"
+    },
+    {
       "command": "pnpm run validate:governed-evidence-brief",
       "purpose": "validate this brief against the source evidence"
     },
@@ -103,13 +126,21 @@
     {
       "command": "pnpm run proof:governed-business-app-workflow",
       "purpose": "rerun the real-device business-app governed workflow proof"
+    },
+    {
+      "command": "M2E_POLICY_ESCALATION_DRY_RUN=1 pnpm run proof:governed-policy-escalation",
+      "purpose": "rerun the CI-safe policy escalation contract proof"
+    },
+    {
+      "command": "pnpm run proof:governed-policy-escalation",
+      "purpose": "rerun the live Android policy escalation proof when a device is visible"
     }
   ],
   "remainingProofGaps": [
     {
-      "gap": "policy escalation after denial",
-      "whyItMatters": "Developers need to see the path from safe refusal to approved retry, not just refusal.",
-      "fastestProof": "Add a real-device proof that denies Login under read-only, switches to an explicit approval profile, retries, and records both outcomes."
+      "gap": "live policy escalation after denial",
+      "whyItMatters": "Developers need to see the dry-run escalation contract repeated on a physical device, not only the policy mechanics.",
+      "fastestProof": "Run pnpm run proof:governed-policy-escalation with an Android device visible in adb, then track a compact live evidence summary."
     },
     {
       "gap": "PR/comment consumption surface",

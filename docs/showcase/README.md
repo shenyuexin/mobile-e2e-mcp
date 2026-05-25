@@ -12,12 +12,15 @@ This folder contains reproducible, real-device demo evidence used by README.
 - `docs/showcase/governed-agent-mobile-control.md`
 - `docs/showcase/governed-agent-mobile-control-live.md`
 - `docs/showcase/governed-business-app-workflow.md`
+- `docs/showcase/governed-policy-escalation.md`
 - Live preflight: `pnpm run proof:governed-agent-mobile-control:preflight`
 - Quickstart readiness: `pnpm run quickstart:governed-control`
 - Business app workflow: `pnpm run proof:governed-business-app-workflow`
+- Policy escalation proof: `pnpm run proof:governed-policy-escalation`
 - Tracked vivo evidence: `docs/showcase/evidence/governed-control-vivo-2026-05-23/`
 - Tracked business app vivo evidence: `docs/showcase/evidence/governed-business-app-vivo-2026-05-24/`
 - Business app alternative comparison: `docs/showcase/evidence/governed-business-app-vivo-2026-05-24/comparison.md`
+- Policy escalation dry-run evidence: `docs/showcase/evidence/governed-policy-escalation-dry-run-2026-05-25/`
 - Governed evidence brief: `docs/showcase/evidence/governed-control-brief/brief.md`
 
 ## Flow record/replay demo
@@ -85,6 +88,7 @@ See `docs/showcase/ci-evidence.md` for the current proof levels and boundaries.
 - Governed-control evidence proof (`pnpm run validate:governed-control-evidence`): verifies the committed compact vivo evidence still proves live inspection, read-only policy denial, and structured remediation together; it does not rerun a device.
 - Business-app governed workflow proof (`pnpm run validate:governed-business-app-evidence`): verifies the committed compact vivo evidence still proves setup launch, read-only business app inspection, policy denial, and governance remediation together; it does not rerun a device.
 - Business-app comparison proof (`pnpm run validate:governed-business-app-comparison`): verifies the committed comparison stays grounded in the business-app evidence and keeps the Appium/Maestro/adb boundary narrow.
+- Policy escalation proof (`pnpm run validate:governed-policy-escalation-evidence`): verifies the dry-run escalation evidence still shows read-only denial, governance remediation, and interactive retry without claiming live-device fidelity.
 - Governed evidence brief proof (`pnpm run validate:governed-evidence-brief`): verifies the compact brief stays grounded in the tracked Settings evidence, business-app evidence, and alternative comparison.
 - Platform smoke proof (`.github/workflows/platform-smoke.yml`): verifies simulator/emulator baseline wiring only.
 - Acceptance proof (`.github/workflows/real-device-acceptance.yml`): self-hosted real-run artifacts plus quality gate on `output/reports/phase-sample-report.json`.

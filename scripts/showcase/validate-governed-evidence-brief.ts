@@ -35,6 +35,27 @@ interface GovernedBusinessAppComparison {
   proofBoundaries?: string[];
 }
 
+interface GovernedPolicyEscalationEvidence {
+  executionMode?: string;
+  verdict?: string;
+  appId?: string;
+  platform?: string;
+  sessions?: {
+    readOnlyPolicyProfile?: string;
+    interactivePolicyProfile?: string;
+  };
+  action?: {
+    actionType?: string;
+  };
+  readOnlyDeniedStep?: {
+    reasonCode?: string;
+  };
+  interactiveRetryStep?: {
+    reasonCode?: string;
+    lowLevelReasonCode?: string;
+  };
+}
+
 interface EvidenceCard {
   id?: string;
   source?: string;
@@ -72,6 +93,7 @@ interface GovernedEvidenceBrief {
 const settingsEvidencePath = "docs/showcase/evidence/governed-control-vivo-2026-05-23/summary.json";
 const businessEvidencePath = "docs/showcase/evidence/governed-business-app-vivo-2026-05-24/summary.json";
 const comparisonPath = "docs/showcase/evidence/governed-business-app-vivo-2026-05-24/comparison.json";
+const policyEscalationPath = "docs/showcase/evidence/governed-policy-escalation-dry-run-2026-05-25/summary.json";
 const briefPath = "docs/showcase/evidence/governed-control-brief/brief.json";
 
 function repoRoot(): string {
@@ -98,6 +120,7 @@ export async function validateGovernedEvidenceBrief(): Promise<void> {
   const settings = await readJson<GovernedControlEvidence>(settingsEvidencePath);
   const business = await readJson<GovernedBusinessAppEvidence>(businessEvidencePath);
   const comparison = await readJson<GovernedBusinessAppComparison>(comparisonPath);
+  const policyEscalation = await readJson<GovernedPolicyEscalationEvidence>(policyEscalationPath);
   const brief = await readJson<GovernedEvidenceBrief>(briefPath);
 
   assert.equal(brief.schema, "governed-control-brief/v1");
@@ -111,7 +134,8 @@ export async function validateGovernedEvidenceBrief(): Promise<void> {
   assert.deepEqual(brief.sourceEvidence, [
     settingsEvidencePath,
     businessEvidencePath,
-    comparisonPath
+    comparisonPath,
+    policyEscalationPath
   ]);
 
   const settingsCard = findCard(brief, "settings-live-governed-control");
@@ -147,14 +171,31 @@ export async function validateGovernedEvidenceBrief(): Promise<void> {
   assert.ok(comparisonCard.observedSignals?.some((signal) => signal.includes("non-replacement boundary")));
   assert.ok(comparison.proofBoundaries?.some((boundary) => boundary.includes("does not claim Maestro")));
 
+  const escalationCard = findCard(brief, "policy-escalation-dry-run");
+  assert.equal(policyEscalation.verdict, "policy_escalation_retry_dry_run_observed");
+  assert.equal(escalationCard.source, policyEscalationPath);
+  assert.equal(escalationCard.appId, policyEscalation.appId);
+  assert.equal(escalationCard.platform, policyEscalation.platform);
+  assert.equal(escalationCard.verdict, policyEscalation.verdict);
+  assert.ok(hasSignal(escalationCard, `executionMode=${policyEscalation.executionMode}`));
+  assert.ok(hasSignal(escalationCard, `readOnlyPolicyProfile=${policyEscalation.sessions?.readOnlyPolicyProfile}`));
+  assert.ok(hasSignal(escalationCard, `interactivePolicyProfile=${policyEscalation.sessions?.interactivePolicyProfile}`));
+  assert.ok(hasSignal(escalationCard, `action.actionType=${policyEscalation.action?.actionType}`));
+  assert.ok(hasSignal(escalationCard, `readOnlyDeniedStep.reasonCode=${policyEscalation.readOnlyDeniedStep?.reasonCode}`));
+  assert.ok(hasSignal(escalationCard, `interactiveRetryStep.reasonCode=${policyEscalation.interactiveRetryStep?.reasonCode}`));
+  assert.ok(hasSignal(escalationCard, `interactiveRetryStep.lowLevelReasonCode=${policyEscalation.interactiveRetryStep?.lowLevelReasonCode}`));
+
   assert.ok(hasCommand(brief, "pnpm run quickstart:governed-control"));
   assert.ok(hasCommand(brief, "pnpm run validate:governed-control-evidence"));
   assert.ok(hasCommand(brief, "pnpm run validate:governed-business-app-evidence"));
   assert.ok(hasCommand(brief, "pnpm run validate:governed-business-app-comparison"));
+  assert.ok(hasCommand(brief, "pnpm run validate:governed-policy-escalation-evidence"));
   assert.ok(hasCommand(brief, "pnpm run validate:governed-evidence-brief"));
   assert.ok(hasCommand(brief, "pnpm run proof:governed-business-app-workflow"));
+  assert.ok(hasCommand(brief, "M2E_POLICY_ESCALATION_DRY_RUN=1 pnpm run proof:governed-policy-escalation"));
+  assert.ok(hasCommand(brief, "pnpm run proof:governed-policy-escalation"));
 
-  assert.ok(brief.remainingProofGaps?.some((gap) => gap.gap === "policy escalation after denial"));
+  assert.ok(brief.remainingProofGaps?.some((gap) => gap.gap === "live policy escalation after denial"));
   assert.ok(brief.remainingProofGaps?.some((gap) => gap.gap === "PR/comment consumption surface"));
   assert.ok(brief.remainingProofGaps?.some((gap) => gap.gap === "iOS parity for governed-control proof"));
 }

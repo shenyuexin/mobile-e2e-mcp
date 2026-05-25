@@ -1,0 +1,67 @@
+{
+  "schema": "governed-policy-escalation-evidence/v1",
+  "capturedAt": "2026-05-25T02:25:56.668Z",
+  "sourceRunId": "2026-05-25T02-25-56-662Z",
+  "sourceOutputDir": "output/showcase/governed-policy-escalation/2026-05-25T02-25-56-662Z",
+  "executionMode": "dry-run",
+  "platform": "android",
+  "runnerProfile": "native_android",
+  "appId": "com.android.settings",
+  "device": {
+    "deviceId": "dry-run-device",
+    "realDeviceDetected": false
+  },
+  "sessions": {
+    "readOnlyPolicyProfile": "read-only",
+    "interactivePolicyProfile": "interactive",
+    "readOnlySessionIdRedacted": "policy-escalation-readonly-1779675952993",
+    "interactiveSessionIdRedacted": "policy-escalation-interactive-1779675952993"
+  },
+  "action": {
+    "actionType": "launch_app",
+    "targetAppId": "com.android.settings",
+    "dryRun": true
+  },
+  "verdict": "policy_escalation_retry_dry_run_observed",
+  "checks": {
+    "deviceDetected": false,
+    "dryRunDeviceSelected": true,
+    "readOnlyDenied": true,
+    "remediationAvailable": true,
+    "interactiveSessionStarted": true,
+    "interactiveRetryAllowed": true,
+    "interactiveRetryExecuted": true
+  },
+  "readOnlyDeniedStep": {
+    "tool": "perform_action_with_evidence",
+    "status": "failed",
+    "reasonCode": "POLICY_DENIED"
+  },
+  "interactiveRetryStep": {
+    "tool": "perform_action_with_evidence",
+    "status": "success",
+    "reasonCode": "OK",
+    "lowLevelStatus": "success",
+    "lowLevelReasonCode": "OK"
+  },
+  "trackedArtifacts": [
+    "summary.json",
+    "report.md"
+  ],
+  "excludedArtifacts": [
+    {
+      "path": "output/evidence/**",
+      "reason": "Runtime session, audit, lease, and action artifacts are local evidence outputs, not compact showcase fixtures."
+    },
+    {
+      "path": "output/showcase/governed-policy-escalation/**",
+      "reason": "Full generated proof bundles are local outputs; this directory keeps the compact, reviewable evidence contract."
+    }
+  ],
+  "proofBoundaries": [
+    "This dry-run evidence proves policy-profile mechanics and structured result semantics, not physical-device launch fidelity.",
+    "It does not replace live-device evidence for the escalation workflow.",
+    "It does not prove arbitrary action approval; only the explicit launch_app action is retried.",
+    "It does not bypass policy; the retry starts a new session with the explicit interactive policy profile."
+  ]
+}
