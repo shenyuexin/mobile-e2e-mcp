@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import type { RunnerProfile } from "../../packages/contracts/src/index.ts";
 import { createServer } from "../../packages/mcp-server/src/index.ts";
 
 interface ProofStep {
@@ -25,6 +26,13 @@ interface PolicyEscalationProof {
   interactiveSessionId?: string;
   readOnlyPolicyProfile: string;
   interactivePolicyProfile: string;
+  remediationPolicyGuidance?: {
+    currentPolicyProfile: string;
+    recommendedPolicyProfile: string;
+    nextSessionId: string;
+    toolSequence: string[];
+    usedForEscalation: boolean;
+  };
   action: {
     actionType: "launch_app";
     targetAppId: string;
@@ -54,6 +62,24 @@ function asRecord(value: unknown): Record<string, unknown> {
 
 function asStringArray(value: unknown): string[] {
   return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
+}
+
+function guidanceToolInput(remediation: unknown, toolName: string): Record<string, unknown> | undefined {
+  const data = asRecord(asRecord(remediation).data);
+  const policyGuidance = asRecord(data.policyGuidance);
+  const toolSequence = Array.isArray(policyGuidance.toolSequence) ? policyGuidance.toolSequence : [];
+  const step = toolSequence.map(asRecord).find((item) => item.toolName === toolName);
+  return step ? asRecord(step.input) : undefined;
+}
+
+function guidanceToolNames(remediation: unknown): string[] {
+  const data = asRecord(asRecord(remediation).data);
+  const policyGuidance = asRecord(data.policyGuidance);
+  const toolSequence = Array.isArray(policyGuidance.toolSequence) ? policyGuidance.toolSequence : [];
+  return toolSequence
+    .map(asRecord)
+    .map((step) => step.toolName)
+    .filter((toolName): toolName is string => typeof toolName === "string");
 }
 
 function summarizeResult(
@@ -148,6 +174,7 @@ function renderMarkdown(proof: PolicyEscalationProof): string {
     `- Interactive session ID: ${proof.interactiveSessionId ?? "<none>"}`,
     `- Read-only policy profile: ${proof.readOnlyPolicyProfile}`,
     `- Interactive policy profile: ${proof.interactivePolicyProfile}`,
+    `- Policy guidance used: ${proof.remediationPolicyGuidance?.usedForEscalation ?? false}`,
     `- Retried action: ${proof.action.actionType}(${proof.action.targetAppId})`,
     `- Action dry-run: ${proof.action.dryRun}`,
     `- Verdict: ${proof.verdict}`,
@@ -193,7 +220,7 @@ async function runPolicyEscalationProof(outputDir: string): Promise<PolicyEscala
   const generatedAt = new Date().toISOString();
   const executionMode = process.env.M2E_POLICY_ESCALATION_DRY_RUN === "1" ? "dry-run" : "live";
   const platform = "android" as const;
-  const runnerProfile = process.env.M2E_RUNNER_PROFILE ?? "native_android";
+  const runnerProfile = (process.env.M2E_RUNNER_PROFILE ?? "native_android") as RunnerProfile;
   const appId = process.env.M2E_POLICY_ESCALATION_APP_ID ?? "com.android.settings";
   const readOnlyPolicyProfile = "read-only";
   const interactivePolicyProfile = "interactive";
@@ -239,7 +266,6 @@ async function runPolicyEscalationProof(outputDir: string): Promise<PolicyEscala
   }
 
   const readOnlySessionId = process.env.M2E_POLICY_ESCALATION_READONLY_SESSION_ID ?? `policy-escalation-readonly-${Date.now()}`;
-  const interactiveSessionId = process.env.M2E_POLICY_ESCALATION_INTERACTIVE_SESSION_ID ?? `policy-escalation-interactive-${Date.now()}`;
   const action = {
     actionType: "launch_app" as const,
     appId,
@@ -285,7 +311,6 @@ async function runPolicyEscalationProof(outputDir: string): Promise<PolicyEscala
   const remediation = await server.invoke("suggest_known_remediation", {
     sessionId: readOnlySessionId,
     platform,
-    runnerProfile,
   });
   steps.push(summarizeResult(
     "suggest_known_remediation",
@@ -293,8 +318,18 @@ async function runPolicyEscalationProof(outputDir: string): Promise<PolicyEscala
     "Ask for governance-specific next steps after read-only policy denial.",
   ));
 
+  const guidedEndSessionInput = guidanceToolInput(remediation, "end_session");
+  const guidedStartSessionInput = guidanceToolInput(remediation, "start_session");
+  const interactiveSessionId = typeof guidedStartSessionInput?.sessionId === "string"
+    ? guidedStartSessionInput.sessionId
+    : process.env.M2E_POLICY_ESCALATION_INTERACTIVE_SESSION_ID ?? `${readOnlySessionId}-interactive`;
+  const guidedInteractivePolicyProfile = typeof guidedStartSessionInput?.policyProfile === "string"
+    ? guidedStartSessionInput.policyProfile
+    : interactivePolicyProfile;
+  const guidanceUsedForEscalation = Boolean(guidedEndSessionInput && guidedStartSessionInput);
+
   const readOnlyEnded = await server.invoke("end_session", {
-    sessionId: readOnlySessionId,
+    sessionId: typeof guidedEndSessionInput?.sessionId === "string" ? guidedEndSessionInput.sessionId : readOnlySessionId,
     artifacts: [path.relative(repoRoot(), outputDir)],
   });
   steps.push(summarizeResult(
@@ -305,11 +340,11 @@ async function runPolicyEscalationProof(outputDir: string): Promise<PolicyEscala
 
   const interactiveStarted = await server.invoke("start_session", {
     sessionId: interactiveSessionId,
-    platform,
-    deviceId,
-    appId,
-    profile: runnerProfile,
-    policyProfile: interactivePolicyProfile,
+    platform: typeof guidedStartSessionInput?.platform === "string" ? guidedStartSessionInput.platform as "android" : platform,
+    deviceId: typeof guidedStartSessionInput?.deviceId === "string" ? guidedStartSessionInput.deviceId : deviceId,
+    appId: typeof guidedStartSessionInput?.appId === "string" ? guidedStartSessionInput.appId : appId,
+    profile: typeof guidedStartSessionInput?.profile === "string" ? guidedStartSessionInput.profile as RunnerProfile : runnerProfile,
+    policyProfile: guidedInteractivePolicyProfile,
   });
   steps.push(summarizeResult(
     "start_interactive_session",
@@ -362,7 +397,14 @@ async function runPolicyEscalationProof(outputDir: string): Promise<PolicyEscala
     readOnlySessionId,
     interactiveSessionId,
     readOnlyPolicyProfile,
-    interactivePolicyProfile,
+    interactivePolicyProfile: guidedInteractivePolicyProfile,
+    remediationPolicyGuidance: {
+      currentPolicyProfile: readOnlyPolicyProfile,
+      recommendedPolicyProfile: guidedInteractivePolicyProfile,
+      nextSessionId: interactiveSessionId,
+      toolSequence: guidanceToolNames(remediation),
+      usedForEscalation: guidanceUsedForEscalation,
+    },
     action: { actionType: "launch_app", targetAppId: appId, dryRun: executionMode === "dry-run" },
     verdict: buildVerdict({
       deviceId,
@@ -396,6 +438,7 @@ async function main(): Promise<void> {
   if (proof.deviceId) {
     assert.equal(proof.readOnlyDenied, true, "read-only session should deny the side-effecting action");
     assert.equal(proof.remediationAvailable, true, "proof should return governance guidance after denial");
+    assert.equal(proof.remediationPolicyGuidance?.usedForEscalation, true, "proof should use remediation policy guidance to choose escalation inputs");
     assert.equal(proof.interactiveSessionStarted, true, "interactive session should start after read-only session closes");
     assert.equal(proof.interactiveRetryAllowed, true, "interactive retry should not be blocked by POLICY_DENIED");
     assert.equal(proof.interactiveRetryExecuted, true, "interactive retry should execute successfully");
@@ -411,6 +454,7 @@ async function main(): Promise<void> {
     verdict: proof.verdict,
     readOnlyDenied: proof.readOnlyDenied,
     remediationAvailable: proof.remediationAvailable,
+    policyGuidanceUsed: proof.remediationPolicyGuidance?.usedForEscalation ?? false,
     interactiveSessionStarted: proof.interactiveSessionStarted,
     interactiveRetryAllowed: proof.interactiveRetryAllowed,
     interactiveRetryExecuted: proof.interactiveRetryExecuted,

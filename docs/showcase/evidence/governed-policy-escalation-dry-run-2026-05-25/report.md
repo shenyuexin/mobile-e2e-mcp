@@ -30,6 +30,8 @@ The same `perform_action_with_evidence` intent was:
 | `checks.dryRunDeviceSelected` | `true` |
 | `checks.readOnlyDenied` | `true` |
 | `checks.remediationAvailable` | `true` |
+| `remediationPolicyGuidance.usedForEscalation` | `true` |
+| `remediationPolicyGuidance.toolSequence` | `end_session -> start_session` |
 | `checks.interactiveSessionStarted` | `true` |
 | `checks.interactiveRetryAllowed` | `true` |
 | `checks.interactiveRetryExecuted` | `true` |
@@ -39,7 +41,7 @@ The same `perform_action_with_evidence` intent was:
 
 ## Boundary
 
-This is not live-device evidence. It proves the governed-control policy mechanics and result contract: refusal under `read-only`, explicit session/profile escalation, and successful retry under `interactive`.
+This is not live-device evidence. It proves the governed-control policy mechanics and result contract: refusal under `read-only`, explicit remediation-guided session/profile escalation, and successful retry under `interactive`.
 
 The live Android proof command is the same entrypoint without `M2E_POLICY_ESCALATION_DRY_RUN=1`:
 

@@ -38,6 +38,13 @@ interface PolicyEscalationEvidence {
     status?: string;
     reasonCode?: string;
   };
+  remediationPolicyGuidance?: {
+    currentPolicyProfile?: string;
+    recommendedPolicyProfile?: string;
+    nextSessionIdRedacted?: string;
+    toolSequence?: string[];
+    usedForEscalation?: boolean;
+  };
   interactiveRetryStep?: {
     tool?: string;
     status?: string;
@@ -70,7 +77,7 @@ export async function validateGovernedPolicyEscalationEvidence(): Promise<void> 
   assert.equal(evidence.sessions?.readOnlyPolicyProfile, "read-only");
   assert.equal(evidence.sessions?.interactivePolicyProfile, "interactive");
   assert.match(evidence.sessions?.readOnlySessionIdRedacted ?? "", /^policy-escalation-readonly-/);
-  assert.match(evidence.sessions?.interactiveSessionIdRedacted ?? "", /^policy-escalation-interactive-/);
+  assert.match(evidence.sessions?.interactiveSessionIdRedacted ?? "", /^policy-escalation-readonly-.*-interactive$/);
 
   assert.equal(evidence.action?.actionType, "launch_app");
   assert.equal(evidence.action?.targetAppId, evidence.appId);
@@ -87,6 +94,12 @@ export async function validateGovernedPolicyEscalationEvidence(): Promise<void> 
   assert.equal(evidence.readOnlyDeniedStep?.tool, "perform_action_with_evidence");
   assert.equal(evidence.readOnlyDeniedStep?.status, "failed");
   assert.equal(evidence.readOnlyDeniedStep?.reasonCode, "POLICY_DENIED");
+
+  assert.equal(evidence.remediationPolicyGuidance?.currentPolicyProfile, "read-only");
+  assert.equal(evidence.remediationPolicyGuidance?.recommendedPolicyProfile, "interactive");
+  assert.match(evidence.remediationPolicyGuidance?.nextSessionIdRedacted ?? "", /^policy-escalation-readonly-.*-interactive$/);
+  assert.deepEqual(evidence.remediationPolicyGuidance?.toolSequence, ["end_session", "start_session"]);
+  assert.equal(evidence.remediationPolicyGuidance?.usedForEscalation, true);
 
   assert.equal(evidence.interactiveRetryStep?.tool, "perform_action_with_evidence");
   assert.notEqual(evidence.interactiveRetryStep?.reasonCode, "POLICY_DENIED");

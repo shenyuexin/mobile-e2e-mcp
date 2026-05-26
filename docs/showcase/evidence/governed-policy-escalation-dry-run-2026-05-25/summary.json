@@ -15,7 +15,7 @@
     "readOnlyPolicyProfile": "read-only",
     "interactivePolicyProfile": "interactive",
     "readOnlySessionIdRedacted": "policy-escalation-readonly-1779675952993",
-    "interactiveSessionIdRedacted": "policy-escalation-interactive-1779675952993"
+    "interactiveSessionIdRedacted": "policy-escalation-readonly-1779675952993-interactive"
   },
   "action": {
     "actionType": "launch_app",
@@ -36,6 +36,16 @@
     "tool": "perform_action_with_evidence",
     "status": "failed",
     "reasonCode": "POLICY_DENIED"
+  },
+  "remediationPolicyGuidance": {
+    "currentPolicyProfile": "read-only",
+    "recommendedPolicyProfile": "interactive",
+    "nextSessionIdRedacted": "policy-escalation-readonly-1779675952993-interactive",
+    "toolSequence": [
+      "end_session",
+      "start_session"
+    ],
+    "usedForEscalation": true
   },
   "interactiveRetryStep": {
     "tool": "perform_action_with_evidence",
