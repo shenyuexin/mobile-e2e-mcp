@@ -1335,11 +1335,24 @@ export interface SkillGuidedRemediation {
   firstFix: string;
   handoffSkill?: string;
 }
+export interface PolicyGuidanceToolStep {
+  toolName: "end_session" | "start_session";
+  input: Record<string, unknown>;
+  reason: string;
+}
+export interface PolicyRemediationGuidance {
+  currentPolicyProfile: string;
+  recommendedPolicyProfile: string;
+  nextSessionId: string;
+  reason: string;
+  toolSequence: PolicyGuidanceToolStep[];
+}
 export interface SuggestKnownRemediationData {
   found: boolean;
   actionId?: string;
   remediation: string[];
   skillGuidance?: SkillGuidedRemediation;
+  policyGuidance?: PolicyRemediationGuidance;
 }
 export interface ExecuteIntentStepInput {
   intent: string;

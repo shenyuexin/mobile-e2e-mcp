@@ -19,6 +19,7 @@ import {
   type RankFailureCandidatesData,
   type RankFailureCandidatesInput,
   REASON_CODES,
+  type Session,
   type StateReadiness,
   type SimilarFailure,
   type SuggestKnownRemediationData,
@@ -43,6 +44,16 @@ import { evidencePaths } from "./artifact-paths.js";
 import { buildSkillGuidedRemediation } from "./readiness-guidance.js";
 
 const DEFAULT_POLICY_PROFILE = "sample-harness-default";
+
+function recommendedPolicyProfileFor(currentPolicyProfile: string): string {
+  if (currentPolicyProfile === "read-only") {
+    return "interactive";
+  }
+  if (currentPolicyProfile === "interactive") {
+    return "full-control";
+  }
+  return DEFAULT_POLICY_PROFILE;
+}
 
 interface IosStartupExecutionEvidence {
   startupPhase?: string;
@@ -111,11 +122,22 @@ function buildIosStartupPhaseRemediation(evidence?: IosStartupExecutionEvidence)
 
 function buildPolicyProfileRemediation(
   input: SuggestKnownRemediationInput,
-  policyProfile?: string,
+  session?: Session,
 ): ToolResult<SuggestKnownRemediationData> | undefined {
+  const policyProfile = session?.policyProfile;
   if (!policyProfile || policyProfile === DEFAULT_POLICY_PROFILE) {
     return undefined;
   }
+  const recommendedPolicyProfile = recommendedPolicyProfileFor(policyProfile);
+  const nextSessionId = `${input.sessionId}-${recommendedPolicyProfile}`;
+  const startSessionInput = {
+    sessionId: nextSessionId,
+    platform: input.platform ?? session.platform,
+    deviceId: session.deviceId,
+    appId: session.appId,
+    profile: session.profile ?? undefined,
+    policyProfile: recommendedPolicyProfile,
+  };
 
   const remediation = [
     `The current session uses policy profile '${policyProfile}', so interactive mobile actions may be intentionally denied before a normal action failure is recorded.`,
@@ -133,6 +155,24 @@ function buildPolicyProfileRemediation(
     data: {
       found: true,
       remediation,
+      policyGuidance: {
+        currentPolicyProfile: policyProfile,
+        recommendedPolicyProfile,
+        nextSessionId,
+        reason: `Policy profile '${policyProfile}' blocked the action before a normal action failure record was created.`,
+        toolSequence: [
+          {
+            toolName: "end_session",
+            input: { sessionId: input.sessionId },
+            reason: "Close the current restricted session before escalating privileges.",
+          },
+          {
+            toolName: "start_session",
+            input: startSessionInput,
+            reason: `Start a new governed session with policyProfile '${recommendedPolicyProfile}' before retrying the intended action.`,
+          },
+        ],
+      },
     },
     nextSuggestions: [
       `Review whether policyProfile '${policyProfile}' is the intended boundary for this agent task.`,
@@ -780,7 +820,7 @@ export async function suggestKnownRemediationWithMaestro(
   const sessionRecord = await loadSessionRecord(repoRoot, input.sessionId);
   const explained = await explainLastFailureWithMaestro({ sessionId: input.sessionId });
   if (explained.status === "failed") {
-    const policyRemediation = buildPolicyProfileRemediation(input, sessionRecord?.session.policyProfile);
+    const policyRemediation = buildPolicyProfileRemediation(input, sessionRecord?.session);
     if (policyRemediation) {
       return policyRemediation;
     }

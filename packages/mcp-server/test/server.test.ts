@@ -1305,6 +1305,21 @@ test("server invoke suggests governance next steps after read-only policy denial
     assert.equal(remediation.data.found, true);
     assert.equal(remediation.data.remediation.some((item) => item.includes("read-only")), true);
     assert.equal(remediation.nextSuggestions.some((item) => item.includes("policyProfile")), true);
+    assert.equal(remediation.data.policyGuidance?.currentPolicyProfile, "read-only");
+    assert.equal(remediation.data.policyGuidance?.recommendedPolicyProfile, "interactive");
+    assert.equal(remediation.data.policyGuidance?.nextSessionId, `${sessionId}-interactive`);
+    assert.deepEqual(remediation.data.policyGuidance?.toolSequence.map((step) => step.toolName), [
+      "end_session",
+      "start_session",
+    ]);
+    assert.deepEqual(remediation.data.policyGuidance?.toolSequence[1]?.input, {
+      sessionId: `${sessionId}-interactive`,
+      platform: "android",
+      deviceId: buildTestDeviceId(sessionId),
+      appId: "host.exp.exponent",
+      profile: "phase1",
+      policyProfile: "interactive",
+    });
   } finally {
     await cleanupSessionArtifact(sessionId);
   }

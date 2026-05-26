@@ -48,6 +48,11 @@ If an agent invokes an action outside the profile, the tool returns a structured
 
 After a denial, call `suggest_known_remediation` with the same `sessionId`. For non-default policy profiles, it returns governance-specific next steps, such as continuing with inspect/query tools, requesting approval, or restarting with a more permissive explicit profile.
 
+The response also includes `data.policyGuidance` when a profile transition is the likely next step.
+That object carries the current profile, the recommended next profile, a deterministic next session ID,
+and an ordered MCP tool sequence. Agents can use it to close the current restricted session and start the
+replacement session without guessing profile names or session inputs.
+
 ## Agent Pattern
 
 For unknown or high-risk tasks:

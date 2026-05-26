@@ -48,6 +48,10 @@ configs/policies/access-profiles.yaml
 
 拒绝后，可以用相同 `sessionId` 调用 `suggest_known_remediation`。对于非默认 policy profile，它会返回治理类下一步建议，例如继续使用 inspect/query 工具、请求审批，或用更明确的权限 profile 重启 session。
 
+当 profile 切换是最可能的下一步时，响应还会包含 `data.policyGuidance`。它会给出当前 profile、
+推荐的新 profile、确定性的下一 session ID，以及有序 MCP tool 调用序列。Agent 可以用它关闭当前受限
+session，并在不猜 profile 名称或 session 入参的情况下启动替代 session。
+
 ## Agent 推荐模式
 
 未知或高风险任务：
