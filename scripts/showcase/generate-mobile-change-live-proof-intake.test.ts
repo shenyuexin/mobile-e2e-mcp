@@ -133,7 +133,7 @@ test("live proof intake rejects fixture summaries before promotion", async () =>
   assert.equal(intake.blockers[0]?.reasonCode, "NOT_LIVE_DEVICE_SOURCE");
 });
 
-test("live proof intake rejects controlled live-runner output before promotion", async () => {
+test("live proof intake rejects known controlled live-runner output before promotion", async () => {
   const { buildMobileChangeLiveProofIntake } = await import("./generate-mobile-change-live-proof-intake.ts");
 
   const intake = buildMobileChangeLiveProofIntake({
@@ -161,13 +161,46 @@ test("live proof intake rejects controlled live-runner output before promotion",
       evidence: {
         artifacts: [],
       },
-      boundaries: [
-        "Forced or controlled live-runner modes prove failure shaping and evidence structure, not physical-device fidelity.",
-      ],
     },
   });
 
   assert.equal(intake.verdict, "not_promotable_live_proof");
   assert.equal(intake.proofLevel, "no_device_or_controlled_output");
   assert.equal(intake.blockers[0]?.reasonCode, "CONTROLLED_OUTPUT");
+});
+
+test("live proof intake does not reject promotable output because of generic live-runner boundaries", async () => {
+  const { buildMobileChangeLiveProofIntake } = await import("./generate-mobile-change-live-proof-intake.ts");
+
+  const intake = buildMobileChangeLiveProofIntake({
+    sourceDir: "output/showcase/mobile-change-verification-live/real-device-success",
+    summary: {
+      schema: "mobile-change-verification/v1",
+      runId: "real-device-success",
+      source: "live_device",
+      verdict: "mobile_change_verified",
+      validationSurface: {
+        platform: "android",
+        appId: "com.example.mobilechange",
+        policyProfile: "interactive",
+      },
+      readiness: {
+        expectedAppPhase: "authentication",
+        matched: true,
+      },
+      workflow: {
+        stepIds: ["discover-device", "start-session", "launch-app", "inspect-readiness", "check-readiness", "close-session"],
+        steps: [],
+      },
+      evidence: {
+        artifacts: [],
+      },
+      boundaries: [
+        "Forced or controlled live-runner modes prove failure shaping and evidence structure, not physical-device fidelity.",
+      ],
+    },
+  });
+
+  assert.equal(intake.verdict, "promotable_live_proof_candidate");
+  assert.equal(intake.blockers.length, 0);
 });

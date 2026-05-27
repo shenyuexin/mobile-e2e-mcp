@@ -20,6 +20,7 @@
 | **50** | **PR / Agent Handoff Integration** | **completed** | **48, 49** |
 | **51** | **Live Proof Readiness Gate** | **completed** | **48, 50** |
 | **52** | **Live Proof Intake Gate** | **completed** | **48, 51** |
+| **53** | **Android Live App Failure Evidence** | **completed** | **48, 52** |
 
 ## Phase 29: Explorer Horizontal Swipe Discovery
 
@@ -185,6 +186,17 @@ Plans:
 
 Plans:
 - [x] `52-PLAN.md` / `52-01-SUMMARY.md` — live proof intake gate
+
+## Phase 53: Android Live App Failure Evidence
+
+- **Goal**: Commit a real Android-device mobile change verification run as tracked evidence.
+- **Depends on**: Phase 48, Phase 52
+- **Key constraint**: The evidence may prove a real live failure without claiming the app change verified successfully.
+- **Support level**: tracked Android live-device failure evidence for device `10AEA40Z3Y000R5`.
+- **Out of scope**: successful app verification, iOS parity, and broad platform support expansion.
+
+Plans:
+- [x] `53-PLAN.md` / `53-01-SUMMARY.md` — Android live app failure evidence
 
 ## Future Candidates
 

@@ -93,7 +93,7 @@ export interface MobileChangeLiveProofIntake {
   boundaries: string[];
 }
 
-const defaultSourceDir = "docs/showcase/evidence/mobile-change-readiness-failure";
+const defaultSourceDir = "docs/showcase/evidence/mobile-change-live-android-10AEA40Z3Y000R5";
 const defaultOutputDir = "docs/showcase/evidence/mobile-change-live-proof-intake";
 const intakeJsonPath = `${defaultOutputDir}/intake.json`;
 const intakeMarkdownPath = `${defaultOutputDir}/intake.md`;
@@ -130,8 +130,8 @@ function requiredLiveStepsMissing(summary: VerificationBundle): string[] {
     .filter((stepId) => !hasStep(summary, stepId));
 }
 
-function isControlledOutput(summary: VerificationBundle): boolean {
-  return Boolean(summary.boundaries?.some((boundary) => /forced|controlled/i.test(boundary)));
+function isControlledOutput(sourceDir: string, summary: VerificationBundle): boolean {
+  return sourceDir.includes("mobile-change-readiness-failure") || (summary.runId?.includes("readiness-failure") ?? false);
 }
 
 function nextActionForBlockers(blockers: MobileChangeLiveProofIntake["blockers"]): MobileChangeLiveProofIntake["nextAction"] {
@@ -176,7 +176,7 @@ export function buildMobileChangeLiveProofIntake(input: {
       detail: "The live runner did not discover an eligible device.",
     });
   }
-  if (isControlledOutput(input.summary)) {
+  if (isControlledOutput(input.sourceDir, input.summary)) {
     blockers.push({
       reasonCode: "CONTROLLED_OUTPUT",
       detail: "The summary boundary identifies this output as forced or controlled rather than physical-device proof.",

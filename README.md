@@ -139,6 +139,7 @@ If you want a quick hands-on tour before diving into architecture details, start
   - `pnpm run proof:mobile-change-verification:live` (optional live device/emulator proof; use `M2E_LIVE_MOBILE_CHANGE_ALLOW_NO_DEVICE=1` for structured no-device output)
   - `pnpm run proof:mobile-change-verification:readiness-failure` (controlled live-runner-derived app readiness failure packet)
   - `pnpm run validate:mobile-change-verification`
+  - `pnpm run validate:mobile-change-live-android-evidence` (tracked Android device `10AEA40Z3Y000R5` live app-readiness failure evidence)
   - `pnpm run validate:mobile-change-readiness-failure`
   - `pnpm run generate:mobile-change-handoff` / `pnpm run validate:mobile-change-handoff`
   - `pnpm run intake:mobile-change-live-proof` / `pnpm run validate:mobile-change-live-proof-intake` (review live runner output before promoting it as tracked evidence)
@@ -157,6 +158,7 @@ If you want a quick hands-on tour before diving into architecture details, start
   - [docs/showcase/evidence/mobile-change-verification-fixture/failure-packet.md](docs/showcase/evidence/mobile-change-verification-fixture/failure-packet.md)
   - [docs/showcase/evidence/mobile-change-verification-fixture/scenario-index.md](docs/showcase/evidence/mobile-change-verification-fixture/scenario-index.md)
   - [docs/showcase/evidence/mobile-change-device-readiness/report.md](docs/showcase/evidence/mobile-change-device-readiness/report.md)
+  - [docs/showcase/evidence/mobile-change-live-android-10AEA40Z3Y000R5/report.md](docs/showcase/evidence/mobile-change-live-android-10AEA40Z3Y000R5/report.md)
   - [docs/showcase/evidence/mobile-change-live-proof-intake/intake.md](docs/showcase/evidence/mobile-change-live-proof-intake/intake.md)
   - [docs/showcase/evidence/mobile-change-readiness-failure/failure-packet.md](docs/showcase/evidence/mobile-change-readiness-failure/failure-packet.md)
   - [docs/showcase/evidence/mobile-change-readiness-failure/handoff.md](docs/showcase/evidence/mobile-change-readiness-failure/handoff.md)

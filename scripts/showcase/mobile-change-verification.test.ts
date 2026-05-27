@@ -250,6 +250,69 @@ test("live runner produces structured device-unavailable output without throwing
   assert.equal(result.failurePacket?.nextAction.kind, "connect_device_or_use_fixture");
 });
 
+test("live runner classifies downstream device-unavailable failures as environment failures", async () => {
+  const { runLiveMobileChangeVerificationWorkflow } = await import("./mobile-change-verification.ts");
+
+  const result = await runLiveMobileChangeVerificationWorkflow({
+    runId: "live-device-lost-fixture",
+    platform: "android",
+    appId: "com.example.live",
+    policyProfile: "interactive",
+    runnerProfile: "native_android",
+    expectedReadiness: {
+      appPhase: "authentication",
+    },
+    deviceId: "10AEA40Z3Y000R5",
+  }, async (tool) => {
+    if (tool === "list_devices") return { status: "failed", reasonCode: "DEVICE_UNAVAILABLE" };
+    if (tool === "describe_capabilities" || tool === "start_session" || tool === "end_session") return { status: "success", reasonCode: "OK" };
+    return { status: "failed", reasonCode: "DEVICE_UNAVAILABLE" };
+  });
+
+  assert.equal(result.bundle.verdict, "device_unavailable");
+  assert.equal(result.failurePacket?.category, "environment");
+  assert.equal(result.failurePacket?.reasonCode, "DEVICE_UNAVAILABLE");
+  assert.equal(result.failurePacket?.nextAction.kind, "connect_device_or_use_fixture");
+});
+
+test("live runner uses readiness mismatch signal when launch fails but screen evidence is collected", async () => {
+  const { runLiveMobileChangeVerificationWorkflow } = await import("./mobile-change-verification.ts");
+
+  const result = await runLiveMobileChangeVerificationWorkflow({
+    runId: "live-launch-error-readiness-fixture",
+    platform: "android",
+    appId: "com.example.live",
+    policyProfile: "interactive",
+    runnerProfile: "native_android",
+    expectedReadiness: {
+      appPhase: "authentication",
+    },
+    deviceId: "10AEA40Z3Y000R5",
+  }, async (tool) => {
+    if (tool === "list_devices") return { status: "success", reasonCode: "OK", data: { android: [{ id: "10AEA40Z3Y000R5", available: true }] } };
+    if (tool === "launch_app") return { status: "failed", reasonCode: "ADAPTER_ERROR" };
+    if (tool === "inspect_ui") return { status: "success", reasonCode: "OK", artifacts: ["output/live/inspect-ui.xml"] };
+    if (tool === "get_screen_summary") {
+      return {
+        status: "success",
+        reasonCode: "OK",
+        data: {
+          screenSummary: {
+            appPhase: "launcher",
+            readiness: "not_ready",
+          },
+        },
+      };
+    }
+    return { status: "success", reasonCode: "OK" };
+  });
+
+  assert.equal(result.bundle.verdict, "mobile_change_verification_failed");
+  assert.equal(result.failurePacket?.failedStep.reasonCode, "ADAPTER_ERROR");
+  assert.equal(result.failurePacket?.category, "app_readiness");
+  assert.equal(result.failurePacket?.nextAction.kind, "wait_or_fix_readiness_contract");
+});
+
 test("controlled readiness failure proof is produced through the live runner path", async () => {
   const { buildControlledReadinessFailureProof } = await import("./mobile-change-verification.ts");
 

@@ -1,33 +1,33 @@
 {
   "schema": "mobile-verification-failure-packet/v1",
-  "runId": "mobile-change-readiness-failure-2026-05-27",
+  "runId": "android-10AEA40Z3Y000R5-2026-05-27-escalated",
   "source": "live_device",
   "category": "app_readiness",
   "confidence": "high",
   "failedStep": {
-    "id": "check-readiness",
-    "tool": "get_screen_summary",
+    "id": "launch-app",
+    "tool": "launch_app",
     "status": "failed",
-    "reasonCode": "APP_NOT_READY"
+    "reasonCode": "ADAPTER_ERROR"
   },
-  "reasonCode": "APP_NOT_READY",
+  "reasonCode": "ADAPTER_ERROR",
   "evidence": {
     "artifacts": [
       {
         "kind": "ui_tree",
-        "path": "output/showcase/mobile-change-readiness-failure/controlled/inspect-ui.xml"
+        "path": "docs/showcase/evidence/mobile-change-live-android-10AEA40Z3Y000R5/inspect-ui.xml"
       },
       {
         "kind": "summary",
-        "path": "docs/showcase/evidence/mobile-change-readiness-failure/summary.json"
+        "path": "docs/showcase/evidence/mobile-change-live-android-10AEA40Z3Y000R5/summary.json"
       },
       {
         "kind": "report",
-        "path": "docs/showcase/evidence/mobile-change-readiness-failure/report.md"
+        "path": "docs/showcase/evidence/mobile-change-live-android-10AEA40Z3Y000R5/report.md"
       },
       {
         "kind": "failure_packet",
-        "path": "docs/showcase/evidence/mobile-change-readiness-failure/failure-packet.json"
+        "path": "docs/showcase/evidence/mobile-change-live-android-10AEA40Z3Y000R5/failure-packet.json"
       }
     ],
     "signals": {

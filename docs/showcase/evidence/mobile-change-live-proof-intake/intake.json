@@ -1,9 +1,9 @@
 {
   "schema": "mobile-change-live-proof-intake/v1",
-  "sourceDir": "docs/showcase/evidence/mobile-change-readiness-failure",
-  "runId": "mobile-change-readiness-failure-2026-05-27",
-  "verdict": "not_promotable_live_proof",
-  "proofLevel": "no_device_or_controlled_output",
+  "sourceDir": "docs/showcase/evidence/mobile-change-live-android-10AEA40Z3Y000R5",
+  "runId": "android-10AEA40Z3Y000R5-2026-05-27-escalated",
+  "verdict": "promotable_live_proof_candidate",
+  "proofLevel": "physical_or_emulator_candidate",
   "source": "live_device",
   "verificationVerdict": "mobile_change_verification_failed",
   "surface": {
@@ -12,7 +12,6 @@
     "policyProfile": "interactive"
   },
   "readiness": {
-    "expectedScreenId": "login",
     "expectedAppPhase": "authentication",
     "matched": false
   },
@@ -27,36 +26,31 @@
   "artifacts": [
     {
       "kind": "ui_tree",
-      "path": "output/showcase/mobile-change-readiness-failure/controlled/inspect-ui.xml"
+      "path": "docs/showcase/evidence/mobile-change-live-android-10AEA40Z3Y000R5/inspect-ui.xml"
     },
     {
       "kind": "summary",
-      "path": "docs/showcase/evidence/mobile-change-readiness-failure/summary.json"
+      "path": "docs/showcase/evidence/mobile-change-live-android-10AEA40Z3Y000R5/summary.json"
     },
     {
       "kind": "report",
-      "path": "docs/showcase/evidence/mobile-change-readiness-failure/report.md"
+      "path": "docs/showcase/evidence/mobile-change-live-android-10AEA40Z3Y000R5/report.md"
     },
     {
       "kind": "failure_packet",
-      "path": "docs/showcase/evidence/mobile-change-readiness-failure/failure-packet.json"
+      "path": "docs/showcase/evidence/mobile-change-live-android-10AEA40Z3Y000R5/failure-packet.json"
     }
   ],
   "failure": {
     "category": "app_readiness",
-    "reasonCode": "APP_NOT_READY",
+    "reasonCode": "ADAPTER_ERROR",
     "nextActionKind": "wait_or_fix_readiness_contract"
   },
-  "blockers": [
-    {
-      "reasonCode": "CONTROLLED_OUTPUT",
-      "detail": "The summary boundary identifies this output as forced or controlled rather than physical-device proof."
-    }
-  ],
+  "blockers": [],
   "nextAction": {
-    "kind": "inspect_live_proof_output",
-    "command": "pnpm run intake:mobile-change-live-proof -- <live-output-dir>",
-    "reason": "The proof output is incomplete or not a live-device source; inspect the runner output before promotion."
+    "kind": "promote_live_evidence",
+    "command": "mkdir -p docs/showcase/evidence/mobile-change-live && cp -R <live-output-dir> docs/showcase/evidence/mobile-change-live/",
+    "reason": "The live output looks promotable; copy the source proof directory into tracked showcase evidence and review it before committing."
   },
   "boundaries": [
     "This intake validates a live runner output directory before promotion; it does not execute a device by itself.",

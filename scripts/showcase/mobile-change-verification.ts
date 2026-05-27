@@ -522,6 +522,8 @@ export async function runLiveMobileChangeVerificationWorkflow(
   });
 
   const failedStep = steps.find((step) => step.status === "failed");
+  const hasDeviceUnavailable = steps.some((step) => step.reasonCode === "DEVICE_UNAVAILABLE");
+  const hasAppNotReady = steps.some((step) => step.reasonCode === "APP_NOT_READY");
   return {
     bundle,
     failurePacket: failedStep
@@ -529,7 +531,10 @@ export async function runLiveMobileChangeVerificationWorkflow(
           runId: options.runId,
           source: "live_device",
           failedStep,
-          signals: { appNotReady: failedStep.reasonCode === "APP_NOT_READY" },
+          signals: {
+            deviceUnavailable: hasDeviceUnavailable,
+            appNotReady: hasAppNotReady,
+          },
           artifacts,
         })
       : undefined,
