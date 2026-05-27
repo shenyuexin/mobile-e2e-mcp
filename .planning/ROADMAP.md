@@ -19,6 +19,7 @@
 | **49** | **Real App Failure Packet Proof** | **completed** | **48** |
 | **50** | **PR / Agent Handoff Integration** | **completed** | **48, 49** |
 | **51** | **Live Proof Readiness Gate** | **completed** | **48, 50** |
+| **52** | **Live Proof Intake Gate** | **completed** | **48, 51** |
 
 ## Phase 29: Explorer Horizontal Swipe Discovery
 
@@ -173,6 +174,17 @@ Plans:
 
 Plans:
 - [x] `51-PLAN.md` / `51-01-SUMMARY.md` — live proof readiness gate
+
+## Phase 52: Live Proof Intake Gate
+
+- **Goal**: Validate live runner output before promoting it into tracked showcase evidence.
+- **Depends on**: Phase 48, Phase 51
+- **Key constraint**: Controlled, fixture, and no-device outputs must be rejected as physical-device proof candidates.
+- **Support level**: `experimental` offline intake validator for local/self-hosted live runner output.
+- **Out of scope**: running a device, copying artifacts automatically into final evidence, and expanding public platform support claims.
+
+Plans:
+- [x] `52-PLAN.md` / `52-01-SUMMARY.md` — live proof intake gate
 
 ## Future Candidates
 

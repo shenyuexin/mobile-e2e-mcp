@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 51 live proof readiness gate completed
+stopped_at: Phase 52 live proof intake gate completed
 last_updated: "2026-05-27T00:00:00.000Z"
-last_activity: 2026-05-27 -- Phase 51 live proof readiness gate implemented
+last_activity: 2026-05-27 -- Phase 52 live proof intake gate implemented
 progress:
   total_phases: 9
   completed_phases: 7
@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-03-28)
 
 ## Current Position
 
-Phase: Live proof readiness gate
-Plan: current product-utility sequence 45-51 is complete; next work should run the live mobile change proof on a physical device or self-hosted lane and commit true live app evidence.
-Status: Explorer failure review/reporting is on main, Android physical-device Explorer evidence exists at `artifacts/explorer/android-full/2026-04-28T03-38-20/`, historical phase/demo/debug scripts live under `scripts/legacy/`, `validate:probe-dry-run` is CI-gated, probe reports use the shared `tool-probe-report/v1` contract, Phase 48 adds an optional live proof runner, Phase 49 adds a controlled live-runner-derived app readiness failure packet, Phase 50 adds PR/agent handoff summaries, and Phase 51 adds a CI-stable live-proof readiness preflight. No physical device was connected during Phase 49-51 execution.
-Last activity: 2026-05-27 -- Phase 51 implemented `generate:mobile-change-device-readiness`, `test:mobile-change-device-readiness`, and `validate:mobile-change-device-readiness`.
+Phase: Live proof intake gate
+Plan: current product-utility sequence 45-52 is complete; next work should run the live mobile change proof on a physical device or self-hosted lane, pass the intake gate, and commit true live app evidence.
+Status: Explorer failure review/reporting is on main, Android physical-device Explorer evidence exists at `artifacts/explorer/android-full/2026-04-28T03-38-20/`, historical phase/demo/debug scripts live under `scripts/legacy/`, `validate:probe-dry-run` is CI-gated, probe reports use the shared `tool-probe-report/v1` contract, Phase 48 adds an optional live proof runner, Phase 49 adds a controlled live-runner-derived app readiness failure packet, Phase 50 adds PR/agent handoff summaries, Phase 51 adds a CI-stable live-proof readiness preflight, and Phase 52 adds a live-proof intake gate that rejects controlled/no-device output before promotion. No physical device was connected during Phase 49-52 execution.
+Last activity: 2026-05-27 -- Phase 52 implemented `intake:mobile-change-live-proof`, `test:mobile-change-live-proof-intake`, and `validate:mobile-change-live-proof-intake`.
 
 Progress: [██████████] 100%
 
@@ -109,6 +109,7 @@ Recent decisions affecting current work:
 - Phase 50 planned: PR / agent handoff integration should turn bundles and packets into compact review artifacts.
 - Phase 50 completed: mobile change handoff generator turns readiness failure bundles and packets into compact PR/agent review artifacts.
 - Phase 51 completed: live-proof readiness preflight checks device availability, optional app artifact presence, and deterministic readiness-contract inputs before attempting live verification.
+- Phase 52 completed: live-proof intake gate rejects no-device, fixture, and controlled outputs before they can be promoted as physical-device proof.
 
 ### Blockers/Concerns
 
@@ -169,6 +170,7 @@ Recent decisions affecting current work:
 - Phase 49 completed: controlled readiness-failure proof, validator, committed evidence, and docs landed.
 - Phase 50 completed: PR / agent handoff generator, validator, committed handoff artifacts, and docs landed.
 - Phase 51 completed: live-proof readiness preflight, validator, committed no-device blocker evidence, docs, and smoke wiring landed.
+- Phase 52 completed: live-proof intake generator, validator, committed controlled-output blocker evidence, docs, and smoke wiring landed.
 
 ### Planning Hygiene Notes
 

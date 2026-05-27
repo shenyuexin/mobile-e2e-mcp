@@ -1,0 +1,66 @@
+{
+  "schema": "mobile-change-live-proof-intake/v1",
+  "sourceDir": "docs/showcase/evidence/mobile-change-readiness-failure",
+  "runId": "mobile-change-readiness-failure-2026-05-27",
+  "verdict": "not_promotable_live_proof",
+  "proofLevel": "no_device_or_controlled_output",
+  "source": "live_device",
+  "verificationVerdict": "mobile_change_verification_failed",
+  "surface": {
+    "platform": "android",
+    "appId": "com.example.mobilechange",
+    "policyProfile": "interactive"
+  },
+  "readiness": {
+    "expectedScreenId": "login",
+    "expectedAppPhase": "authentication",
+    "matched": false
+  },
+  "requiredStepIds": [
+    "discover-device",
+    "start-session",
+    "launch-app",
+    "inspect-readiness",
+    "check-readiness",
+    "close-session"
+  ],
+  "artifacts": [
+    {
+      "kind": "ui_tree",
+      "path": "output/showcase/mobile-change-readiness-failure/controlled/inspect-ui.xml"
+    },
+    {
+      "kind": "summary",
+      "path": "docs/showcase/evidence/mobile-change-readiness-failure/summary.json"
+    },
+    {
+      "kind": "report",
+      "path": "docs/showcase/evidence/mobile-change-readiness-failure/report.md"
+    },
+    {
+      "kind": "failure_packet",
+      "path": "docs/showcase/evidence/mobile-change-readiness-failure/failure-packet.json"
+    }
+  ],
+  "failure": {
+    "category": "app_readiness",
+    "reasonCode": "APP_NOT_READY",
+    "nextActionKind": "wait_or_fix_readiness_contract"
+  },
+  "blockers": [
+    {
+      "reasonCode": "CONTROLLED_OUTPUT",
+      "detail": "The summary boundary identifies this output as forced or controlled rather than physical-device proof."
+    }
+  ],
+  "nextAction": {
+    "kind": "inspect_live_proof_output",
+    "command": "pnpm run intake:mobile-change-live-proof -- <live-output-dir>",
+    "reason": "The proof output is incomplete or not a live-device source; inspect the runner output before promotion."
+  },
+  "boundaries": [
+    "This intake validates a live runner output directory before promotion; it does not execute a device by itself.",
+    "Only live_device summaries without no-device blockers can be treated as promotable live proof candidates.",
+    "Promotion still requires human review of artifacts before expanding public support claims."
+  ]
+}

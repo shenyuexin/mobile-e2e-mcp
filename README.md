@@ -141,6 +141,7 @@ If you want a quick hands-on tour before diving into architecture details, start
   - `pnpm run validate:mobile-change-verification`
   - `pnpm run validate:mobile-change-readiness-failure`
   - `pnpm run generate:mobile-change-handoff` / `pnpm run validate:mobile-change-handoff`
+  - `pnpm run intake:mobile-change-live-proof` / `pnpm run validate:mobile-change-live-proof-intake` (review live runner output before promoting it as tracked evidence)
   - [docs/showcase/governed-agent-mobile-control.md](docs/showcase/governed-agent-mobile-control.md)
   - [docs/showcase/governed-agent-mobile-control-live.md](docs/showcase/governed-agent-mobile-control-live.md)
   - [docs/showcase/governed-business-app-workflow.md](docs/showcase/governed-business-app-workflow.md)
@@ -156,6 +157,7 @@ If you want a quick hands-on tour before diving into architecture details, start
   - [docs/showcase/evidence/mobile-change-verification-fixture/failure-packet.md](docs/showcase/evidence/mobile-change-verification-fixture/failure-packet.md)
   - [docs/showcase/evidence/mobile-change-verification-fixture/scenario-index.md](docs/showcase/evidence/mobile-change-verification-fixture/scenario-index.md)
   - [docs/showcase/evidence/mobile-change-device-readiness/report.md](docs/showcase/evidence/mobile-change-device-readiness/report.md)
+  - [docs/showcase/evidence/mobile-change-live-proof-intake/intake.md](docs/showcase/evidence/mobile-change-live-proof-intake/intake.md)
   - [docs/showcase/evidence/mobile-change-readiness-failure/failure-packet.md](docs/showcase/evidence/mobile-change-readiness-failure/failure-packet.md)
   - [docs/showcase/evidence/mobile-change-readiness-failure/handoff.md](docs/showcase/evidence/mobile-change-readiness-failure/handoff.md)
 - Historical demo scripts:
