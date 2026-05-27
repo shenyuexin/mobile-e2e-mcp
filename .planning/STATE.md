@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 44 governed PR summary hardening completed
-last_updated: "2026-05-25T00:00:00.000Z"
-last_activity: 2026-05-25 -- phase 44 governed PR summary hardening added
+stopped_at: Phase 45 mobile change verification workflow planned
+last_updated: "2026-05-27T00:00:00.000Z"
+last_activity: 2026-05-27 -- phases 45-47 added from mobile developer pain-point assessment
 progress:
-  total_phases: 3
+  total_phases: 6
   completed_phases: 1
-  total_plans: 2
+  total_plans: 5
   completed_plans: 1
-  percent: 86
+  percent: 80
 ---
 
 # Project State
@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-03-28)
 
 ## Current Position
 
-Phase: probe evidence contract hardening
-Plan: stabilize generated probe report JSON/Markdown through shared helpers and fixture-backed validation without requiring devices.
-Status: Explorer failure review/reporting is on main, Android physical-device Explorer evidence exists at `artifacts/explorer/android-full/2026-04-28T03-38-20/`, historical phase/demo/debug scripts live under `scripts/legacy/`, `validate:probe-dry-run` is CI-gated, probe reports use the shared `tool-probe-report/v1` contract, and Phase 44 hardens the PR summary generator for import-safe CI/GitHub reuse.
-Last activity: 2026-05-25 -- Phase 44 added `test:governed-pr-evidence-summary`, covering import side effects and PR comment rendering before the drift validator runs in smoke.
+Phase: mobile change verification workflow
+Plan: create a concrete "change -> mobile verification -> evidence bundle" entrypoint before expanding into broader failure and evidence scenarios.
+Status: Explorer failure review/reporting is on main, Android physical-device Explorer evidence exists at `artifacts/explorer/android-full/2026-04-28T03-38-20/`, historical phase/demo/debug scripts live under `scripts/legacy/`, `validate:probe-dry-run` is CI-gated, probe reports use the shared `tool-probe-report/v1` contract, Phase 44 hardened the PR summary generator, and Phases 45-47 now redirect the next work toward product utility: mobile change verification, actionable failure packets, and realistic app-oriented evidence breadth.
+Last activity: 2026-05-27 -- Phase 45, Phase 46, and Phase 47 were added from the market/pain-point assessment to move the roadmap from governance proof toward developer-facing mobile verification value.
 
-Progress: [█████████░] 86%
+Progress: [████████░░] 80%
 
 ## Workspace Semantics
 
@@ -101,6 +101,9 @@ Recent decisions affecting current work:
 - Phase 21 Plan 01 completed: critical gap test files now have behavioral coverage.
 - Phase 21 Plan 03 completed: coverage baseline, untested-tool tests, and ajv-backed tool-output contract validation landed. Phase 21 Plan 02 remains a separate medium-path backlog item unless completed evidence is added.
 - Phase 22 completed: `navigate_back` is now a first-class MCP tool with Android deterministic support and explicit iOS conditional/unsupported boundaries.
+- Phase 45 planned: mobile change verification workflow should create a concrete "change -> mobile verification -> evidence bundle" entrypoint.
+- Phase 46 planned: actionable failure packet should turn failed verification into schema-backed cause, evidence, and next action.
+- Phase 47 planned: realistic mobile evidence breadth should prove the workflow on app-like scenarios beyond governance demos.
 
 ### Blockers/Concerns
 
@@ -148,6 +151,9 @@ Recent decisions affecting current work:
 - Phase 34 completed: alternative kill test ranked AI-safe mobile device control strongest, Explorer coverage discovery second, failure intelligence as supporting, and generic mobile E2E replacement discarded.
 - Phase 35 completed: wedge selection chose AI-safe mobile device control via MCP as the primary wedge; Explorer is secondary/proof layer and failure intelligence is supporting.
 - Phase 36 completed: governed agent mobile control proof now produces a timestamped dry-run proof bundle before any README repositioning.
+- Phase 45 added: Mobile Change Verification Workflow
+- Phase 46 added: Actionable Failure Packet
+- Phase 47 added: Realistic Mobile Evidence Breadth
 
 ### Planning Hygiene Notes
 

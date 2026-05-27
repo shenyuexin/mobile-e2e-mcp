@@ -12,6 +12,9 @@
 | **30** | **Release Network Policy Inspection** | **completed** | **—** |
 | **30.1** | **Network Failure Policy Diagnosis** | **completed** | **30** |
 | **31** | **Probe Evidence Contract Hardening** | **completed** | **—** |
+| **45** | **Mobile Change Verification Workflow** | **planned** | **42, 43, 44** |
+| **46** | **Actionable Failure Packet** | **planned** | **45** |
+| **47** | **Realistic Mobile Evidence Breadth** | **planned** | **45, 46** |
 
 ## Phase 29: Explorer Horizontal Swipe Discovery
 
@@ -86,6 +89,39 @@ Plans:
 
 Plans:
 - [x] shared `tool-probe-report/v1` helpers, fixture-backed contract tests, and docs
+
+## Phase 45: Mobile Change Verification Workflow
+
+- **Goal**: Turn the governed mobile-control foundation into a developer-facing workflow that verifies a mobile app change end to end and emits a reusable evidence bundle.
+- **Depends on**: Phase 42 (policy escalation proof), Phase 43 (PR evidence summary), Phase 44 (summary generator hardening)
+- **Key constraint**: Ship one reliable "change -> mobile verification -> evidence" path before expanding into broad test generation or platform parity.
+- **Support level**: `experimental` for the first workflow entrypoint; fixture-backed contract validation must run without devices.
+- **Out of scope**: general test generation, cloud device farms, and claims of full Android/iOS/RN/Flutter coverage.
+
+Plans:
+- [ ] `45-PLAN.md` — mobile change verification workflow
+
+## Phase 46: Actionable Failure Packet
+
+- **Goal**: Upgrade failed mobile verification from scattered logs into an agent-usable failure packet with cause, evidence, policy context, and bounded remediation options.
+- **Depends on**: Phase 45
+- **Key constraint**: Keep the first version deterministic and schema-backed; no LLM-generated remediation in this phase.
+- **Support level**: `experimental` schema and rendering layer for Phase 45 failures.
+- **Out of scope**: autonomous code fixing, open-ended AI remediation, and cross-session flakiness scoring.
+
+Plans:
+- [ ] `46-PLAN.md` — actionable failure packet
+
+## Phase 47: Realistic Mobile Evidence Breadth
+
+- **Goal**: Prove the workflow on realistic mobile developer scenarios so the project is credible as a practical tool, not only a governance demo.
+- **Depends on**: Phase 45, Phase 46
+- **Key constraint**: Evidence claims must match actual runs; dry-run artifacts must remain explicitly labeled.
+- **Support level**: evidence expansion for the governed verification workflow.
+- **Out of scope**: broad platform parity, cloud farm support, and framework-wide maturity claims unless proven by this phase.
+
+Plans:
+- [ ] `47-PLAN.md` — realistic mobile evidence breadth
 
 ## Future Candidates
 
