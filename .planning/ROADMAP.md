@@ -12,9 +12,9 @@
 | **30** | **Release Network Policy Inspection** | **completed** | **—** |
 | **30.1** | **Network Failure Policy Diagnosis** | **completed** | **30** |
 | **31** | **Probe Evidence Contract Hardening** | **completed** | **—** |
-| **45** | **Mobile Change Verification Workflow** | **planned** | **42, 43, 44** |
-| **46** | **Actionable Failure Packet** | **planned** | **45** |
-| **47** | **Realistic Mobile Evidence Breadth** | **planned** | **45, 46** |
+| **45** | **Mobile Change Verification Workflow** | **completed** | **42, 43, 44** |
+| **46** | **Actionable Failure Packet** | **completed** | **45** |
+| **47** | **Realistic Mobile Evidence Breadth** | **completed** | **45, 46** |
 
 ## Phase 29: Explorer Horizontal Swipe Discovery
 
@@ -46,6 +46,9 @@ Plans:
 - Phase 42: governed policy escalation proof completed (`42-01-SUMMARY.md`).
 - Phase 43: governed PR evidence summary completed (`43-01-SUMMARY.md`).
 - Phase 44: governed PR summary hardening completed (`44-01-SUMMARY.md`).
+- Phase 45: mobile change verification workflow completed (`45-01-SUMMARY.md`).
+- Phase 46: actionable failure packet completed (`46-01-SUMMARY.md`).
+- Phase 47: realistic mobile evidence breadth completed (`47-01-SUMMARY.md`).
 - Explorer failure review/reporting landed in local commits `aa8cc94` through `cb62a82`, with failure artifacts, log signals, rule decision reporting, and markdown sampling.
 - Android physical-device Explorer evidence is tracked at `artifacts/explorer/android-full/2026-04-28T03-38-20/` (45 pages, max depth 4, 0 failures).
 - Script cleanup moved historical phase/demo/debug runners under `scripts/legacy/`; current real-device direction is Explorer/probe first, with legacy runners kept as compatibility artifacts.
@@ -99,7 +102,7 @@ Plans:
 - **Out of scope**: general test generation, cloud device farms, and claims of full Android/iOS/RN/Flutter coverage.
 
 Plans:
-- [ ] `45-PLAN.md` — mobile change verification workflow
+- [x] `45-PLAN.md` / `45-01-SUMMARY.md` — mobile change verification workflow
 
 ## Phase 46: Actionable Failure Packet
 
@@ -110,7 +113,7 @@ Plans:
 - **Out of scope**: autonomous code fixing, open-ended AI remediation, and cross-session flakiness scoring.
 
 Plans:
-- [ ] `46-PLAN.md` — actionable failure packet
+- [x] `46-PLAN.md` / `46-01-SUMMARY.md` — actionable failure packet
 
 ## Phase 47: Realistic Mobile Evidence Breadth
 
@@ -121,7 +124,7 @@ Plans:
 - **Out of scope**: broad platform parity, cloud farm support, and framework-wide maturity claims unless proven by this phase.
 
 Plans:
-- [ ] `47-PLAN.md` — realistic mobile evidence breadth
+- [x] `47-PLAN.md` / `47-01-SUMMARY.md` — realistic mobile evidence breadth
 
 ## Future Candidates
 

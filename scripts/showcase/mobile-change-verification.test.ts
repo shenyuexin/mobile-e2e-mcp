@@ -1,0 +1,170 @@
+import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
+import test from "node:test";
+
+test("mobile change verification bundle captures workflow steps and PR-ready next action", async () => {
+  const { buildMobileChangeVerificationBundle, renderMobileChangeVerificationMarkdown } = await import("./mobile-change-verification.ts");
+
+  const bundle = buildMobileChangeVerificationBundle({
+    runId: "fixture-2026-05-27",
+    source: "fixture",
+    platform: "android",
+    appId: "com.example.mobilechange",
+    appArtifact: "examples/rn-login-demo/android/app/build/outputs/apk/debug/app-debug.apk",
+    policyProfile: "interactive",
+    expectedReadiness: {
+      screenId: "login",
+      appPhase: "authentication",
+    },
+    steps: [
+      { id: "discover-device", tool: "list_devices", status: "success", reasonCode: "OK" },
+      { id: "start-session", tool: "start_session", status: "success", reasonCode: "OK" },
+      { id: "launch-app", tool: "launch_app", status: "success", reasonCode: "OK" },
+      { id: "inspect-readiness", tool: "inspect_ui", status: "success", reasonCode: "OK" },
+      { id: "close-session", tool: "end_session", status: "success", reasonCode: "OK" },
+    ],
+    artifacts: [
+      { kind: "ui_tree", path: "output/showcase/mobile-change-verification/fixture/ui-tree.json" },
+      { kind: "screenshot", path: "output/showcase/mobile-change-verification/fixture/screenshot.png" },
+    ],
+  });
+
+  assert.equal(bundle.schema, "mobile-change-verification/v1");
+  assert.equal(bundle.verdict, "mobile_change_verified");
+  assert.equal(bundle.nextAction.kind, "attach_to_pr");
+  assert.deepEqual(bundle.workflow.stepIds, [
+    "discover-device",
+    "start-session",
+    "launch-app",
+    "inspect-readiness",
+    "close-session",
+  ]);
+  assert.equal(bundle.readiness.matched, true);
+
+  const markdown = renderMobileChangeVerificationMarkdown(bundle);
+  assert.match(markdown, /## Mobile change verification/);
+  assert.match(markdown, /Verdict: `mobile_change_verified`/);
+  assert.match(markdown, /Validation surface:/);
+  assert.match(markdown, /Next action:/);
+});
+
+test("failure packet normalizes failure category, evidence, and remediation", async () => {
+  const { buildFailurePacket, renderFailurePacketMarkdown } = await import("./mobile-change-verification.ts");
+
+  const packet = buildFailurePacket({
+    runId: "failure-fixture-2026-05-27",
+    source: "fixture",
+    failedStep: {
+      id: "tap-login",
+      tool: "tap_element",
+      status: "failed",
+      reasonCode: "NO_MATCH",
+    },
+    signals: {
+      policyDenied: false,
+      appNotReady: false,
+      networkPolicyFailure: false,
+      selectorNoMatch: true,
+    },
+    artifacts: [
+      { kind: "ui_tree", path: "output/showcase/mobile-change-verification/failure/ui-tree.json" },
+    ],
+  });
+
+  assert.equal(packet.schema, "mobile-verification-failure-packet/v1");
+  assert.equal(packet.category, "ui_target");
+  assert.equal(packet.confidence, "high");
+  assert.equal(packet.nextAction.kind, "refine_selector_or_wait_for_ui");
+  assert.equal(packet.evidence.artifacts[0]?.kind, "ui_tree");
+
+  const markdown = renderFailurePacketMarkdown(packet);
+  assert.match(markdown, /## Mobile verification failure packet/);
+  assert.match(markdown, /Category: `ui_target`/);
+  assert.match(markdown, /Next action:/);
+});
+
+test("realistic evidence index requires at least two app-oriented scenarios and one failure packet", async () => {
+  const { buildRealisticEvidenceIndex } = await import("./mobile-change-verification.ts");
+
+  const index = buildRealisticEvidenceIndex({
+    scenarios: [
+      {
+        id: "rn-login-readiness",
+        surface: "react_native_android",
+        painPoint: "launch_readiness_regression",
+        evidencePath: "docs/showcase/evidence/mobile-change-verification-fixture/summary.json",
+        verdict: "mobile_change_verified",
+      },
+      {
+        id: "network-policy-failure",
+        surface: "native_android",
+        painPoint: "network_policy_failure",
+        evidencePath: "docs/showcase/evidence/mobile-change-verification-fixture/failure-packet.json",
+        verdict: "failure_packet_actionable",
+        failurePacketPath: "docs/showcase/evidence/mobile-change-verification-fixture/failure-packet.json",
+      },
+    ],
+  });
+
+  assert.equal(index.schema, "realistic-mobile-evidence-breadth/v1");
+  assert.equal(index.scenarioCount, 2);
+  assert.equal(index.failurePacketCount, 1);
+  assert.equal(index.verdict, "realistic_workflow_evidence_available");
+});
+
+test("mobile change verification module can be imported without writing or logging", () => {
+  const result = spawnSync(
+    process.execPath,
+    [
+      "--import",
+      "tsx",
+      "-e",
+      "await import('./scripts/showcase/mobile-change-verification.ts')",
+    ],
+    {
+      cwd: process.cwd(),
+      encoding: "utf8",
+    },
+  );
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.stdout, "");
+  assert.equal(result.stderr, "");
+});
+
+test("validator module rejects malformed evidence shape", async () => {
+  const { validateMobileChangeVerificationEvidenceShape } = await import("./validate-mobile-change-verification-evidence.ts");
+
+  assert.throws(
+    () => validateMobileChangeVerificationEvidenceShape({
+      bundle: {
+        schema: "mobile-change-verification/v1",
+        verdict: "mobile_change_verified",
+        source: "fixture",
+        validationSurface: {
+          platform: "android",
+          appId: "com.example.mobilechange",
+          policyProfile: "interactive",
+        },
+        readiness: {
+          matched: true,
+        },
+        workflow: { stepIds: [] },
+      },
+      failurePacket: {
+        schema: "mobile-verification-failure-packet/v1",
+        category: "network",
+        nextAction: { kind: "inspect_network_policy" },
+      },
+      scenarioIndex: {
+        schema: "realistic-mobile-evidence-breadth/v1",
+        scenarioCount: 1,
+        failurePacketCount: 0,
+      },
+      reportMarkdown: "## Mobile change verification\n",
+      failureMarkdown: "## Mobile verification failure packet\n",
+      scenarioMarkdown: "## Realistic mobile evidence breadth\n",
+    }),
+    /workflow must include at least five governed verification steps/,
+  );
+});

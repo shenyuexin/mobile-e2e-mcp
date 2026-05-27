@@ -1,0 +1,42 @@
+{
+  "schema": "mobile-verification-failure-packet/v1",
+  "runId": "mobile-change-verification-network-policy-failure-2026-05-27",
+  "source": "fixture",
+  "category": "network",
+  "confidence": "high",
+  "failedStep": {
+    "id": "wait-login-network-ready",
+    "tool": "diagnose_network_failure",
+    "status": "failed",
+    "reasonCode": "NETWORK_POLICY_BLOCKED",
+    "detail": "HTTP endpoint would be blocked by release network policy."
+  },
+  "reasonCode": "NETWORK_POLICY_BLOCKED",
+  "evidence": {
+    "artifacts": [
+      {
+        "kind": "failure_packet",
+        "path": "docs/showcase/evidence/mobile-change-verification-fixture/failure-packet.json"
+      },
+      {
+        "kind": "logs",
+        "path": "output/showcase/mobile-change-verification/failure/network-events.json"
+      },
+      {
+        "kind": "timeline",
+        "path": "output/showcase/mobile-change-verification/failure/session-timeline.json"
+      }
+    ],
+    "signals": {
+      "networkPolicyFailure": true
+    }
+  },
+  "nextAction": {
+    "kind": "inspect_network_policy",
+    "reason": "Check Android cleartext or iOS ATS policy before retrying network-dependent UI actions."
+  },
+  "boundaries": [
+    "Failure packets classify observed evidence; they do not autonomously fix app code.",
+    "Remediation is deterministic and bounded. LLM-generated remediation is out of scope for this phase."
+  ]
+}

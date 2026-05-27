@@ -134,6 +134,8 @@ If you want a quick hands-on tour before diving into architecture details, start
   - `pnpm run validate:governed-policy-escalation-evidence`
   - `pnpm run validate:governed-evidence-brief`
   - `pnpm run validate:governed-pr-evidence-summary`
+  - `pnpm run proof:mobile-change-verification` (fixture-backed mobile change verification bundle, failure packet, and scenario index)
+  - `pnpm run validate:mobile-change-verification`
   - [docs/showcase/governed-agent-mobile-control.md](docs/showcase/governed-agent-mobile-control.md)
   - [docs/showcase/governed-agent-mobile-control-live.md](docs/showcase/governed-agent-mobile-control-live.md)
   - [docs/showcase/governed-business-app-workflow.md](docs/showcase/governed-business-app-workflow.md)
@@ -145,6 +147,9 @@ If you want a quick hands-on tour before diving into architecture details, start
   - [docs/showcase/evidence/governed-business-app-vivo-2026-05-24/report.md](docs/showcase/evidence/governed-business-app-vivo-2026-05-24/report.md)
   - [docs/showcase/evidence/governed-business-app-vivo-2026-05-24/comparison.md](docs/showcase/evidence/governed-business-app-vivo-2026-05-24/comparison.md)
   - [docs/showcase/evidence/governed-policy-escalation-dry-run-2026-05-25/report.md](docs/showcase/evidence/governed-policy-escalation-dry-run-2026-05-25/report.md)
+  - [docs/showcase/evidence/mobile-change-verification-fixture/report.md](docs/showcase/evidence/mobile-change-verification-fixture/report.md)
+  - [docs/showcase/evidence/mobile-change-verification-fixture/failure-packet.md](docs/showcase/evidence/mobile-change-verification-fixture/failure-packet.md)
+  - [docs/showcase/evidence/mobile-change-verification-fixture/scenario-index.md](docs/showcase/evidence/mobile-change-verification-fixture/scenario-index.md)
 - Historical demo scripts:
   - `bash scripts/legacy/dev/record-demo-happy-path-android.sh`
   - `bash scripts/legacy/dev/record-demo-interruption-home-recovery-android.sh`

@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 45 mobile change verification workflow planned
+stopped_at: Phase 47 realistic mobile evidence breadth completed
 last_updated: "2026-05-27T00:00:00.000Z"
-last_activity: 2026-05-27 -- phases 45-47 added from mobile developer pain-point assessment
+last_activity: 2026-05-27 -- phases 45-47 implemented with mobile verification evidence, failure packet, and scenario index fixtures
 progress:
   total_phases: 6
-  completed_phases: 1
+  completed_phases: 4
   total_plans: 5
-  completed_plans: 1
-  percent: 80
+  completed_plans: 4
+  percent: 100
 ---
 
 # Project State
@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-03-28)
 
 ## Current Position
 
-Phase: mobile change verification workflow
-Plan: create a concrete "change -> mobile verification -> evidence bundle" entrypoint before expanding into broader failure and evidence scenarios.
-Status: Explorer failure review/reporting is on main, Android physical-device Explorer evidence exists at `artifacts/explorer/android-full/2026-04-28T03-38-20/`, historical phase/demo/debug scripts live under `scripts/legacy/`, `validate:probe-dry-run` is CI-gated, probe reports use the shared `tool-probe-report/v1` contract, Phase 44 hardened the PR summary generator, and Phases 45-47 now redirect the next work toward product utility: mobile change verification, actionable failure packets, and realistic app-oriented evidence breadth.
-Last activity: 2026-05-27 -- Phase 45, Phase 46, and Phase 47 were added from the market/pain-point assessment to move the roadmap from governance proof toward developer-facing mobile verification value.
+Phase: realistic mobile evidence breadth
+Plan: complete the product-utility bridge from governed proof to mobile verification workflow, failure packet, and app-oriented scenario index.
+Status: Explorer failure review/reporting is on main, Android physical-device Explorer evidence exists at `artifacts/explorer/android-full/2026-04-28T03-38-20/`, historical phase/demo/debug scripts live under `scripts/legacy/`, `validate:probe-dry-run` is CI-gated, probe reports use the shared `tool-probe-report/v1` contract, Phase 44 hardened the PR summary generator, and Phases 45-47 now provide a fixture-backed mobile change verification bundle, actionable failure packet, and realistic scenario index.
+Last activity: 2026-05-27 -- Phase 45, Phase 46, and Phase 47 were implemented and validated through `pnpm run test:mobile-change-verification` and `pnpm run validate:mobile-change-verification`.
 
-Progress: [████████░░] 80%
+Progress: [██████████] 100%
 
 ## Workspace Semantics
 
@@ -101,9 +101,9 @@ Recent decisions affecting current work:
 - Phase 21 Plan 01 completed: critical gap test files now have behavioral coverage.
 - Phase 21 Plan 03 completed: coverage baseline, untested-tool tests, and ajv-backed tool-output contract validation landed. Phase 21 Plan 02 remains a separate medium-path backlog item unless completed evidence is added.
 - Phase 22 completed: `navigate_back` is now a first-class MCP tool with Android deterministic support and explicit iOS conditional/unsupported boundaries.
-- Phase 45 planned: mobile change verification workflow should create a concrete "change -> mobile verification -> evidence bundle" entrypoint.
-- Phase 46 planned: actionable failure packet should turn failed verification into schema-backed cause, evidence, and next action.
-- Phase 47 planned: realistic mobile evidence breadth should prove the workflow on app-like scenarios beyond governance demos.
+- Phase 45 completed: mobile change verification workflow creates a fixture-backed "change -> mobile verification -> evidence bundle" entrypoint.
+- Phase 46 completed: actionable failure packet turns failed verification into schema-backed cause, evidence, and next action.
+- Phase 47 completed: realistic mobile evidence breadth tracks app-like scenario fixtures beyond governance demos.
 
 ### Blockers/Concerns
 
@@ -154,6 +154,9 @@ Recent decisions affecting current work:
 - Phase 45 added: Mobile Change Verification Workflow
 - Phase 46 added: Actionable Failure Packet
 - Phase 47 added: Realistic Mobile Evidence Breadth
+- Phase 45 completed: mobile change verification workflow command, fixture bundle, validator, and docs landed.
+- Phase 46 completed: actionable failure packet schema, network failure fixture, validator, and Markdown rendering landed.
+- Phase 47 completed: realistic scenario index fixture and docs landed.
 
 ### Planning Hygiene Notes
 

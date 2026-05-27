@@ -1,0 +1,28 @@
+{
+  "schema": "realistic-mobile-evidence-breadth/v1",
+  "verdict": "realistic_workflow_evidence_available",
+  "scenarioCount": 2,
+  "failurePacketCount": 1,
+  "scenarios": [
+    {
+      "id": "rn-login-readiness",
+      "surface": "react_native_android",
+      "painPoint": "launch_readiness_regression",
+      "evidencePath": "docs/showcase/evidence/mobile-change-verification-fixture/summary.json",
+      "verdict": "mobile_change_verified"
+    },
+    {
+      "id": "network-policy-failure-packet",
+      "surface": "native_android",
+      "painPoint": "network_policy_failure",
+      "evidencePath": "docs/showcase/evidence/mobile-change-verification-fixture/failure-packet.json",
+      "verdict": "failure_packet_actionable",
+      "failurePacketPath": "docs/showcase/evidence/mobile-change-verification-fixture/failure-packet.json"
+    }
+  ],
+  "boundaries": [
+    "This index proves app-oriented evidence breadth only for the listed scenarios.",
+    "Dry-run or fixture evidence must not be described as live-device coverage.",
+    "Cloud farms, broad platform parity, and framework-wide maturity remain future work unless backed by separate evidence."
+  ]
+}
