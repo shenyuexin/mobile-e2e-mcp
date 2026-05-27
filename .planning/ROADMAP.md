@@ -18,6 +18,7 @@
 | **48** | **Live Mobile Change Verification Runner** | **completed** | **45, 46** |
 | **49** | **Real App Failure Packet Proof** | **completed** | **48** |
 | **50** | **PR / Agent Handoff Integration** | **completed** | **48, 49** |
+| **51** | **Live Proof Readiness Gate** | **completed** | **48, 50** |
 
 ## Phase 29: Explorer Horizontal Swipe Discovery
 
@@ -161,6 +162,17 @@ Plans:
 
 Plans:
 - [x] `50-PLAN.md` / `50-01-SUMMARY.md` — PR / agent handoff integration
+
+## Phase 51: Live Proof Readiness Gate
+
+- **Goal**: Make the next physical-device proof attempt safer by checking device availability, app artifact presence, and deterministic readiness-contract inputs before invoking UI-affecting live verification.
+- **Depends on**: Phase 48, Phase 50
+- **Key constraint**: The readiness gate must not claim physical-device fidelity by itself; it only proves whether the local/self-hosted environment is ready to attempt live proof.
+- **Support level**: `experimental` preflight and committed controlled no-device blocker evidence.
+- **Out of scope**: cloud device farm orchestration, live proof replacement, and automatic app readiness fixes.
+
+Plans:
+- [x] `51-PLAN.md` / `51-01-SUMMARY.md` — live proof readiness gate
 
 ## Future Candidates
 

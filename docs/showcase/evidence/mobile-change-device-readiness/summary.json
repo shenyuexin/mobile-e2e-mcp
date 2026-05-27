@@ -1,0 +1,44 @@
+{
+  "schema": "mobile-change-device-readiness/v1",
+  "runId": "mobile-change-device-readiness-2026-05-27",
+  "verdict": "blocked_before_live_verification",
+  "platform": "android",
+  "appId": "com.example.mobilechange",
+  "policyProfile": "interactive",
+  "runnerProfile": "native_android",
+  "expectedReadiness": {
+    "appPhase": "authentication"
+  },
+  "checks": [
+    {
+      "id": "device-inventory",
+      "status": "blocked",
+      "reasonCode": "DEVICE_UNAVAILABLE",
+      "detail": "No available android device was returned by list_devices."
+    },
+    {
+      "id": "readiness-contract",
+      "status": "passed",
+      "reasonCode": "OK",
+      "detail": "At least one deterministic readiness expectation is configured."
+    }
+  ],
+  "blockers": [
+    {
+      "id": "device-inventory",
+      "status": "blocked",
+      "reasonCode": "DEVICE_UNAVAILABLE",
+      "detail": "No available android device was returned by list_devices."
+    }
+  ],
+  "nextAction": {
+    "kind": "connect_device_or_use_self_hosted_runner",
+    "command": "M2E_LIVE_MOBILE_CHANGE_ALLOW_NO_DEVICE=1 pnpm run proof:mobile-change-verification:live",
+    "reason": "No eligible local device was discovered; connect one or run the live proof on a self-hosted device runner."
+  },
+  "boundaries": [
+    "This preflight only proves local readiness to attempt live verification; it does not claim physical-device proof by itself.",
+    "Device availability, app artifact presence, and readiness contracts are checked before invoking UI-affecting actions.",
+    "Cloud farms and broad platform parity remain outside this preflight unless backed by separate evidence."
+  ]
+}

@@ -135,6 +135,7 @@ If you want a quick hands-on tour before diving into architecture details, start
   - `pnpm run validate:governed-evidence-brief`
   - `pnpm run validate:governed-pr-evidence-summary`
   - `pnpm run proof:mobile-change-verification` (fixture-backed mobile change verification bundle, failure packet, and scenario index)
+  - `pnpm run generate:mobile-change-device-readiness` / `pnpm run validate:mobile-change-device-readiness` (device/app/readiness preflight before attempting live mobile change proof)
   - `pnpm run proof:mobile-change-verification:live` (optional live device/emulator proof; use `M2E_LIVE_MOBILE_CHANGE_ALLOW_NO_DEVICE=1` for structured no-device output)
   - `pnpm run proof:mobile-change-verification:readiness-failure` (controlled live-runner-derived app readiness failure packet)
   - `pnpm run validate:mobile-change-verification`
@@ -154,6 +155,7 @@ If you want a quick hands-on tour before diving into architecture details, start
   - [docs/showcase/evidence/mobile-change-verification-fixture/report.md](docs/showcase/evidence/mobile-change-verification-fixture/report.md)
   - [docs/showcase/evidence/mobile-change-verification-fixture/failure-packet.md](docs/showcase/evidence/mobile-change-verification-fixture/failure-packet.md)
   - [docs/showcase/evidence/mobile-change-verification-fixture/scenario-index.md](docs/showcase/evidence/mobile-change-verification-fixture/scenario-index.md)
+  - [docs/showcase/evidence/mobile-change-device-readiness/report.md](docs/showcase/evidence/mobile-change-device-readiness/report.md)
   - [docs/showcase/evidence/mobile-change-readiness-failure/failure-packet.md](docs/showcase/evidence/mobile-change-readiness-failure/failure-packet.md)
   - [docs/showcase/evidence/mobile-change-readiness-failure/handoff.md](docs/showcase/evidence/mobile-change-readiness-failure/handoff.md)
 - Historical demo scripts:
