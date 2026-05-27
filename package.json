@@ -71,6 +71,7 @@
     "validate:mobile-change-verification": "node --import tsx scripts/showcase/mobile-change-verification.ts --check && node --import tsx scripts/showcase/validate-mobile-change-verification-evidence.ts",
     "test:mobile-change-verification": "node --import tsx --test scripts/showcase/mobile-change-verification.test.ts",
     "proof:mobile-change-verification": "node --import tsx scripts/showcase/mobile-change-verification.ts",
+    "proof:mobile-change-verification:live": "node --import tsx scripts/showcase/mobile-change-verification.ts --live",
     "quickstart:governed-control": "node --import tsx scripts/showcase/governed-quickstart-readiness.ts",
     "proof:governed-agent-mobile-control": "node --import tsx scripts/showcase/governed-agent-mobile-control-proof.ts",
     "proof:governed-agent-mobile-control:preflight": "node --import tsx scripts/showcase/governed-agent-mobile-control-preflight.ts",

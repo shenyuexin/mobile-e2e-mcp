@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { access, mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { createServer } from "../../packages/mcp-server/src/index.ts";
 
 export type VerificationSource = "fixture" | "dry_run" | "live_device" | "simulator";
 export type StepStatus = "success" | "failed" | "skipped";
@@ -39,7 +40,7 @@ export interface MobileChangeVerificationBundle {
   schema: "mobile-change-verification/v1";
   runId: string;
   source: VerificationSource;
-  verdict: "mobile_change_verified" | "mobile_change_verification_failed";
+  verdict: "mobile_change_verified" | "mobile_change_verification_failed" | "device_unavailable" | "app_artifact_unavailable";
   validationSurface: {
     platform: "android" | "ios";
     appId: string;
@@ -67,6 +68,8 @@ export interface MobileChangeVerificationBundle {
 }
 
 export interface FailureSignals {
+  deviceUnavailable?: boolean;
+  appArtifactUnavailable?: boolean;
   policyDenied?: boolean;
   appNotReady?: boolean;
   networkPolicyFailure?: boolean;
@@ -90,6 +93,7 @@ export interface FailurePacketInput {
 }
 
 export type FailureCategory =
+  | "environment"
   | "policy"
   | "app_readiness"
   | "network"
@@ -115,6 +119,8 @@ export interface FailurePacket {
   nextAction: {
     kind:
       | "escalate_policy_profile"
+      | "connect_device_or_use_fixture"
+      | "build_or_provide_app_artifact"
       | "wait_or_fix_readiness_contract"
       | "inspect_network_policy"
       | "refine_selector_or_wait_for_ui"
@@ -153,6 +159,29 @@ const failurePacketMarkdownPath = `${verificationEvidenceDir}/failure-packet.md`
 const scenarioIndexJsonPath = `${verificationEvidenceDir}/scenario-index.json`;
 const scenarioIndexMarkdownPath = `${verificationEvidenceDir}/scenario-index.md`;
 
+export type ToolInvoker = (toolName: string, input: Record<string, unknown>) => Promise<unknown>;
+
+export interface LiveMobileChangeVerificationOptions {
+  runId: string;
+  platform: "android" | "ios";
+  appId: string;
+  appArtifact?: string;
+  policyProfile: string;
+  runnerProfile: string;
+  expectedReadiness: {
+    screenId?: string;
+    appPhase?: string;
+  };
+  deviceId?: string;
+  outputDir?: string;
+  skipInstall?: boolean;
+}
+
+export interface LiveMobileChangeVerificationResult {
+  bundle: MobileChangeVerificationBundle;
+  failurePacket?: FailurePacket;
+}
+
 function repoRoot(): string {
   return path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 }
@@ -161,13 +190,20 @@ function isSuccessfulWorkflow(steps: VerificationStep[]): boolean {
   return steps.length > 0 && steps.every((step) => step.status === "success");
 }
 
+function verdictFromSteps(steps: VerificationStep[]): MobileChangeVerificationBundle["verdict"] {
+  if (steps.some((step) => step.reasonCode === "DEVICE_UNAVAILABLE")) return "device_unavailable";
+  if (steps.some((step) => step.reasonCode === "APP_ARTIFACT_UNAVAILABLE")) return "app_artifact_unavailable";
+  return isSuccessfulWorkflow(steps) ? "mobile_change_verified" : "mobile_change_verification_failed";
+}
+
 export function buildMobileChangeVerificationBundle(input: MobileChangeVerificationInput): MobileChangeVerificationBundle {
-  const verified = isSuccessfulWorkflow(input.steps);
+  const verdict = verdictFromSteps(input.steps);
+  const verified = verdict === "mobile_change_verified";
   return {
     schema: "mobile-change-verification/v1",
     runId: input.runId,
     source: input.source,
-    verdict: verified ? "mobile_change_verified" : "mobile_change_verification_failed",
+    verdict,
     validationSurface: {
       platform: input.platform,
       appId: input.appId,
@@ -206,6 +242,7 @@ export function buildMobileChangeVerificationBundle(input: MobileChangeVerificat
 }
 
 function categoryFromSignals(signals: FailureSignals): FailureCategory {
+  if (signals.deviceUnavailable || signals.appArtifactUnavailable) return "environment";
   if (signals.policyDenied) return "policy";
   if (signals.appNotReady) return "app_readiness";
   if (signals.networkPolicyFailure) return "network";
@@ -218,6 +255,11 @@ function categoryFromSignals(signals: FailureSignals): FailureCategory {
 
 function nextActionForCategory(category: FailureCategory): FailurePacket["nextAction"] {
   switch (category) {
+    case "environment":
+      return {
+        kind: "connect_device_or_use_fixture",
+        reason: "Connect an eligible device/emulator or run the fixture-backed proof when live execution is unavailable.",
+      };
     case "policy":
       return {
         kind: "escalate_policy_profile",
@@ -259,6 +301,221 @@ function nextActionForCategory(category: FailureCategory): FailurePacket["nextAc
         reason: "Collect logs, UI tree, screenshot, and session timeline before assigning a specific cause.",
       };
   }
+}
+
+function asRecord(value: unknown): Record<string, unknown> {
+  return typeof value === "object" && value !== null ? value as Record<string, unknown> : {};
+}
+
+function asStringArray(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
+}
+
+function stepFromResult(id: string, tool: string, result: unknown, fallbackReasonCode = "UNKNOWN"): VerificationStep {
+  const record = asRecord(result);
+  return {
+    id,
+    tool,
+    status: record.status === "success" ? "success" : record.status === "skipped" ? "skipped" : "failed",
+    reasonCode: typeof record.reasonCode === "string" ? record.reasonCode : fallbackReasonCode,
+  };
+}
+
+function selectDevice(listDevicesResult: unknown, platform: "android" | "ios", requestedDeviceId?: string): string | undefined {
+  if (requestedDeviceId) return requestedDeviceId;
+  const data = asRecord(asRecord(listDevicesResult).data);
+  const devices = Array.isArray(data[platform]) ? data[platform] : [];
+  for (const item of devices) {
+    const device = asRecord(item);
+    if (device.available === false) continue;
+    if (typeof device.id === "string" && device.id.length > 0) return device.id;
+  }
+  return undefined;
+}
+
+function screenSummaryFromResult(result: unknown): Record<string, unknown> {
+  return asRecord(asRecord(asRecord(result).data).screenSummary);
+}
+
+function readinessMatches(summary: Record<string, unknown>, expected: LiveMobileChangeVerificationOptions["expectedReadiness"]): boolean {
+  if (expected.appPhase && summary.appPhase !== expected.appPhase) return false;
+  return true;
+}
+
+async function pathExists(filePath: string): Promise<boolean> {
+  try {
+    await access(filePath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export async function runLiveMobileChangeVerificationWorkflow(
+  options: LiveMobileChangeVerificationOptions,
+  invoke: ToolInvoker,
+): Promise<LiveMobileChangeVerificationResult> {
+  const steps: VerificationStep[] = [];
+  const artifacts: VerificationArtifact[] = [];
+  const outputDir = options.outputDir ?? `output/showcase/mobile-change-verification-live/${options.runId}`;
+
+  const listed = await invoke("list_devices", { includeUnavailable: true });
+  const deviceId = selectDevice(listed, options.platform, options.deviceId);
+  steps.push(deviceId
+    ? stepFromResult("discover-device", "list_devices", listed, "OK")
+    : { id: "discover-device", tool: "list_devices", status: "failed", reasonCode: "DEVICE_UNAVAILABLE" });
+
+  if (!deviceId) {
+    const bundle = buildMobileChangeVerificationBundle({
+      runId: options.runId,
+      source: "live_device",
+      platform: options.platform,
+      appId: options.appId,
+      appArtifact: options.appArtifact,
+      policyProfile: options.policyProfile,
+      expectedReadiness: options.expectedReadiness,
+      steps,
+      artifacts,
+    });
+    return {
+      bundle,
+      failurePacket: buildFailurePacket({
+        runId: options.runId,
+        source: "live_device",
+        failedStep: steps[0],
+        signals: { deviceUnavailable: true },
+        artifacts,
+      }),
+    };
+  }
+
+  if (options.appArtifact && !options.skipInstall && !(await pathExists(path.resolve(repoRoot(), options.appArtifact)))) {
+    const failedStep = {
+      id: "check-app-artifact",
+      tool: "filesystem",
+      status: "failed" as const,
+      reasonCode: "APP_ARTIFACT_UNAVAILABLE",
+      detail: options.appArtifact,
+    };
+    steps.push(failedStep);
+    const bundle = buildMobileChangeVerificationBundle({
+      runId: options.runId,
+      source: "live_device",
+      platform: options.platform,
+      appId: options.appId,
+      appArtifact: options.appArtifact,
+      policyProfile: options.policyProfile,
+      expectedReadiness: options.expectedReadiness,
+      steps,
+      artifacts,
+    });
+    return {
+      bundle,
+      failurePacket: buildFailurePacket({
+        runId: options.runId,
+        source: "live_device",
+        failedStep,
+        signals: { appArtifactUnavailable: true },
+        artifacts,
+      }),
+    };
+  }
+
+  const sessionId = `mobile-change-live-${options.runId}`;
+
+  const capabilities = await invoke("describe_capabilities", { platform: options.platform, runnerProfile: options.runnerProfile });
+  steps.push(stepFromResult("describe-capabilities", "describe_capabilities", capabilities, "OK"));
+
+  const started = await invoke("start_session", {
+    sessionId,
+    platform: options.platform,
+    deviceId,
+    appId: options.appId,
+    profile: options.runnerProfile,
+    policyProfile: options.policyProfile,
+  });
+  steps.push(stepFromResult("start-session", "start_session", started, "OK"));
+
+  if (options.appArtifact && !options.skipInstall) {
+    const installed = await invoke("install_app", {
+      sessionId,
+      platform: options.platform,
+      deviceId,
+      runnerProfile: options.runnerProfile,
+      artifactPath: path.resolve(repoRoot(), options.appArtifact),
+    });
+    steps.push(stepFromResult("install-app", "install_app", installed, "OK"));
+  }
+
+  const launched = await invoke("launch_app", {
+    sessionId,
+    platform: options.platform,
+    deviceId,
+    runnerProfile: options.runnerProfile,
+    appId: options.appId,
+  });
+  steps.push(stepFromResult("launch-app", "launch_app", launched, "OK"));
+
+  const inspectOutputPath = path.join(outputDir, "inspect-ui.xml");
+  const inspected = await invoke("inspect_ui", {
+    sessionId,
+    platform: options.platform,
+    deviceId,
+    runnerProfile: options.runnerProfile,
+    appId: options.appId,
+    outputPath: inspectOutputPath,
+  });
+  steps.push(stepFromResult("inspect-readiness", "inspect_ui", inspected, "OK"));
+  const inspectArtifacts = asStringArray(asRecord(inspected).artifacts);
+  for (const artifact of inspectArtifacts) artifacts.push({ kind: "ui_tree", path: artifact });
+
+  const screen = await invoke("get_screen_summary", {
+    sessionId,
+    platform: options.platform,
+    deviceId,
+    runnerProfile: options.runnerProfile,
+    appId: options.appId,
+    includeDebugSignals: true,
+  });
+  const screenSummary = screenSummaryFromResult(screen);
+  const screenStep = stepFromResult("check-readiness", "get_screen_summary", screen, "OK");
+  if (screenStep.status === "success" && !readinessMatches(screenSummary, options.expectedReadiness)) {
+    screenStep.status = "failed";
+    screenStep.reasonCode = "APP_NOT_READY";
+  }
+  steps.push(screenStep);
+
+  const ended = await invoke("end_session", {
+    sessionId,
+    artifacts: [outputDir],
+  });
+  steps.push(stepFromResult("close-session", "end_session", ended, "OK"));
+
+  const bundle = buildMobileChangeVerificationBundle({
+    runId: options.runId,
+    source: "live_device",
+    platform: options.platform,
+    appId: options.appId,
+    appArtifact: options.appArtifact,
+    policyProfile: options.policyProfile,
+    expectedReadiness: options.expectedReadiness,
+    steps,
+    artifacts,
+  });
+
+  const failedStep = steps.find((step) => step.status === "failed");
+  return {
+    bundle,
+    failurePacket: failedStep
+      ? buildFailurePacket({
+          runId: options.runId,
+          source: "live_device",
+          failedStep,
+          signals: { appNotReady: failedStep.reasonCode === "APP_NOT_READY" },
+          artifacts,
+        })
+      : undefined,
+  };
 }
 
 export function buildFailurePacket(input: FailurePacketInput): FailurePacket {
@@ -498,7 +755,86 @@ export async function writeFixtureEvidence(check: boolean): Promise<void> {
   await writeOrCheck(scenarioIndexMarkdownPath, renderRealisticEvidenceIndexMarkdown(scenarioIndex), check);
 }
 
+function timestampId(): string {
+  return new Date().toISOString().replace(/[:.]/g, "-");
+}
+
+export async function writeLiveMobileChangeVerificationProof(): Promise<{
+  outputDir: string;
+  result: LiveMobileChangeVerificationResult;
+}> {
+  const root = repoRoot();
+  const runId = process.env.M2E_LIVE_MOBILE_CHANGE_RUN_ID ?? timestampId();
+  const outputDir = path.resolve(root, "output/showcase/mobile-change-verification-live", runId);
+  await mkdir(outputDir, { recursive: true });
+
+  const server = createServer();
+  const invoke: ToolInvoker = process.env.M2E_LIVE_MOBILE_CHANGE_FORCE_NO_DEVICE === "1"
+    ? async (toolName) => toolName === "list_devices"
+      ? { status: "success", reasonCode: "OK", data: { android: [], ios: [] } }
+      : { status: "skipped", reasonCode: "FORCED_NO_DEVICE" }
+    : (toolName, input) => server.invoke(toolName, input);
+  const result = await runLiveMobileChangeVerificationWorkflow({
+    runId,
+    outputDir: path.relative(root, outputDir),
+    platform: (process.env.M2E_LIVE_MOBILE_CHANGE_PLATFORM as "android" | "ios" | undefined) ?? "android",
+    appId: process.env.M2E_LIVE_MOBILE_CHANGE_APP_ID ?? "com.example.mobilechange",
+    appArtifact: process.env.M2E_LIVE_MOBILE_CHANGE_APP_ARTIFACT,
+    policyProfile: process.env.M2E_LIVE_MOBILE_CHANGE_POLICY_PROFILE ?? "interactive",
+    runnerProfile: process.env.M2E_LIVE_MOBILE_CHANGE_RUNNER_PROFILE ?? "native_android",
+    expectedReadiness: {
+      screenId: process.env.M2E_LIVE_MOBILE_CHANGE_EXPECTED_SCREEN_ID,
+      appPhase: process.env.M2E_LIVE_MOBILE_CHANGE_EXPECTED_APP_PHASE,
+    },
+    deviceId: process.env.M2E_DEVICE_ID,
+    skipInstall: process.env.M2E_LIVE_MOBILE_CHANGE_SKIP_INSTALL !== "0",
+  }, invoke);
+
+  result.bundle.evidence.artifacts.push(
+    { kind: "summary", path: path.relative(root, path.join(outputDir, "summary.json")) },
+    { kind: "report", path: path.relative(root, path.join(outputDir, "report.md")) },
+  );
+  if (result.failurePacket) {
+    result.bundle.evidence.artifacts.push({ kind: "failure_packet", path: path.relative(root, path.join(outputDir, "failure-packet.json")) });
+    result.failurePacket.evidence.artifacts.push({ kind: "failure_packet", path: path.relative(root, path.join(outputDir, "failure-packet.json")) });
+  }
+
+  await writeFile(path.join(outputDir, "summary.json"), `${JSON.stringify(result.bundle, null, 2)}\n`, "utf8");
+  await writeFile(path.join(outputDir, "report.md"), renderMobileChangeVerificationMarkdown(result.bundle), "utf8");
+  if (result.failurePacket) {
+    await writeFile(path.join(outputDir, "failure-packet.json"), `${JSON.stringify(result.failurePacket, null, 2)}\n`, "utf8");
+    await writeFile(path.join(outputDir, "failure-packet.md"), renderFailurePacketMarkdown(result.failurePacket), "utf8");
+  }
+
+  return { outputDir, result };
+}
+
 async function main(): Promise<void> {
+  if (process.argv.includes("--live")) {
+    const { outputDir, result } = await writeLiveMobileChangeVerificationProof();
+    const relativeOutputDir = path.relative(repoRoot(), outputDir);
+    console.log(`Live mobile change verification proof written to ${relativeOutputDir}`);
+    console.log(JSON.stringify({
+      outputDir: relativeOutputDir,
+      verdict: result.bundle.verdict,
+      failureCategory: result.failurePacket?.category ?? null,
+      nextAction: result.bundle.nextAction.kind,
+    }, null, 2));
+
+    if (
+      result.bundle.verdict === "device_unavailable" &&
+      process.env.M2E_LIVE_MOBILE_CHANGE_ALLOW_NO_DEVICE !== "1"
+    ) {
+      process.exitCode = 1;
+    } else if (
+      result.bundle.verdict !== "mobile_change_verified" &&
+      result.bundle.verdict !== "device_unavailable"
+    ) {
+      process.exitCode = 1;
+    }
+    return;
+  }
+
   const check = process.argv.includes("--check");
   await writeFixtureEvidence(check);
   console.log(check

@@ -58,6 +58,7 @@ For each run of `Real Device Acceptance` (`.github/workflows/real-device-accepta
 - `validate:governed-evidence-brief` is an offline grounding check for the compact developer/AI-facing brief. It keeps the current practical-use verdict tied to tracked Settings evidence, business-app evidence, and the comparison boundary.
 - `test:governed-pr-evidence-summary` verifies the generator can be imported without write/log side effects and keeps the compact PR comment sections stable. `validate:governed-pr-evidence-summary` is the offline drift check for the PR-ready Markdown/JSON evidence summary generated from the governed evidence brief.
 - `test:mobile-change-verification` verifies the mobile verification bundle, failure packet, and realistic scenario index builders. `validate:mobile-change-verification` is an offline drift check over the committed fixture evidence; it proves the workflow contract and debugging artifact shape, not live-device fidelity.
+- `proof:mobile-change-verification:live` is an optional local/self-hosted proof path over existing governed MCP tools. It writes timestamped live output when a device is available and can write structured no-device output with `M2E_LIVE_MOBILE_CHANGE_ALLOW_NO_DEVICE=1`; normal Ubuntu CI does not require this command.
 - Probe dry-run validates Android + iOS simulator probe structure without device dependencies.
 - Platform smoke validates simulator/emulator toolchain baseline only.
 - Ubuntu CI and platform smoke do **not** fully prove real-device execution fidelity.

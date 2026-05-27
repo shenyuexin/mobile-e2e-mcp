@@ -15,6 +15,9 @@
 | **45** | **Mobile Change Verification Workflow** | **completed** | **42, 43, 44** |
 | **46** | **Actionable Failure Packet** | **completed** | **45** |
 | **47** | **Realistic Mobile Evidence Breadth** | **completed** | **45, 46** |
+| **48** | **Live Mobile Change Verification Runner** | **completed** | **45, 46** |
+| **49** | **Real App Failure Packet Proof** | **planned** | **48** |
+| **50** | **PR / Agent Handoff Integration** | **planned** | **48, 49** |
 
 ## Phase 29: Explorer Horizontal Swipe Discovery
 
@@ -125,6 +128,39 @@ Plans:
 
 Plans:
 - [x] `47-PLAN.md` / `47-01-SUMMARY.md` — realistic mobile evidence breadth
+
+## Phase 48: Live Mobile Change Verification Runner
+
+- **Goal**: Upgrade the fixture-backed mobile change verification contract into a live-capable runner that can produce the same evidence bundle from real device/emulator conditions.
+- **Depends on**: Phase 45, Phase 46
+- **Key constraint**: Keep CI deterministic by making live execution optional and no-device outcomes structured.
+- **Support level**: `experimental` live proof runner; existing MCP tools remain the execution surface.
+- **Out of scope**: new MCP tool surface, cloud farm execution, and platform parity claims.
+
+Plans:
+- [x] `48-PLAN.md` / `48-01-SUMMARY.md` — live mobile change verification runner
+
+## Phase 49: Real App Failure Packet Proof
+
+- **Goal**: Capture at least one real or live-run-derived app failure as a committed proof artifact.
+- **Depends on**: Phase 48
+- **Key constraint**: Real failure evidence must remain separate from fixture evidence and must not block normal CI on device availability.
+- **Support level**: manual/self-hosted proof expansion.
+- **Out of scope**: broad failure taxonomy completion and automatic app fixing.
+
+Plans:
+- [ ] `49-PLAN.md` — real app failure packet proof
+
+## Phase 50: PR / Agent Handoff Integration
+
+- **Goal**: Turn verification bundles and failure packets into compact PR/agent handoff summaries.
+- **Depends on**: Phase 48, Phase 49
+- **Key constraint**: Generate review-ready artifacts without posting to GitHub automatically.
+- **Support level**: offline summary generation and drift validation.
+- **Out of scope**: GitHub comment publishing automation and CI status checks.
+
+Plans:
+- [ ] `50-PLAN.md` — PR / agent handoff integration
 
 ## Future Candidates
 

@@ -27,6 +27,7 @@ This folder contains reproducible, real-device demo evidence used by README.
 - Actionable failure packet fixture: `docs/showcase/evidence/mobile-change-verification-fixture/failure-packet.md`
 - Realistic scenario index fixture: `docs/showcase/evidence/mobile-change-verification-fixture/scenario-index.md`
 - Mobile change verification command: `pnpm run proof:mobile-change-verification`
+- Optional live mobile change verification command: `pnpm run proof:mobile-change-verification:live`
 - Mobile change verification contract check: `pnpm run validate:mobile-change-verification`
 
 ## Flow record/replay demo
@@ -98,6 +99,7 @@ See `docs/showcase/ci-evidence.md` for the current proof levels and boundaries.
 - Governed evidence brief proof (`pnpm run validate:governed-evidence-brief`): verifies the compact brief stays grounded in the tracked Settings evidence, business-app evidence, and alternative comparison.
 - Governed PR evidence summary proof (`pnpm run test:governed-pr-evidence-summary` + `pnpm run validate:governed-pr-evidence-summary`): verifies the generator is import-safe and the PR-ready Markdown/JSON summary stays generated from the governed evidence brief.
 - Mobile change verification proof (`pnpm run test:mobile-change-verification` + `pnpm run validate:mobile-change-verification`): verifies the fixture-backed workflow bundle, failure packet, and realistic scenario index stay schema-backed and PR-ready. It does not rerun a device.
+- Live mobile change verification proof (`pnpm run proof:mobile-change-verification:live`): uses existing governed MCP tools to select a device, start a session, launch the app, inspect readiness, and write a timestamped bundle under `output/showcase/mobile-change-verification-live/`. It is optional and device-dependent; no-device runs can be captured as structured environment failure with `M2E_LIVE_MOBILE_CHANGE_ALLOW_NO_DEVICE=1`.
 - Platform smoke proof (`.github/workflows/platform-smoke.yml`): verifies simulator/emulator baseline wiring only.
 - Acceptance proof (`.github/workflows/real-device-acceptance.yml`): self-hosted real-run artifacts plus quality gate on `output/reports/phase-sample-report.json`.
 

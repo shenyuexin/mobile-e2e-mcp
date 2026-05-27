@@ -135,6 +135,7 @@ If you want a quick hands-on tour before diving into architecture details, start
   - `pnpm run validate:governed-evidence-brief`
   - `pnpm run validate:governed-pr-evidence-summary`
   - `pnpm run proof:mobile-change-verification` (fixture-backed mobile change verification bundle, failure packet, and scenario index)
+  - `pnpm run proof:mobile-change-verification:live` (optional live device/emulator proof; use `M2E_LIVE_MOBILE_CHANGE_ALLOW_NO_DEVICE=1` for structured no-device output)
   - `pnpm run validate:mobile-change-verification`
   - [docs/showcase/governed-agent-mobile-control.md](docs/showcase/governed-agent-mobile-control.md)
   - [docs/showcase/governed-agent-mobile-control-live.md](docs/showcase/governed-agent-mobile-control-live.md)
