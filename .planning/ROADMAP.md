@@ -17,7 +17,7 @@
 | **47** | **Realistic Mobile Evidence Breadth** | **completed** | **45, 46** |
 | **48** | **Live Mobile Change Verification Runner** | **completed** | **45, 46** |
 | **49** | **Real App Failure Packet Proof** | **completed** | **48** |
-| **50** | **PR / Agent Handoff Integration** | **planned** | **48, 49** |
+| **50** | **PR / Agent Handoff Integration** | **completed** | **48, 49** |
 
 ## Phase 29: Explorer Horizontal Swipe Discovery
 
@@ -160,7 +160,7 @@ Plans:
 - **Out of scope**: GitHub comment publishing automation and CI status checks.
 
 Plans:
-- [ ] `50-PLAN.md` — PR / agent handoff integration
+- [x] `50-PLAN.md` / `50-01-SUMMARY.md` — PR / agent handoff integration
 
 ## Future Candidates
 

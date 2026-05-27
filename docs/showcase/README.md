@@ -30,6 +30,8 @@ This folder contains reproducible, real-device demo evidence used by README.
 - Optional live mobile change verification command: `pnpm run proof:mobile-change-verification:live`
 - Controlled readiness failure proof: `docs/showcase/evidence/mobile-change-readiness-failure/failure-packet.md`
 - Controlled readiness failure command: `pnpm run proof:mobile-change-verification:readiness-failure`
+- Mobile change handoff summary: `docs/showcase/evidence/mobile-change-readiness-failure/handoff.md`
+- Mobile change handoff command: `pnpm run generate:mobile-change-handoff`
 - Mobile change verification contract check: `pnpm run validate:mobile-change-verification`
 
 ## Flow record/replay demo
@@ -103,6 +105,7 @@ See `docs/showcase/ci-evidence.md` for the current proof levels and boundaries.
 - Mobile change verification proof (`pnpm run test:mobile-change-verification` + `pnpm run validate:mobile-change-verification`): verifies the fixture-backed workflow bundle, failure packet, and realistic scenario index stay schema-backed and PR-ready. It does not rerun a device.
 - Live mobile change verification proof (`pnpm run proof:mobile-change-verification:live`): uses existing governed MCP tools to select a device, start a session, launch the app, inspect readiness, and write a timestamped bundle under `output/showcase/mobile-change-verification-live/`. It is optional and device-dependent; no-device runs can be captured as structured environment failure with `M2E_LIVE_MOBILE_CHANGE_ALLOW_NO_DEVICE=1`.
 - Controlled readiness failure proof (`pnpm run validate:mobile-change-readiness-failure`): verifies an app-readiness failure packet produced through the live runner contract with a controlled invoker. It proves failure packet usefulness for readiness mismatch, not physical-device fidelity.
+- Mobile change handoff proof (`pnpm run test:mobile-change-handoff` + `pnpm run validate:mobile-change-handoff`): verifies the PR/agent-ready handoff summary stays generated from the readiness failure bundle and failure packet. It does not post comments or change CI status by itself.
 - Platform smoke proof (`.github/workflows/platform-smoke.yml`): verifies simulator/emulator baseline wiring only.
 - Acceptance proof (`.github/workflows/real-device-acceptance.yml`): self-hosted real-run artifacts plus quality gate on `output/reports/phase-sample-report.json`.
 

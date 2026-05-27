@@ -15,7 +15,7 @@ For each run of `CI` (`.github/workflows/ci.yml`):
 1. Job logs for `unit-and-typecheck` and `dry-run-smoke`
 2. Dedicated `explorer-evidence` job that validates the committed Android physical-device Explorer artifact contract
 3. Probe dry-run contract validation for Android + iOS simulator probe scripts
-4. `dry-run-smoke` also validates committed governed-control evidence contracts, the compact governed evidence brief, the PR-ready evidence summary, the fixture-backed mobile change verification bundle, and the controlled readiness failure packet through `pnpm run validate:governed-control-evidence`, `pnpm run validate:governed-business-app-evidence`, `pnpm run validate:governed-business-app-comparison`, `pnpm run validate:governed-policy-escalation-evidence`, `pnpm run validate:governed-evidence-brief`, `pnpm run validate:governed-pr-evidence-summary`, `pnpm run validate:mobile-change-verification`, and `pnpm run validate:mobile-change-readiness-failure`
+4. `dry-run-smoke` also validates committed governed-control evidence contracts, the compact governed evidence brief, the PR-ready evidence summary, the fixture-backed mobile change verification bundle, the controlled readiness failure packet, and the PR/agent handoff through `pnpm run validate:governed-control-evidence`, `pnpm run validate:governed-business-app-evidence`, `pnpm run validate:governed-business-app-comparison`, `pnpm run validate:governed-policy-escalation-evidence`, `pnpm run validate:governed-evidence-brief`, `pnpm run validate:governed-pr-evidence-summary`, `pnpm run validate:mobile-change-verification`, `pnpm run validate:mobile-change-readiness-failure`, and `pnpm run validate:mobile-change-handoff`
 5. Uploaded metadata artifacts:
    - `ci-unit-typecheck-metadata`
    - `ci-dry-run-smoke-metadata`
@@ -60,6 +60,7 @@ For each run of `Real Device Acceptance` (`.github/workflows/real-device-accepta
 - `test:mobile-change-verification` verifies the mobile verification bundle, failure packet, and realistic scenario index builders. `validate:mobile-change-verification` is an offline drift check over the committed fixture evidence; it proves the workflow contract and debugging artifact shape, not live-device fidelity.
 - `proof:mobile-change-verification:live` is an optional local/self-hosted proof path over existing governed MCP tools. It writes timestamped live output when a device is available and can write structured no-device output with `M2E_LIVE_MOBILE_CHANGE_ALLOW_NO_DEVICE=1`; normal Ubuntu CI does not require this command.
 - `validate:mobile-change-readiness-failure` is an offline drift check for a controlled live-runner-derived app readiness failure packet. It does not prove physical-device fidelity, but it keeps the failure packet shape grounded in the live runner path.
+- `validate:mobile-change-handoff` is an offline drift check for the PR/agent-ready handoff summary generated from the readiness failure bundle and packet. It does not post to GitHub or alter CI status.
 - Probe dry-run validates Android + iOS simulator probe structure without device dependencies.
 - Platform smoke validates simulator/emulator toolchain baseline only.
 - Ubuntu CI and platform smoke do **not** fully prove real-device execution fidelity.
@@ -76,6 +77,7 @@ For each run of `Real Device Acceptance` (`.github/workflows/real-device-accepta
   - `docs/showcase/evidence/governed-control-brief/pr-comment.md` plus `pnpm run validate:governed-pr-evidence-summary` for the PR-ready evidence summary
   - `docs/showcase/evidence/mobile-change-verification-fixture/` plus `pnpm run validate:mobile-change-verification` for the fixture-backed mobile change verification workflow, failure packet, and scenario index
   - `docs/showcase/evidence/mobile-change-readiness-failure/` plus `pnpm run validate:mobile-change-readiness-failure` for the controlled app-readiness failure packet
+  - `docs/showcase/evidence/mobile-change-readiness-failure/handoff.md` plus `pnpm run validate:mobile-change-handoff` for the PR/agent handoff summary
   - `pnpm run validate:android-tool-probe` and `pnpm run validate:ios-tool-probe`
   - `real-device-acceptance` workflow artifacts and summaries
   - `docs/showcase/README.md`

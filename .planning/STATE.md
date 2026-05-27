@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 49 controlled app-readiness failure packet proof completed
+stopped_at: Phase 50 PR / agent handoff integration completed
 last_updated: "2026-05-27T00:00:00.000Z"
-last_activity: 2026-05-27 -- Phase 49 controlled app-readiness failure packet proof implemented
+last_activity: 2026-05-27 -- Phase 50 PR / agent handoff integration implemented
 progress:
   total_phases: 9
-  completed_phases: 6
+  completed_phases: 7
   total_plans: 5
-  completed_plans: 6
-  percent: 94
+  completed_plans: 7
+  percent: 100
 ---
 
 # Project State
@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-03-28)
 
 ## Current Position
 
-Phase: real app failure packet proof
-Plan: next move to Phase 50 PR / agent handoff integration.
-Status: Explorer failure review/reporting is on main, Android physical-device Explorer evidence exists at `artifacts/explorer/android-full/2026-04-28T03-38-20/`, historical phase/demo/debug scripts live under `scripts/legacy/`, `validate:probe-dry-run` is CI-gated, probe reports use the shared `tool-probe-report/v1` contract, Phase 48 adds an optional live proof runner, and Phase 49 now adds a controlled live-runner-derived app readiness failure packet. No physical device was connected during Phase 49 execution.
-Last activity: 2026-05-27 -- Phase 49 implemented `proof:mobile-change-verification:readiness-failure` and `validate:mobile-change-readiness-failure`.
+Phase: PR / agent handoff integration
+Plan: current product-utility sequence 45-50 is complete; next work should use a physical device or self-hosted lane to replace controlled proof with true live app evidence.
+Status: Explorer failure review/reporting is on main, Android physical-device Explorer evidence exists at `artifacts/explorer/android-full/2026-04-28T03-38-20/`, historical phase/demo/debug scripts live under `scripts/legacy/`, `validate:probe-dry-run` is CI-gated, probe reports use the shared `tool-probe-report/v1` contract, Phase 48 adds an optional live proof runner, Phase 49 adds a controlled live-runner-derived app readiness failure packet, and Phase 50 adds PR/agent handoff summaries. No physical device was connected during Phase 49-50 execution.
+Last activity: 2026-05-27 -- Phase 50 implemented `generate:mobile-change-handoff`, `test:mobile-change-handoff`, and `validate:mobile-change-handoff`.
 
-Progress: [█████████░] 94%
+Progress: [██████████] 100%
 
 ## Workspace Semantics
 
@@ -107,6 +107,7 @@ Recent decisions affecting current work:
 - Phase 48 completed: live mobile change verification runner produces the same evidence bundle from optional device/emulator execution and structured no-device output.
 - Phase 49 completed: controlled live-runner-derived app-readiness failure packet grounds the failure packet in the live runner path; physical-device failure proof remains future work.
 - Phase 50 planned: PR / agent handoff integration should turn bundles and packets into compact review artifacts.
+- Phase 50 completed: mobile change handoff generator turns readiness failure bundles and packets into compact PR/agent review artifacts.
 
 ### Blockers/Concerns
 
@@ -165,6 +166,7 @@ Recent decisions affecting current work:
 - Phase 50 added: PR / Agent Handoff Integration
 - Phase 48 completed: optional live runner command, fake-invoker unit tests, and forced no-device verification path landed.
 - Phase 49 completed: controlled readiness-failure proof, validator, committed evidence, and docs landed.
+- Phase 50 completed: PR / agent handoff generator, validator, committed handoff artifacts, and docs landed.
 
 ### Planning Hygiene Notes
 

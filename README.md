@@ -139,6 +139,7 @@ If you want a quick hands-on tour before diving into architecture details, start
   - `pnpm run proof:mobile-change-verification:readiness-failure` (controlled live-runner-derived app readiness failure packet)
   - `pnpm run validate:mobile-change-verification`
   - `pnpm run validate:mobile-change-readiness-failure`
+  - `pnpm run generate:mobile-change-handoff` / `pnpm run validate:mobile-change-handoff`
   - [docs/showcase/governed-agent-mobile-control.md](docs/showcase/governed-agent-mobile-control.md)
   - [docs/showcase/governed-agent-mobile-control-live.md](docs/showcase/governed-agent-mobile-control-live.md)
   - [docs/showcase/governed-business-app-workflow.md](docs/showcase/governed-business-app-workflow.md)
@@ -154,6 +155,7 @@ If you want a quick hands-on tour before diving into architecture details, start
   - [docs/showcase/evidence/mobile-change-verification-fixture/failure-packet.md](docs/showcase/evidence/mobile-change-verification-fixture/failure-packet.md)
   - [docs/showcase/evidence/mobile-change-verification-fixture/scenario-index.md](docs/showcase/evidence/mobile-change-verification-fixture/scenario-index.md)
   - [docs/showcase/evidence/mobile-change-readiness-failure/failure-packet.md](docs/showcase/evidence/mobile-change-readiness-failure/failure-packet.md)
+  - [docs/showcase/evidence/mobile-change-readiness-failure/handoff.md](docs/showcase/evidence/mobile-change-readiness-failure/handoff.md)
 - Historical demo scripts:
   - `bash scripts/legacy/dev/record-demo-happy-path-android.sh`
   - `bash scripts/legacy/dev/record-demo-interruption-home-recovery-android.sh`
