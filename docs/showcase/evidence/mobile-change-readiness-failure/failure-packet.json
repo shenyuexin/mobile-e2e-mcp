@@ -1,0 +1,45 @@
+{
+  "schema": "mobile-verification-failure-packet/v1",
+  "runId": "mobile-change-readiness-failure-2026-05-27",
+  "source": "live_device",
+  "category": "app_readiness",
+  "confidence": "high",
+  "failedStep": {
+    "id": "check-readiness",
+    "tool": "get_screen_summary",
+    "status": "failed",
+    "reasonCode": "APP_NOT_READY"
+  },
+  "reasonCode": "APP_NOT_READY",
+  "evidence": {
+    "artifacts": [
+      {
+        "kind": "ui_tree",
+        "path": "output/showcase/mobile-change-readiness-failure/controlled/inspect-ui.xml"
+      },
+      {
+        "kind": "summary",
+        "path": "docs/showcase/evidence/mobile-change-readiness-failure/summary.json"
+      },
+      {
+        "kind": "report",
+        "path": "docs/showcase/evidence/mobile-change-readiness-failure/report.md"
+      },
+      {
+        "kind": "failure_packet",
+        "path": "docs/showcase/evidence/mobile-change-readiness-failure/failure-packet.json"
+      }
+    ],
+    "signals": {
+      "appNotReady": true
+    }
+  },
+  "nextAction": {
+    "kind": "wait_or_fix_readiness_contract",
+    "reason": "Add or verify deterministic readiness signals before treating the screen as testable."
+  },
+  "boundaries": [
+    "Failure packets classify observed evidence; they do not autonomously fix app code.",
+    "Remediation is deterministic and bounded. LLM-generated remediation is out of scope for this phase."
+  ]
+}

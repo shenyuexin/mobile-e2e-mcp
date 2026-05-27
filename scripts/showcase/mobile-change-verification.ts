@@ -158,6 +158,11 @@ const failurePacketJsonPath = `${verificationEvidenceDir}/failure-packet.json`;
 const failurePacketMarkdownPath = `${verificationEvidenceDir}/failure-packet.md`;
 const scenarioIndexJsonPath = `${verificationEvidenceDir}/scenario-index.json`;
 const scenarioIndexMarkdownPath = `${verificationEvidenceDir}/scenario-index.md`;
+const readinessFailureEvidenceDir = "docs/showcase/evidence/mobile-change-readiness-failure";
+const readinessFailureSummaryPath = `${readinessFailureEvidenceDir}/summary.json`;
+const readinessFailureReportPath = `${readinessFailureEvidenceDir}/report.md`;
+const readinessFailurePacketJsonPath = `${readinessFailureEvidenceDir}/failure-packet.json`;
+const readinessFailurePacketMarkdownPath = `${readinessFailureEvidenceDir}/failure-packet.md`;
 
 export type ToolInvoker = (toolName: string, input: Record<string, unknown>) => Promise<unknown>;
 
@@ -190,6 +195,12 @@ function isSuccessfulWorkflow(steps: VerificationStep[]): boolean {
   return steps.length > 0 && steps.every((step) => step.status === "success");
 }
 
+function addArtifactUnique(artifacts: VerificationArtifact[], artifact: VerificationArtifact): void {
+  if (!artifacts.some((existing) => existing.kind === artifact.kind && existing.path === artifact.path)) {
+    artifacts.push(artifact);
+  }
+}
+
 function verdictFromSteps(steps: VerificationStep[]): MobileChangeVerificationBundle["verdict"] {
   if (steps.some((step) => step.reasonCode === "DEVICE_UNAVAILABLE")) return "device_unavailable";
   if (steps.some((step) => step.reasonCode === "APP_ARTIFACT_UNAVAILABLE")) return "app_artifact_unavailable";
@@ -199,6 +210,17 @@ function verdictFromSteps(steps: VerificationStep[]): MobileChangeVerificationBu
 export function buildMobileChangeVerificationBundle(input: MobileChangeVerificationInput): MobileChangeVerificationBundle {
   const verdict = verdictFromSteps(input.steps);
   const verified = verdict === "mobile_change_verified";
+  const boundaries = input.source === "fixture"
+    ? [
+        "This fixture validates the workflow contract without claiming a live-device run.",
+        "The workflow proves launch/readiness evidence packaging, not broad Android/iOS/RN/Flutter parity.",
+        "Device-specific support must still be backed by live proof bundles before public claims expand.",
+      ]
+    : [
+        "This bundle was produced through the live runner contract, but its proof level depends on the invoker and available device context.",
+        "Forced or controlled live-runner modes prove failure shaping and evidence structure, not physical-device fidelity.",
+        "Device-specific support must still be backed by live proof bundles before public claims expand.",
+      ];
   return {
     schema: "mobile-change-verification/v1",
     runId: input.runId,
@@ -233,11 +255,7 @@ export function buildMobileChangeVerificationBundle(input: MobileChangeVerificat
           command: "pnpm run validate:mobile-change-verification",
           reason: "Inspect the generated failure packet before retrying or changing the app.",
         },
-    boundaries: [
-      "This fixture validates the workflow contract without claiming a live-device run.",
-      "The workflow proves launch/readiness evidence packaging, not broad Android/iOS/RN/Flutter parity.",
-      "Device-specific support must still be backed by live proof bundles before public claims expand.",
-    ],
+    boundaries,
   };
 }
 
@@ -790,13 +808,12 @@ export async function writeLiveMobileChangeVerificationProof(): Promise<{
     skipInstall: process.env.M2E_LIVE_MOBILE_CHANGE_SKIP_INSTALL !== "0",
   }, invoke);
 
-  result.bundle.evidence.artifacts.push(
-    { kind: "summary", path: path.relative(root, path.join(outputDir, "summary.json")) },
-    { kind: "report", path: path.relative(root, path.join(outputDir, "report.md")) },
-  );
+  addArtifactUnique(result.bundle.evidence.artifacts, { kind: "summary", path: path.relative(root, path.join(outputDir, "summary.json")) });
+  addArtifactUnique(result.bundle.evidence.artifacts, { kind: "report", path: path.relative(root, path.join(outputDir, "report.md")) });
   if (result.failurePacket) {
-    result.bundle.evidence.artifacts.push({ kind: "failure_packet", path: path.relative(root, path.join(outputDir, "failure-packet.json")) });
-    result.failurePacket.evidence.artifacts.push({ kind: "failure_packet", path: path.relative(root, path.join(outputDir, "failure-packet.json")) });
+    const failureArtifact = { kind: "failure_packet" as const, path: path.relative(root, path.join(outputDir, "failure-packet.json")) };
+    addArtifactUnique(result.bundle.evidence.artifacts, failureArtifact);
+    addArtifactUnique(result.failurePacket.evidence.artifacts, failureArtifact);
   }
 
   await writeFile(path.join(outputDir, "summary.json"), `${JSON.stringify(result.bundle, null, 2)}\n`, "utf8");
@@ -809,7 +826,77 @@ export async function writeLiveMobileChangeVerificationProof(): Promise<{
   return { outputDir, result };
 }
 
+export async function buildControlledReadinessFailureProof(): Promise<LiveMobileChangeVerificationResult> {
+  return runLiveMobileChangeVerificationWorkflow({
+    runId: "mobile-change-readiness-failure-2026-05-27",
+    platform: "android",
+    appId: "com.example.mobilechange",
+    policyProfile: "interactive",
+    runnerProfile: "native_android",
+    expectedReadiness: {
+      screenId: "login",
+      appPhase: "authentication",
+    },
+    outputDir: "output/showcase/mobile-change-readiness-failure/controlled",
+    skipInstall: true,
+  }, async (toolName) => {
+    if (toolName === "list_devices") {
+      return { status: "success", reasonCode: "OK", data: { android: [{ id: "controlled-live-runner", available: true }] } };
+    }
+    if (toolName === "inspect_ui") {
+      return {
+        status: "success",
+        reasonCode: "OK",
+        data: {
+          outputPath: "output/showcase/mobile-change-readiness-failure/controlled/inspect-ui.xml",
+          summary: { totalNodes: 17, clickableNodes: 4 },
+        },
+        artifacts: ["output/showcase/mobile-change-readiness-failure/controlled/inspect-ui.xml"],
+      };
+    }
+    if (toolName === "get_screen_summary") {
+      return {
+        status: "success",
+        reasonCode: "OK",
+        data: {
+          screenSummary: {
+            appPhase: "onboarding",
+            readiness: "not_ready",
+            stateConfidence: 0.72,
+          },
+        },
+      };
+    }
+    return { status: "success", reasonCode: "OK" };
+  });
+}
+
+export async function writeControlledReadinessFailureProof(check: boolean): Promise<void> {
+  const proof = await buildControlledReadinessFailureProof();
+  addArtifactUnique(proof.bundle.evidence.artifacts, { kind: "summary", path: readinessFailureSummaryPath });
+  addArtifactUnique(proof.bundle.evidence.artifacts, { kind: "report", path: readinessFailureReportPath });
+  addArtifactUnique(proof.bundle.evidence.artifacts, { kind: "failure_packet", path: readinessFailurePacketJsonPath });
+  if (proof.failurePacket) {
+    addArtifactUnique(proof.failurePacket.evidence.artifacts, { kind: "failure_packet", path: readinessFailurePacketJsonPath });
+  }
+
+  await writeOrCheck(readinessFailureSummaryPath, `${JSON.stringify(proof.bundle, null, 2)}\n`, check);
+  await writeOrCheck(readinessFailureReportPath, renderMobileChangeVerificationMarkdown(proof.bundle), check);
+  assert.ok(proof.failurePacket, "controlled readiness failure proof must include a failure packet");
+  await writeOrCheck(readinessFailurePacketJsonPath, `${JSON.stringify(proof.failurePacket, null, 2)}\n`, check);
+  await writeOrCheck(readinessFailurePacketMarkdownPath, renderFailurePacketMarkdown(proof.failurePacket), check);
+}
+
 async function main(): Promise<void> {
+  if (process.argv.includes("--readiness-failure")) {
+    const check = process.argv.includes("--check");
+    await writeControlledReadinessFailureProof(check);
+    console.log(check
+      ? "Controlled readiness failure proof is up to date."
+      : `Controlled readiness failure proof written to ${readinessFailureEvidenceDir}`);
+    return;
+  }
+
   if (process.argv.includes("--live")) {
     const { outputDir, result } = await writeLiveMobileChangeVerificationProof();
     const relativeOutputDir = path.relative(repoRoot(), outputDir);

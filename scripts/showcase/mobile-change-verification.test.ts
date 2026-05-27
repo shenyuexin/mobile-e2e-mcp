@@ -249,3 +249,47 @@ test("live runner produces structured device-unavailable output without throwing
   assert.equal(result.failurePacket?.category, "environment");
   assert.equal(result.failurePacket?.nextAction.kind, "connect_device_or_use_fixture");
 });
+
+test("controlled readiness failure proof is produced through the live runner path", async () => {
+  const { buildControlledReadinessFailureProof } = await import("./mobile-change-verification.ts");
+
+  const proof = await buildControlledReadinessFailureProof();
+
+  assert.equal(proof.bundle.source, "live_device");
+  assert.equal(proof.bundle.verdict, "mobile_change_verification_failed");
+  assert.equal(proof.bundle.readiness.matched, false);
+  assert.equal(proof.failurePacket?.category, "app_readiness");
+  assert.equal(proof.failurePacket?.reasonCode, "APP_NOT_READY");
+  assert.equal(proof.failurePacket?.nextAction.kind, "wait_or_fix_readiness_contract");
+});
+
+test("readiness failure validator rejects non-readiness packets", async () => {
+  const { validateMobileChangeReadinessFailureShape } = await import("./validate-mobile-change-readiness-failure.ts");
+
+  assert.throws(
+    () => validateMobileChangeReadinessFailureShape({
+      summary: {
+        schema: "mobile-change-verification/v1",
+        source: "live_device",
+        verdict: "mobile_change_verification_failed",
+        readiness: { matched: false, expectedAppPhase: "authentication" },
+        workflow: {
+          stepIds: ["check-readiness"],
+          steps: [{ id: "check-readiness", status: "failed", reasonCode: "APP_NOT_READY" }],
+        },
+        evidence: {
+          artifacts: [{ kind: "failure_packet", path: "docs/showcase/evidence/mobile-change-readiness-failure/failure-packet.json" }],
+        },
+      },
+      failurePacket: {
+        schema: "mobile-verification-failure-packet/v1",
+        source: "live_device",
+        category: "network",
+        reasonCode: "NETWORK_POLICY_BLOCKED",
+      },
+      reportMarkdown: "## Mobile change verification\n",
+      failureMarkdown: "## Mobile verification failure packet\n",
+    }),
+    /failure packet must classify app readiness/,
+  );
+});

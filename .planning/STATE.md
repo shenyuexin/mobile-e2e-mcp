@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 48 live mobile change verification runner completed
+stopped_at: Phase 49 controlled app-readiness failure packet proof completed
 last_updated: "2026-05-27T00:00:00.000Z"
-last_activity: 2026-05-27 -- Phase 48 live mobile change verification runner implemented
+last_activity: 2026-05-27 -- Phase 49 controlled app-readiness failure packet proof implemented
 progress:
   total_phases: 9
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 5
-  completed_plans: 5
-  percent: 88
+  completed_plans: 6
+  percent: 94
 ---
 
 # Project State
@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-03-28)
 
 ## Current Position
 
-Phase: live mobile change verification runner
-Plan: next move to Phase 49 real app failure packet proof once a suitable live app failure scenario is available.
-Status: Explorer failure review/reporting is on main, Android physical-device Explorer evidence exists at `artifacts/explorer/android-full/2026-04-28T03-38-20/`, historical phase/demo/debug scripts live under `scripts/legacy/`, `validate:probe-dry-run` is CI-gated, probe reports use the shared `tool-probe-report/v1` contract, Phases 45-47 provide fixture-backed mobile verification/failure/scenario contracts, and Phase 48 now adds an optional live proof runner with structured no-device output.
-Last activity: 2026-05-27 -- Phase 48 implemented `proof:mobile-change-verification:live` and validated the forced no-device path.
+Phase: real app failure packet proof
+Plan: next move to Phase 50 PR / agent handoff integration.
+Status: Explorer failure review/reporting is on main, Android physical-device Explorer evidence exists at `artifacts/explorer/android-full/2026-04-28T03-38-20/`, historical phase/demo/debug scripts live under `scripts/legacy/`, `validate:probe-dry-run` is CI-gated, probe reports use the shared `tool-probe-report/v1` contract, Phase 48 adds an optional live proof runner, and Phase 49 now adds a controlled live-runner-derived app readiness failure packet. No physical device was connected during Phase 49 execution.
+Last activity: 2026-05-27 -- Phase 49 implemented `proof:mobile-change-verification:readiness-failure` and `validate:mobile-change-readiness-failure`.
 
-Progress: [█████████░] 88%
+Progress: [█████████░] 94%
 
 ## Workspace Semantics
 
@@ -105,7 +105,7 @@ Recent decisions affecting current work:
 - Phase 46 completed: actionable failure packet turns failed verification into schema-backed cause, evidence, and next action.
 - Phase 47 completed: realistic mobile evidence breadth tracks app-like scenario fixtures beyond governance demos.
 - Phase 48 completed: live mobile change verification runner produces the same evidence bundle from optional device/emulator execution and structured no-device output.
-- Phase 49 planned: real app failure packet proof should ground the failure packet in a real or live-run-derived failure.
+- Phase 49 completed: controlled live-runner-derived app-readiness failure packet grounds the failure packet in the live runner path; physical-device failure proof remains future work.
 - Phase 50 planned: PR / agent handoff integration should turn bundles and packets into compact review artifacts.
 
 ### Blockers/Concerns
@@ -164,6 +164,7 @@ Recent decisions affecting current work:
 - Phase 49 added: Real App Failure Packet Proof
 - Phase 50 added: PR / Agent Handoff Integration
 - Phase 48 completed: optional live runner command, fake-invoker unit tests, and forced no-device verification path landed.
+- Phase 49 completed: controlled readiness-failure proof, validator, committed evidence, and docs landed.
 
 ### Planning Hygiene Notes
 

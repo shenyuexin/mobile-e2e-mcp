@@ -16,7 +16,7 @@
 | **46** | **Actionable Failure Packet** | **completed** | **45** |
 | **47** | **Realistic Mobile Evidence Breadth** | **completed** | **45, 46** |
 | **48** | **Live Mobile Change Verification Runner** | **completed** | **45, 46** |
-| **49** | **Real App Failure Packet Proof** | **planned** | **48** |
+| **49** | **Real App Failure Packet Proof** | **completed** | **48** |
 | **50** | **PR / Agent Handoff Integration** | **planned** | **48, 49** |
 
 ## Phase 29: Explorer Horizontal Swipe Discovery
@@ -149,7 +149,7 @@ Plans:
 - **Out of scope**: broad failure taxonomy completion and automatic app fixing.
 
 Plans:
-- [ ] `49-PLAN.md` — real app failure packet proof
+- [x] `49-PLAN.md` / `49-01-SUMMARY.md` — controlled app-readiness failure packet proof
 
 ## Phase 50: PR / Agent Handoff Integration
 
