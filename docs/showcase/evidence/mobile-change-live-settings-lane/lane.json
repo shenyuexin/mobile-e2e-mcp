@@ -1,0 +1,26 @@
+{
+  "schema": "mobile-change-live-settings-lane/v1",
+  "platform": "android",
+  "appId": "com.android.settings",
+  "deviceId": "10AEA40Z3Y000R5",
+  "runId": "android-settings-live-success-2026-05-29",
+  "policyProfile": "interactive",
+  "runnerProfile": "native_android",
+  "expectedReadiness": {},
+  "command": "M2E_DEVICE_ID=10AEA40Z3Y000R5 M2E_LIVE_MOBILE_CHANGE_RUN_ID=android-settings-live-success-2026-05-29 M2E_LIVE_MOBILE_CHANGE_APP_ID=com.android.settings M2E_LIVE_MOBILE_CHANGE_POLICY_PROFILE=interactive M2E_LIVE_MOBILE_CHANGE_RUNNER_PROFILE=native_android pnpm run proof:mobile-change-verification:live",
+  "intakeCommand": "pnpm run intake:mobile-change-live-proof -- output/showcase/mobile-change-verification-live/android-settings-live-success-2026-05-29",
+  "evidenceDir": "output/showcase/mobile-change-verification-live/android-settings-live-success-2026-05-29",
+  "successCriteria": [
+    "Device discovery succeeds for the requested Android device.",
+    "The governed session starts under the interactive policy profile.",
+    "The Android Settings app launches without requiring an APK build or install.",
+    "UI inspection and screen-summary collection succeed.",
+    "The verification bundle verdict is mobile_change_verified."
+  ],
+  "boundaries": [
+    "This lane targets Android Settings as a built-in app so the success path does not depend on a repo-built APK.",
+    "No APK build or install is required.",
+    "The lane is a runnable proof recipe. It does not claim live success until the command is executed and the resulting bundle passes intake.",
+    "For app-under-test claims, replace the appId and add a deterministic readiness contract backed by app evidence."
+  ]
+}

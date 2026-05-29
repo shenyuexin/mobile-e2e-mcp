@@ -137,6 +137,8 @@ If you want a quick hands-on tour before diving into architecture details, start
   - `pnpm run proof:mobile-change-verification` (fixture-backed mobile change verification bundle, failure packet, and scenario index)
   - `pnpm run generate:mobile-change-device-readiness` / `pnpm run validate:mobile-change-device-readiness` (device/app/readiness preflight before attempting live mobile change proof)
   - `pnpm run proof:mobile-change-verification:live` (optional live device/emulator proof; use `M2E_LIVE_MOBILE_CHANGE_ALLOW_NO_DEVICE=1` for structured no-device output)
+  - `pnpm run proof:mobile-change-verification:live-settings` (runnable no-APK Android Settings success lane; requires `10AEA40Z3Y000R5` or editing the device id)
+  - `pnpm run generate:mobile-change-live-settings-lane` / `pnpm run validate:mobile-change-live-settings-lane`
   - `pnpm run proof:mobile-change-verification:readiness-failure` (controlled live-runner-derived app readiness failure packet)
   - `pnpm run validate:mobile-change-verification`
   - `pnpm run validate:mobile-change-live-android-evidence` (tracked Android device `10AEA40Z3Y000R5` live app-readiness failure evidence)
@@ -159,6 +161,7 @@ If you want a quick hands-on tour before diving into architecture details, start
   - [docs/showcase/evidence/mobile-change-verification-fixture/scenario-index.md](docs/showcase/evidence/mobile-change-verification-fixture/scenario-index.md)
   - [docs/showcase/evidence/mobile-change-device-readiness/report.md](docs/showcase/evidence/mobile-change-device-readiness/report.md)
   - [docs/showcase/evidence/mobile-change-live-android-10AEA40Z3Y000R5/report.md](docs/showcase/evidence/mobile-change-live-android-10AEA40Z3Y000R5/report.md)
+  - [docs/showcase/evidence/mobile-change-live-settings-lane/lane.md](docs/showcase/evidence/mobile-change-live-settings-lane/lane.md)
   - [docs/showcase/evidence/mobile-change-live-proof-intake/intake.md](docs/showcase/evidence/mobile-change-live-proof-intake/intake.md)
   - [docs/showcase/evidence/mobile-change-readiness-failure/failure-packet.md](docs/showcase/evidence/mobile-change-readiness-failure/failure-packet.md)
   - [docs/showcase/evidence/mobile-change-readiness-failure/handoff.md](docs/showcase/evidence/mobile-change-readiness-failure/handoff.md)
