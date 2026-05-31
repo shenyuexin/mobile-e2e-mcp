@@ -23,7 +23,7 @@
 | **53** | **Android Live App Failure Evidence** | **completed** | **48, 52** |
 | **54** | **Android Settings Live Success Lane** | **completed** | **48, 53** |
 | **55** | **One-Command Mobile Change Verification UX** | **completed** | **45, 48, 51, 52, 54** |
-| **56** | **Structured Device Readiness Doctor** | **planned** | **51, 55** |
+| **56** | **Structured Device Readiness Doctor** | **completed** | **51, 55** |
 | **57** | **AUT Readiness Contract Scaffold** | **planned** | **51, 55** |
 | **58** | **Repo-Owned App Success Evidence** | **planned** | **55, 56, 57** |
 | **59** | **PR and CI Evidence Automation** | **planned** | **50, 55, 58** |
@@ -236,7 +236,7 @@ Plans:
 - **Out of scope**: automatic driver installation, destructive ADB resets, cloud runner provisioning, and guaranteed device recovery.
 
 Plans:
-- [ ] `56-PLAN.md` — structured device readiness doctor
+- [x] `56-PLAN.md` / `56-01-SUMMARY.md` — structured device readiness doctor
 
 ## Phase 57: AUT Readiness Contract Scaffold
 

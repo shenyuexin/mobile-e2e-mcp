@@ -15,7 +15,16 @@ test("device readiness validator accepts blocked no-device preflight evidence", 
         { id: "readiness-contract", status: "passed", reasonCode: "OK" },
       ],
       blockers: [
-        { id: "device-inventory", status: "blocked", reasonCode: "DEVICE_UNAVAILABLE" },
+        {
+          id: "device-inventory",
+          status: "blocked",
+          reasonCode: "DEVICE_UNAVAILABLE",
+          diagnostic: {
+            blockerType: "no_device",
+            evidence: ["No android devices returned."],
+            nextActions: ["Connect an Android device."],
+          },
+        },
       ],
       nextAction: {
         kind: "connect_device_or_use_self_hosted_runner",
@@ -42,8 +51,17 @@ test("device readiness validator rejects ready verdicts with blockers", async ()
           { id: "device-inventory", status: "blocked", reasonCode: "DEVICE_UNAVAILABLE" },
           { id: "readiness-contract", status: "passed", reasonCode: "OK" },
         ],
-        blockers: [
-          { id: "device-inventory", status: "blocked", reasonCode: "DEVICE_UNAVAILABLE" },
+      blockers: [
+          {
+            id: "device-inventory",
+            status: "blocked",
+            reasonCode: "DEVICE_UNAVAILABLE",
+            diagnostic: {
+              blockerType: "no_device",
+              evidence: ["No android devices returned."],
+              nextActions: ["Connect an Android device."],
+            },
+          },
         ],
         nextAction: {
           kind: "run_live_mobile_change_verification",
@@ -55,5 +73,35 @@ test("device readiness validator rejects ready verdicts with blockers", async ()
       reportMarkdown: "## Mobile change device readiness\n",
     }),
     /ready preflight must not include blockers/,
+  );
+});
+
+test("device readiness validator requires blocker diagnostics", async () => {
+  const { validateMobileChangeDeviceReadinessShape } = await import("./validate-mobile-change-device-readiness.ts");
+
+  assert.throws(
+    () => validateMobileChangeDeviceReadinessShape({
+      summary: {
+        schema: "mobile-change-device-readiness/v1",
+        verdict: "blocked_before_live_verification",
+        platform: "android",
+        appId: "com.example.mobilechange",
+        checks: [
+          { id: "device-inventory", status: "blocked", reasonCode: "DEVICE_UNAUTHORIZED" },
+          { id: "readiness-contract", status: "passed", reasonCode: "OK" },
+        ],
+        blockers: [
+          { id: "device-inventory", status: "blocked", reasonCode: "DEVICE_UNAUTHORIZED" },
+        ],
+        nextAction: {
+          kind: "authorize_device",
+        },
+        boundaries: [
+          "This preflight only proves local readiness to attempt live verification; it does not claim physical-device proof by itself.",
+        ],
+      },
+      reportMarkdown: "## Mobile change device readiness\nVerdict: `blocked_before_live_verification`\n",
+    }),
+    /blocked checks must include structured diagnostics/,
   );
 });

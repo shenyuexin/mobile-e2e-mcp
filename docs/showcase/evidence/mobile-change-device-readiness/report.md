@@ -12,11 +12,16 @@ Expected readiness:
 - App phase: `authentication`
 
 Checks:
-- device-inventory: `blocked` (DEVICE_UNAVAILABLE) - No available android device was returned by list_devices.
+- device-inventory: `blocked` (DEVICE_UNAVAILABLE) - No Android devices were returned by list_devices.; diagnostic `no_device`
 - readiness-contract: `passed` (OK) - At least one deterministic readiness expectation is configured.
 
 Blockers:
-- device-inventory: `DEVICE_UNAVAILABLE`
+- device-inventory: `DEVICE_UNAVAILABLE` (no_device)
+
+Diagnostics:
+- no_device:
+  - Evidence: Android inventory is empty.
+  - Next: Connect an Android device or run on a self-hosted device runner.
 
 Next action:
 - `connect_device_or_use_self_hosted_runner`: No eligible local device was discovered; connect one or run the live proof on a self-hosted device runner.

@@ -136,7 +136,7 @@ If you want a quick hands-on tour before diving into architecture details, start
   - `pnpm run validate:governed-pr-evidence-summary`
   - `pnpm run verify:mobile-change` (one-command mobile change verification UX; use `-- --live` for live-device mode)
   - `pnpm run proof:mobile-change-verification` (fixture-backed mobile change verification bundle, failure packet, and scenario index)
-  - `pnpm run generate:mobile-change-device-readiness` / `pnpm run validate:mobile-change-device-readiness` (device/app/readiness preflight before attempting live mobile change proof)
+  - `pnpm run generate:mobile-change-device-readiness` / `pnpm run validate:mobile-change-device-readiness` (structured device/app/readiness preflight before attempting live mobile change proof)
   - `pnpm run proof:mobile-change-verification:live` (optional live device/emulator proof; use `M2E_LIVE_MOBILE_CHANGE_ALLOW_NO_DEVICE=1` for structured no-device output)
   - `pnpm run proof:mobile-change-verification:live-settings` (runnable no-APK Android Settings success lane; requires `10AEA40Z3Y000R5` or editing the device id)
   - `pnpm run generate:mobile-change-live-settings-lane` / `pnpm run validate:mobile-change-live-settings-lane`

@@ -9,8 +9,21 @@ export type DeviceReadinessVerdict = "ready_for_live_mobile_change_verification"
 export type DeviceReadinessReasonCode =
   | "OK"
   | "DEVICE_UNAVAILABLE"
+  | "DEVICE_UNAUTHORIZED"
+  | "DEVICE_OFFLINE"
+  | "REQUESTED_DEVICE_UNAVAILABLE"
+  | "PLATFORM_TOOL_UNAVAILABLE"
   | "APP_ARTIFACT_UNAVAILABLE"
   | "READINESS_CONTRACT_MISSING";
+
+export type DeviceReadinessBlockerType =
+  | "no_device"
+  | "unauthorized"
+  | "offline"
+  | "wrong_device"
+  | "platform_tool_unavailable"
+  | "missing_app"
+  | "missing_readiness_contract";
 
 export interface MobileChangeDeviceReadinessOptions {
   runId: string;
@@ -31,6 +44,11 @@ export interface DeviceReadinessCheck {
   status: "passed" | "blocked";
   reasonCode: DeviceReadinessReasonCode;
   detail: string;
+  diagnostic?: {
+    blockerType: DeviceReadinessBlockerType;
+    evidence: string[];
+    nextActions: string[];
+  };
 }
 
 export interface MobileChangeDeviceReadinessPreflight {
@@ -53,6 +71,10 @@ export interface MobileChangeDeviceReadinessPreflight {
     kind:
       | "run_live_mobile_change_verification"
       | "connect_device_or_use_self_hosted_runner"
+      | "authorize_device"
+      | "restart_or_select_online_device"
+      | "select_requested_device"
+      | "install_or_repair_platform_tooling"
       | "build_or_provide_app_artifact"
       | "define_readiness_contract";
     command: string;
@@ -73,16 +95,165 @@ function asRecord(value: unknown): Record<string, unknown> {
   return typeof value === "object" && value !== null ? value as Record<string, unknown> : {};
 }
 
-function selectDevice(listDevicesResult: unknown, platform: "android" | "ios", requestedDeviceId?: string): string | undefined {
-  if (requestedDeviceId) return requestedDeviceId;
-  const data = asRecord(asRecord(listDevicesResult).data);
-  const devices = Array.isArray(data[platform]) ? data[platform] : [];
-  for (const item of devices) {
-    const device = asRecord(item);
-    if (device.available === false) continue;
-    if (typeof device.id === "string" && device.id.length > 0) return device.id;
+function platformLabel(platform: "android" | "ios"): string {
+  return platform === "android" ? "Android" : "iOS";
+}
+
+function stringField(record: Record<string, unknown>, ...keys: string[]): string | undefined {
+  for (const key of keys) {
+    if (typeof record[key] === "string" && record[key].length > 0) return record[key];
   }
   return undefined;
+}
+
+function isUnauthorizedDevice(device: Record<string, unknown>): boolean {
+  const state = stringField(device, "state", "status", "authorization", "authState")?.toLowerCase();
+  return device.authorized === false || state === "unauthorized" || state === "unauthorised";
+}
+
+function isOfflineDevice(device: Record<string, unknown>): boolean {
+  const state = stringField(device, "state", "status")?.toLowerCase();
+  return state === "offline" || state === "disconnected";
+}
+
+function isReadyDevice(device: Record<string, unknown>): boolean {
+  return Boolean(stringField(device, "id", "udid")) && device.available !== false && !isUnauthorizedDevice(device) && !isOfflineDevice(device);
+}
+
+function diagnosticCheck(params: {
+  reasonCode: DeviceReadinessReasonCode;
+  blockerType: DeviceReadinessBlockerType;
+  detail: string;
+  evidence: string[];
+  nextActions: string[];
+}): DeviceReadinessCheck {
+  return {
+    id: "device-inventory",
+    status: "blocked",
+    reasonCode: params.reasonCode,
+    detail: params.detail,
+    diagnostic: {
+      blockerType: params.blockerType,
+      evidence: params.evidence,
+      nextActions: params.nextActions,
+    },
+  };
+}
+
+function deviceInventoryCheck(listDevicesResult: unknown, platform: "android" | "ios", requestedDeviceId?: string): {
+  selectedDeviceId?: string;
+  check: DeviceReadinessCheck;
+} {
+  const result = asRecord(listDevicesResult);
+  if (result.status && result.status !== "success") {
+    const reason = typeof result.reasonCode === "string" ? result.reasonCode : "unknown";
+    return {
+      check: diagnosticCheck({
+        reasonCode: "PLATFORM_TOOL_UNAVAILABLE",
+        blockerType: "platform_tool_unavailable",
+        detail: `Device inventory failed before selecting a ${platform} device.`,
+        evidence: [`list_devices status: ${String(result.status)}`, `reasonCode: ${reason}`],
+        nextActions: ["Install or repair platform tooling, then rerun the readiness doctor."],
+      }),
+    };
+  }
+  const data = asRecord(asRecord(listDevicesResult).data);
+  const devices = Array.isArray(data[platform]) ? data[platform] : [];
+  const deviceRecords = devices.map((item) => asRecord(item));
+
+  if (requestedDeviceId) {
+    const requested = deviceRecords.find((device) => stringField(device, "id", "udid") === requestedDeviceId);
+    if (!requested) {
+      return {
+        check: diagnosticCheck({
+          reasonCode: "REQUESTED_DEVICE_UNAVAILABLE",
+          blockerType: "wrong_device",
+          detail: `Requested ${platform} device was not returned by list_devices: ${requestedDeviceId}.`,
+          evidence: [
+            `requestedDeviceId: ${requestedDeviceId}`,
+            `seenDevices: ${deviceRecords.map((device) => stringField(device, "id", "udid") ?? "unknown").join(",") || "none"}`,
+          ],
+          nextActions: ["Connect the requested device, clear M2E_DEVICE_ID, or choose one of the listed device ids."],
+        }),
+      };
+    }
+    if (isReadyDevice(requested)) {
+      return {
+        selectedDeviceId: requestedDeviceId,
+        check: {
+          id: "device-inventory",
+          status: "passed",
+          reasonCode: "OK",
+          detail: `Selected ${platform} device ${requestedDeviceId}.`,
+        },
+      };
+    }
+  }
+
+  const readyDevice = deviceRecords.find((device) => isReadyDevice(device));
+  if (readyDevice) {
+    const selectedDeviceId = stringField(readyDevice, "id", "udid");
+    return {
+      selectedDeviceId,
+      check: {
+        id: "device-inventory",
+        status: "passed",
+        reasonCode: "OK",
+        detail: `Selected ${platform} device ${selectedDeviceId}.`,
+      },
+    };
+  }
+
+  if (deviceRecords.length === 0) {
+    const label = platformLabel(platform);
+    return {
+      check: diagnosticCheck({
+        reasonCode: "DEVICE_UNAVAILABLE",
+        blockerType: "no_device",
+        detail: `No ${label} devices were returned by list_devices.`,
+        evidence: [`${label} inventory is empty.`],
+        nextActions: [`Connect an ${label} device or run on a self-hosted device runner.`],
+      }),
+    };
+  }
+
+  const firstUnauthorized = deviceRecords.find((device) => isUnauthorizedDevice(device));
+  if (firstUnauthorized) {
+    const deviceId = stringField(firstUnauthorized, "id", "udid") ?? "unknown";
+    return {
+      check: diagnosticCheck({
+        reasonCode: "DEVICE_UNAUTHORIZED",
+        blockerType: "unauthorized",
+        detail: `${platform} device ${deviceId} is connected but not authorized for automation.`,
+        evidence: [`deviceId: ${deviceId}`, `state: ${stringField(firstUnauthorized, "state", "status", "authorization", "authState") ?? "unauthorized"}`],
+        nextActions: ["Accept the USB debugging authorization prompt, reconnect the device, then rerun verification."],
+      }),
+    };
+  }
+
+  const firstOffline = deviceRecords.find((device) => isOfflineDevice(device) || device.available === false);
+  if (firstOffline) {
+    const deviceId = stringField(firstOffline, "id", "udid") ?? "unknown";
+    return {
+      check: diagnosticCheck({
+        reasonCode: "DEVICE_OFFLINE",
+        blockerType: "offline",
+        detail: `${platform} device ${deviceId} is listed but offline or unavailable.`,
+        evidence: [`deviceId: ${deviceId}`, `state: ${stringField(firstOffline, "state", "status") ?? "unavailable"}`, `available: ${String(firstOffline.available)}`],
+        nextActions: ["Reconnect the device, restart the platform bridge if needed, or select an online device."],
+      }),
+    };
+  }
+
+  return {
+    check: diagnosticCheck({
+      reasonCode: "DEVICE_UNAVAILABLE",
+      blockerType: "no_device",
+      detail: `No eligible ${platformLabel(platform)} device was returned by list_devices.`,
+      evidence: [`deviceCount: ${deviceRecords.length}`],
+      nextActions: [`Connect an eligible ${platformLabel(platform)} device or use a self-hosted runner.`],
+    }),
+  };
 }
 
 async function pathExists(filePath: string): Promise<boolean> {
@@ -105,6 +276,34 @@ function nextActionForBlockers(blockers: DeviceReadinessCheck[]): MobileChangeDe
       kind: "run_live_mobile_change_verification",
       command: "pnpm run proof:mobile-change-verification:live",
       reason: "A device and deterministic readiness contract are available, so the live proof runner can be attempted.",
+    };
+  }
+  if (first.reasonCode === "DEVICE_UNAUTHORIZED") {
+    return {
+      kind: "authorize_device",
+      command: "adb devices -l",
+      reason: "The selected Android device needs USB debugging authorization before live verification can run.",
+    };
+  }
+  if (first.reasonCode === "DEVICE_OFFLINE") {
+    return {
+      kind: "restart_or_select_online_device",
+      command: "adb devices -l",
+      reason: "The device is offline or unavailable; reconnect it, restart the platform bridge if needed, or select an online device.",
+    };
+  }
+  if (first.reasonCode === "REQUESTED_DEVICE_UNAVAILABLE") {
+    return {
+      kind: "select_requested_device",
+      command: "M2E_DEVICE_ID=<visible-device-id> pnpm run verify:mobile-change -- --live",
+      reason: "The requested device id was not present; connect it or choose a visible device id.",
+    };
+  }
+  if (first.reasonCode === "PLATFORM_TOOL_UNAVAILABLE") {
+    return {
+      kind: "install_or_repair_platform_tooling",
+      command: "pnpm run verify:mobile-change -- --live",
+      reason: "The platform inventory command failed; install or repair platform tooling, then retry verification.",
     };
   }
   if (first.reasonCode === "APP_ARTIFACT_UNAVAILABLE") {
@@ -135,20 +334,9 @@ export async function buildMobileChangeDeviceReadinessPreflight(
   const checks: DeviceReadinessCheck[] = [];
 
   const listed = await invoke("list_devices", { includeUnavailable: true });
-  const selectedDeviceId = selectDevice(listed, options.platform, options.deviceId);
-  checks.push(selectedDeviceId
-    ? {
-        id: "device-inventory",
-        status: "passed",
-        reasonCode: "OK",
-        detail: `Selected ${options.platform} device ${selectedDeviceId}.`,
-      }
-    : {
-        id: "device-inventory",
-        status: "blocked",
-        reasonCode: "DEVICE_UNAVAILABLE",
-        detail: `No available ${options.platform} device was returned by list_devices.`,
-      });
+  const inventory = deviceInventoryCheck(listed, options.platform, options.deviceId);
+  const selectedDeviceId = inventory.selectedDeviceId;
+  checks.push(inventory.check);
 
   if (options.appArtifact) {
     const exists = await pathExists(path.resolve(repoRoot(), options.appArtifact));
@@ -164,6 +352,11 @@ export async function buildMobileChangeDeviceReadinessPreflight(
           status: "blocked",
           reasonCode: "APP_ARTIFACT_UNAVAILABLE",
           detail: `App artifact does not exist: ${options.appArtifact}.`,
+          diagnostic: {
+            blockerType: "missing_app",
+            evidence: [`appArtifact: ${options.appArtifact}`],
+            nextActions: ["Build the app artifact or point M2E_LIVE_MOBILE_CHANGE_APP_ARTIFACT at an existing file."],
+          },
         });
   }
 
@@ -179,6 +372,11 @@ export async function buildMobileChangeDeviceReadinessPreflight(
         status: "blocked",
         reasonCode: "READINESS_CONTRACT_MISSING",
         detail: "Expected screen id or app phase is required before live proof can be trusted.",
+        diagnostic: {
+          blockerType: "missing_readiness_contract",
+          evidence: ["expectedReadiness.screenId and expectedReadiness.appPhase are both empty."],
+          nextActions: ["Define M2E_LIVE_MOBILE_CHANGE_EXPECTED_SCREEN_ID or M2E_LIVE_MOBILE_CHANGE_EXPECTED_APP_PHASE before live verification."],
+        },
       });
 
   const blockers = checks.filter((check) => check.status === "blocked");
@@ -205,10 +403,20 @@ export async function buildMobileChangeDeviceReadinessPreflight(
 }
 
 export function renderMobileChangeDeviceReadinessMarkdown(preflight: MobileChangeDeviceReadinessPreflight): string {
-  const checkLines = preflight.checks.map((check) => `- ${check.id}: \`${check.status}\` (${check.reasonCode}) - ${check.detail}`);
+  const checkLines = preflight.checks.map((check) => {
+    const diagnostic = check.diagnostic ? `; diagnostic \`${check.diagnostic.blockerType}\`` : "";
+    return `- ${check.id}: \`${check.status}\` (${check.reasonCode}) - ${check.detail}${diagnostic}`;
+  });
   const blockerLines = preflight.blockers.length > 0
-    ? preflight.blockers.map((check) => `- ${check.id}: \`${check.reasonCode}\``)
+    ? preflight.blockers.map((check) => `- ${check.id}: \`${check.reasonCode}\` (${check.diagnostic?.blockerType ?? "unknown"})`)
     : ["- none"];
+  const diagnosticLines = preflight.blockers.flatMap((check) => check.diagnostic
+    ? [
+        `- ${check.diagnostic.blockerType}:`,
+        `  - Evidence: ${check.diagnostic.evidence.join("; ")}`,
+        `  - Next: ${check.diagnostic.nextActions.join("; ")}`,
+      ]
+    : []);
   const boundaryLines = preflight.boundaries.map((boundary) => `- ${boundary}`);
 
   return [
@@ -230,6 +438,9 @@ export function renderMobileChangeDeviceReadinessMarkdown(preflight: MobileChang
     "",
     "Blockers:",
     ...blockerLines,
+    "",
+    "Diagnostics:",
+    ...(diagnosticLines.length > 0 ? diagnosticLines : ["- none"]),
     "",
     "Next action:",
     `- \`${preflight.nextAction.kind}\`: ${preflight.nextAction.reason}`,

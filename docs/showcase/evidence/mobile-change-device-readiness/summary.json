@@ -14,7 +14,16 @@
       "id": "device-inventory",
       "status": "blocked",
       "reasonCode": "DEVICE_UNAVAILABLE",
-      "detail": "No available android device was returned by list_devices."
+      "detail": "No Android devices were returned by list_devices.",
+      "diagnostic": {
+        "blockerType": "no_device",
+        "evidence": [
+          "Android inventory is empty."
+        ],
+        "nextActions": [
+          "Connect an Android device or run on a self-hosted device runner."
+        ]
+      }
     },
     {
       "id": "readiness-contract",
@@ -28,7 +37,16 @@
       "id": "device-inventory",
       "status": "blocked",
       "reasonCode": "DEVICE_UNAVAILABLE",
-      "detail": "No available android device was returned by list_devices."
+      "detail": "No Android devices were returned by list_devices.",
+      "diagnostic": {
+        "blockerType": "no_device",
+        "evidence": [
+          "Android inventory is empty."
+        ],
+        "nextActions": [
+          "Connect an Android device or run on a self-hosted device runner."
+        ]
+      }
     }
   ],
   "nextAction": {

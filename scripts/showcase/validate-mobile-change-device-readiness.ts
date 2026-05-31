@@ -13,11 +13,21 @@ interface DeviceReadinessShape {
       id?: string;
       status?: string;
       reasonCode?: string;
+      diagnostic?: {
+        blockerType?: string;
+        evidence?: string[];
+        nextActions?: string[];
+      };
     }>;
     blockers?: Array<{
       id?: string;
       status?: string;
       reasonCode?: string;
+      diagnostic?: {
+        blockerType?: string;
+        evidence?: string[];
+        nextActions?: string[];
+      };
     }>;
     nextAction?: {
       kind?: string;
@@ -60,6 +70,11 @@ export function validateMobileChangeDeviceReadinessShape(shape: DeviceReadinessS
   } else {
     assert.equal(shape.summary.verdict, "blocked_before_live_verification");
     assert.ok(blockers.length > 0, "blocked preflight must include at least one blocker");
+    for (const blocker of blockers) {
+      assert.ok(blocker.diagnostic?.blockerType, "blocked checks must include structured diagnostics");
+      assert.ok((blocker.diagnostic.evidence?.length ?? 0) > 0, "blocked diagnostics must include evidence");
+      assert.ok((blocker.diagnostic.nextActions?.length ?? 0) > 0, "blocked diagnostics must include next actions");
+    }
     assert.notEqual(shape.summary.nextAction?.kind, "run_live_mobile_change_verification");
   }
 
