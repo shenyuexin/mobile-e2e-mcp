@@ -1,0 +1,94 @@
+{
+  "schema": "official-tool-bridge/v1",
+  "generatedAt": "2026-06-01",
+  "positioning": {
+    "mobileE2ERole": "Governed cross-stack mobile verification harness: policy, session, evidence, intake, failure memory, and PR/CI proof boundaries.",
+    "officialToolRole": "Source-native AI tooling that can author journeys, provide project context, or produce upstream execution evidence.",
+    "replacementClaim": false
+  },
+  "entries": [
+    {
+      "id": "android_cli_journeys",
+      "name": "Android CLI support for Journeys",
+      "officialSource": "https://developer.android.com/tools/agents/android-cli/journeys",
+      "provider": "android",
+      "role": "upstream_android_journey_executor",
+      "relationToMobileE2E": "upstream_evidence_provider",
+      "acceptedEvidenceKinds": [
+        "journey_definition",
+        "journey_run_result",
+        "device_screenshot",
+        "assertion_result"
+      ],
+      "requiredIntakeChecks": [
+        "source identifies target app and device",
+        "run result distinguishes completed, failed, and blocked",
+        "screenshots/assertions are linked as artifacts",
+        "mobile-e2e proof level remains governed by harness intake"
+      ],
+      "cannotClaim": [
+        "standalone_cross_stack_success",
+        "react_native_or_flutter_profile_maturity",
+        "policy_session_audit_coverage_inside_this_harness"
+      ],
+      "recommendedUse": "Use as an Android-native upstream journey runner; ingest outputs as evidence candidates, not as automatic mobile-e2e success proof."
+    },
+    {
+      "id": "android_studio_journeys",
+      "name": "Journeys for Android Studio",
+      "officialSource": "https://developer.android.com/studio/gemini/journeys",
+      "provider": "android",
+      "role": "ide_android_journey_authoring",
+      "relationToMobileE2E": "upstream_evidence_provider",
+      "acceptedEvidenceKinds": [
+        "journey_xml",
+        "ide_run_result",
+        "reasoning_trace",
+        "assertion_result"
+      ],
+      "requiredIntakeChecks": [
+        "journey file and run output are preserved",
+        "device/app configuration is visible",
+        "AI-evaluated assertions are labeled as visual/reasoning evidence",
+        "harness result keeps deterministic and visual evidence boundaries separate"
+      ],
+      "cannotClaim": [
+        "standalone_cross_stack_success",
+        "non_android_platform_coverage",
+        "harness_policy_compliance_without_intake"
+      ],
+      "recommendedUse": "Use for Android IDE journey authoring and exploratory AI testing; treat run output as upstream evidence requiring harness intake."
+    },
+    {
+      "id": "dart_flutter_mcp",
+      "name": "Dart and Flutter MCP server",
+      "officialSource": "https://docs.flutter.dev/ai/mcp-server",
+      "provider": "flutter",
+      "role": "framework_project_context_provider",
+      "relationToMobileE2E": "upstream_context_provider",
+      "acceptedEvidenceKinds": [
+        "runtime_error",
+        "widget_tree_context",
+        "static_analysis_issue",
+        "dependency_action"
+      ],
+      "requiredIntakeChecks": [
+        "framework context is linked to a specific app run or code change",
+        "runtime/widget evidence is labeled as Flutter context rather than device E2E proof",
+        "mobile-e2e verification still supplies device/session/proof-level outcome",
+        "dependency or code actions remain separate from evidence promotion"
+      ],
+      "cannotClaim": [
+        "standalone_device_e2e_success",
+        "android_or_ios_policy_session_coverage",
+        "react_native_support"
+      ],
+      "recommendedUse": "Use as Flutter project intelligence and runtime context for agents; combine with mobile-e2e device evidence for proof."
+    }
+  ],
+  "bridgeRules": [
+    "Official-tool outputs are accepted only as evidence or context candidates until mobile-e2e intake assigns proof level.",
+    "Vision/reasoning assertions must be labeled separately from deterministic readiness or native post-condition checks.",
+    "No official-tool bridge entry may claim to replace the harness policy, session, evidence, and failure-memory layer."
+  ]
+}

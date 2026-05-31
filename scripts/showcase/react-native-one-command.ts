@@ -3,12 +3,10 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import {
-  renderReactNativeEvidencePackMarkdown,
   writeReactNativeEvidencePack,
   type ReactNativeEvidencePack,
 } from "./react-native-evidence-pack.ts";
 import {
-  renderReactNativeReadinessMarkdown,
   writeReactNativeReadiness,
   type ReactNativeReadinessResult,
 } from "./react-native-readiness.ts";
@@ -165,16 +163,14 @@ async function writeOrCheck(relativePath: string, content: string, check: boolea
   await writeFile(absolutePath, content, "utf8");
 }
 
-function defaultDeps(): ReactNativeOneCommandDependencies {
+function defaultDeps(check: boolean): ReactNativeOneCommandDependencies {
   return {
     runReadiness: async () => {
-      const result = await writeReactNativeReadiness(false);
-      await writeFile(path.join(repoRoot(), "docs/showcase/evidence/react-native-readiness/report.md"), renderReactNativeReadinessMarkdown(result), "utf8");
+      const result = await writeReactNativeReadiness(check);
       return { path: readinessOutputPath, result };
     },
     runEvidencePack: async () => {
-      const result = await writeReactNativeEvidencePack(false);
-      await writeFile(path.join(repoRoot(), "docs/showcase/evidence/react-native-evidence-pack/evidence-pack.md"), renderReactNativeEvidencePackMarkdown(result), "utf8");
+      const result = await writeReactNativeEvidencePack(check);
       return { path: evidencePackOutputPath, result };
     },
   };
@@ -182,7 +178,7 @@ function defaultDeps(): ReactNativeOneCommandDependencies {
 
 export async function writeReactNativeOneCommand(check: boolean): Promise<ReactNativeOneCommandResult> {
   const runId = process.env.M2E_RN_ONE_COMMAND_RUN_ID ?? "react-native-one-command-2026-06-01";
-  const result = await runReactNativeOneCommand(runId, defaultDeps());
+  const result = await runReactNativeOneCommand(runId, defaultDeps(check));
   validateReactNativeOneCommand(result);
   await writeOrCheck(resultJsonPath, `${JSON.stringify(result, null, 2)}\n`, check);
   await writeOrCheck(resultMarkdownPath, renderReactNativeOneCommandMarkdown(result), check);

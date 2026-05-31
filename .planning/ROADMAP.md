@@ -329,4 +329,4 @@ Plans:
 - **Out of scope**: invoking Android CLI/Journeys or Dart/Flutter MCP directly, vendor-specific account setup, and claiming official-tool parity.
 
 Plans:
-- [ ] `64-PLAN.md` — official tool bridge contract
+- [x] `64-PLAN.md` / `64-01-SUMMARY.md` — official tool bridge contract
