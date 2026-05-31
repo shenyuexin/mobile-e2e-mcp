@@ -15,15 +15,17 @@ For each run of `CI` (`.github/workflows/ci.yml`):
 1. Job logs for `unit-and-typecheck` and `dry-run-smoke`
 2. Dedicated `explorer-evidence` job that validates the committed Android physical-device Explorer artifact contract
 3. Probe dry-run contract validation for Android + iOS simulator probe scripts
-4. `dry-run-smoke` also validates committed governed-control evidence contracts, the compact governed evidence brief, the PR-ready evidence summary, the one-command mobile change UX, the AUT readiness contract scaffold, the repo-owned app success candidate, the fixture-backed mobile change verification bundle, the controlled readiness failure packet, the PR/agent handoff, the live-proof readiness preflight, the Android Settings success-lane recipe, the tracked Android live evidence, and the live-proof intake gate through `pnpm run validate:governed-control-evidence`, `pnpm run validate:governed-business-app-evidence`, `pnpm run validate:governed-business-app-comparison`, `pnpm run validate:governed-policy-escalation-evidence`, `pnpm run validate:governed-evidence-brief`, `pnpm run validate:governed-pr-evidence-summary`, `pnpm run test:mobile-change-one-command`, `pnpm run validate:mobile-change-readiness-contract`, `pnpm run validate:mobile-change-repo-app-success-candidate`, `pnpm run validate:mobile-change-verification`, `pnpm run validate:mobile-change-readiness-failure`, `pnpm run validate:mobile-change-handoff`, `pnpm run validate:mobile-change-device-readiness`, `pnpm run validate:mobile-change-live-settings-lane`, `pnpm run validate:mobile-change-live-android-evidence`, and `pnpm run validate:mobile-change-live-proof-intake`
+4. `dry-run-smoke` also validates committed governed-control evidence contracts, the compact governed evidence brief, the PR-ready evidence summary, the one-command mobile change UX, the AUT readiness contract scaffold, the repo-owned app success candidate, the mobile change CI/PR evidence artifact, the fixture-backed mobile change verification bundle, the controlled readiness failure packet, the PR/agent handoff, the live-proof readiness preflight, the Android Settings success-lane recipe, the tracked Android live evidence, and the live-proof intake gate through `pnpm run validate:governed-control-evidence`, `pnpm run validate:governed-business-app-evidence`, `pnpm run validate:governed-business-app-comparison`, `pnpm run validate:governed-policy-escalation-evidence`, `pnpm run validate:governed-evidence-brief`, `pnpm run validate:governed-pr-evidence-summary`, `pnpm run test:mobile-change-one-command`, `pnpm run validate:mobile-change-readiness-contract`, `pnpm run validate:mobile-change-repo-app-success-candidate`, `pnpm run validate:mobile-change-ci-pr-evidence`, `pnpm run validate:mobile-change-verification`, `pnpm run validate:mobile-change-readiness-failure`, `pnpm run validate:mobile-change-handoff`, `pnpm run validate:mobile-change-device-readiness`, `pnpm run validate:mobile-change-live-settings-lane`, `pnpm run validate:mobile-change-live-android-evidence`, and `pnpm run validate:mobile-change-live-proof-intake`
 5. Uploaded metadata artifacts:
    - `ci-unit-typecheck-metadata`
    - `ci-dry-run-smoke-metadata`
    - `ci-explorer-evidence-metadata`
    - `ci-probe-dry-run-metadata`
-6. Uploaded Explorer evidence report artifact:
+6. Uploaded mobile change PR evidence artifact:
+   - `ci-mobile-change-pr-evidence-<run_id>`
+7. Uploaded Explorer evidence report artifact:
    - `ci-android-explorer-evidence-<run_id>`
-7. Job-level step summary with:
+8. Job-level step summary with:
    - job status
    - run URL
    - artifact names
@@ -61,6 +63,7 @@ For each run of `Real Device Acceptance` (`.github/workflows/real-device-accepta
 - `test:mobile-change-one-command` verifies the one-command developer UX across fixture, live-blocked, intake-rejected, and live-success-shaped outcomes. It preserves lower-level proof labels rather than turning all paths into success.
 - `validate:mobile-change-readiness-contract` is an offline drift check for the scaffolded AUT readiness contract. It verifies deterministic entry, reset semantics, and ready-state signals before live proof relies on app-specific assumptions.
 - `validate:mobile-change-repo-app-success-candidate` is an offline drift check for the repo-owned demo Android app success candidate. It verifies the APK artifact and deterministic contract are present, while keeping no-device output blocked until a real or explicitly labeled emulator run passes intake.
+- `validate:mobile-change-ci-pr-evidence` is an offline drift check for the compact PR/CI artifact generated from mobile change evidence sources. Blocked and no-device evidence maps to neutral CI status, while success requires promoted physical/emulator evidence with no blockers.
 - `validate:mobile-change-device-readiness` is an offline drift check for the controlled live-proof preflight. It verifies structured device blocker diagnostics, optional app artifact, and readiness-contract checks are reported before UI-affecting live actions; the committed no-device blocker does not prove physical-device fidelity.
 - `proof:mobile-change-verification:live` is an optional local/self-hosted proof path over existing governed MCP tools. It writes timestamped live output when a device is available and can write structured no-device output with `M2E_LIVE_MOBILE_CHANGE_ALLOW_NO_DEVICE=1`; normal Ubuntu CI does not require this command.
 - `validate:mobile-change-live-settings-lane` is an offline drift check for the Android Settings no-APK success-lane recipe. It keeps the runnable command stable, but it is not live success evidence until executed on a connected device and accepted by the intake gate.
@@ -88,6 +91,7 @@ For each run of `Real Device Acceptance` (`.github/workflows/real-device-accepta
   - `docs/showcase/evidence/mobile-change-live-android-10AEA40Z3Y000R5/` plus `pnpm run validate:mobile-change-live-android-evidence` for tracked Android live app-readiness failure evidence
   - `docs/showcase/evidence/mobile-change-live-proof-intake/` plus `pnpm run validate:mobile-change-live-proof-intake` for the live proof promotion gate
   - `docs/showcase/evidence/mobile-change-repo-app-success-candidate/` plus `pnpm run validate:mobile-change-repo-app-success-candidate` for the repo-owned Android app success candidate and its no-device blocker boundary
+  - `docs/showcase/evidence/mobile-change-ci-pr-evidence/` plus `pnpm run validate:mobile-change-ci-pr-evidence` for the compact PR/CI artifact and proof-level-safe CI conclusion
   - `docs/showcase/evidence/mobile-change-readiness-failure/` plus `pnpm run validate:mobile-change-readiness-failure` for the controlled app-readiness failure packet
   - `docs/showcase/evidence/mobile-change-readiness-failure/handoff.md` plus `pnpm run validate:mobile-change-handoff` for the PR/agent handoff summary
   - `pnpm run validate:android-tool-probe` and `pnpm run validate:ios-tool-probe`

@@ -26,7 +26,7 @@
 | **56** | **Structured Device Readiness Doctor** | **completed** | **51, 55** |
 | **57** | **AUT Readiness Contract Scaffold** | **completed** | **51, 55** |
 | **58** | **Repo-Owned App Success Evidence** | **completed-with-live-device-blocker** | **55, 56, 57** |
-| **59** | **PR and CI Evidence Automation** | **planned** | **50, 55, 58** |
+| **59** | **PR and CI Evidence Automation** | **completed** | **50, 55, 58** |
 | **60** | **Failure Memory Remediation Loop** | **planned** | **46, 50, 55** |
 
 ## Phase 29: Explorer Horizontal Swipe Discovery
@@ -269,7 +269,7 @@ Plans:
 - **Out of scope**: mandatory real-device CI, GitHub comment publishing by default, and release gate hard-blocking without configured evidence lanes.
 
 Plans:
-- [ ] `59-PLAN.md` — PR and CI evidence automation
+- [x] `59-PLAN.md` / `59-01-SUMMARY.md` — PR and CI evidence automation
 
 ## Phase 60: Failure Memory Remediation Loop
 

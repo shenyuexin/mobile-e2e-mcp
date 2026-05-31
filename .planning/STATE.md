@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 58 repo-owned app success candidate completed with live-device blocker
+stopped_at: Phase 59 PR and CI evidence automation completed
 last_updated: "2026-05-31T00:00:00.000Z"
-last_activity: 2026-05-31 -- Phase 58 repo-owned app success candidate implemented; live success remains blocked by no visible device
+last_activity: 2026-05-31 -- Phase 59 PR and CI evidence automation implemented
 progress:
   total_phases: 16
-  completed_phases: 14
+  completed_phases: 15
   total_plans: 16
-  completed_plans: 14
-  percent: 88
+  completed_plans: 15
+  percent: 94
 ---
 
 # Project State
@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-03-28)
 
 ## Current Position
 
-Phase: PR and CI evidence automation
-Plan: Phase 58 is complete as a repo-owned app success candidate and blocked-boundary gate; execute Phase 59 next to package one-command/candidate outputs for review and CI.
-Status: Explorer failure review/reporting is on main, Android physical-device Explorer evidence exists at `artifacts/explorer/android-full/2026-04-28T03-38-20/`, historical phase/demo/debug scripts live under `scripts/legacy/`, `validate:probe-dry-run` is CI-gated, probe reports use the shared `tool-probe-report/v1` contract, Phase 48 adds an optional live proof runner, Phase 49 adds a controlled live-runner-derived app readiness failure packet, Phase 50 adds PR/agent handoff summaries, Phase 51 adds a CI-stable live-proof readiness preflight, Phase 52 adds a live-proof intake gate, Phase 53 adds tracked Android live app-readiness failure evidence for device `10AEA40Z3Y000R5`, Phase 54 adds a no-APK Android Settings live success lane, Phase 55 adds `verify:mobile-change` plus `mobile-e2e-mcp verify-mobile-change`, Phase 56 adds structured readiness diagnostics, Phase 57 adds a scaffolded AUT readiness contract at `configs/readiness/mobile-change.android.json`, and Phase 58 adds `configs/readiness/demo-android-app.android.json` plus a repo-owned app success candidate at `docs/showcase/evidence/mobile-change-repo-app-success-candidate/`. The candidate is blocked before live success because no Android device/emulator is visible through ADB in the current environment.
-Last activity: 2026-05-31 -- Phase 58 implemented repo-owned app candidate generation, validation, tracked evidence, package scripts, and doc/CI evidence references.
+Phase: Failure memory remediation loop
+Plan: Phase 59 is complete; execute Phase 60 next to turn repeated failure/candidate evidence into bounded remediation routing.
+Status: Explorer failure review/reporting is on main, Android physical-device Explorer evidence exists at `artifacts/explorer/android-full/2026-04-28T03-38-20/`, historical phase/demo/debug scripts live under `scripts/legacy/`, `validate:probe-dry-run` is CI-gated, probe reports use the shared `tool-probe-report/v1` contract, Phase 48 adds an optional live proof runner, Phase 49 adds a controlled live-runner-derived app readiness failure packet, Phase 50 adds PR/agent handoff summaries, Phase 51 adds a CI-stable live-proof readiness preflight, Phase 52 adds a live-proof intake gate, Phase 53 adds tracked Android live app-readiness failure evidence for device `10AEA40Z3Y000R5`, Phase 54 adds a no-APK Android Settings live success lane, Phase 55 adds `verify:mobile-change` plus `mobile-e2e-mcp verify-mobile-change`, Phase 56 adds structured readiness diagnostics, Phase 57 adds a scaffolded AUT readiness contract at `configs/readiness/mobile-change.android.json`, Phase 58 adds `configs/readiness/demo-android-app.android.json` plus a repo-owned app success candidate at `docs/showcase/evidence/mobile-change-repo-app-success-candidate/`, and Phase 59 adds a compact PR/CI artifact at `docs/showcase/evidence/mobile-change-ci-pr-evidence/` plus CI upload wiring. The repo-owned app candidate remains blocked before live success because no Android device/emulator is visible through ADB in the current environment.
+Last activity: 2026-05-31 -- Phase 59 implemented PR/CI artifact generation, validation, committed evidence, CI upload wiring, and summary docs.
 
-Progress: [█████████░] 88%
+Progress: [█████████░] 94%
 
 ## Workspace Semantics
 
@@ -117,6 +117,7 @@ Recent decisions affecting current work:
 - Phase 56 completed: device readiness now distinguishes no-device, unauthorized, offline, requested-device mismatch, platform-tool failure, missing app artifact, and missing readiness-contract blockers with evidence and next actions.
 - Phase 57 completed: AUT readiness contract scaffold and validator now provide a contract-backed live verification path without relying only on loose environment variables.
 - Phase 58 completed with live-device blocker: repo-owned demo app APK and readiness contract are validated, and a tracked candidate records that success promotion is blocked until a device/emulator run passes intake.
+- Phase 59 completed: mobile change evidence now produces a compact PR/CI artifact, neutral blocked CI conclusion, and GitHub Actions upload path.
 
 ### Blockers/Concerns
 
@@ -184,6 +185,7 @@ Recent decisions affecting current work:
 - Phase 56 completed: structured device readiness doctor.
 - Phase 57 completed: AUT readiness contract scaffold.
 - Phase 58 completed with live-device blocker: repo-owned app success candidate and no-device boundary.
+- Phase 59 completed: PR and CI evidence automation.
 - Phase 58 added: repo-owned app success evidence.
 - Phase 59 added: PR and CI evidence automation.
 - Phase 60 added: failure memory remediation loop.

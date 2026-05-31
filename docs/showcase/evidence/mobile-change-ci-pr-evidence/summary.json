@@ -1,0 +1,49 @@
+{
+  "schema": "mobile-change-ci-pr-evidence/v1",
+  "runId": "mobile-change-ci-pr-evidence-2026-05-31",
+  "reviewStatus": "blocked",
+  "proofLevel": "blocked_before_live",
+  "sources": [
+    {
+      "kind": "repo_app_success_candidate",
+      "path": "docs/showcase/evidence/mobile-change-repo-app-success-candidate/candidate.json",
+      "verdict": "blocked_before_live_success",
+      "proofLevel": "blocked_before_live",
+      "successEvidencePromoted": false,
+      "blockers": [
+        {
+          "reasonCode": "DEVICE_UNAVAILABLE",
+          "detail": "No connected Android device or explicitly labeled emulator was visible when this repo-owned app success candidate was generated."
+        }
+      ],
+      "nextAction": {
+        "kind": "connect_device_and_run_repo_app_live_proof",
+        "command": "pnpm run verify:mobile-change -- --live --contract=configs/readiness/demo-android-app.android.json --run-id=repo-owned-demo-android-app-2026-05-31",
+        "reason": "Connect an authorized Android device or explicitly labeled emulator, then rerun the repo-owned app live proof."
+      }
+    }
+  ],
+  "blockers": [
+    {
+      "reasonCode": "DEVICE_UNAVAILABLE",
+      "detail": "No connected Android device or explicitly labeled emulator was visible when this repo-owned app success candidate was generated."
+    }
+  ],
+  "ci": {
+    "conclusion": "neutral",
+    "artifactName": "ci-mobile-change-pr-evidence",
+    "uploadPath": "docs/showcase/evidence/mobile-change-ci-pr-evidence",
+    "requiredByDefault": false
+  },
+  "nextAction": {
+    "kind": "connect_device_and_run_repo_app_live_proof",
+    "command": "pnpm run verify:mobile-change -- --live --contract=configs/readiness/demo-android-app.android.json --run-id=repo-owned-demo-android-app-2026-05-31",
+    "reason": "Connect an authorized Android device or explicitly labeled emulator, then rerun the repo-owned app live proof."
+  },
+  "boundaries": [
+    "This artifact is designed for CI upload and PR review; it does not execute a device by itself.",
+    "Blocked and no-device outputs use neutral CI conclusions and must not be treated as successful app verification.",
+    "A success CI conclusion requires an intake-backed physical/emulator proof candidate with no blockers."
+  ],
+  "prSummary": "## Mobile Change CI Evidence\n\nReview status: `blocked`\nCI conclusion: `neutral`\nProof level: `blocked_before_live`\nRun ID: `mobile-change-ci-pr-evidence-2026-05-31`\n\nSources:\n- repo_app_success_candidate: verdict `blocked_before_live_success`, proof `blocked_before_live`, source `docs/showcase/evidence/mobile-change-repo-app-success-candidate/candidate.json`\n\nBlockers:\n- DEVICE_UNAVAILABLE: No connected Android device or explicitly labeled emulator was visible when this repo-owned app success candidate was generated.\n\nNext action:\n- `connect_device_and_run_repo_app_live_proof`: Connect an authorized Android device or explicitly labeled emulator, then rerun the repo-owned app live proof.\n- Command: `pnpm run verify:mobile-change -- --live --contract=configs/readiness/demo-android-app.android.json --run-id=repo-owned-demo-android-app-2026-05-31`\n\nBoundaries:\n- This artifact is designed for CI upload and PR review; it does not execute a device by itself.\n- Blocked and no-device outputs use neutral CI conclusions and must not be treated as successful app verification.\n- A success CI conclusion requires an intake-backed physical/emulator proof candidate with no blockers.\n"
+}

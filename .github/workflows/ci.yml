@@ -69,6 +69,16 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
       - run: pnpm test:smoke
+      - name: Generate mobile change CI/PR evidence
+        if: always()
+        run: pnpm run generate:mobile-change-ci-pr-evidence -- --run-id=${{ github.run_id }} --output-dir=output/reports/mobile-change-ci-pr-evidence
+      - name: Upload mobile change CI/PR evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ci-mobile-change-pr-evidence-${{ github.run_id }}
+          path: output/reports/mobile-change-ci-pr-evidence/
+          if-no-files-found: warn
       - name: Prepare CI metadata artifact (dry-run-smoke)
         if: always()
         run: |
@@ -97,8 +107,13 @@ jobs:
             echo "- Status: **${{ job.status }}**"
             echo "- Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
             echo "- Artifact: \`ci-dry-run-smoke-metadata\`"
+            echo "- Mobile change evidence: \`ci-mobile-change-pr-evidence-${{ github.run_id }}\`"
             echo "- Evidence guide: docs/showcase/ci-evidence.md"
             echo "- Boundary: Ubuntu CI does not validate physical-device behavior; use showcase real-device evidence for that."
+            if [ -f output/reports/mobile-change-ci-pr-evidence/pr-summary.md ]; then
+              echo ""
+              cat output/reports/mobile-change-ci-pr-evidence/pr-summary.md
+            fi
           } >> "$GITHUB_STEP_SUMMARY"
 
   explorer-evidence:
