@@ -136,6 +136,7 @@ If you want a quick hands-on tour before diving into architecture details, start
   - `pnpm run validate:governed-pr-evidence-summary`
   - `pnpm run verify:mobile-change` (one-command mobile change verification UX; use `-- --live --contract=configs/readiness/mobile-change.android.json` for contract-backed live mode)
   - `pnpm run generate:mobile-change-readiness-contract` / `pnpm run validate:mobile-change-readiness-contract`
+  - `pnpm run generate:mobile-change-repo-app-success-candidate` / `pnpm run validate:mobile-change-repo-app-success-candidate` (repo-owned demo app success candidate; blocked output is not success evidence until a device/emulator run passes intake)
   - `pnpm run proof:mobile-change-verification` (fixture-backed mobile change verification bundle, failure packet, and scenario index)
   - `pnpm run generate:mobile-change-device-readiness` / `pnpm run validate:mobile-change-device-readiness` (structured device/app/readiness preflight before attempting live mobile change proof)
   - `pnpm run proof:mobile-change-verification:live` (optional live device/emulator proof; use `M2E_LIVE_MOBILE_CHANGE_ALLOW_NO_DEVICE=1` for structured no-device output)
@@ -165,6 +166,7 @@ If you want a quick hands-on tour before diving into architecture details, start
   - [docs/showcase/evidence/mobile-change-live-android-10AEA40Z3Y000R5/report.md](docs/showcase/evidence/mobile-change-live-android-10AEA40Z3Y000R5/report.md)
   - [docs/showcase/evidence/mobile-change-live-settings-lane/lane.md](docs/showcase/evidence/mobile-change-live-settings-lane/lane.md)
   - [docs/showcase/evidence/mobile-change-live-proof-intake/intake.md](docs/showcase/evidence/mobile-change-live-proof-intake/intake.md)
+  - [docs/showcase/evidence/mobile-change-repo-app-success-candidate/candidate.md](docs/showcase/evidence/mobile-change-repo-app-success-candidate/candidate.md)
   - [docs/showcase/evidence/mobile-change-readiness-failure/failure-packet.md](docs/showcase/evidence/mobile-change-readiness-failure/failure-packet.md)
   - [docs/showcase/evidence/mobile-change-readiness-failure/handoff.md](docs/showcase/evidence/mobile-change-readiness-failure/handoff.md)
 - Historical demo scripts:

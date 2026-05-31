@@ -1,0 +1,58 @@
+{
+  "schema": "mobile-change-repo-app-success-candidate/v1",
+  "runId": "repo-owned-demo-android-app-2026-05-31",
+  "verdict": "blocked_before_live_success",
+  "successEvidencePromoted": false,
+  "repoApp": {
+    "ownership": "repo_owned",
+    "platform": "android",
+    "appId": "com.epam.mobitru",
+    "artifact": {
+      "path": "examples/demo-android-app/app/build/outputs/apk/debug/app-debug.apk",
+      "exists": true
+    }
+  },
+  "contract": {
+    "path": "configs/readiness/demo-android-app.android.json",
+    "strongProofReady": true,
+    "warnings": [],
+    "readiness": {
+      "proofLevel": "deterministic",
+      "screenId": "login",
+      "appPhase": "authentication",
+      "selector": {
+        "strategy": "resource_id",
+        "value": "com.epam.mobitru:id/login_signin"
+      }
+    }
+  },
+  "verification": {
+    "verdict": "blocked",
+    "proofLevel": "blocked_before_live",
+    "blockers": [
+      {
+        "reasonCode": "DEVICE_UNAVAILABLE",
+        "detail": "No connected Android device or explicitly labeled emulator was visible when this repo-owned app success candidate was generated."
+      }
+    ],
+    "evidence": {
+      "readiness": "docs/showcase/evidence/mobile-change-device-readiness"
+    }
+  },
+  "blockers": [
+    {
+      "reasonCode": "DEVICE_UNAVAILABLE",
+      "detail": "No connected Android device or explicitly labeled emulator was visible when this repo-owned app success candidate was generated."
+    }
+  ],
+  "nextAction": {
+    "kind": "connect_device_and_run_repo_app_live_proof",
+    "command": "pnpm run verify:mobile-change -- --live --contract=configs/readiness/demo-android-app.android.json --run-id=repo-owned-demo-android-app-2026-05-31",
+    "reason": "Connect an authorized Android device or explicitly labeled emulator, then rerun the repo-owned app live proof."
+  },
+  "boundaries": [
+    "This candidate is tied to the repo-owned demo Android app and must not be generalized to arbitrary apps.",
+    "Blocked no-device output proves the gate and diagnostics, not app-under-test success.",
+    "Repo-owned app success can be promoted only after live verification completes and intake accepts physical/emulator evidence."
+  ]
+}

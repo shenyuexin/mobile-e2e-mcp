@@ -25,7 +25,7 @@
 | **55** | **One-Command Mobile Change Verification UX** | **completed** | **45, 48, 51, 52, 54** |
 | **56** | **Structured Device Readiness Doctor** | **completed** | **51, 55** |
 | **57** | **AUT Readiness Contract Scaffold** | **completed** | **51, 55** |
-| **58** | **Repo-Owned App Success Evidence** | **planned** | **55, 56, 57** |
+| **58** | **Repo-Owned App Success Evidence** | **completed-with-live-device-blocker** | **55, 56, 57** |
 | **59** | **PR and CI Evidence Automation** | **planned** | **50, 55, 58** |
 | **60** | **Failure Memory Remediation Loop** | **planned** | **46, 50, 55** |
 
@@ -258,7 +258,7 @@ Plans:
 - **Out of scope**: iOS parity, full RN/Flutter matrix, and success claims for arbitrary external apps.
 
 Plans:
-- [ ] `58-PLAN.md` — repo-owned app success evidence
+- [x] `58-PLAN.md` / `58-01-SUMMARY.md` — repo-owned app success candidate and live-device blocker boundary
 
 ## Phase 59: PR and CI Evidence Automation
 

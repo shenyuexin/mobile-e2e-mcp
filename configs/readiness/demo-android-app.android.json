@@ -1,0 +1,28 @@
+{
+  "schema": "mobile-change-readiness-contract/v1",
+  "platform": "android",
+  "appId": "com.epam.mobitru",
+  "appArtifact": "examples/demo-android-app/app/build/outputs/apk/debug/app-debug.apk",
+  "runnerProfile": "native_android",
+  "policyProfile": "interactive",
+  "deterministicEntry": {
+    "kind": "launch_app"
+  },
+  "reset": {
+    "kind": "none"
+  },
+  "readiness": {
+    "proofLevel": "deterministic",
+    "screenId": "login",
+    "appPhase": "authentication",
+    "selector": {
+      "strategy": "resource_id",
+      "value": "com.epam.mobitru:id/login_signin"
+    }
+  },
+  "boundaries": [
+    "This contract defines app-under-test readiness assumptions before live verification.",
+    "Deterministic readiness signals are required for strong proof promotion.",
+    "Visual-only readiness can guide inspection but cannot be promoted as strong live success evidence by itself."
+  ]
+}
