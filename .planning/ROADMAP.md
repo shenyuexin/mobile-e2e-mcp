@@ -318,7 +318,7 @@ Plans:
 - **Out of scope**: mandatory live-device CI, broad RN app compatibility claims, and automatic code remediation.
 
 Plans:
-- [ ] `63-PLAN.md` — React Native one-command verification lane
+- [x] `63-PLAN.md` / `63-01-SUMMARY.md` — React Native one-command verification lane
 
 ## Phase 64: Official Tool Bridge Contract
 

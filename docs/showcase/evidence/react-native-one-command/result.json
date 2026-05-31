@@ -1,0 +1,52 @@
+{
+  "schema": "react-native-one-command/v1",
+  "runId": "react-native-one-command-2026-06-01",
+  "verdict": "blocked",
+  "proofLevel": "blocked_before_live",
+  "stages": [
+    {
+      "id": "readiness",
+      "status": "blocked",
+      "detail": "Readiness verdict: blocked_before_react_native_verification."
+    },
+    {
+      "id": "evidence-pack",
+      "status": "blocked",
+      "detail": "Evidence pack review status: blocked."
+    },
+    {
+      "id": "review",
+      "status": "blocked",
+      "detail": "RN one-command verdict: blocked."
+    }
+  ],
+  "blockers": [
+    {
+      "reasonCode": "DEVICE_UNAVAILABLE",
+      "detail": "No eligible android device is visible."
+    },
+    {
+      "reasonCode": "METRO_UNAVAILABLE",
+      "detail": "Metro inspector endpoint is not reachable."
+    },
+    {
+      "reasonCode": "NO_JS_DEBUG_TARGET",
+      "detail": "No RN/Expo debug target can be selected because Metro is unavailable."
+    }
+  ],
+  "evidence": {
+    "readiness": "docs/showcase/evidence/react-native-readiness/summary.json",
+    "evidencePack": "docs/showcase/evidence/react-native-evidence-pack/evidence-pack.json",
+    "result": "docs/showcase/evidence/react-native-one-command/result.json"
+  },
+  "nextAction": {
+    "kind": "fix_readiness_blocker",
+    "command": "pnpm run validate:react-native-readiness",
+    "reason": "Connect an eligible device or run on a self-hosted runner."
+  },
+  "boundaries": [
+    "This RN command orchestrates readiness and evidence packaging; it does not weaken proof-level labels.",
+    "A blocked RN result is not an app assertion failure.",
+    "Live RN success still requires device-backed verification and intake-backed promotion evidence."
+  ]
+}
