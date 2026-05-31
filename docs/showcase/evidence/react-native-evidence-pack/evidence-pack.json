@@ -1,0 +1,70 @@
+{
+  "schema": "react-native-evidence-pack/v1",
+  "runId": "react-native-evidence-pack-2026-06-01",
+  "reviewStatus": "blocked",
+  "proofLevel": "blocked_before_live",
+  "readiness": {
+    "sourcePath": "docs/showcase/evidence/react-native-readiness/summary.json",
+    "verdict": "blocked_before_react_native_verification",
+    "proofLevel": "blocked_before_live",
+    "blockers": [
+      {
+        "reasonCode": "DEVICE_UNAVAILABLE",
+        "detail": "No eligible android device is visible."
+      },
+      {
+        "reasonCode": "METRO_UNAVAILABLE",
+        "detail": "Metro inspector endpoint is not reachable."
+      },
+      {
+        "reasonCode": "NO_JS_DEBUG_TARGET",
+        "detail": "No RN/Expo debug target can be selected because Metro is unavailable."
+      }
+    ]
+  },
+  "jsSignals": {
+    "console": {
+      "available": false,
+      "source": "metro_inspector",
+      "status": "unavailable",
+      "summary": "Metro console evidence is unavailable in the committed fixture.",
+      "counters": {
+        "totalLogs": 0,
+        "exceptionCount": 0
+      }
+    },
+    "network": {
+      "available": false,
+      "source": "metro_inspector",
+      "status": "unavailable",
+      "summary": "Metro network evidence is unavailable in the committed fixture.",
+      "counters": {
+        "totalTrackedRequests": 0,
+        "failedRequestCount": 0
+      }
+    }
+  },
+  "nativeEvidence": [
+    {
+      "kind": "readiness",
+      "path": "docs/showcase/evidence/react-native-readiness/summary.json",
+      "status": "available",
+      "summary": "RN readiness artifact is included as the proof-boundary backbone."
+    }
+  ],
+  "failureSummary": {
+    "strongestSuspectLayer": "environment",
+    "confidence": "high",
+    "detail": "RN readiness blocked before live verification: DEVICE_UNAVAILABLE, METRO_UNAVAILABLE, NO_JS_DEBUG_TARGET"
+  },
+  "boundaries": [
+    "This RN evidence pack is a review artifact; it does not execute the app by itself.",
+    "Metro console and network signals are supplemental and cannot promote live success without native readiness and intake-backed verification evidence.",
+    "Blocked readiness remains a setup blocker, not an app assertion failure."
+  ],
+  "nextAction": {
+    "kind": "fix_readiness_blocker",
+    "command": "pnpm run validate:react-native-readiness",
+    "reason": "Connect an eligible device or run on a self-hosted runner."
+  }
+}

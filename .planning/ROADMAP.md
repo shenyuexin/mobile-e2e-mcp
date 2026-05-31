@@ -307,7 +307,7 @@ Plans:
 - **Out of scope**: full debugger semantics, long-running JS tracing, active network interception, and source-code fixing.
 
 Plans:
-- [ ] `62-PLAN.md` — React Native evidence pack
+- [x] `62-PLAN.md` / `62-01-SUMMARY.md` — React Native evidence pack
 
 ## Phase 63: React Native One-Command Verification Lane
 
