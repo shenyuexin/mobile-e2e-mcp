@@ -22,7 +22,7 @@
 | **52** | **Live Proof Intake Gate** | **completed** | **48, 51** |
 | **53** | **Android Live App Failure Evidence** | **completed** | **48, 52** |
 | **54** | **Android Settings Live Success Lane** | **completed** | **48, 53** |
-| **55** | **One-Command Mobile Change Verification UX** | **planned** | **45, 48, 51, 52, 54** |
+| **55** | **One-Command Mobile Change Verification UX** | **completed** | **45, 48, 51, 52, 54** |
 | **56** | **Structured Device Readiness Doctor** | **planned** | **51, 55** |
 | **57** | **AUT Readiness Contract Scaffold** | **planned** | **51, 55** |
 | **58** | **Repo-Owned App Success Evidence** | **planned** | **55, 56, 57** |
@@ -225,7 +225,7 @@ Plans:
 - **Out of scope**: cloud device farm execution, broad framework parity, automatic code fixing, and new MCP tool surface.
 
 Plans:
-- [ ] `55-PLAN.md` — one-command mobile change verification UX
+- [x] `55-PLAN.md` / `55-01-SUMMARY.md` — one-command mobile change verification UX
 
 ## Phase 56: Structured Device Readiness Doctor
 

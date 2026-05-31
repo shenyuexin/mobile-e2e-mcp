@@ -24,6 +24,7 @@ This folder contains reproducible, real-device demo evidence used by README.
 - Governed evidence brief: `docs/showcase/evidence/governed-control-brief/brief.md`
 - Governed PR evidence summary: `docs/showcase/evidence/governed-control-brief/pr-comment.md`
 - Mobile change verification fixture: `docs/showcase/evidence/mobile-change-verification-fixture/report.md`
+- One-command mobile change verification: `pnpm run verify:mobile-change`
 - Actionable failure packet fixture: `docs/showcase/evidence/mobile-change-verification-fixture/failure-packet.md`
 - Realistic scenario index fixture: `docs/showcase/evidence/mobile-change-verification-fixture/scenario-index.md`
 - Mobile change verification command: `pnpm run proof:mobile-change-verification`
@@ -110,6 +111,7 @@ See `docs/showcase/ci-evidence.md` for the current proof levels and boundaries.
 - Policy escalation proof (`pnpm run validate:governed-policy-escalation-evidence`): verifies the dry-run escalation evidence still shows read-only denial, governance remediation, and interactive retry without claiming live-device fidelity.
 - Governed evidence brief proof (`pnpm run validate:governed-evidence-brief`): verifies the compact brief stays grounded in the tracked Settings evidence, business-app evidence, and alternative comparison.
 - Governed PR evidence summary proof (`pnpm run test:governed-pr-evidence-summary` + `pnpm run validate:governed-pr-evidence-summary`): verifies the generator is import-safe and the PR-ready Markdown/JSON summary stays generated from the governed evidence brief.
+- One-command mobile change proof (`pnpm run test:mobile-change-one-command`): verifies the primary developer-facing entrypoint can produce a compact verdict across fixture, live-blocked, intake-rejected, and live-success-shaped outcomes. It orchestrates lower-level proof steps and preserves their proof-level boundaries.
 - Mobile change verification proof (`pnpm run test:mobile-change-verification` + `pnpm run validate:mobile-change-verification`): verifies the fixture-backed workflow bundle, failure packet, and realistic scenario index stay schema-backed and PR-ready. It does not rerun a device.
 - Mobile change device readiness proof (`pnpm run test:mobile-change-device-readiness` + `pnpm run validate:mobile-change-device-readiness`): verifies the live-proof preflight reports device availability, app artifact availability when configured, and deterministic readiness-contract presence before UI-affecting live actions. The committed proof is a controlled no-device blocker, not physical-device fidelity.
 - Live mobile change verification proof (`pnpm run proof:mobile-change-verification:live`): uses existing governed MCP tools to select a device, start a session, launch the app, inspect readiness, and write a timestamped bundle under `output/showcase/mobile-change-verification-live/`. It is optional and device-dependent; no-device runs can be captured as structured environment failure with `M2E_LIVE_MOBILE_CHANGE_ALLOW_NO_DEVICE=1`.
