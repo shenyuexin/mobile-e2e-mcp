@@ -24,7 +24,7 @@
 | **54** | **Android Settings Live Success Lane** | **completed** | **48, 53** |
 | **55** | **One-Command Mobile Change Verification UX** | **completed** | **45, 48, 51, 52, 54** |
 | **56** | **Structured Device Readiness Doctor** | **completed** | **51, 55** |
-| **57** | **AUT Readiness Contract Scaffold** | **planned** | **51, 55** |
+| **57** | **AUT Readiness Contract Scaffold** | **completed** | **51, 55** |
 | **58** | **Repo-Owned App Success Evidence** | **planned** | **55, 56, 57** |
 | **59** | **PR and CI Evidence Automation** | **planned** | **50, 55, 58** |
 | **60** | **Failure Memory Remediation Loop** | **planned** | **46, 50, 55** |
@@ -247,7 +247,7 @@ Plans:
 - **Out of scope**: automatic app instrumentation, framework-specific code generation for every stack, and claiming readiness from visual guesses alone.
 
 Plans:
-- [ ] `57-PLAN.md` — AUT readiness contract scaffold
+- [x] `57-PLAN.md` / `57-01-SUMMARY.md` — AUT readiness contract scaffold
 
 ## Phase 58: Repo-Owned App Success Evidence
 

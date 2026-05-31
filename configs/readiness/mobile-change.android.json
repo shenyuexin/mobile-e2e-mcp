@@ -1,0 +1,27 @@
+{
+  "schema": "mobile-change-readiness-contract/v1",
+  "platform": "android",
+  "appId": "com.example.mobilechange",
+  "runnerProfile": "native_android",
+  "policyProfile": "interactive",
+  "deterministicEntry": {
+    "kind": "launch_app"
+  },
+  "reset": {
+    "kind": "none"
+  },
+  "readiness": {
+    "proofLevel": "deterministic",
+    "screenId": "login",
+    "appPhase": "authentication",
+    "selector": {
+      "strategy": "test_id",
+      "value": "login-screen"
+    }
+  },
+  "boundaries": [
+    "This contract defines app-under-test readiness assumptions before live verification.",
+    "Deterministic readiness signals are required for strong proof promotion.",
+    "Visual-only readiness can guide inspection but cannot be promoted as strong live success evidence by itself."
+  ]
+}

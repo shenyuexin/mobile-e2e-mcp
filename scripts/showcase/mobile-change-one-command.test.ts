@@ -139,3 +139,28 @@ test("one-command live success keeps intake and handoff evidence paths", async (
   assert.equal(result.evidence.handoff, "output/showcase/mobile-change-one-command/one-command-success/handoff.md");
   assert.equal(result.nextAction.kind, "promote_live_evidence");
 });
+
+test("one-command live options can be populated from a readiness contract", async () => {
+  const { liveOptionsFromContract } = await import("./mobile-change-one-command.ts");
+
+  const options = liveOptionsFromContract({
+    schema: "mobile-change-readiness-contract/v1",
+    platform: "android",
+    appId: "com.example.contract",
+    appArtifact: "examples/demo-android-app/app/build/outputs/apk/debug/app-debug.apk",
+    runnerProfile: "native_android",
+    policyProfile: "interactive",
+    deterministicEntry: { kind: "launch_app" },
+    reset: { kind: "none" },
+    readiness: {
+      proofLevel: "deterministic",
+      appPhase: "authentication",
+      screenId: "login",
+    },
+  });
+
+  assert.equal(options.appId, "com.example.contract");
+  assert.equal(options.appArtifact, "examples/demo-android-app/app/build/outputs/apk/debug/app-debug.apk");
+  assert.equal(options.expectedReadiness.appPhase, "authentication");
+  assert.equal(options.expectedReadiness.screenId, "login");
+});

@@ -134,7 +134,8 @@ If you want a quick hands-on tour before diving into architecture details, start
   - `pnpm run validate:governed-policy-escalation-evidence`
   - `pnpm run validate:governed-evidence-brief`
   - `pnpm run validate:governed-pr-evidence-summary`
-  - `pnpm run verify:mobile-change` (one-command mobile change verification UX; use `-- --live` for live-device mode)
+  - `pnpm run verify:mobile-change` (one-command mobile change verification UX; use `-- --live --contract=configs/readiness/mobile-change.android.json` for contract-backed live mode)
+  - `pnpm run generate:mobile-change-readiness-contract` / `pnpm run validate:mobile-change-readiness-contract`
   - `pnpm run proof:mobile-change-verification` (fixture-backed mobile change verification bundle, failure packet, and scenario index)
   - `pnpm run generate:mobile-change-device-readiness` / `pnpm run validate:mobile-change-device-readiness` (structured device/app/readiness preflight before attempting live mobile change proof)
   - `pnpm run proof:mobile-change-verification:live` (optional live device/emulator proof; use `M2E_LIVE_MOBILE_CHANGE_ALLOW_NO_DEVICE=1` for structured no-device output)

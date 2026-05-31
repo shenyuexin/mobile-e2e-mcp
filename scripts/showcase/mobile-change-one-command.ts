@@ -25,6 +25,11 @@ import {
   writeMobileChangeLiveProofIntake,
   type MobileChangeLiveProofIntake,
 } from "./generate-mobile-change-live-proof-intake.ts";
+import {
+  readMobileChangeReadinessContract,
+  validateMobileChangeReadinessContract,
+  type MobileChangeReadinessContract,
+} from "./mobile-change-readiness-contract.ts";
 
 export type MobileChangeOneCommandMode = "fixture" | "live";
 export type MobileChangeOneCommandVerdict = "completed" | "blocked" | "verification_failed" | "intake_rejected";
@@ -38,6 +43,7 @@ export interface MobileChangeOneCommandOptions {
   mode: MobileChangeOneCommandMode;
   runId: string;
   outputDir?: string;
+  contractPath?: string;
 }
 
 interface CommandNextAction {
@@ -334,7 +340,32 @@ async function writeHandoff(outputDir: string, summary: MobileChangeHandoffSumma
   };
 }
 
-function liveOptionsFromEnv(runId: string): {
+export function liveOptionsFromContract(contract: MobileChangeReadinessContract): {
+  platform: "android" | "ios";
+  appId: string;
+  appArtifact?: string;
+  policyProfile: string;
+  runnerProfile: string;
+  expectedReadiness: { screenId?: string; appPhase?: string };
+} {
+  const validation = validateMobileChangeReadinessContract(contract);
+  if (!validation.strongProofReady) {
+    throw new Error(`Readiness contract is not strong-proof ready: ${validation.warnings.join(",")}`);
+  }
+  return {
+    platform: contract.platform,
+    appId: contract.appId,
+    appArtifact: contract.appArtifact,
+    policyProfile: contract.policyProfile,
+    runnerProfile: contract.runnerProfile,
+    expectedReadiness: {
+      screenId: contract.readiness.screenId,
+      appPhase: contract.readiness.appPhase,
+    },
+  };
+}
+
+function liveOptionsFromEnv(runId: string, contract?: MobileChangeReadinessContract): {
   platform: "android" | "ios";
   appId: string;
   appArtifact?: string;
@@ -343,21 +374,32 @@ function liveOptionsFromEnv(runId: string): {
   expectedReadiness: { screenId?: string; appPhase?: string };
   deviceId?: string;
 } {
+  const contractOptions = contract ? liveOptionsFromContract(contract) : undefined;
   return {
-    platform: (process.env.M2E_LIVE_MOBILE_CHANGE_PLATFORM as "android" | "ios" | undefined) ?? "android",
-    appId: process.env.M2E_LIVE_MOBILE_CHANGE_APP_ID ?? "com.example.mobilechange",
-    appArtifact: process.env.M2E_LIVE_MOBILE_CHANGE_APP_ARTIFACT,
-    policyProfile: process.env.M2E_LIVE_MOBILE_CHANGE_POLICY_PROFILE ?? "interactive",
-    runnerProfile: process.env.M2E_LIVE_MOBILE_CHANGE_RUNNER_PROFILE ?? "native_android",
+    platform: (process.env.M2E_LIVE_MOBILE_CHANGE_PLATFORM as "android" | "ios" | undefined) ?? contractOptions?.platform ?? "android",
+    appId: process.env.M2E_LIVE_MOBILE_CHANGE_APP_ID ?? contractOptions?.appId ?? "com.example.mobilechange",
+    appArtifact: process.env.M2E_LIVE_MOBILE_CHANGE_APP_ARTIFACT ?? contractOptions?.appArtifact,
+    policyProfile: process.env.M2E_LIVE_MOBILE_CHANGE_POLICY_PROFILE ?? contractOptions?.policyProfile ?? "interactive",
+    runnerProfile: process.env.M2E_LIVE_MOBILE_CHANGE_RUNNER_PROFILE ?? contractOptions?.runnerProfile ?? "native_android",
     expectedReadiness: {
-      screenId: process.env.M2E_LIVE_MOBILE_CHANGE_EXPECTED_SCREEN_ID,
-      appPhase: process.env.M2E_LIVE_MOBILE_CHANGE_EXPECTED_APP_PHASE,
+      screenId: process.env.M2E_LIVE_MOBILE_CHANGE_EXPECTED_SCREEN_ID ?? contractOptions?.expectedReadiness.screenId,
+      appPhase: process.env.M2E_LIVE_MOBILE_CHANGE_EXPECTED_APP_PHASE ?? contractOptions?.expectedReadiness.appPhase,
     },
     deviceId: process.env.M2E_DEVICE_ID,
   };
 }
 
-function defaultDeps(runId: string, outputDir: string): MobileChangeOneCommandDependencies {
+function applyLiveOptionsToEnv(options: ReturnType<typeof liveOptionsFromEnv>): void {
+  process.env.M2E_LIVE_MOBILE_CHANGE_PLATFORM = options.platform;
+  process.env.M2E_LIVE_MOBILE_CHANGE_APP_ID = options.appId;
+  process.env.M2E_LIVE_MOBILE_CHANGE_POLICY_PROFILE = options.policyProfile;
+  process.env.M2E_LIVE_MOBILE_CHANGE_RUNNER_PROFILE = options.runnerProfile;
+  if (options.appArtifact) process.env.M2E_LIVE_MOBILE_CHANGE_APP_ARTIFACT = options.appArtifact;
+  if (options.expectedReadiness.screenId) process.env.M2E_LIVE_MOBILE_CHANGE_EXPECTED_SCREEN_ID = options.expectedReadiness.screenId;
+  if (options.expectedReadiness.appPhase) process.env.M2E_LIVE_MOBILE_CHANGE_EXPECTED_APP_PHASE = options.expectedReadiness.appPhase;
+}
+
+function defaultDeps(runId: string, outputDir: string, contract?: MobileChangeReadinessContract): MobileChangeOneCommandDependencies {
   const root = repoRoot();
   return {
     runFixtureVerification: async () => {
@@ -377,7 +419,7 @@ function defaultDeps(runId: string, outputDir: string): MobileChangeOneCommandDe
     },
     runReadiness: async () => {
       const server = createServer();
-      const liveOptions = liveOptionsFromEnv(runId);
+      const liveOptions = liveOptionsFromEnv(runId, contract);
       const invoke: ToolInvoker = process.env.M2E_LIVE_MOBILE_CHANGE_FORCE_NO_DEVICE === "1"
         ? async (toolName) => toolName === "list_devices"
           ? { status: "success", reasonCode: "OK", data: { android: [], ios: [] } }
@@ -389,6 +431,7 @@ function defaultDeps(runId: string, outputDir: string): MobileChangeOneCommandDe
       }, invoke);
     },
     runLiveVerification: async () => {
+      applyLiveOptionsToEnv(liveOptionsFromEnv(runId, contract));
       const proof = await writeLiveMobileChangeVerificationProof();
       return {
         outputDir: path.relative(root, proof.outputDir),
@@ -413,6 +456,7 @@ function parseArgs(argv: string[]): MobileChangeOneCommandOptions {
   const live = argv.includes("--live");
   const runIdArg = argv.find((arg) => arg.startsWith("--run-id="));
   const outputArg = argv.find((arg) => arg.startsWith("--output-dir="));
+  const contractArg = argv.find((arg) => arg.startsWith("--contract="));
   const runId = runIdArg?.slice("--run-id=".length)
     ?? process.env.M2E_VERIFY_MOBILE_CHANGE_RUN_ID
     ?? `mobile-change-one-command-${new Date().toISOString().replace(/[:.]/g, "-")}`;
@@ -420,13 +464,15 @@ function parseArgs(argv: string[]): MobileChangeOneCommandOptions {
     mode: live ? "live" : "fixture",
     runId,
     outputDir: outputArg?.slice("--output-dir=".length),
+    contractPath: contractArg?.slice("--contract=".length) ?? process.env.M2E_MOBILE_CHANGE_READINESS_CONTRACT,
   };
 }
 
 async function main(): Promise<void> {
   const options = parseArgs(process.argv.slice(2));
   const outputDir = options.outputDir ?? defaultOutputDir(options.runId);
-  const result = await runMobileChangeOneCommand({ ...options, outputDir }, defaultDeps(options.runId, outputDir));
+  const contract = options.contractPath ? await readMobileChangeReadinessContract(options.contractPath) : undefined;
+  const result = await runMobileChangeOneCommand({ ...options, outputDir }, defaultDeps(options.runId, outputDir, contract));
   await writeResultArtifacts(outputDir, result);
   console.log(JSON.stringify({
     verdict: result.verdict,
