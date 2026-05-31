@@ -22,6 +22,12 @@
 | **52** | **Live Proof Intake Gate** | **completed** | **48, 51** |
 | **53** | **Android Live App Failure Evidence** | **completed** | **48, 52** |
 | **54** | **Android Settings Live Success Lane** | **completed** | **48, 53** |
+| **55** | **One-Command Mobile Change Verification UX** | **planned** | **45, 48, 51, 52, 54** |
+| **56** | **Structured Device Readiness Doctor** | **planned** | **51, 55** |
+| **57** | **AUT Readiness Contract Scaffold** | **planned** | **51, 55** |
+| **58** | **Repo-Owned App Success Evidence** | **planned** | **55, 56, 57** |
+| **59** | **PR and CI Evidence Automation** | **planned** | **50, 55, 58** |
+| **60** | **Failure Memory Remediation Loop** | **planned** | **46, 50, 55** |
 
 ## Phase 29: Explorer Horizontal Swipe Discovery
 
@@ -209,6 +215,72 @@ Plans:
 
 Plans:
 - [x] `54-PLAN.md` / `54-01-SUMMARY.md` — Android Settings live success lane
+
+## Phase 55: One-Command Mobile Change Verification UX
+
+- **Goal**: Replace the current scattered proof/readiness/intake/handoff scripts with one developer-facing command that runs the right checks in order and emits a compact result.
+- **Depends on**: Phase 45, Phase 48, Phase 51, Phase 52, Phase 54
+- **Key constraint**: The command must reduce developer workflow friction without hiding evidence boundaries or live-device prerequisites.
+- **Support level**: `experimental` local CLI orchestration for Android-first mobile change verification.
+- **Out of scope**: cloud device farm execution, broad framework parity, automatic code fixing, and new MCP tool surface.
+
+Plans:
+- [ ] `55-PLAN.md` — one-command mobile change verification UX
+
+## Phase 56: Structured Device Readiness Doctor
+
+- **Goal**: Turn device-unavailable and environment-blocked runs into concrete diagnostics and next actions for Android/iOS developer machines.
+- **Depends on**: Phase 51, Phase 55
+- **Key constraint**: Diagnose and explain readiness blockers; do not mutate host/device state without explicit user action.
+- **Support level**: `experimental` structured doctor output for local/self-hosted verification environments.
+- **Out of scope**: automatic driver installation, destructive ADB resets, cloud runner provisioning, and guaranteed device recovery.
+
+Plans:
+- [ ] `56-PLAN.md` — structured device readiness doctor
+
+## Phase 57: AUT Readiness Contract Scaffold
+
+- **Goal**: Help developers create and validate deterministic app-under-test readiness contracts before live verification runs.
+- **Depends on**: Phase 51, Phase 55
+- **Key constraint**: Prefer stable IDs, accessibility identifiers, deep links, and explicit ready-state checks before OCR/CV fallback.
+- **Support level**: `experimental` readiness-contract scaffold and validator for Android-first workflows.
+- **Out of scope**: automatic app instrumentation, framework-specific code generation for every stack, and claiming readiness from visual guesses alone.
+
+Plans:
+- [ ] `57-PLAN.md` — AUT readiness contract scaffold
+
+## Phase 58: Repo-Owned App Success Evidence
+
+- **Goal**: Produce tracked successful live evidence against a repo-owned app path instead of only Android Settings or failure evidence.
+- **Depends on**: Phase 55, Phase 56, Phase 57
+- **Key constraint**: Success evidence must prove install/launch/readiness/verification outcome on a real or explicitly labeled emulator device and pass intake before promotion.
+- **Support level**: `experimental` Android-first app success proof.
+- **Out of scope**: iOS parity, full RN/Flutter matrix, and success claims for arbitrary external apps.
+
+Plans:
+- [ ] `58-PLAN.md` — repo-owned app success evidence
+
+## Phase 59: PR and CI Evidence Automation
+
+- **Goal**: Make verification output useful in normal developer review by producing CI artifacts and PR-ready summaries from the one-command flow.
+- **Depends on**: Phase 50, Phase 55, Phase 58
+- **Key constraint**: Automate evidence packaging while preserving proof-level labels and avoiding automatic GitHub posting unless explicitly configured.
+- **Support level**: `experimental` CI artifact and PR summary generation.
+- **Out of scope**: mandatory real-device CI, GitHub comment publishing by default, and release gate hard-blocking without configured evidence lanes.
+
+Plans:
+- [ ] `59-PLAN.md` — PR and CI evidence automation
+
+## Phase 60: Failure Memory Remediation Loop
+
+- **Goal**: Use repeated failure packets and session evidence to recommend bounded next actions that shorten the debug/fix loop for mobile developers.
+- **Depends on**: Phase 46, Phase 50, Phase 55
+- **Key constraint**: Recommendations must be evidence-backed and policy-bounded, not open-ended AI code modification.
+- **Support level**: `experimental` local failure-memory analysis and remediation routing.
+- **Out of scope**: autonomous source edits, flaky-test prediction as a product claim, and LLM-only root-cause attribution.
+
+Plans:
+- [ ] `60-PLAN.md` — failure memory remediation loop
 
 ## Future Candidates
 
