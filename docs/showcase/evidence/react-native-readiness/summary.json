@@ -1,0 +1,133 @@
+{
+  "schema": "react-native-readiness/v1",
+  "runId": "react-native-readiness-2026-06-01",
+  "verdict": "blocked_before_react_native_verification",
+  "proofLevel": "blocked_before_live",
+  "platform": "android",
+  "appId": "com.anonymous.rnlogindemo",
+  "metroBaseUrl": "http://127.0.0.1:8081",
+  "policyProfile": "interactive",
+  "runnerProfile": "react_native_android",
+  "expectedReadiness": {
+    "screenId": "login",
+    "appPhase": "authentication"
+  },
+  "stableSelectors": [
+    "login.email",
+    "login.password",
+    "login.submit"
+  ],
+  "checks": [
+    {
+      "id": "device-inventory",
+      "status": "blocked",
+      "reasonCode": "DEVICE_UNAVAILABLE",
+      "detail": "No eligible android device is visible.",
+      "evidence": [
+        "seenDevices: none"
+      ],
+      "nextActions": [
+        "Connect a device/emulator or use a self-hosted runner with visible devices."
+      ]
+    },
+    {
+      "id": "metro-inspector",
+      "status": "blocked",
+      "reasonCode": "METRO_UNAVAILABLE",
+      "detail": "Metro inspector endpoint is not reachable.",
+      "evidence": [
+        "metroBaseUrl: http://127.0.0.1:8081",
+        "endpoint: http://127.0.0.1:8081/json/list",
+        "status: failed"
+      ],
+      "nextActions": [
+        "Start Metro or Expo dev server, then verify /json/list is reachable."
+      ]
+    },
+    {
+      "id": "js-debug-target",
+      "status": "blocked",
+      "reasonCode": "NO_JS_DEBUG_TARGET",
+      "detail": "No RN/Expo debug target can be selected because Metro is unavailable.",
+      "evidence": [
+        "targetCount: 0"
+      ],
+      "nextActions": [
+        "Start Metro, launch the RN app in debug/dev mode, and reload it so a JS debug target appears."
+      ]
+    },
+    {
+      "id": "readiness-contract",
+      "status": "passed",
+      "reasonCode": "OK",
+      "detail": "A deterministic readiness expectation is configured.",
+      "evidence": [
+        "screenId: login",
+        "appPhase: authentication"
+      ],
+      "nextActions": []
+    },
+    {
+      "id": "stable-selectors",
+      "status": "passed",
+      "reasonCode": "OK",
+      "detail": "3 stable RN selector(s) are declared.",
+      "evidence": [
+        "selector: login.email",
+        "selector: login.password",
+        "selector: login.submit"
+      ],
+      "nextActions": []
+    }
+  ],
+  "blockers": [
+    {
+      "id": "device-inventory",
+      "status": "blocked",
+      "reasonCode": "DEVICE_UNAVAILABLE",
+      "detail": "No eligible android device is visible.",
+      "evidence": [
+        "seenDevices: none"
+      ],
+      "nextActions": [
+        "Connect a device/emulator or use a self-hosted runner with visible devices."
+      ]
+    },
+    {
+      "id": "metro-inspector",
+      "status": "blocked",
+      "reasonCode": "METRO_UNAVAILABLE",
+      "detail": "Metro inspector endpoint is not reachable.",
+      "evidence": [
+        "metroBaseUrl: http://127.0.0.1:8081",
+        "endpoint: http://127.0.0.1:8081/json/list",
+        "status: failed"
+      ],
+      "nextActions": [
+        "Start Metro or Expo dev server, then verify /json/list is reachable."
+      ]
+    },
+    {
+      "id": "js-debug-target",
+      "status": "blocked",
+      "reasonCode": "NO_JS_DEBUG_TARGET",
+      "detail": "No RN/Expo debug target can be selected because Metro is unavailable.",
+      "evidence": [
+        "targetCount: 0"
+      ],
+      "nextActions": [
+        "Start Metro, launch the RN app in debug/dev mode, and reload it so a JS debug target appears."
+      ]
+    }
+  ],
+  "nextAction": {
+    "kind": "connect_device_or_use_self_hosted_runner",
+    "command": "pnpm run validate:react-native-readiness",
+    "reason": "Connect an eligible device or run on a self-hosted runner."
+  },
+  "boundaries": [
+    "RN readiness is a preflight and does not prove app success by itself.",
+    "Metro/JS debug evidence is supplemental; native UI post-condition evidence remains the proof backbone.",
+    "Stable testID/accessibility selectors and deterministic readiness contracts are required before live RN success can be trusted."
+  ]
+}

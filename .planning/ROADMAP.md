@@ -286,3 +286,47 @@ Plans:
 
 - Phase 32: Container-Targeted Scroll (requires MCP contract extension for bounds/selector)
 - Phase 38: Interleaved Scroll Axis Priority (requires validation data from Phase 29)
+
+## Phase 61: React Native Readiness Doctor
+
+- **Goal**: Give React Native developers a first-class readiness doctor that checks device availability, Metro/debug-target reachability, app-under-test readiness contract strength, and stable RN selector instrumentation before live verification starts.
+- **Depends on**: Phase 55, Phase 56, Phase 57, Phase 60
+- **Key constraint**: Diagnose readiness blockers without mutating device or host state; blocked readiness is not a failed app verification.
+- **Support level**: `experimental` React Native profile readiness diagnostics with fixture-backed validation.
+- **Out of scope**: automatic Metro startup, app instrumentation edits, cloud device provisioning, and Detox/Appium/Maestro replacement claims.
+
+Plans:
+- [x] `61-PLAN.md` / `61-01-SUMMARY.md` — React Native readiness doctor
+
+## Phase 62: React Native Evidence Pack
+
+- **Goal**: Merge RN readiness, Metro console/network signals, native device evidence references, and bounded failure context into one reviewable evidence pack.
+- **Depends on**: Phase 61
+- **Key constraint**: Metro evidence is supplemental; native post-condition and readiness evidence remain the proof backbone.
+- **Support level**: `experimental` RN evidence packaging for local/CI review.
+- **Out of scope**: full debugger semantics, long-running JS tracing, active network interception, and source-code fixing.
+
+Plans:
+- [ ] `62-PLAN.md` — React Native evidence pack
+
+## Phase 63: React Native One-Command Verification Lane
+
+- **Goal**: Provide a developer-facing RN command path that runs readiness, evidence packing, and review summary generation in a predictable order.
+- **Depends on**: Phase 61, Phase 62
+- **Key constraint**: Reduce workflow friction while preserving blocked/failed/success proof labels.
+- **Support level**: `experimental` RN one-command local verification lane.
+- **Out of scope**: mandatory live-device CI, broad RN app compatibility claims, and automatic code remediation.
+
+Plans:
+- [ ] `63-PLAN.md` — React Native one-command verification lane
+
+## Phase 64: Official Tool Bridge Contract
+
+- **Goal**: Define how Android CLI/Journeys, Android Studio Journeys, and Dart/Flutter MCP outputs relate to this harness as upstream evidence/context providers rather than replacements.
+- **Depends on**: Phase 61, Phase 62, Phase 63
+- **Key constraint**: Accept official-tool outputs only with explicit evidence kind, proof boundary, and intake decision.
+- **Support level**: `contract-ready` bridge matrix and validator.
+- **Out of scope**: invoking Android CLI/Journeys or Dart/Flutter MCP directly, vendor-specific account setup, and claiming official-tool parity.
+
+Plans:
+- [ ] `64-PLAN.md` — official tool bridge contract

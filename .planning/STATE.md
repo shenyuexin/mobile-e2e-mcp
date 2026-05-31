@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executed
-stopped_at: Phase 60 failure memory remediation loop completed
+stopped_at: Phase 61 React Native readiness doctor completed
 last_updated: "2026-05-31T00:00:00.000Z"
-last_activity: 2026-05-31 -- Phase 60 failure memory remediation loop implemented
+last_activity: 2026-06-01 -- Phase 61 React Native readiness doctor implemented
 progress:
   total_phases: 16
   completed_phases: 16
@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-03-28)
 
 ## Current Position
 
-Phase: Phase 55-60 sequence completed
-Plan: All requested Phase 55-60 implementation slices have been committed; remaining live app success promotion depends on a visible Android device/emulator.
-Status: Explorer failure review/reporting is on main, Android physical-device Explorer evidence exists at `artifacts/explorer/android-full/2026-04-28T03-38-20/`, historical phase/demo/debug scripts live under `scripts/legacy/`, `validate:probe-dry-run` is CI-gated, probe reports use the shared `tool-probe-report/v1` contract, Phase 48 adds an optional live proof runner, Phase 49 adds a controlled live-runner-derived app readiness failure packet, Phase 50 adds PR/agent handoff summaries, Phase 51 adds a CI-stable live-proof readiness preflight, Phase 52 adds a live-proof intake gate, Phase 53 adds tracked Android live app-readiness failure evidence for device `10AEA40Z3Y000R5`, Phase 54 adds a no-APK Android Settings live success lane, Phase 55 adds `verify:mobile-change` plus `mobile-e2e-mcp verify-mobile-change`, Phase 56 adds structured readiness diagnostics, Phase 57 adds a scaffolded AUT readiness contract at `configs/readiness/mobile-change.android.json`, Phase 58 adds `configs/readiness/demo-android-app.android.json` plus a repo-owned app success candidate at `docs/showcase/evidence/mobile-change-repo-app-success-candidate/`, Phase 59 adds a compact PR/CI artifact at `docs/showcase/evidence/mobile-change-ci-pr-evidence/` plus CI upload wiring, and Phase 60 adds failure-memory remediation routing at `docs/showcase/evidence/mobile-change-failure-memory/`. The repo-owned app candidate remains blocked before live success because no Android device/emulator is visible through ADB in the current environment.
-Last activity: 2026-05-31 -- Phase 60 implemented failure pattern grouping, bounded recommendation routing, committed evidence, smoke scripts, and docs.
+Phase: Phase 61 completed; Phase 62 React Native evidence pack is next
+Plan: Execute the RN capability wave Phase 61-64 with one commit per phase.
+Status: Phase 61 adds `react-native-readiness/v1`, committed blocked fixture evidence, and scripts for generate/validate/test. It checks device inventory, Metro reachability, RN/Expo JS debug target availability, readiness contract, and stable selector contract before live RN verification starts. The repo-owned app candidate remains blocked before live success because no Android device/emulator is visible through ADB in the current environment.
+Last activity: 2026-06-01 -- Phase 61 implemented RN readiness diagnostics and committed fixture evidence.
 
 Progress: [██████████] 100%
 
@@ -112,7 +112,11 @@ Recent decisions affecting current work:
 - Phase 52 completed: live-proof intake gate rejects no-device, fixture, and controlled outputs before they can be promoted as physical-device proof.
 - Phase 53 completed: Android device `10AEA40Z3Y000R5` live run produced tracked app-readiness failure evidence; successful app verification remains future work.
 - Phase 54 completed: Android Settings no-APK success-lane recipe is tracked and smoke-validated; execution waits for the device to reappear through ADB.
-- Phase 55-60 planned: next work is intentionally functional and developer-efficiency focused, with docs only as support for new UX, diagnostics, contracts, success evidence, CI artifacts, and remediation routing.
+- Phase 55-60 completed: developer-efficiency workflow, diagnostics, contracts, success candidate, CI artifacts, and remediation routing.
+- Phase 61 completed: RN readiness doctor checks device, Metro, debug target, readiness contract, and stable selectors before live RN verification.
+- Phase 62 planned: RN evidence pack.
+- Phase 63 planned: RN one-command verification lane.
+- Phase 64 planned: official tool bridge contract.
 - Phase 55 completed: one-command mobile change verification UX now wraps lower-level verification, blocked-readiness, intake, and handoff outcomes behind `verify:mobile-change` and the CLI `verify-mobile-change` subcommand.
 - Phase 56 completed: device readiness now distinguishes no-device, unauthorized, offline, requested-device mismatch, platform-tool failure, missing app artifact, and missing readiness-contract blockers with evidence and next actions.
 - Phase 57 completed: AUT readiness contract scaffold and validator now provide a contract-backed live verification path without relying only on loose environment variables.
