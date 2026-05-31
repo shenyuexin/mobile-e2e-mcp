@@ -137,6 +137,7 @@ Explorer 会生成一个包含结构化产物的目录：
   - `pnpm run verify:mobile-change`（一条命令跑移动变更验证；repo-owned demo app 可用 `-- --live --contract=configs/readiness/demo-android-app.android.json`）
   - `pnpm run generate:mobile-change-repo-app-success-candidate` / `pnpm run validate:mobile-change-repo-app-success-candidate`（repo-owned demo app 成功候选证据；blocked 结果不会被当成成功证据）
   - `pnpm run generate:mobile-change-ci-pr-evidence` / `pnpm run validate:mobile-change-ci-pr-evidence`（生成 PR/CI 可读的移动变更证据摘要，保留 blocked/failed/success proof level）
+  - `pnpm run generate:mobile-change-failure-memory` / `pnpm run validate:mobile-change-failure-memory`（聚合重复 failure packet，并给出有边界的下一步处理建议）
   - [docs/showcase/governed-agent-mobile-control.md](docs/showcase/governed-agent-mobile-control.md)
   - [docs/showcase/governed-agent-mobile-control-live.md](docs/showcase/governed-agent-mobile-control-live.md)
   - [docs/showcase/governed-business-app-workflow.md](docs/showcase/governed-business-app-workflow.md)
@@ -150,6 +151,7 @@ Explorer 会生成一个包含结构化产物的目录：
   - [docs/showcase/evidence/governed-policy-escalation-dry-run-2026-05-25/report.md](docs/showcase/evidence/governed-policy-escalation-dry-run-2026-05-25/report.md)
   - [docs/showcase/evidence/mobile-change-repo-app-success-candidate/candidate.md](docs/showcase/evidence/mobile-change-repo-app-success-candidate/candidate.md)
   - [docs/showcase/evidence/mobile-change-ci-pr-evidence/pr-summary.md](docs/showcase/evidence/mobile-change-ci-pr-evidence/pr-summary.md)
+  - [docs/showcase/evidence/mobile-change-failure-memory/remediation.md](docs/showcase/evidence/mobile-change-failure-memory/remediation.md)
 - 历史演示脚本：
   - `bash scripts/legacy/dev/record-demo-happy-path-android.sh`
   - `bash scripts/legacy/dev/record-demo-interruption-home-recovery-android.sh`

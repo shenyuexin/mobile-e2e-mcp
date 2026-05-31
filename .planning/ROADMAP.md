@@ -27,7 +27,7 @@
 | **57** | **AUT Readiness Contract Scaffold** | **completed** | **51, 55** |
 | **58** | **Repo-Owned App Success Evidence** | **completed-with-live-device-blocker** | **55, 56, 57** |
 | **59** | **PR and CI Evidence Automation** | **completed** | **50, 55, 58** |
-| **60** | **Failure Memory Remediation Loop** | **planned** | **46, 50, 55** |
+| **60** | **Failure Memory Remediation Loop** | **completed** | **46, 50, 55** |
 
 ## Phase 29: Explorer Horizontal Swipe Discovery
 
@@ -280,7 +280,7 @@ Plans:
 - **Out of scope**: autonomous source edits, flaky-test prediction as a product claim, and LLM-only root-cause attribution.
 
 Plans:
-- [ ] `60-PLAN.md` — failure memory remediation loop
+- [x] `60-PLAN.md` / `60-01-SUMMARY.md` — failure memory remediation loop
 
 ## Future Candidates
 
