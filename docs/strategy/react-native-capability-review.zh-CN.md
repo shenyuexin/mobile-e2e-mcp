@@ -21,6 +21,7 @@
 | RN readiness doctor | experimental, fixture-backed | `pnpm run validate:react-native-readiness` | `scripts/showcase/react-native-readiness.ts` | device inventory via MCP `list_devices` + runtime mode + Metro target check + readiness contract + stable selector contract |
 | RN evidence pack | experimental, fixture-backed | `pnpm run validate:react-native-evidence-pack` | `scripts/showcase/react-native-evidence-pack.ts` | RN readiness artifact + JS signal summary + native evidence references + RN failure taxonomy + proof boundary |
 | RN one-command lane | experimental, fixture-backed/live-gated | `pnpm run verify:react-native-change` | `scripts/showcase/react-native-one-command.ts` | readiness -> evidence pack -> optional live bridge -> compact result orchestration；支持 `--live-bridge`, `--contract`, `--output-dir` |
+| RN live success candidate | experimental, fixture-backed/live-gated | `pnpm run validate:react-native-live-success-candidate` | `scripts/showcase/react-native-live-success-candidate.ts` | 对 `react-native-one-command/v2` 结果做 promotion gate，只有 completed live bridge + physical/emulator proof + verification/intake evidence 才能 promoted |
 | RN failure taxonomy | experimental, fixture-backed | `pnpm run validate:react-native-failure-taxonomy` | `scripts/showcase/react-native-failure-taxonomy.ts` | 将 RN readiness/JS/network signals 映射为 `RN_*` reason codes 和 bounded next actions |
 | Official tool bridge relation | contract-ready | `pnpm run validate:official-tool-bridge` | `scripts/showcase/official-tool-bridge.ts` | 将 Android CLI/Journeys、Android Studio Journeys、Dart/Flutter MCP 定义为 upstream evidence/context provider |
 
@@ -57,6 +58,7 @@ RN 不是单独一套执行 backend。当前架构是：
 - `react-native-readiness/v1`：检查 device、runtime mode、Metro、JS debug target、readiness contract、stable selectors。
 - `react-native-evidence-pack/v1`：把 readiness、JS signal summary、native evidence reference、failure summary、failure taxonomy 合成 review artifact。
 - `react-native-one-command/v2`：提供 `pnpm run verify:react-native-change` 的 developer-facing orchestration，并可显式开启 live bridge。
+- `react-native-live-success-candidate/v1`：把 RN live success promotion 从执行命令里拆出来，防止 blocked/no-device output 被误标为成功 evidence。
 - `react-native-failure-taxonomy/v1`：将重复 RN blocker / JS runtime / network signals 归类到稳定 reason codes 和 bounded remediation。
 
 它解决的不是“替代 Detox/Maestro”，而是“AI agent 或开发者在 RN change 后，快速知道为什么不能开始验证，以及能把哪些 evidence 交给 PR/CI/下一步诊断”。

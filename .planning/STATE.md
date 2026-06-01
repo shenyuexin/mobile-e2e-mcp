@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executed
-stopped_at: Phase 69 React Native live bridge CLI UX completed
+stopped_at: Phase 70 React Native live success evidence promotion completed
 last_updated: "2026-05-31T00:00:00.000Z"
-last_activity: 2026-06-01 -- Phase 69 React Native live bridge CLI UX completed
+last_activity: 2026-06-01 -- Phase 70 React Native live success evidence promotion completed
 progress:
   total_phases: 16
   completed_phases: 16
@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-03-28)
 
 ## Current Position
 
-Phase: Phase 69 React Native live bridge CLI UX completed
-Plan: Next RN proof work should wait for a visible Android device/emulator plus Metro/debug target, then run the output-directed live bridge command.
-Status: `verify:react-native-change` now accepts live bridge CLI flags and custom output directories. The current environment still has no visible Android device through ADB, so live success remains unpromoted.
-Last activity: 2026-06-01 -- Phase 69 completed CLI wiring and blocked-safe command verification.
+Phase: Phase 70 React Native live success evidence promotion completed
+Plan: Next live work should connect a device/emulator, start Metro/debug target, run the RN live bridge command, then regenerate the live success candidate from that output.
+Status: Phase 70 added `react-native-live-success-candidate/v1`. The committed candidate is correctly blocked before RN live success because the current environment has no visible Android device, no Metro endpoint, no JS target, and no live bridge run.
+Last activity: 2026-06-01 -- Phase 70 completed blocked RN live success candidate evidence.
 
 Progress: [██████████] 100%
 
@@ -122,6 +122,7 @@ Recent decisions affecting current work:
 - Phase 67 completed: RN one-command now has an explicit optional live bridge into mobile-change verification and intake.
 - Phase 68 completed: RN failure taxonomy maps RN blockers and JS/network signals to stable reason codes and bounded next actions.
 - Phase 69 completed: RN live bridge can be invoked through CLI flags with output-directed evidence paths.
+- Phase 70 completed: RN live success promotion now has a candidate gate that blocks no-device output and promotes only completed physical/emulator bridge evidence with intake.
 - Phase 55 completed: one-command mobile change verification UX now wraps lower-level verification, blocked-readiness, intake, and handoff outcomes behind `verify:mobile-change` and the CLI `verify-mobile-change` subcommand.
 - Phase 56 completed: device readiness now distinguishes no-device, unauthorized, offline, requested-device mismatch, platform-tool failure, missing app artifact, and missing readiness-contract blockers with evidence and next actions.
 - Phase 57 completed: AUT readiness contract scaffold and validator now provide a contract-backed live verification path without relying only on loose environment variables.

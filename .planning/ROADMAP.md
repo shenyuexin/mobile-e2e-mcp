@@ -385,3 +385,14 @@ Plans:
 
 Plans:
 - [x] `69-PLAN.md` / `69-01-SUMMARY.md` — React Native live bridge CLI UX
+
+## Phase 70: React Native Live Success Evidence Promotion
+
+- **Goal**: Gate RN live success promotion on a completed RN one-command live bridge with physical/emulator proof and intake evidence.
+- **Depends on**: Phase 67, Phase 68, Phase 69
+- **Key constraint**: Promotion artifact must distinguish blocked/no-device output from app success.
+- **Support level**: `experimental` RN live success candidate promotion gate.
+- **Out of scope**: automatic Metro startup, app install/build, and success claims without device-backed intake evidence.
+
+Plans:
+- [x] `70-PLAN.md` / `70-01-SUMMARY.md` — React Native live success evidence promotion
