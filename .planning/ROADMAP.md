@@ -374,3 +374,14 @@ Plans:
 
 Plans:
 - [x] `68-PLAN.md` / `68-01-SUMMARY.md` — React Native failure taxonomy and remediation
+
+## Phase 69: React Native Live Bridge CLI UX
+
+- **Goal**: Make the RN live bridge usable from `verify:react-native-change` flags instead of hidden environment variables only.
+- **Depends on**: Phase 67, Phase 68
+- **Key constraint**: CLI flags improve ergonomics but must not weaken blocked/live proof labels or mutate host/device state implicitly.
+- **Support level**: `experimental` RN one-command live bridge CLI.
+- **Out of scope**: automatic Metro startup, app install/build, and live success without connected device/intake evidence.
+
+Plans:
+- [x] `69-PLAN.md` / `69-01-SUMMARY.md` — React Native live bridge CLI UX

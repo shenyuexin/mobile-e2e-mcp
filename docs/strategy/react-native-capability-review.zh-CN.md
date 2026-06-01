@@ -20,7 +20,7 @@
 | RN runtime mode contract | experimental, fixture-backed | `pnpm run validate:react-native-runtime-contract` | `scripts/showcase/react-native-runtime-contract.ts` | 区分 `expo_go` / `expo_dev_client` / `bare_debug` / `bare_release` 的 Metro、JS target、app artifact、entry strategy 前置条件 |
 | RN readiness doctor | experimental, fixture-backed | `pnpm run validate:react-native-readiness` | `scripts/showcase/react-native-readiness.ts` | device inventory via MCP `list_devices` + runtime mode + Metro target check + readiness contract + stable selector contract |
 | RN evidence pack | experimental, fixture-backed | `pnpm run validate:react-native-evidence-pack` | `scripts/showcase/react-native-evidence-pack.ts` | RN readiness artifact + JS signal summary + native evidence references + RN failure taxonomy + proof boundary |
-| RN one-command lane | experimental, fixture-backed/live-gated | `pnpm run verify:react-native-change` | `scripts/showcase/react-native-one-command.ts` | readiness -> evidence pack -> optional live bridge -> compact result orchestration |
+| RN one-command lane | experimental, fixture-backed/live-gated | `pnpm run verify:react-native-change` | `scripts/showcase/react-native-one-command.ts` | readiness -> evidence pack -> optional live bridge -> compact result orchestration；支持 `--live-bridge`, `--contract`, `--output-dir` |
 | RN failure taxonomy | experimental, fixture-backed | `pnpm run validate:react-native-failure-taxonomy` | `scripts/showcase/react-native-failure-taxonomy.ts` | 将 RN readiness/JS/network signals 映射为 `RN_*` reason codes 和 bounded next actions |
 | Official tool bridge relation | contract-ready | `pnpm run validate:official-tool-bridge` | `scripts/showcase/official-tool-bridge.ts` | 将 Android CLI/Journeys、Android Studio Journeys、Dart/Flutter MCP 定义为 upstream evidence/context provider |
 
@@ -104,7 +104,7 @@ RN 不是单独一套执行 backend。当前架构是：
 
 ### 已完成：把 RN one-command 接到 live verification/intake
 
-状态：`react-native-one-command/v2` 已增加 explicit live bridge，可选地进入 mobile-change live verification/intake。
+状态：`react-native-one-command/v2` 已增加 explicit live bridge，可通过 `pnpm run verify:react-native-change -- --live-bridge --contract=<path> --output-dir=<dir>` 进入 mobile-change live verification/intake。
 
 建议设计：
 

@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { runReactNativeOneCommand, renderReactNativeOneCommandMarkdown, validateReactNativeOneCommand } from "./react-native-one-command.ts";
+import {
+  parseReactNativeOneCommandArgs,
+  runReactNativeOneCommand,
+  renderReactNativeOneCommandMarkdown,
+  validateReactNativeOneCommand,
+} from "./react-native-one-command.ts";
 import type { ReactNativeEvidencePack } from "./react-native-evidence-pack.ts";
 import type { ReactNativeReadinessResult } from "./react-native-readiness.ts";
 
@@ -164,4 +169,32 @@ test("RN one-command markdown includes proof boundary language", async () => {
 
   assert.match(markdown, /React Native one-command verification/);
   assert.match(markdown, /does not weaken proof-level labels/);
+});
+
+test("RN one-command parser exposes live bridge CLI options", () => {
+  const options = parseReactNativeOneCommandArgs([
+    "--live-bridge",
+    "--run-id=rn-cli",
+    "--output-dir=output/rn-cli",
+    "--bridge-run-id=rn-cli-bridge",
+    "--bridge-output-dir=output/rn-cli/bridge",
+    "--contract=configs/readiness/demo-android-app.android.json",
+  ], false);
+
+  assert.equal(options.enableLiveBridge, true);
+  assert.equal(options.runId, "rn-cli");
+  assert.equal(options.outputDir, "output/rn-cli");
+  assert.equal(options.liveBridgeRunId, "rn-cli-bridge");
+  assert.equal(options.liveBridgeOutputDir, "output/rn-cli/bridge");
+  assert.equal(options.liveBridgeContractPath, "configs/readiness/demo-android-app.android.json");
+});
+
+test("RN one-command can point result evidence at a custom output path", async () => {
+  const result = await runReactNativeOneCommand("rn-output-path", {
+    runReadiness: async () => ({ path: "ready.json", result: readyReadiness }),
+    runEvidencePack: async () => ({ path: "pack.json", result: pack() }),
+  }, { resultPath: "output/rn-custom/result.json" });
+
+  assert.equal(result.evidence.result, "output/rn-custom/result.json");
+  validateReactNativeOneCommand(result);
 });

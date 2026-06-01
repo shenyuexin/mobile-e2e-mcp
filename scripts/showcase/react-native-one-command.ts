@@ -58,11 +58,20 @@ export interface ReactNativeOneCommandDependencies {
 
 export interface ReactNativeOneCommandOptions {
   enableLiveBridge?: boolean;
+  resultPath?: string;
 }
 
-const outputDir = "docs/showcase/evidence/react-native-one-command";
-const resultJsonPath = `${outputDir}/result.json`;
-const resultMarkdownPath = `${outputDir}/result.md`;
+export interface ReactNativeOneCommandWriteOptions {
+  check: boolean;
+  runId: string;
+  outputDir: string;
+  enableLiveBridge: boolean;
+  liveBridgeRunId: string;
+  liveBridgeOutputDir?: string;
+  liveBridgeContractPath?: string;
+}
+
+const defaultOutputDir = "docs/showcase/evidence/react-native-one-command";
 const readinessOutputPath = "docs/showcase/evidence/react-native-readiness/summary.json";
 const evidencePackOutputPath = "docs/showcase/evidence/react-native-evidence-pack/evidence-pack.json";
 
@@ -173,7 +182,7 @@ export async function runReactNativeOneCommand(
     evidence: {
       readiness: readiness.path,
       evidencePack: evidencePack.path,
-      result: resultJsonPath,
+      result: options.resultPath ?? `${defaultOutputDir}/result.json`,
     },
     nextAction: evidencePack.result.nextAction,
     boundaries: defaultBoundaries(),
@@ -243,40 +252,77 @@ async function writeOrCheck(relativePath: string, content: string, check: boolea
   await writeFile(absolutePath, content, "utf8");
 }
 
-function defaultDeps(check: boolean): ReactNativeOneCommandDependencies {
+function defaultDeps(options: ReactNativeOneCommandWriteOptions): ReactNativeOneCommandDependencies {
   return {
     runReadiness: async () => {
-      const result = await writeReactNativeReadiness(check);
+      const result = await writeReactNativeReadiness(options.check);
       return { path: readinessOutputPath, result };
     },
     runEvidencePack: async () => {
-      const result = await writeReactNativeEvidencePack(check);
+      const result = await writeReactNativeEvidencePack(options.check);
       return { path: evidencePackOutputPath, result };
     },
     runLiveBridge: async () => writeMobileChangeOneCommand({
       mode: "live",
-      runId: process.env.M2E_RN_LIVE_BRIDGE_RUN_ID ?? process.env.M2E_RN_ONE_COMMAND_RUN_ID ?? "react-native-live-bridge-2026-06-01",
-      outputDir: process.env.M2E_RN_LIVE_BRIDGE_OUTPUT_DIR,
-      contractPath: process.env.M2E_MOBILE_CHANGE_READINESS_CONTRACT,
+      runId: options.liveBridgeRunId,
+      outputDir: options.liveBridgeOutputDir,
+      contractPath: options.liveBridgeContractPath,
     }),
   };
 }
 
-export async function writeReactNativeOneCommand(check: boolean): Promise<ReactNativeOneCommandResult> {
-  const runId = process.env.M2E_RN_ONE_COMMAND_RUN_ID ?? "react-native-one-command-2026-06-01";
-  const result = await runReactNativeOneCommand(runId, defaultDeps(check), {
-    enableLiveBridge: process.env.M2E_RN_ENABLE_LIVE_BRIDGE === "1",
+export async function writeReactNativeOneCommand(options: boolean | ReactNativeOneCommandWriteOptions): Promise<ReactNativeOneCommandResult> {
+  const resolved = typeof options === "boolean" ? defaultWriteOptions(options) : options;
+  const resultJsonPath = `${resolved.outputDir}/result.json`;
+  const resultMarkdownPath = `${resolved.outputDir}/result.md`;
+  const result = await runReactNativeOneCommand(resolved.runId, defaultDeps(resolved), {
+    enableLiveBridge: resolved.enableLiveBridge,
+    resultPath: resultJsonPath,
   });
   validateReactNativeOneCommand(result);
-  await writeOrCheck(resultJsonPath, `${JSON.stringify(result, null, 2)}\n`, check);
-  await writeOrCheck(resultMarkdownPath, renderReactNativeOneCommandMarkdown(result), check);
+  await writeOrCheck(resultJsonPath, `${JSON.stringify(result, null, 2)}\n`, resolved.check);
+  await writeOrCheck(resultMarkdownPath, renderReactNativeOneCommandMarkdown(result), resolved.check);
   return result;
+}
+
+export function parseReactNativeOneCommandArgs(argv: string[], check: boolean): ReactNativeOneCommandWriteOptions {
+  const runIdArg = argv.find((arg) => arg.startsWith("--run-id="));
+  const outputDirArg = argv.find((arg) => arg.startsWith("--output-dir="));
+  const bridgeRunIdArg = argv.find((arg) => arg.startsWith("--bridge-run-id="));
+  const bridgeOutputDirArg = argv.find((arg) => arg.startsWith("--bridge-output-dir="));
+  const contractArg = argv.find((arg) => arg.startsWith("--contract=") || arg.startsWith("--bridge-contract="));
+  const runId = runIdArg?.slice("--run-id=".length)
+    ?? process.env.M2E_RN_ONE_COMMAND_RUN_ID
+    ?? "react-native-one-command-2026-06-01";
+  const liveBridgeRunId = bridgeRunIdArg?.slice("--bridge-run-id=".length)
+    ?? process.env.M2E_RN_LIVE_BRIDGE_RUN_ID
+    ?? runId;
+  const liveBridgeOutputDir = bridgeOutputDirArg?.slice("--bridge-output-dir=".length)
+    ?? process.env.M2E_RN_LIVE_BRIDGE_OUTPUT_DIR;
+  const liveBridgeContractPath = contractArg?.startsWith("--contract=")
+    ? contractArg.slice("--contract=".length)
+    : contractArg?.slice("--bridge-contract=".length) ?? process.env.M2E_MOBILE_CHANGE_READINESS_CONTRACT;
+
+  return {
+    check,
+    runId,
+    outputDir: outputDirArg?.slice("--output-dir=".length) ?? defaultOutputDir,
+    enableLiveBridge: argv.includes("--live-bridge") || argv.includes("--live") || process.env.M2E_RN_ENABLE_LIVE_BRIDGE === "1",
+    liveBridgeRunId,
+    liveBridgeOutputDir,
+    liveBridgeContractPath,
+  };
+}
+
+function defaultWriteOptions(check: boolean): ReactNativeOneCommandWriteOptions {
+  return parseReactNativeOneCommandArgs([], check);
 }
 
 async function main(): Promise<void> {
   const check = process.argv.includes("--check");
-  const result = await writeReactNativeOneCommand(check);
-  console.log(check ? "React Native one-command result is up to date." : `React Native one-command result written to ${outputDir}`);
+  const options = parseReactNativeOneCommandArgs(process.argv.slice(2), check);
+  const result = await writeReactNativeOneCommand(options);
+  console.log(check ? "React Native one-command result is up to date." : `React Native one-command result written to ${options.outputDir}`);
   console.log(JSON.stringify({
     verdict: result.verdict,
     proofLevel: result.proofLevel,
