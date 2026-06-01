@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executed
-stopped_at: Phase 64 official tool bridge contract completed
+stopped_at: Phase 65 React Native selector audit completed
 last_updated: "2026-05-31T00:00:00.000Z"
-last_activity: 2026-06-01 -- Phase 64 official tool bridge contract implemented
+last_activity: 2026-06-01 -- Phase 65 React Native selector audit completed
 progress:
   total_phases: 16
   completed_phases: 16
@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-03-28)
 
 ## Current Position
 
-Phase: Phase 61-64 RN capability wave completed
-Plan: All requested RN capability wave implementation slices have been committed; remaining live RN success promotion depends on a visible device/emulator, running Metro, attached RN debug target, stable selectors, and intake-backed verification evidence.
-Status: Phase 61 adds `react-native-readiness/v1`, committed blocked fixture evidence, and scripts for generate/validate/test. Phase 62 adds `react-native-evidence-pack/v1`, combining RN readiness, Metro console/network signal summaries, native/readiness evidence references, failure summary, review status, and next action. Phase 63 adds `react-native-one-command/v1` and `pnpm run verify:react-native-change` as the experimental RN orchestration lane. Phase 64 adds `official-tool-bridge/v1` for Android CLI/Journeys, Android Studio Journeys, and Dart/Flutter MCP relationship/intake semantics. The repo-owned app candidate remains blocked before live success because no Android device/emulator is visible through ADB in the current environment.
-Last activity: 2026-06-01 -- Phase 64 implemented official tool bridge contract and committed fixture evidence.
+Phase: Phase 66 React Native runtime mode contract next
+Plan: Continue RN hardening with runtime mode contract, live verification bridge, and RN failure taxonomy/remediation.
+Status: Phase 65 completed `react-native-selector-audit/v1` with fixture evidence and aligned RN readiness selector defaults. Live success promotion still requires device-backed verification and intake.
+Last activity: 2026-06-01 -- Phase 65 completed selector source audit.
 
-Progress: [██████████] 100%
+Progress: [██░░░░░░░░] 25%
 
 ## Workspace Semantics
 
@@ -117,6 +117,7 @@ Recent decisions affecting current work:
 - Phase 62 completed: RN evidence pack keeps Metro signals supplemental and preserves blocked proof boundaries.
 - Phase 63 completed: RN one-command verification lane orchestrates readiness and evidence pack while preserving blocked proof labels.
 - Phase 64 completed: official tool bridge contract defines Android CLI/Journeys, Android Studio Journeys, and Dart/Flutter MCP as upstream providers rather than replacements.
+- Phase 65 completed: RN selector audit checks declared stable selectors against source literals before live verification.
 - Phase 55 completed: one-command mobile change verification UX now wraps lower-level verification, blocked-readiness, intake, and handoff outcomes behind `verify:mobile-change` and the CLI `verify-mobile-change` subcommand.
 - Phase 56 completed: device readiness now distinguishes no-device, unauthorized, offline, requested-device mismatch, platform-tool failure, missing app artifact, and missing readiness-contract blockers with evidence and next actions.
 - Phase 57 completed: AUT readiness contract scaffold and validator now provide a contract-backed live verification path without relying only on loose environment variables.

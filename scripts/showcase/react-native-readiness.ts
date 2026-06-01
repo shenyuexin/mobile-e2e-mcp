@@ -456,7 +456,7 @@ async function writeOrCheck(relativePath: string, content: string, check: boolea
 }
 
 function stableSelectorsFromEnv(): string[] {
-  return (process.env.M2E_RN_STABLE_SELECTORS ?? "login.email,login.password,login.submit")
+  return (process.env.M2E_RN_STABLE_SELECTORS ?? "login-screen,phone-input,password-input,login-button")
     .split(",")
     .map((selector) => selector.trim())
     .filter(Boolean);

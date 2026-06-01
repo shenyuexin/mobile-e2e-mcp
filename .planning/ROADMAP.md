@@ -330,3 +330,47 @@ Plans:
 
 Plans:
 - [x] `64-PLAN.md` / `64-01-SUMMARY.md` — official tool bridge contract
+
+## Phase 65: React Native Selector Audit
+
+- **Goal**: Turn declared RN stable selectors into a source-audited artifact before live verification starts.
+- **Depends on**: Phase 61, Phase 63
+- **Key constraint**: Static source audit only; do not claim runtime UI visibility without device evidence.
+- **Support level**: `experimental` source-level RN selector contract validation.
+- **Out of scope**: automatic source edits, device UI tree confirmation, and AST-perfect coverage for every custom wrapper.
+
+Plans:
+- [x] `65-PLAN.md` / `65-01-SUMMARY.md` — React Native selector audit
+
+## Phase 66: React Native Runtime Mode Contract
+
+- **Goal**: Make Expo Go, Expo dev-client, bare debug, and bare release prerequisites explicit in RN readiness.
+- **Depends on**: Phase 61, Phase 65
+- **Key constraint**: Runtime mode contract clarifies prerequisites; it does not start Metro, build apps, or install artifacts.
+- **Support level**: `experimental` RN runtime mode readiness contract.
+- **Out of scope**: invoking Expo/React Native CLI, automatic native builds, and release-mode debugger claims.
+
+Plans:
+- [ ] `66-PLAN.md` — React Native runtime mode contract
+
+## Phase 67: React Native Live Verification Bridge
+
+- **Goal**: Let `verify:react-native-change` enter the live mobile-change verification and intake path when RN prerequisites pass.
+- **Depends on**: Phase 63, Phase 65, Phase 66
+- **Key constraint**: Live bridge must preserve blocked/failed/success proof labels and stay explicitly gated.
+- **Support level**: `experimental` RN one-command live bridge.
+- **Out of scope**: mandatory live-device CI, automatic success promotion, and replacing the mobile-change runner.
+
+Plans:
+- [ ] `67-PLAN.md` — React Native live verification bridge
+
+## Phase 68: React Native Failure Taxonomy And Remediation
+
+- **Goal**: Classify RN-specific blockers and JS/runtime signals into deterministic reason codes with bounded next actions.
+- **Depends on**: Phase 62, Phase 65, Phase 66, Phase 67
+- **Key constraint**: Taxonomy groups evidence and recommends bounded actions; it must not become autonomous code fixing.
+- **Support level**: `experimental` RN failure intelligence.
+- **Out of scope**: LLM-only root cause attribution, source-map symbolication, and automatic remediation edits.
+
+Plans:
+- [ ] `68-PLAN.md` — React Native failure taxonomy and remediation

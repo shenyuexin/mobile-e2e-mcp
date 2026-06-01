@@ -13,7 +13,7 @@ Checks:
 - metro-inspector: `blocked` (METRO_UNAVAILABLE) - Metro inspector endpoint is not reachable.
 - js-debug-target: `blocked` (NO_JS_DEBUG_TARGET) - No RN/Expo debug target can be selected because Metro is unavailable.
 - readiness-contract: `passed` (OK) - A deterministic readiness expectation is configured.
-- stable-selectors: `passed` (OK) - 3 stable RN selector(s) are declared.
+- stable-selectors: `passed` (OK) - 4 stable RN selector(s) are declared.
 
 Blockers:
 - DEVICE_UNAVAILABLE: No eligible android device is visible.

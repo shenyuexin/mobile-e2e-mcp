@@ -13,9 +13,10 @@
     "appPhase": "authentication"
   },
   "stableSelectors": [
-    "login.email",
-    "login.password",
-    "login.submit"
+    "login-screen",
+    "phone-input",
+    "password-input",
+    "login-button"
   ],
   "checks": [
     {
@@ -71,11 +72,12 @@
       "id": "stable-selectors",
       "status": "passed",
       "reasonCode": "OK",
-      "detail": "3 stable RN selector(s) are declared.",
+      "detail": "4 stable RN selector(s) are declared.",
       "evidence": [
-        "selector: login.email",
-        "selector: login.password",
-        "selector: login.submit"
+        "selector: login-screen",
+        "selector: phone-input",
+        "selector: password-input",
+        "selector: login-button"
       ],
       "nextActions": []
     }
