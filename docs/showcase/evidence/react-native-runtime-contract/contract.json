@@ -1,0 +1,100 @@
+{
+  "schema": "react-native-runtime-contract/v1",
+  "runId": "react-native-runtime-contract-2026-06-01",
+  "defaultMode": "bare_debug",
+  "modes": [
+    {
+      "mode": "expo_go",
+      "supportLevel": "conditional",
+      "requiresMetroInspector": true,
+      "requiresJsDebugTarget": true,
+      "requiresAppArtifact": false,
+      "entryStrategy": "expo_url",
+      "proofBackbone": "native_ui_postcondition",
+      "supplementalEvidence": [
+        "Metro console snapshot",
+        "Metro network snapshot"
+      ],
+      "caveats": [
+        "Requires Expo Go or a compatible Expo runtime already available on the device.",
+        "Native module behavior may differ from dev-client or bare builds."
+      ],
+      "nextActions": [
+        "Start Expo with an inspectable Metro endpoint.",
+        "Launch the Expo URL and wait for a JS debug target."
+      ]
+    },
+    {
+      "mode": "expo_dev_client",
+      "supportLevel": "experimental",
+      "requiresMetroInspector": true,
+      "requiresJsDebugTarget": true,
+      "requiresAppArtifact": false,
+      "entryStrategy": "dev_client_deep_link",
+      "proofBackbone": "native_ui_postcondition",
+      "supplementalEvidence": [
+        "Metro console snapshot",
+        "Metro network snapshot",
+        "native logs"
+      ],
+      "caveats": [
+        "Requires a dev-client build installed before verification.",
+        "Deep-link entry must be deterministic and documented by the app-under-test contract."
+      ],
+      "nextActions": [
+        "Install or select the dev-client app.",
+        "Start Metro and launch the dev-client deep link."
+      ]
+    },
+    {
+      "mode": "bare_debug",
+      "supportLevel": "experimental",
+      "requiresMetroInspector": true,
+      "requiresJsDebugTarget": true,
+      "requiresAppArtifact": false,
+      "entryStrategy": "native_app_launch",
+      "proofBackbone": "native_ui_postcondition",
+      "supplementalEvidence": [
+        "Metro console snapshot",
+        "Metro network snapshot",
+        "native logs",
+        "screenshots"
+      ],
+      "caveats": [
+        "Requires a debug-capable RN app and reachable Metro inspector.",
+        "Metro evidence remains supplemental and cannot promote success without native post-condition proof."
+      ],
+      "nextActions": [
+        "Install or launch the debug RN app.",
+        "Start Metro and attach the JS debug target."
+      ]
+    },
+    {
+      "mode": "bare_release",
+      "supportLevel": "conditional",
+      "requiresMetroInspector": false,
+      "requiresJsDebugTarget": false,
+      "requiresAppArtifact": true,
+      "entryStrategy": "release_artifact_launch",
+      "proofBackbone": "native_ui_postcondition",
+      "supplementalEvidence": [
+        "native logs",
+        "screenshots",
+        "crash evidence"
+      ],
+      "caveats": [
+        "Release mode should not be blocked by missing Metro inspector or JS debug target.",
+        "JS runtime diagnosis is limited without source-map or Hermes symbolication evidence."
+      ],
+      "nextActions": [
+        "Provide a release APK/IPA artifact.",
+        "Use native UI post-conditions and crash/log evidence for proof."
+      ]
+    }
+  ],
+  "boundaries": [
+    "Runtime mode clarifies prerequisites; it does not start Metro, build apps, or install artifacts by itself.",
+    "Native UI post-condition evidence remains the proof backbone for every RN mode.",
+    "Metro and JS debug target evidence are required only for debug/dev modes and remain supplemental."
+  ]
+}

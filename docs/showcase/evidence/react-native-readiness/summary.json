@@ -8,6 +8,13 @@
   "metroBaseUrl": "http://127.0.0.1:8081",
   "policyProfile": "interactive",
   "runnerProfile": "react_native_android",
+  "runtimeMode": "bare_debug",
+  "runtimeRequirements": {
+    "requiresMetroInspector": true,
+    "requiresJsDebugTarget": true,
+    "requiresAppArtifact": false,
+    "entryStrategy": "native_app_launch"
+  },
   "expectedReadiness": {
     "screenId": "login",
     "appPhase": "authentication"
@@ -19,6 +26,18 @@
     "login-button"
   ],
   "checks": [
+    {
+      "id": "runtime-mode",
+      "status": "passed",
+      "reasonCode": "OK",
+      "detail": "Runtime mode bare_debug uses native_app_launch.",
+      "evidence": [
+        "requiresMetroInspector: true",
+        "requiresJsDebugTarget: true",
+        "requiresAppArtifact: false"
+      ],
+      "nextActions": []
+    },
     {
       "id": "device-inventory",
       "status": "blocked",

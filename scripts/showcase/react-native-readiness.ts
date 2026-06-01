@@ -4,11 +4,19 @@ import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { createServer } from "../../packages/mcp-server/src/index.ts";
 import { listJsDebugTargetsWithMaestro } from "../../packages/adapter-maestro/src/js-debug.ts";
+import {
+  defaultReactNativeRuntimeContract,
+  findReactNativeRuntimeMode,
+  type ReactNativeRuntimeMode,
+  type ReactNativeRuntimeModeContractEntry,
+} from "./react-native-runtime-contract.ts";
 
 export type ReactNativeReadinessVerdict = "ready_for_react_native_verification" | "blocked_before_react_native_verification";
 export type ReactNativeReadinessProofLevel = "readiness_candidate" | "blocked_before_live";
 export type ReactNativeReadinessReasonCode =
   | "OK"
+  | "RUNTIME_MODE_CONTRACT_MISSING"
+  | "APP_ARTIFACT_REQUIRED"
   | "DEVICE_UNAVAILABLE"
   | "DEVICE_UNAUTHORIZED"
   | "DEVICE_OFFLINE"
@@ -25,6 +33,8 @@ export interface ReactNativeReadinessOptions {
   metroBaseUrl: string;
   policyProfile: string;
   runnerProfile: string;
+  runtimeMode: ReactNativeRuntimeMode;
+  appArtifact?: string;
   expectedReadiness: {
     screenId?: string;
     appPhase?: string;
@@ -34,7 +44,7 @@ export interface ReactNativeReadinessOptions {
 }
 
 export interface ReactNativeReadinessCheck {
-  id: "device-inventory" | "metro-inspector" | "js-debug-target" | "readiness-contract" | "stable-selectors";
+  id: "runtime-mode" | "device-inventory" | "metro-inspector" | "js-debug-target" | "readiness-contract" | "stable-selectors";
   status: "passed" | "blocked";
   reasonCode: ReactNativeReadinessReasonCode;
   detail: string;
@@ -52,6 +62,14 @@ export interface ReactNativeReadinessResult {
   metroBaseUrl: string;
   policyProfile: string;
   runnerProfile: string;
+  runtimeMode: ReactNativeRuntimeMode;
+  runtimeRequirements: {
+    requiresMetroInspector: boolean;
+    requiresJsDebugTarget: boolean;
+    requiresAppArtifact: boolean;
+    entryStrategy: ReactNativeRuntimeModeContractEntry["entryStrategy"];
+  };
+  appArtifact?: string;
   selectedDeviceId?: string;
   expectedReadiness: {
     screenId?: string;
@@ -131,6 +149,41 @@ function passedCheck(input: {
     detail: input.detail,
     evidence: input.evidence,
     nextActions: [],
+  };
+}
+
+function runtimeModeCheck(input: {
+  runtimeMode: ReactNativeRuntimeMode;
+  appArtifact?: string;
+}): {
+  entry: ReactNativeRuntimeModeContractEntry;
+  check: ReactNativeReadinessCheck;
+} {
+  const entry = findReactNativeRuntimeMode(defaultReactNativeRuntimeContract(), input.runtimeMode);
+  if (entry.requiresAppArtifact && !input.appArtifact) {
+    return {
+      entry,
+      check: blockedCheck({
+        id: "runtime-mode",
+        reasonCode: "APP_ARTIFACT_REQUIRED",
+        detail: `${input.runtimeMode} requires an app artifact before live RN verification.`,
+        evidence: [`runtimeMode: ${input.runtimeMode}`, `entryStrategy: ${entry.entryStrategy}`],
+        nextActions: ["Provide M2E_RN_APP_ARTIFACT or choose a debug/dev runtime mode."],
+      }),
+    };
+  }
+
+  return {
+    entry,
+    check: passedCheck({
+      id: "runtime-mode",
+      detail: `Runtime mode ${input.runtimeMode} uses ${entry.entryStrategy}.`,
+      evidence: [
+        `requiresMetroInspector: ${entry.requiresMetroInspector}`,
+        `requiresJsDebugTarget: ${entry.requiresJsDebugTarget}`,
+        `requiresAppArtifact: ${entry.requiresAppArtifact}`,
+      ],
+    }),
   };
 }
 
@@ -246,7 +299,22 @@ function deviceInventoryCheck(listDevicesResult: unknown, platform: "android" | 
   };
 }
 
-function metroChecks(result: unknown, metroBaseUrl: string): ReactNativeReadinessCheck[] {
+function metroChecks(result: unknown, metroBaseUrl: string, requirements: ReactNativeRuntimeModeContractEntry): ReactNativeReadinessCheck[] {
+  if (!requirements.requiresMetroInspector && !requirements.requiresJsDebugTarget) {
+    return [
+      passedCheck({
+        id: "metro-inspector",
+        detail: `Metro inspector is not required for ${requirements.mode}.`,
+        evidence: [`runtimeMode: ${requirements.mode}`, "requiresMetroInspector: false"],
+      }),
+      passedCheck({
+        id: "js-debug-target",
+        detail: `JS debug target is not required for ${requirements.mode}.`,
+        evidence: [`runtimeMode: ${requirements.mode}`, "requiresJsDebugTarget: false"],
+      }),
+    ];
+  }
+
   const record = asRecord(result);
   const data = asRecord(record.data);
   const targetCount = typeof data.targetCount === "number" ? data.targetCount : 0;
@@ -365,10 +433,15 @@ export async function buildReactNativeReadiness(
   options: ReactNativeReadinessOptions,
   deps: ReactNativeReadinessDependencies,
 ): Promise<ReactNativeReadinessResult> {
+  const runtime = runtimeModeCheck({ runtimeMode: options.runtimeMode, appArtifact: options.appArtifact });
   const inventory = deviceInventoryCheck(await deps.listDevices(), options.platform, options.deviceId);
+  const jsDebugResult = runtime.entry.requiresMetroInspector || runtime.entry.requiresJsDebugTarget
+    ? await deps.listJsDebugTargets()
+    : { status: "skipped", data: { targetCount: 0, targets: [] } };
   const checks = [
+    runtime.check,
     inventory.check,
-    ...metroChecks(await deps.listJsDebugTargets(), options.metroBaseUrl),
+    ...metroChecks(jsDebugResult, options.metroBaseUrl, runtime.entry),
     readinessContractCheck(options.expectedReadiness),
     stableSelectorCheck(options.stableSelectors),
   ];
@@ -384,6 +457,14 @@ export async function buildReactNativeReadiness(
     metroBaseUrl: options.metroBaseUrl,
     policyProfile: options.policyProfile,
     runnerProfile: options.runnerProfile,
+    runtimeMode: options.runtimeMode,
+    runtimeRequirements: {
+      requiresMetroInspector: runtime.entry.requiresMetroInspector,
+      requiresJsDebugTarget: runtime.entry.requiresJsDebugTarget,
+      requiresAppArtifact: runtime.entry.requiresAppArtifact,
+      entryStrategy: runtime.entry.entryStrategy,
+    },
+    appArtifact: options.appArtifact,
     selectedDeviceId: inventory.selectedDeviceId,
     expectedReadiness: options.expectedReadiness,
     stableSelectors: options.stableSelectors,
@@ -414,6 +495,7 @@ export function renderReactNativeReadinessMarkdown(result: ReactNativeReadinessR
     `Platform: \`${result.platform}\``,
     `App ID: \`${result.appId}\``,
     `Metro: \`${result.metroBaseUrl}\``,
+    `Runtime mode: \`${result.runtimeMode}\``,
     `Selected device: \`${result.selectedDeviceId ?? "none"}\``,
     "",
     "Checks:",
@@ -434,7 +516,7 @@ export function renderReactNativeReadinessMarkdown(result: ReactNativeReadinessR
 
 export function validateReactNativeReadiness(result: ReactNativeReadinessResult): void {
   assert.equal(result.schema, "react-native-readiness/v1");
-  assert.ok(result.checks.length >= 5, "RN readiness must report device, Metro, debug target, readiness, and selector checks");
+  assert.ok(result.checks.length >= 6, "RN readiness must report runtime, device, Metro, debug target, readiness, and selector checks");
   assert.ok(result.boundaries.some((boundary) => boundary.includes("does not prove app success")), "readiness boundary must prevent success overclaim");
   if (result.verdict === "ready_for_react_native_verification") {
     assert.equal(result.blockers.length, 0, "ready RN readiness cannot include blockers");
@@ -480,6 +562,8 @@ export async function writeReactNativeReadiness(check: boolean): Promise<ReactNa
     metroBaseUrl,
     policyProfile: process.env.M2E_RN_POLICY_PROFILE ?? "interactive",
     runnerProfile: process.env.M2E_RN_RUNNER_PROFILE ?? "react_native_android",
+    runtimeMode: (process.env.M2E_RN_RUNTIME_MODE as ReactNativeRuntimeMode | undefined) ?? "bare_debug",
+    appArtifact: process.env.M2E_RN_APP_ARTIFACT,
     expectedReadiness: {
       screenId: process.env.M2E_RN_EXPECTED_SCREEN_ID ?? "login",
       appPhase: process.env.M2E_RN_EXPECTED_APP_PHASE ?? "authentication",

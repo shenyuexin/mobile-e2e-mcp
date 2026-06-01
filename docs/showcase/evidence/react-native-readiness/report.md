@@ -6,9 +6,11 @@ Run ID: `react-native-readiness-2026-06-01`
 Platform: `android`
 App ID: `com.anonymous.rnlogindemo`
 Metro: `http://127.0.0.1:8081`
+Runtime mode: `bare_debug`
 Selected device: `none`
 
 Checks:
+- runtime-mode: `passed` (OK) - Runtime mode bare_debug uses native_app_launch.
 - device-inventory: `blocked` (DEVICE_UNAVAILABLE) - No eligible android device is visible.
 - metro-inspector: `blocked` (METRO_UNAVAILABLE) - Metro inspector endpoint is not reachable.
 - js-debug-target: `blocked` (NO_JS_DEBUG_TARGET) - No RN/Expo debug target can be selected because Metro is unavailable.

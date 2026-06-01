@@ -351,7 +351,7 @@ Plans:
 - **Out of scope**: invoking Expo/React Native CLI, automatic native builds, and release-mode debugger claims.
 
 Plans:
-- [ ] `66-PLAN.md` — React Native runtime mode contract
+- [x] `66-PLAN.md` / `66-01-SUMMARY.md` — React Native runtime mode contract
 
 ## Phase 67: React Native Live Verification Bridge
 
