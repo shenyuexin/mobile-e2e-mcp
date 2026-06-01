@@ -373,4 +373,4 @@ Plans:
 - **Out of scope**: LLM-only root cause attribution, source-map symbolication, and automatic remediation edits.
 
 Plans:
-- [ ] `68-PLAN.md` — React Native failure taxonomy and remediation
+- [x] `68-PLAN.md` / `68-01-SUMMARY.md` — React Native failure taxonomy and remediation

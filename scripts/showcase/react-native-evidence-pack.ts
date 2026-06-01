@@ -3,6 +3,10 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import type { ReactNativeReadinessResult } from "./react-native-readiness.ts";
+import {
+  classifyReactNativeFailure,
+  type ReactNativeFailureClassification,
+} from "./react-native-failure-taxonomy.ts";
 
 export type ReactNativeEvidencePackReviewStatus = "blocked" | "needs_review" | "ready_for_review";
 export type ReactNativeEvidencePackProofLevel = "blocked_before_live" | "rn_evidence_candidate";
@@ -42,6 +46,13 @@ export interface ReactNativeEvidencePack {
     strongestSuspectLayer: "environment" | "rn_runtime" | "native_runtime" | "unknown";
     confidence: "high" | "medium" | "low";
     detail: string;
+  };
+  failureTaxonomy: {
+    schema: "react-native-failure-taxonomy/v1";
+    verdict: "rn_failure_detected" | "no_rn_failure_detected";
+    classifications: Array<Pick<ReactNativeFailureClassification, "reasonCode" | "category" | "confidence" | "detail"> & {
+      recommendationKind: ReactNativeFailureClassification["recommendation"]["kind"];
+    }>;
   };
   nextAction: {
     kind: "fix_readiness_blocker" | "inspect_js_runtime" | "attach_rn_evidence_pack";
@@ -160,6 +171,12 @@ export function buildReactNativeEvidencePack(input: {
   };
   const reviewStatus = reviewStatusFor({ readiness: input.readiness, console: consoleSignal, network: networkSignal });
   const proofLevel: ReactNativeEvidencePackProofLevel = reviewStatus === "blocked" ? "blocked_before_live" : "rn_evidence_candidate";
+  const failureTaxonomy = classifyReactNativeFailure({
+    runId: `${input.runId}-taxonomy`,
+    readinessBlockers: input.readiness.blockers.map((blocker) => ({ reasonCode: blocker.reasonCode, detail: blocker.detail })),
+    consoleSignal,
+    networkSignal,
+  });
 
   const packWithoutNextAction = {
     schema: "react-native-evidence-pack/v1" as const,
@@ -188,6 +205,17 @@ export function buildReactNativeEvidencePack(input: {
       },
     ],
     failureSummary: failureSummaryFor({ readiness: input.readiness, console: consoleSignal, network: networkSignal }),
+    failureTaxonomy: {
+      schema: failureTaxonomy.schema,
+      verdict: failureTaxonomy.verdict,
+      classifications: failureTaxonomy.classifications.map((item) => ({
+        reasonCode: item.reasonCode,
+        category: item.category,
+        confidence: item.confidence,
+        detail: item.detail,
+        recommendationKind: item.recommendation.kind,
+      })),
+    },
     boundaries: defaultBoundaries(),
   };
 
@@ -230,6 +258,12 @@ export function renderReactNativeEvidencePackMarkdown(pack: ReactNativeEvidenceP
     `- Confidence: \`${pack.failureSummary.confidence}\``,
     `- Detail: ${pack.failureSummary.detail}`,
     "",
+    "RN failure taxonomy:",
+    `- Verdict: \`${pack.failureTaxonomy.verdict}\``,
+    ...(pack.failureTaxonomy.classifications.length > 0
+      ? pack.failureTaxonomy.classifications.map((item) => `- ${item.reasonCode}: \`${item.category}\`, confidence \`${item.confidence}\`, recommendation \`${item.recommendationKind}\``)
+      : ["- none"]),
+    "",
     "Next action:",
     `- \`${pack.nextAction.kind}\`: ${pack.nextAction.reason}`,
     `- Command: \`${pack.nextAction.command}\``,
@@ -245,6 +279,7 @@ export function validateReactNativeEvidencePack(pack: ReactNativeEvidencePack): 
   assert.ok(pack.readiness.sourcePath.length > 0, "RN evidence pack requires a readiness source path");
   assert.ok(pack.nativeEvidence.length > 0, "RN evidence pack requires at least one native/readiness evidence reference");
   assert.ok(pack.boundaries.some((boundary) => boundary.includes("Metro console and network signals are supplemental")), "RN evidence pack must mark Metro evidence as supplemental");
+  assert.equal(pack.failureTaxonomy.schema, "react-native-failure-taxonomy/v1", "RN evidence pack must include RN failure taxonomy summary");
   if (pack.reviewStatus === "blocked") {
     assert.equal(pack.proofLevel, "blocked_before_live", "blocked RN pack must preserve blocked proof level");
     assert.ok(pack.readiness.blockers.length > 0, "blocked RN pack must include readiness blockers");

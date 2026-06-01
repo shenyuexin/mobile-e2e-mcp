@@ -14,6 +14,13 @@ function readiness(overrides: Partial<ReactNativeReadinessResult> = {}): ReactNa
     metroBaseUrl: "http://127.0.0.1:8081",
     policyProfile: "interactive",
     runnerProfile: "react_native_android",
+    runtimeMode: "bare_debug",
+    runtimeRequirements: {
+      requiresMetroInspector: true,
+      requiresJsDebugTarget: true,
+      requiresAppArtifact: false,
+      entryStrategy: "native_app_launch",
+    },
     selectedDeviceId: "device-1",
     expectedReadiness: { screenId: "login", appPhase: "authentication" },
     stableSelectors: ["login.submit"],
@@ -39,6 +46,7 @@ test("RN evidence pack preserves blocked readiness proof level", () => {
 
   assert.equal(pack.reviewStatus, "blocked");
   assert.equal(pack.proofLevel, "blocked_before_live");
+  assert.equal(pack.failureTaxonomy.classifications.some((item) => item.reasonCode === "RN_METRO_UNAVAILABLE"), true);
   assert.equal(pack.nextAction.kind, "fix_readiness_blocker");
   validateReactNativeEvidencePack(pack);
 });
@@ -59,6 +67,7 @@ test("RN evidence pack marks JS exceptions as needs review, not success", () => 
 
   assert.equal(pack.reviewStatus, "needs_review");
   assert.equal(pack.proofLevel, "rn_evidence_candidate");
+  assert.equal(pack.failureTaxonomy.classifications.some((item) => item.reasonCode === "RN_JS_EXCEPTION"), true);
   assert.equal(pack.nextAction.kind, "inspect_js_runtime");
 });
 
@@ -97,4 +106,5 @@ test("RN evidence pack markdown includes supplemental Metro boundary", () => {
 
   assert.match(markdown, /React Native evidence pack/);
   assert.match(markdown, /Metro console and network signals are supplemental/);
+  assert.match(markdown, /RN failure taxonomy/);
 });

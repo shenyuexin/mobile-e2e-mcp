@@ -1,0 +1,42 @@
+{
+  "schema": "react-native-failure-taxonomy/v1",
+  "runId": "react-native-failure-taxonomy-2026-06-01",
+  "verdict": "rn_failure_detected",
+  "classifications": [
+    {
+      "reasonCode": "RN_METRO_UNAVAILABLE",
+      "category": "environment",
+      "confidence": "high",
+      "detail": "Metro inspector endpoint is not reachable.",
+      "evidence": [
+        "readiness:METRO_UNAVAILABLE"
+      ],
+      "recommendation": {
+        "kind": "start_metro_or_expo",
+        "command": "npx react-native start",
+        "reason": "Metro must be reachable before RN debug evidence can be collected.",
+        "bounded": true
+      }
+    },
+    {
+      "reasonCode": "RN_NO_DEBUG_TARGET",
+      "category": "environment",
+      "confidence": "high",
+      "detail": "No RN/Expo debug target can be selected because Metro is unavailable.",
+      "evidence": [
+        "readiness:NO_JS_DEBUG_TARGET"
+      ],
+      "recommendation": {
+        "kind": "attach_react_native_debug_target",
+        "command": "pnpm run validate:react-native-readiness",
+        "reason": "Launch or reload the RN app so Metro exposes a debuggable JS target.",
+        "bounded": true
+      }
+    }
+  ],
+  "boundaries": [
+    "RN failure taxonomy groups observed evidence; it is not a root-cause oracle.",
+    "Recommendations are bounded next actions and must not autonomously edit app or test code.",
+    "Metro-only or JS-only evidence cannot promote live success without native verification and intake."
+  ]
+}

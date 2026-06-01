@@ -25,6 +25,11 @@ Failure summary:
 - Confidence: `high`
 - Detail: RN readiness blocked before live verification: DEVICE_UNAVAILABLE, METRO_UNAVAILABLE, NO_JS_DEBUG_TARGET
 
+RN failure taxonomy:
+- Verdict: `rn_failure_detected`
+- RN_METRO_UNAVAILABLE: `environment`, confidence `high`, recommendation `start_metro_or_expo`
+- RN_NO_DEBUG_TARGET: `environment`, confidence `high`, recommendation `attach_react_native_debug_target`
+
 Next action:
 - `fix_readiness_blocker`: Connect an eligible device or run on a self-hosted runner.
 - Command: `pnpm run validate:react-native-readiness`
