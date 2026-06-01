@@ -351,6 +351,21 @@ function selectDevice(listDevicesResult: unknown, platform: "android" | "ios", r
   return undefined;
 }
 
+function discoverDeviceStepFromResult(result: unknown, deviceId: string): VerificationStep {
+  const record = asRecord(result);
+  const originalStatus = typeof record.status === "string" ? record.status : "unknown";
+  const originalReasonCode = typeof record.reasonCode === "string" ? record.reasonCode : "unknown";
+  return {
+    id: "discover-device",
+    tool: "list_devices",
+    status: "success",
+    reasonCode: "OK",
+    detail: originalStatus === "success"
+      ? `Selected device ${deviceId}.`
+      : `Selected device ${deviceId}; list_devices returned ${originalStatus}/${originalReasonCode}.`,
+  };
+}
+
 function screenSummaryFromResult(result: unknown): Record<string, unknown> {
   return asRecord(asRecord(asRecord(result).data).screenSummary);
 }
@@ -380,7 +395,7 @@ export async function runLiveMobileChangeVerificationWorkflow(
   const listed = await invoke("list_devices", { includeUnavailable: true });
   const deviceId = selectDevice(listed, options.platform, options.deviceId);
   steps.push(deviceId
-    ? stepFromResult("discover-device", "list_devices", listed, "OK")
+    ? discoverDeviceStepFromResult(listed, deviceId)
     : { id: "discover-device", tool: "list_devices", status: "failed", reasonCode: "DEVICE_UNAVAILABLE" });
 
   if (!deviceId) {

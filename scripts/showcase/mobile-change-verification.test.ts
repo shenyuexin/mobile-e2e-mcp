@@ -231,6 +231,49 @@ test("live runner maps successful governed tool calls into a verification bundle
   ]);
 });
 
+test("live runner accepts target platform device when cross-platform inventory is partial", async () => {
+  const { runLiveMobileChangeVerificationWorkflow } = await import("./mobile-change-verification.ts");
+
+  const result = await runLiveMobileChangeVerificationWorkflow({
+    runId: "live-partial-inventory-device-fixture",
+    platform: "android",
+    appId: "com.android.settings",
+    policyProfile: "interactive",
+    runnerProfile: "native_android",
+    expectedReadiness: {},
+    deviceId: "10AEA40Z3Y000R5",
+    skipInstall: true,
+  }, async (tool) => {
+    if (tool === "list_devices") {
+      return {
+        status: "partial",
+        reasonCode: "DEVICE_UNAVAILABLE",
+        data: { android: [{ id: "10AEA40Z3Y000R5", state: "device", available: true }], ios: [] },
+      };
+    }
+    if (tool === "inspect_ui") {
+      return {
+        status: "success",
+        reasonCode: "OK",
+        artifacts: ["output/live/inspect-ui.xml"],
+      };
+    }
+    if (tool === "get_screen_summary") {
+      return {
+        status: "success",
+        reasonCode: "OK",
+        data: { screenSummary: { appPhase: "settings", readiness: "ready" } },
+      };
+    }
+    return { status: "success", reasonCode: "OK" };
+  });
+
+  assert.equal(result.bundle.verdict, "mobile_change_verified");
+  assert.equal(result.bundle.workflow.steps[0]?.status, "success");
+  assert.equal(result.bundle.workflow.steps[0]?.reasonCode, "OK");
+  assert.equal(result.failurePacket, undefined);
+});
+
 test("live runner produces structured device-unavailable output without throwing", async () => {
   const { runLiveMobileChangeVerificationWorkflow } = await import("./mobile-change-verification.ts");
   const result = await runLiveMobileChangeVerificationWorkflow({
