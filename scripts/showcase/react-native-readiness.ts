@@ -206,21 +206,24 @@ function deviceInventoryCheck(listDevicesResult: unknown, platform: "android" | 
   check: ReactNativeReadinessCheck;
 } {
   const result = asRecord(listDevicesResult);
-  if (result.status && result.status !== "success") {
+  const data = asRecord(result.data);
+  const devices = Array.isArray(data[platform]) ? data[platform].map(asRecord) : [];
+  const ids = devices.map((device) => stringField(device, "id", "udid") ?? "unknown");
+  const inventoryStatusEvidence = result.status && result.status !== "success"
+    ? [`list_devices status: ${String(result.status)}`, `reasonCode: ${String(result.reasonCode ?? "unknown")}`]
+    : [];
+
+  if (inventoryStatusEvidence.length > 0 && devices.length === 0) {
     return {
       check: blockedCheck({
         id: "device-inventory",
         reasonCode: "DEVICE_UNAVAILABLE",
         detail: "Device inventory failed before RN verification could start.",
-        evidence: [`list_devices status: ${String(result.status)}`, `reasonCode: ${String(result.reasonCode ?? "unknown")}`],
+        evidence: inventoryStatusEvidence,
         nextActions: ["Repair platform tooling or rerun on a self-hosted device runner."],
       }),
     };
   }
-
-  const data = asRecord(result.data);
-  const devices = Array.isArray(data[platform]) ? data[platform].map(asRecord) : [];
-  const ids = devices.map((device) => stringField(device, "id", "udid") ?? "unknown");
 
   if (requestedDeviceId) {
     const requested = devices.find((device) => stringField(device, "id", "udid") === requestedDeviceId);
@@ -241,7 +244,7 @@ function deviceInventoryCheck(listDevicesResult: unknown, platform: "android" | 
         check: passedCheck({
           id: "device-inventory",
           detail: `Selected requested ${platform} device ${requestedDeviceId}.`,
-          evidence: [`deviceId: ${requestedDeviceId}`],
+          evidence: [`deviceId: ${requestedDeviceId}`, ...inventoryStatusEvidence],
         }),
       };
     }
@@ -255,7 +258,7 @@ function deviceInventoryCheck(listDevicesResult: unknown, platform: "android" | 
       check: passedCheck({
         id: "device-inventory",
         detail: `Selected ${platform} device ${selectedDeviceId}.`,
-        evidence: [`deviceId: ${selectedDeviceId}`],
+        evidence: [`deviceId: ${selectedDeviceId}`, ...inventoryStatusEvidence],
       }),
     };
   }

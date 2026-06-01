@@ -37,6 +37,22 @@ test("RN readiness reports no visible device before live verification", async ()
   assert.equal(result.nextAction.kind, "connect_device_or_use_self_hosted_runner");
 });
 
+test("RN readiness accepts target platform device when cross-platform inventory is partial", async () => {
+  const result = await buildReactNativeReadiness({ ...baseOptions, deviceId: "10AEA40Z3Y000R5" }, {
+    listDevices: async () => ({
+      status: "partial",
+      reasonCode: "DEVICE_UNAVAILABLE",
+      data: { android: [{ id: "10AEA40Z3Y000R5", state: "device", available: true }], ios: [] },
+    }),
+    listJsDebugTargets: async () => ({ status: "failed", data: { endpoint: "http://127.0.0.1:8081/json/list", targetCount: 0, targets: [] } }),
+  });
+
+  assert.equal(result.selectedDeviceId, "10AEA40Z3Y000R5");
+  assert.equal(result.checks.find((check) => check.id === "device-inventory")?.status, "passed");
+  assert.equal(result.blockers.some((blocker) => blocker.reasonCode === "DEVICE_UNAVAILABLE"), false);
+  assert.equal(result.blockers.some((blocker) => blocker.reasonCode === "METRO_UNAVAILABLE"), true);
+});
+
 test("RN readiness reports Metro unavailable as a setup blocker", async () => {
   const result = await buildReactNativeReadiness(baseOptions, {
     listDevices: async () => ({ status: "success", data: { android: [{ id: "device-1", available: true }], ios: [] } }),
