@@ -1,5 +1,5 @@
 {
-  "schema": "react-native-one-command/v1",
+  "schema": "react-native-one-command/v2",
   "runId": "react-native-one-command-2026-06-01",
   "verdict": "blocked",
   "proofLevel": "blocked_before_live",
@@ -15,11 +15,21 @@
       "detail": "Evidence pack review status: blocked."
     },
     {
+      "id": "live-bridge",
+      "status": "skipped",
+      "detail": "Live bridge was not requested."
+    },
+    {
       "id": "review",
       "status": "blocked",
       "detail": "RN one-command verdict: blocked."
     }
   ],
+  "liveBridge": {
+    "mode": "skipped",
+    "status": "skipped",
+    "detail": "Live bridge was not requested."
+  },
   "blockers": [
     {
       "reasonCode": "DEVICE_UNAVAILABLE",
@@ -47,6 +57,7 @@
   "boundaries": [
     "This RN command orchestrates readiness and evidence packaging; it does not weaken proof-level labels.",
     "A blocked RN result is not an app assertion failure.",
-    "Live RN success still requires device-backed verification and intake-backed promotion evidence."
+    "Live RN success still requires device-backed verification and intake-backed promotion evidence.",
+    "The live bridge is explicit and only runs after RN readiness passes."
   ]
 }

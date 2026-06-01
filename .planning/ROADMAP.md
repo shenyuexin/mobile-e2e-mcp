@@ -362,7 +362,7 @@ Plans:
 - **Out of scope**: mandatory live-device CI, automatic success promotion, and replacing the mobile-change runner.
 
 Plans:
-- [ ] `67-PLAN.md` — React Native live verification bridge
+- [x] `67-PLAN.md` / `67-01-SUMMARY.md` — React Native live verification bridge
 
 ## Phase 68: React Native Failure Taxonomy And Remediation
 

@@ -326,6 +326,17 @@ async function writeResultArtifacts(outputDir: string, result: MobileChangeOneCo
   await writeFile(path.join(absoluteOutputDir, "result.md"), renderMobileChangeOneCommandMarkdown(result), "utf8");
 }
 
+export async function writeMobileChangeOneCommand(options: MobileChangeOneCommandOptions): Promise<{
+  outputDir: string;
+  result: MobileChangeOneCommandResult;
+}> {
+  const outputDir = options.outputDir ?? defaultOutputDir(options.runId);
+  const contract = options.contractPath ? await readMobileChangeReadinessContract(options.contractPath) : undefined;
+  const result = await runMobileChangeOneCommand({ ...options, outputDir }, defaultDeps(options.runId, outputDir, contract));
+  await writeResultArtifacts(outputDir, result);
+  return { outputDir, result };
+}
+
 async function writeHandoff(outputDir: string, summary: MobileChangeHandoffSummary): Promise<HandoffOutput> {
   const root = repoRoot();
   const handoffPath = path.join(outputDir, "handoff.md");
@@ -470,10 +481,7 @@ function parseArgs(argv: string[]): MobileChangeOneCommandOptions {
 
 async function main(): Promise<void> {
   const options = parseArgs(process.argv.slice(2));
-  const outputDir = options.outputDir ?? defaultOutputDir(options.runId);
-  const contract = options.contractPath ? await readMobileChangeReadinessContract(options.contractPath) : undefined;
-  const result = await runMobileChangeOneCommand({ ...options, outputDir }, defaultDeps(options.runId, outputDir, contract));
-  await writeResultArtifacts(outputDir, result);
+  const { outputDir, result } = await writeMobileChangeOneCommand(options);
   console.log(JSON.stringify({
     verdict: result.verdict,
     proofLevel: result.proofLevel,

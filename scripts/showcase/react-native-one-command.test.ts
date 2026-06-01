@@ -14,6 +14,13 @@ const readyReadiness: ReactNativeReadinessResult = {
   metroBaseUrl: "http://127.0.0.1:8081",
   policyProfile: "interactive",
   runnerProfile: "react_native_android",
+  runtimeMode: "bare_debug",
+  runtimeRequirements: {
+    requiresMetroInspector: true,
+    requiresJsDebugTarget: true,
+    requiresAppArtifact: false,
+    entryStrategy: "native_app_launch",
+  },
   selectedDeviceId: "device-1",
   expectedReadiness: { screenId: "login" },
   stableSelectors: ["login.submit"],
@@ -50,7 +57,8 @@ test("RN one-command completes when readiness and evidence pack are ready for re
 
   assert.equal(result.verdict, "completed");
   assert.equal(result.proofLevel, "rn_evidence_candidate");
-  assert.equal(result.stages.map((stage) => stage.id).join(","), "readiness,evidence-pack,review");
+  assert.equal(result.stages.map((stage) => stage.id).join(","), "readiness,evidence-pack,live-bridge,review");
+  assert.equal(result.liveBridge.status, "skipped");
   validateReactNativeOneCommand(result);
 });
 
@@ -94,6 +102,57 @@ test("RN one-command returns needs review for JS runtime evidence concerns", asy
 
   assert.equal(result.verdict, "needs_review");
   assert.equal(result.nextAction.kind, "inspect_js_runtime");
+});
+
+test("RN one-command can run live bridge after readiness passes", async () => {
+  const result = await runReactNativeOneCommand("rn-one-command-live", {
+    runReadiness: async () => ({ path: "ready.json", result: readyReadiness }),
+    runEvidencePack: async () => ({ path: "pack.json", result: pack() }),
+    runLiveBridge: async () => ({
+      outputDir: "output/rn-live",
+      result: {
+        schema: "mobile-change-one-command/v1",
+        runId: "mobile-live",
+        mode: "live",
+        verdict: "completed",
+        proofLevel: "physical_or_emulator_candidate",
+        stages: [],
+        blockers: [],
+        evidence: { verification: "output/rn-live/verification", intake: "output/rn-live/intake" },
+        nextAction: { kind: "attach_live_evidence", command: "pnpm run verify:mobile-change -- --live", reason: "Attach live evidence." },
+        boundaries: ["Live success evidence must pass intake before it is promoted as tracked showcase evidence."],
+      },
+    }),
+  }, { enableLiveBridge: true });
+
+  assert.equal(result.verdict, "completed");
+  assert.equal(result.liveBridge.status, "completed");
+  assert.equal(result.proofLevel, "physical_or_emulator_candidate");
+  validateReactNativeOneCommand(result);
+});
+
+test("RN one-command skips requested live bridge when readiness is blocked", async () => {
+  const blockedPack = pack({
+    reviewStatus: "blocked",
+    proofLevel: "blocked_before_live",
+    readiness: {
+      sourcePath: "ready.json",
+      verdict: "blocked_before_react_native_verification",
+      proofLevel: "blocked_before_live",
+      blockers: [{ reasonCode: "DEVICE_UNAVAILABLE", detail: "No device." }],
+    },
+  });
+  const result = await runReactNativeOneCommand("rn-one-command-live-skipped", {
+    runReadiness: async () => ({
+      path: "ready.json",
+      result: { ...readyReadiness, verdict: "blocked_before_react_native_verification", proofLevel: "blocked_before_live" },
+    }),
+    runEvidencePack: async () => ({ path: "pack.json", result: blockedPack }),
+  }, { enableLiveBridge: true });
+
+  assert.equal(result.verdict, "blocked");
+  assert.equal(result.liveBridge.status, "skipped");
+  assert.match(result.liveBridge.detail, /readiness did not pass/);
 });
 
 test("RN one-command markdown includes proof boundary language", async () => {

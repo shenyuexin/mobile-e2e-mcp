@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executed
-stopped_at: Phase 66 React Native runtime mode contract completed
+stopped_at: Phase 67 React Native live verification bridge completed
 last_updated: "2026-05-31T00:00:00.000Z"
-last_activity: 2026-06-01 -- Phase 66 React Native runtime mode contract completed
+last_activity: 2026-06-01 -- Phase 67 React Native live verification bridge completed
 progress:
   total_phases: 16
   completed_phases: 16
@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-03-28)
 
 ## Current Position
 
-Phase: Phase 67 React Native live verification bridge next
-Plan: Continue RN hardening with live verification bridge and RN failure taxonomy/remediation.
-Status: Phase 66 completed `react-native-runtime-contract/v1` and wired runtime mode requirements into RN readiness. Debug/dev modes require Metro and JS debug target; `bare_release` requires app artifact and does not block on Metro.
-Last activity: 2026-06-01 -- Phase 66 completed runtime mode contract.
+Phase: Phase 68 React Native failure taxonomy/remediation next
+Plan: Complete RN hardening with RN-specific failure taxonomy and bounded remediation routing.
+Status: Phase 67 upgraded RN one-command to `react-native-one-command/v2` with an explicit optional live bridge into the existing mobile-change live verification/intake path. The bridge is disabled by default and only runs after RN readiness passes.
+Last activity: 2026-06-01 -- Phase 67 completed RN live verification bridge.
 
-Progress: [█████░░░░░] 50%
+Progress: [███████░░░] 75%
 
 ## Workspace Semantics
 
@@ -119,6 +119,7 @@ Recent decisions affecting current work:
 - Phase 64 completed: official tool bridge contract defines Android CLI/Journeys, Android Studio Journeys, and Dart/Flutter MCP as upstream providers rather than replacements.
 - Phase 65 completed: RN selector audit checks declared stable selectors against source literals before live verification.
 - Phase 66 completed: RN runtime mode contract distinguishes Expo Go, Expo dev-client, bare debug, and bare release readiness prerequisites.
+- Phase 67 completed: RN one-command now has an explicit optional live bridge into mobile-change verification and intake.
 - Phase 55 completed: one-command mobile change verification UX now wraps lower-level verification, blocked-readiness, intake, and handoff outcomes behind `verify:mobile-change` and the CLI `verify-mobile-change` subcommand.
 - Phase 56 completed: device readiness now distinguishes no-device, unauthorized, offline, requested-device mismatch, platform-tool failure, missing app artifact, and missing readiness-contract blockers with evidence and next actions.
 - Phase 57 completed: AUT readiness contract scaffold and validator now provide a contract-backed live verification path without relying only on loose environment variables.

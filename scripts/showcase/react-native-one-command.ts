@@ -10,21 +10,36 @@ import {
   writeReactNativeReadiness,
   type ReactNativeReadinessResult,
 } from "./react-native-readiness.ts";
+import {
+  writeMobileChangeOneCommand,
+  type MobileChangeOneCommandResult,
+} from "./mobile-change-one-command.ts";
 
-export type ReactNativeOneCommandVerdict = "completed" | "blocked" | "needs_review";
+export type ReactNativeOneCommandVerdict = "completed" | "blocked" | "needs_review" | "verification_failed" | "intake_rejected";
 
 export interface ReactNativeOneCommandStage {
-  id: "readiness" | "evidence-pack" | "review";
-  status: "passed" | "blocked" | "needs_review";
+  id: "readiness" | "evidence-pack" | "live-bridge" | "review";
+  status: "passed" | "blocked" | "needs_review" | "failed" | "skipped";
+  detail: string;
+}
+
+export interface ReactNativeLiveBridgeResult {
+  mode: "skipped" | "live";
+  status: "skipped" | MobileChangeOneCommandResult["verdict"];
+  proofLevel?: MobileChangeOneCommandResult["proofLevel"];
+  outputDir?: string;
+  evidence?: MobileChangeOneCommandResult["evidence"];
+  blockers?: MobileChangeOneCommandResult["blockers"];
   detail: string;
 }
 
 export interface ReactNativeOneCommandResult {
-  schema: "react-native-one-command/v1";
+  schema: "react-native-one-command/v2";
   runId: string;
   verdict: ReactNativeOneCommandVerdict;
-  proofLevel: ReactNativeEvidencePack["proofLevel"];
+  proofLevel: ReactNativeEvidencePack["proofLevel"] | MobileChangeOneCommandResult["proofLevel"];
   stages: ReactNativeOneCommandStage[];
+  liveBridge: ReactNativeLiveBridgeResult;
   blockers: Array<{ reasonCode: string; detail: string }>;
   evidence: {
     readiness: string;
@@ -38,6 +53,11 @@ export interface ReactNativeOneCommandResult {
 export interface ReactNativeOneCommandDependencies {
   runReadiness: () => Promise<{ path: string; result: ReactNativeReadinessResult }>;
   runEvidencePack: () => Promise<{ path: string; result: ReactNativeEvidencePack }>;
+  runLiveBridge?: () => Promise<{ outputDir: string; result: MobileChangeOneCommandResult }>;
+}
+
+export interface ReactNativeOneCommandOptions {
+  enableLiveBridge?: boolean;
 }
 
 const outputDir = "docs/showcase/evidence/react-native-one-command";
@@ -55,6 +75,7 @@ function defaultBoundaries(): string[] {
     "This RN command orchestrates readiness and evidence packaging; it does not weaken proof-level labels.",
     "A blocked RN result is not an app assertion failure.",
     "Live RN success still requires device-backed verification and intake-backed promotion evidence.",
+    "The live bridge is explicit and only runs after RN readiness passes.",
   ];
 }
 
@@ -64,13 +85,39 @@ function verdictFor(pack: ReactNativeEvidencePack): ReactNativeOneCommandVerdict
   return "completed";
 }
 
+function bridgeStageStatus(status: ReactNativeLiveBridgeResult["status"]): ReactNativeOneCommandStage["status"] {
+  if (status === "skipped") return "skipped";
+  if (status === "completed") return "passed";
+  if (status === "blocked") return "blocked";
+  return "failed";
+}
+
+function verdictWithBridge(packVerdict: ReactNativeOneCommandVerdict, bridge: ReactNativeLiveBridgeResult): ReactNativeOneCommandVerdict {
+  if (bridge.status === "skipped") return packVerdict;
+  if (bridge.status === "completed") return packVerdict === "blocked" ? "blocked" : "completed";
+  return bridge.status;
+}
+
+function proofLevelWithBridge(pack: ReactNativeEvidencePack, bridge: ReactNativeLiveBridgeResult): ReactNativeOneCommandResult["proofLevel"] {
+  return bridge.status === "skipped" ? pack.proofLevel : bridge.proofLevel ?? pack.proofLevel;
+}
+
 export async function runReactNativeOneCommand(
   runId: string,
   deps: ReactNativeOneCommandDependencies,
+  options: ReactNativeOneCommandOptions = {},
 ): Promise<ReactNativeOneCommandResult> {
   const readiness = await deps.runReadiness();
   const evidencePack = await deps.runEvidencePack();
-  const verdict = verdictFor(evidencePack.result);
+  const packVerdict = verdictFor(evidencePack.result);
+  let liveBridge: ReactNativeLiveBridgeResult = {
+    mode: "skipped",
+    status: "skipped",
+    detail: options.enableLiveBridge
+      ? "Live bridge skipped because RN readiness did not pass."
+      : "Live bridge was not requested.",
+  };
+
   const stages: ReactNativeOneCommandStage[] = [
     {
       id: "readiness",
@@ -82,20 +129,47 @@ export async function runReactNativeOneCommand(
       status: evidencePack.result.reviewStatus === "blocked" ? "blocked" : evidencePack.result.reviewStatus === "needs_review" ? "needs_review" : "passed",
       detail: `Evidence pack review status: ${evidencePack.result.reviewStatus}.`,
     },
-    {
-      id: "review",
-      status: verdict === "completed" ? "passed" : verdict,
-      detail: `RN one-command verdict: ${verdict}.`,
-    },
   ];
 
+  if (options.enableLiveBridge && readiness.result.verdict === "ready_for_react_native_verification") {
+    if (!deps.runLiveBridge) throw new Error("runLiveBridge dependency is required when RN live bridge is enabled");
+    const bridge = await deps.runLiveBridge();
+    liveBridge = {
+      mode: "live",
+      status: bridge.result.verdict,
+      proofLevel: bridge.result.proofLevel,
+      outputDir: bridge.outputDir,
+      evidence: bridge.result.evidence,
+      blockers: bridge.result.blockers,
+      detail: `Mobile-change live bridge verdict: ${bridge.result.verdict}.`,
+    };
+  }
+
+  stages.push({
+    id: "live-bridge",
+    status: bridgeStageStatus(liveBridge.status),
+    detail: liveBridge.detail,
+  });
+
+  const verdict = verdictWithBridge(packVerdict, liveBridge);
+
+  stages.push({
+    id: "review",
+    status: verdict === "completed" ? "passed" : verdict === "blocked" ? "blocked" : verdict === "needs_review" ? "needs_review" : "failed",
+    detail: `RN one-command verdict: ${verdict}.`,
+  });
+
   return {
-    schema: "react-native-one-command/v1",
+    schema: "react-native-one-command/v2",
     runId,
     verdict,
-    proofLevel: evidencePack.result.proofLevel,
+    proofLevel: proofLevelWithBridge(evidencePack.result, liveBridge),
     stages,
-    blockers: evidencePack.result.readiness.blockers,
+    liveBridge,
+    blockers: [
+      ...evidencePack.result.readiness.blockers,
+      ...(liveBridge.blockers ?? []),
+    ],
     evidence: {
       readiness: readiness.path,
       evidencePack: evidencePack.path,
@@ -130,6 +204,7 @@ export function renderReactNativeOneCommandMarkdown(result: ReactNativeOneComman
     `- readiness: \`${result.evidence.readiness}\``,
     `- evidence pack: \`${result.evidence.evidencePack}\``,
     `- result: \`${result.evidence.result}\``,
+    `- live bridge: \`${result.liveBridge.outputDir ?? "not-run"}\``,
     "",
     "Next action:",
     `- \`${result.nextAction.kind}\`: ${result.nextAction.reason}`,
@@ -142,14 +217,19 @@ export function renderReactNativeOneCommandMarkdown(result: ReactNativeOneComman
 }
 
 export function validateReactNativeOneCommand(result: ReactNativeOneCommandResult): void {
-  assert.equal(result.schema, "react-native-one-command/v1");
-  assert.equal(result.stages.length, 3, "RN one-command result must include readiness, evidence-pack, and review stages");
+  assert.equal(result.schema, "react-native-one-command/v2");
+  assert.equal(result.stages.length, 4, "RN one-command result must include readiness, evidence-pack, live-bridge, and review stages");
   assert.ok(result.evidence.readiness.length > 0, "RN one-command result requires readiness evidence path");
   assert.ok(result.evidence.evidencePack.length > 0, "RN one-command result requires evidence pack path");
   assert.ok(result.boundaries.some((boundary) => boundary.includes("does not weaken proof-level labels")), "RN one-command result must preserve proof labels");
+  assert.ok(result.boundaries.some((boundary) => boundary.includes("live bridge is explicit")), "RN one-command result must keep live bridge explicit");
   if (result.verdict === "blocked") {
     assert.equal(result.proofLevel, "blocked_before_live", "blocked RN one-command result must preserve blocked proof level");
     assert.ok(result.blockers.length > 0, "blocked RN one-command result must include blockers");
+  }
+  if (result.liveBridge.status !== "skipped") {
+    assert.equal(result.liveBridge.mode, "live", "non-skipped bridge result must be live");
+    assert.ok(result.liveBridge.outputDir, "live bridge result requires an output directory");
   }
 }
 
@@ -173,12 +253,20 @@ function defaultDeps(check: boolean): ReactNativeOneCommandDependencies {
       const result = await writeReactNativeEvidencePack(check);
       return { path: evidencePackOutputPath, result };
     },
+    runLiveBridge: async () => writeMobileChangeOneCommand({
+      mode: "live",
+      runId: process.env.M2E_RN_LIVE_BRIDGE_RUN_ID ?? process.env.M2E_RN_ONE_COMMAND_RUN_ID ?? "react-native-live-bridge-2026-06-01",
+      outputDir: process.env.M2E_RN_LIVE_BRIDGE_OUTPUT_DIR,
+      contractPath: process.env.M2E_MOBILE_CHANGE_READINESS_CONTRACT,
+    }),
   };
 }
 
 export async function writeReactNativeOneCommand(check: boolean): Promise<ReactNativeOneCommandResult> {
   const runId = process.env.M2E_RN_ONE_COMMAND_RUN_ID ?? "react-native-one-command-2026-06-01";
-  const result = await runReactNativeOneCommand(runId, defaultDeps(check));
+  const result = await runReactNativeOneCommand(runId, defaultDeps(check), {
+    enableLiveBridge: process.env.M2E_RN_ENABLE_LIVE_BRIDGE === "1",
+  });
   validateReactNativeOneCommand(result);
   await writeOrCheck(resultJsonPath, `${JSON.stringify(result, null, 2)}\n`, check);
   await writeOrCheck(resultMarkdownPath, renderReactNativeOneCommandMarkdown(result), check);
