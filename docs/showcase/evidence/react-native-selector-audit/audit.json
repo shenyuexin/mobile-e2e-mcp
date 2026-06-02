@@ -3,7 +3,7 @@
   "runId": "react-native-selector-audit-2026-06-01",
   "verdict": "selector_contract_satisfied",
   "sourceRoots": [
-    "examples/rn-login-demo"
+    "docs/showcase/fixtures/react-native-login"
   ],
   "declaredSelectors": [
     "login-screen",
@@ -15,49 +15,49 @@
     {
       "selector": "home-screen",
       "prop": "testID",
-      "file": "examples/rn-login-demo/App.tsx.template",
+      "file": "docs/showcase/fixtures/react-native-login/App.tsx.template",
       "line": 26
     },
     {
       "selector": "welcome-home",
       "prop": "testID",
-      "file": "examples/rn-login-demo/App.tsx.template",
+      "file": "docs/showcase/fixtures/react-native-login/App.tsx.template",
       "line": 29
     },
     {
       "selector": "logout-button",
       "prop": "testID",
-      "file": "examples/rn-login-demo/App.tsx.template",
+      "file": "docs/showcase/fixtures/react-native-login/App.tsx.template",
       "line": 30
     },
     {
       "selector": "login-screen",
       "prop": "testID",
-      "file": "examples/rn-login-demo/App.tsx.template",
+      "file": "docs/showcase/fixtures/react-native-login/App.tsx.template",
       "line": 39
     },
     {
       "selector": "phone-input",
       "prop": "testID",
-      "file": "examples/rn-login-demo/App.tsx.template",
+      "file": "docs/showcase/fixtures/react-native-login/App.tsx.template",
       "line": 44
     },
     {
       "selector": "password-input",
       "prop": "testID",
-      "file": "examples/rn-login-demo/App.tsx.template",
+      "file": "docs/showcase/fixtures/react-native-login/App.tsx.template",
       "line": 53
     },
     {
       "selector": "login-error",
       "prop": "testID",
-      "file": "examples/rn-login-demo/App.tsx.template",
+      "file": "docs/showcase/fixtures/react-native-login/App.tsx.template",
       "line": 62
     },
     {
       "selector": "login-button",
       "prop": "testID",
-      "file": "examples/rn-login-demo/App.tsx.template",
+      "file": "docs/showcase/fixtures/react-native-login/App.tsx.template",
       "line": 68
     }
   ],
@@ -65,25 +65,25 @@
     {
       "selector": "login-screen",
       "prop": "testID",
-      "file": "examples/rn-login-demo/App.tsx.template",
+      "file": "docs/showcase/fixtures/react-native-login/App.tsx.template",
       "line": 39
     },
     {
       "selector": "phone-input",
       "prop": "testID",
-      "file": "examples/rn-login-demo/App.tsx.template",
+      "file": "docs/showcase/fixtures/react-native-login/App.tsx.template",
       "line": 44
     },
     {
       "selector": "password-input",
       "prop": "testID",
-      "file": "examples/rn-login-demo/App.tsx.template",
+      "file": "docs/showcase/fixtures/react-native-login/App.tsx.template",
       "line": 53
     },
     {
       "selector": "login-button",
       "prop": "testID",
-      "file": "examples/rn-login-demo/App.tsx.template",
+      "file": "docs/showcase/fixtures/react-native-login/App.tsx.template",
       "line": 68
     }
   ],
