@@ -168,7 +168,7 @@ Current migration truth:
 - that preview reports `executionMode`, replay progress, and per-step outcomes for the generated flow path
 - Android physical-device replay uses the `owned-adb` primary backend for common commands: `launchApp`, `tapOn` (selector or coordinate), `inputText`, `assertVisible`, `assertNotVisible`, `swipe`, `back`, `home`, `hideKeyboard`, `stopApp`, and `clearState`
 - Maestro / `runner_compat` remains the Android fallback for edge-case commands such as `extendedWaitUntil`, `setClipboard`, `openLink`, or complex sub-flow behavior; it is no longer the common-command Android replay baseline
-- Android physical-device Explorer evidence is available at `artifacts/explorer/android-full/2026-04-28T03-38-20/` (45 pages, max depth 4, 0 failures)
+- Android physical-device Explorer evidence is available at `docs/showcase/evidence/android-explorer-full-2026-04-28T03-38-20/` (45 pages, max depth 4, 0 failures)
 
 ## 3) Mapping coverage and current limit
 
