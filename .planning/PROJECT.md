@@ -2,13 +2,13 @@
 
 ## What This Is
 
-`mobile-e2e-mcp` is an AI-first mobile E2E orchestration harness for Android, iOS, React Native, and Flutter. It combines deterministic-first execution, bounded OCR fallback, policy-aware session control, and evidence-rich diagnostics so AI agents can drive mobile workflows safely and reproducibly.
+`mobile-e2e-mcp` is an Explorer-led, AI-first mobile E2E orchestration harness for Android, iOS, React Native, and Flutter. Its primary outward-facing product capability is automatic app exploration that composes deterministic-first execution, bounded OCR fallback, policy-aware session control, interruption/recovery handling, and evidence-rich diagnostics into reviewable coverage artifacts.
 
 This `PROJECT.md` file is part of the repository's **internal planning workspace**. It helps steer execution, but it does not override the codebase, formal docs, or validation artifacts that define shipped behavior.
 
 ## Core Value
 
-Teams can trust the harness's stated support boundaries because live behavior, capability reporting, and acceptance evidence stay aligned.
+Teams can use Explorer as the main product entrypoint for understanding mobile app reachability, risk boundaries, interruptions, and failures, while trusting the harness's stated support boundaries because live behavior, capability reporting, and acceptance evidence stay aligned.
 
 ## Planning Workspace Rules
 
@@ -25,9 +25,11 @@ Teams can trust the harness's stated support boundaries because live behavior, c
 - ✓ Android deterministic execution, evidence capture, and record/replay front-door flows are already implemented and demonstrated.
 - ✓ iOS simulator support exists for core session, UI, flow, and recording paths, but with explicit partial-support caveats.
 - ✓ Policy, session, and artifact persistence are already first-class parts of the runtime rather than afterthought wrappers.
+- ✓ Explorer already produces fixed coverage artifacts (`tree.txt`, `report.md`, `summary.json`, `config.json`, failure review outputs) and has demonstrated large Settings explorations with rule decisions and interruption/failure evidence.
 
 ### Active
 
+- [ ] Productize Explorer as the primary external capability: coverage intelligence, failure/rule explanation, PR-ready summaries, run-to-run diffing, replay-path extraction, and curated/redacted showcase evidence.
 - [ ] Turn cross-platform support claims into a tracked, reproducible capability baseline for native plus at least one framework lane, starting with React Native Android unless repo truth proves Flutter Android lower risk.
 - [ ] Remove silent local-config drift so clean clones, CI, and contributors evaluate the same harness and compatibility inputs, with acceptance evidence separate from smoke validation.
 - [ ] Keep README, capability docs, and `describe_capabilities` aligned with live support levels and evidence gates.
@@ -41,7 +43,7 @@ Teams can trust the harness's stated support boundaries because live behavior, c
 
 ## Context
 
-This is a brownfield pnpm monorepo with strong contracts/core/adapter/server layering and a meaningful Android-first execution baseline. The codebase already exposes a broad tool catalog and several showcase flows, but the repo analysis surfaced three gaps that matter for adoption: some support claims are ahead of live validated behavior, local ignored config can change outcomes silently, and framework/real-device confidence is narrower than the public positioning suggests.
+This is a brownfield pnpm monorepo with strong contracts/core/adapter/server layering and a meaningful Android-first execution baseline. The codebase already exposes a broad tool catalog and several showcase flows, but the strongest product direction is now Explorer: it turns the underlying MCP tools into a visible developer workflow for app coverage, risk gating, interruption handling, failure review, and evidence packaging. Adoption risk now centers less on missing raw tool capability and more on whether Explorer outputs are curated, explained, comparable across runs, and easy to consume in PR/release workflows.
 
 ## Constraints
 
@@ -68,6 +70,7 @@ This is a brownfield pnpm monorepo with strong contracts/core/adapter/server lay
 | iOS real skills should correct false SwiftUI-only or timing-only diagnoses without becoming a second baseline | The iOS layer adds platform-specific interpretation for launch/reset, accessibility identifiers, mixed ownership, interruption handling, and post-transition actionability | `ios-e2e-readiness` should stay layered under the baseline and keep SwiftUI, UIKit, and mixed-surface distinctions explicit |
 | Canonical skills should ship with a repo-tracked selection layer | A first-wave skill set is easier to use and harder to misuse when the invocation boundary is explicit in one shared place | The repo should include a `skills/README.md` or equivalent decision layer explaining when to use baseline vs Android vs iOS |
 | Canonical skills should support explicit export without changing source ownership | Repo-tracked skill sources are more useful when users can materialize them into a chosen target directory on demand, but exports must remain downstream copies or symlinks | The repo should provide an explicit export script with `--out-dir` and keep `skills/` as the only canonical source |
+| Explorer is the primary outward-facing product capability | Explorer exercises and composes the harness's core MCP abilities: device/session control, UI inspection/action, risk rules, interruption handling, recovery, and evidence reporting. This is more differentiated than a narrow golden-path E2E demo. | Future roadmap work should optimize Explorer coverage intelligence, review consumption, replay extraction, and curated evidence before adding unrelated tool surface |
 
 ## Evolution
 

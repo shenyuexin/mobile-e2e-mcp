@@ -23,6 +23,19 @@ This repository is a pnpm monorepo that combines MCP tooling, adapter execution,
 
 Once installed, you get **66 MCP tools** for governed mobile automation, plus a built-in **Explorer** for automatic page traversal.
 
+## Primary Product Surface: Explorer
+
+Explorer is the main outward-facing product capability of this repository. It is not a standalone crawler bolted onto the side; it is the clearest product surface for the harness because broad app exploration requires the same core MCP capabilities a mobile AI agent needs in practice: device discovery, auditable sessions, UI inspection, bounded UI actions, rule-based risk gates, interruption/recovery handling, and structured evidence.
+
+Use Explorer when you want to answer product questions such as:
+
+- Which screens are reachable from this app entry point?
+- Which flows are blocked by policy, external-app boundaries, risk gates, or repeated failures?
+- What changed between two exploration runs?
+- Which discovered paths should be promoted into deterministic replay or PR review evidence?
+
+Explorer writes fixed, reviewable artifacts such as `tree.txt`, `report.md`, `summary.json`, `config.json`, and failure-review JSON/Markdown. Current local and tracked evidence includes large Settings explorations, including 100+ page runs, with rule decisions, interruption/failure context, and machine-consumable page metadata.
+
 ## Core Wedge: Governed Agent Control
 
 The strongest use case for this project is not "replace every mobile E2E framework." It is: give an AI agent a safer control plane for mobile devices.
@@ -60,6 +73,7 @@ Key features:
 - **Circuit breaker**: automatically stops when exploration hits diminishing returns or configured limits
 - **Structured coverage reports**: outputs machine-consumable reports showing which screens and elements were discovered
 - **Rule-based gating**: respects skip-page, skip-element, sampling, and risk-gating rules for safe exploration
+- **Interruption-aware evidence**: records blocked, interrupted, skipped, and failed traversal decisions with reasons so a run can be reviewed instead of treated as a raw pass/fail crawl
 - **Experimental horizontal fallback**: after vertical segments are exhausted, Explorer can probe horizontally scrollable content with bounded page-identity checks
 
 ### Output
@@ -81,6 +95,8 @@ Example output from a real run against iOS Settings (181 pages, max depth 5):
 - [`report.md`](docs/showcase/explorer/report.md) — module breakdown and paths
 - [`summary.json`](docs/showcase/explorer/summary.json) — metrics and metadata
 
+Local real-device runs are written under `output/evidence/explorer/`. These outputs are intentionally structured so they can be curated into public showcase evidence or consumed by follow-on tooling such as coverage diffing, PR summaries, and replay path extraction.
+
 For architecture details and rule configuration:
 
 - [Explorer hybrid traversal design](docs/architecture/explorer-hybrid-traversal-ascii.md)
@@ -93,7 +109,7 @@ This repo contains both:
 1. **Executable implementation** (MCP server, adapters, contracts, core orchestration), and
 2. **Architecture and delivery knowledge base** (design principles, capability model, phased rollout docs).
 
-If you only remember one thing: this project is designed as a **governed mobile control layer for AI agents**, not a single-framework test runner.
+If you only remember one thing: this project is designed as an **Explorer-led, governed mobile control layer for AI agents**, not a single-framework test runner.
 
 ## Mobile E2E Harness Positioning
 
@@ -106,7 +122,7 @@ If you're searching for terms like **mobile test harness**, **real-device Androi
 - **Deterministic-first harness**: stable selectors and structured retries before OCR/CV fallback
 - **Failure-intelligence harness**: reason codes, evidence artifacts, and remediation suggestions
 - **Governance-aware harness**: policy profiles, auditable sessions, and controlled tool surfaces
-- **Explorer harness**: DFS-based automatic page traversal with state graph, circuit breaker, and structured coverage reports *(available via CLI)*
+- **Explorer harness**: the primary product surface, combining traversal, tool orchestration, risk gating, interruption handling, recovery, and structured coverage/failure evidence *(available via CLI)*
 - **Real-device evidence**: Explorer/probe artifacts plus historical videos for happy path and interruption recovery
 
 ## Capability Showcase

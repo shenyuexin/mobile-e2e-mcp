@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executed
-stopped_at: Phase 70 React Native live success evidence promotion completed
+stopped_at: Explorer product capability roadmap added
 last_updated: "2026-05-31T00:00:00.000Z"
-last_activity: 2026-06-01 -- Phase 70 React Native live success evidence promotion completed
+last_activity: 2026-06-02 -- Explorer product capability roadmap added
 progress:
   total_phases: 16
   completed_phases: 16
@@ -20,15 +20,15 @@ progress:
 
 See: .planning/PROJECT.md (updated 2026-03-28)
 
-**Core value:** Teams can trust the harness's stated support boundaries because live behavior, capability reporting, and acceptance evidence stay aligned.
-**Current focus:** Explorer/probe should be the primary live-device verification path. Historical phase/demo runners are archived under `scripts/legacy/`; active probe dry-run contracts are now CI-gated.
+**Core value:** Explorer is the primary product entrypoint for turning mobile app traversal into coverage, risk-boundary, interruption, failure, and evidence intelligence. Teams can trust the harness's stated support boundaries because live behavior, capability reporting, and acceptance evidence stay aligned.
+**Current focus:** Explorer should be treated as the main outward-facing product capability. Historical phase/demo runners are archived under `scripts/legacy/`; active probe dry-run contracts are CI-gated, and future productization should improve Explorer review consumption rather than add unrelated tool surface.
 
 ## Current Position
 
-Phase: Phase 70 React Native live success evidence promotion completed
-Plan: Next live work should connect a device/emulator, start Metro/debug target, run the RN live bridge command, then regenerate the live success candidate from that output.
-Status: Phase 70 added `react-native-live-success-candidate/v1`. The committed candidate is correctly blocked before RN live success because the current environment has no visible Android device, no Metro endpoint, no JS target, and no live bridge run.
-Last activity: 2026-06-01 -- Phase 70 completed blocked RN live success candidate evidence.
+Phase: Phase 71 Explorer Product Capability Roadmap planned
+Plan: Productize Explorer as the external product surface by improving positioning, PR consumption, coverage diffing, replay-path extraction, and redacted showcase evidence from existing Explorer artifacts.
+Status: Phase 71 is added to the roadmap as a planned productization track. The direction explicitly builds on existing Explorer artifacts (`tree.txt`, `report.md`, `summary.json`, `config.json`, failure review outputs) instead of re-creating their evidence contract.
+Last activity: 2026-06-02 -- Explorer product capability roadmap and project positioning updated.
 
 Progress: [██████████] 100%
 
@@ -85,6 +85,7 @@ Recent decisions affecting current work:
 - [Phase 6]: The first-wave skills now also have bounded repo-derived real-workflow validation beyond the original pressure cards.
 - [Phase 6]: The installed first-wave skills are now discoverable through the live `skill` runtime after local install.
 - [Phase 6]: The default `suggest_known_remediation` MCP path now returns built-in baseline/Android/iOS skill-guided routing without requiring agent-side skill calls.
+- [Phase 71]: Explorer is now the primary outward-facing product capability because it composes the core MCP tools into app traversal, state graph coverage, risk/rule gating, interruption handling, recovery, and structured evidence.
 
 ### Pending Todos
 
@@ -92,6 +93,7 @@ Recent decisions affecting current work:
 - Decide whether the next canonical skill wave should focus on overlays/framework-specific skills or a more opinionated installation target layer.
 - Keep strategy/planning docs aligned with live tool registry; do not list shipped tools such as `replay_checkpoint_chain`, `capture_element_screenshot`, `compare_visual_baseline`, or network diagnosis as missing.
 - Keep Android physical-device Explorer evidence as the current primary live-device proof point (`artifacts/explorer/android-full/2026-04-28T03-38-20/`).
+- Execute Phase 71 as Explorer productization: positioning/showcase refresh, PR summary, coverage diff, replay-path extraction, and redacted evidence promotion.
 - Follow up on Android keyboard-state typing hardening with iOS parity, IME type reporting, and richer focus-cause diagnostics.
 - Follow up on Explorer/probe visual evidence with baseline lifecycle governance: expiry policy and richer review metadata.
 - After `10-01`, return to `02-02` framework acceptance evidence wiring.

@@ -6,7 +6,22 @@ Create defensible product advantages beyond being a wrapper around existing auto
 
 ---
 
-## 2. Practical Differentiators
+## 2. Primary Product Bet: Explorer Coverage Intelligence
+
+Explorer should be treated as the main product surface, not as a secondary crawler or a demo path. It composes the capabilities that make this project differentiated in practice: device/session governance, deterministic-first UI inspection/action, bounded fallback, rule-based risk gates, interruption/recovery handling, and reviewable evidence artifacts.
+
+The near-term product question is no longer "can the harness drive one golden path?" It is "can Explorer turn a real mobile app into useful coverage, risk, failure, and replay intelligence that developers can trust?"
+
+Priority productization layers:
+
+- PR-ready Explorer summaries from existing `summary.json`, `report.md`, and failure-review artifacts.
+- Run-to-run coverage diffing for added/removed pages, changed paths, changed failures, and changed rule decisions.
+- Replay-path extraction so discovered paths can become deterministic flows or targeted verification candidates.
+- Evidence redaction and curation so large real-device runs can be promoted into public showcase assets without leaking app/account/device text.
+
+---
+
+## 3. Practical Differentiators
 
 ## D1. Semantic View-Tree Diffing (Quick Win)
 
@@ -62,17 +77,19 @@ Value:
 
 ---
 
-## 3. Delivery Placement
+## 4. Delivery Placement
 
-- Near-term: D1, D2
-- Mid-term: D3, D4
+- Primary near-term: Explorer coverage intelligence layers, D1
+- Secondary near-term: D2
+- Mid-term: D3, D4, Explorer replay-path extraction
 - Expansion: D5
 - R&D moonshot: D6
 
 ---
 
-## 4. Risk Notes
+## 5. Risk Notes
 
 - Any auto-healing output should be proposal-only by default (human-reviewed patch).
 - Dynamic network tooling needs strict policy control and environment scoping.
+- Explorer productization should build on the existing artifact contract instead of creating another evidence format.
 - Exploratory chaos needs guardrails to prevent unbounded loops.

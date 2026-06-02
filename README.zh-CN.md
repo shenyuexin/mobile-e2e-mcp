@@ -23,6 +23,19 @@
 
 安装后，你将获得 **66 个 MCP 工具** 用于受治理的移动端自动化，以及内置的 **Explorer** 自动页面遍历能力。
 
+## 主要产品面：Explorer
+
+Explorer 是这个仓库最重要的对外产品能力。它不是旁路附加的 crawler，而是把底层 MCP 工具组合成一个开发者可以直接理解的产品入口：设备发现、可审计 session、UI inspection、受限 UI action、规则风险门控、中断/恢复处理，以及结构化 evidence，都会在一次全面 app exploration 中被串起来。
+
+适合用 Explorer 回答的问题包括：
+
+- 从当前入口能到达哪些页面？
+- 哪些路径被 policy、外部 app 边界、风险规则或连续失败挡住？
+- 两次探索之间，页面覆盖、失败、规则决策发生了什么变化？
+- 哪些已发现路径值得提升为确定性 replay flow 或 PR review evidence？
+
+Explorer 会产出固定、可审查的 `tree.txt`、`report.md`、`summary.json`、`config.json` 与 failure-review JSON/Markdown。当前本地与历史证据已经包含 Settings 这类 100+ 页面的大规模探索，并保留 rule decision、中断/失败上下文与机器可消费页面元数据。
+
 ## 核心切入点：受治理的 Agent 控制
 
 这个项目最强的使用场景不是“替代所有移动端 E2E 框架”，而是：给 AI Agent 一个更安全的移动设备控制平面。
@@ -60,6 +73,7 @@ npx -y @shenyuexin/mobile-e2e-mcp@latest explore \
 - **熔断器**：当探索收益递减或达到配置限制时自动停止
 - **结构化覆盖率报告**：输出机器可消费的报告，展示已发现的页面与元素
 - **规则门控**：遵循跳过页面、跳过元素、采样与风险门控规则，确保安全探索
+- **中断感知证据**：被阻塞、被跳过、被外部边界截断或失败的遍历决策都会带原因，方便复盘而不是只看原始日志
 
 ### 输出产物
 
@@ -80,6 +94,8 @@ Explorer 会生成一个包含结构化产物的目录：
 - [`report.md`](docs/showcase/explorer/report.md) — 模块分组与路径
 - [`summary.json`](docs/showcase/explorer/summary.json) — 指标与元数据
 
+本地真机运行会写入 `output/evidence/explorer/`。这些输出的结构已经固定，后续可以被整理成公开 showcase 证据，也可以被 PR summary、coverage diff、replay path extraction 等消费层继续使用。
+
 架构设计与规则配置参考：
 
 - [Explorer 混合遍历设计](docs/architecture/explorer-hybrid-traversal-ascii.md)
@@ -92,7 +108,7 @@ Explorer 会生成一个包含结构化产物的目录：
 1. **可执行实现**（MCP server、adapters、contracts、core 编排能力）
 2. **架构与交付知识库**（设计原则、能力模型、阶段规划文档）
 
-如果只记住一句话：它是一个**给 AI Agent 用的受治理移动控制层**，不是单一框架的测试 runner。
+如果只记住一句话：它是一个 **Explorer-led、给 AI Agent 用的受治理移动控制层**，不是单一框架的测试 runner。
 
 ## Mobile E2E Harness 定位
 
@@ -106,7 +122,7 @@ Explorer 会生成一个包含结构化产物的目录：
 - **Deterministic-first harness**：优先稳定定位与可解释重试，再进入 OCR/CV 兜底
 - **Failure-intelligence harness**：失败有原因码、证据产物、候选根因与修复建议
 - **Governance-aware harness**：策略 profile、可审计 session、受控工具面
-- **Explorer harness**：基于 DFS 的自动页面遍历，包含状态图、熔断器与结构化覆盖率报告*（可通过 CLI 使用）*
+- **Explorer harness**：主要产品面，组合遍历、工具编排、风险规则、中断处理、恢复与结构化覆盖/失败证据*（可通过 CLI 使用）*
 - **真机证据**：以 Explorer/probe 产物为主，并保留 happy path 与中断恢复历史录屏
 
 ## 能力展示

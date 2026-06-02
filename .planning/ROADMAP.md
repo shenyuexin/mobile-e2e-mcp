@@ -28,6 +28,7 @@
 | **58** | **Repo-Owned App Success Evidence** | **completed-with-live-device-blocker** | **55, 56, 57** |
 | **59** | **PR and CI Evidence Automation** | **completed** | **50, 55, 58** |
 | **60** | **Failure Memory Remediation Loop** | **completed** | **46, 50, 55** |
+| **71** | **Explorer Product Capability Roadmap** | **planned** | **25, 28, 29, 31, 60** |
 
 ## Phase 29: Explorer Horizontal Swipe Discovery
 
@@ -68,6 +69,7 @@ Plans:
 - Probe-first validation entrypoint consolidation landed on main: Android probe uses probe-native `validate_flow`, Phase 2 RN Android has a dedicated acceptance wrapper, the sample matrix is legacy compatibility, and `validate:probe-dry-run` is CI-gated.
 - Capability truth sync and stability hardening are underway: shipped visual/network/checkpoint/flow tools are no longer listed as missing, Explorer failure-review fixtures cover report categories/signals/current visual evidence/managed-baseline comparison/candidate promotion, and Android `type_into_element` records IME visibility around focus.
 - Phase 31: Probe evidence contract hardening completed. Android and iOS simulator probe reports now share `tool-probe-report/v1` helpers for JSON shape, Markdown rendering, artifact paths, observed-effect classification, and fixture-backed validation.
+- Product direction update: Explorer is now the primary outward-facing product capability. Future Explorer work should optimize coverage intelligence, failure/rule explanation, interruption evidence, PR consumption, run-to-run comparison, replay-path extraction, and curated/redacted evidence rather than adding unrelated tool surface.
 
 ## Completed Phases
 
@@ -396,3 +398,18 @@ Plans:
 
 Plans:
 - [x] `70-PLAN.md` / `70-01-SUMMARY.md` — React Native live success evidence promotion
+
+## Phase 71: Explorer Product Capability Roadmap
+
+- **Goal**: Treat Explorer as the primary external product surface and optimize it into a developer-facing coverage intelligence workflow.
+- **Depends on**: Phase 25 (Full App Explorer), Phase 28 (Explorer Rule Registry), Phase 29 (Horizontal Swipe Discovery), Phase 31 (Probe Evidence Contract Hardening), Phase 60 (Failure Memory Remediation Loop)
+- **Key constraint**: Do not re-plan an Explorer evidence contract that already exists. Build on the existing `tree.txt`, `report.md`, `summary.json`, `config.json`, and failure-review artifacts.
+- **Support level**: `productization` roadmap for existing Explorer capabilities and follow-on consumption layers.
+- **Out of scope**: Replacing Explorer with a narrow golden-path E2E lane, broad cloud device farm support, or adding unrelated MCP tool families before Explorer consumption is sharper.
+
+Planned slices:
+- [ ] Explorer positioning and showcase refresh — make README/docs present Explorer as the key product capability and curate current Android/iOS large-run evidence safely.
+- [ ] Explorer PR summary — consume existing summary/failure-review artifacts and emit a compact review artifact with page count, failures, rule decisions, skipped/gated pages, and next actions.
+- [ ] Explorer coverage diff — compare two runs and report added/removed pages, changed paths, changed failures, and changed rule decisions.
+- [ ] Explorer replay-path extraction — turn discovered state-graph paths into candidate deterministic flows or replay checkpoints for follow-up verification.
+- [ ] Explorer evidence redaction/curation — protect account/device/app text in large real-device runs before promoting output into public showcase evidence.
