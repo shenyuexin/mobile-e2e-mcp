@@ -13,7 +13,7 @@ function repoRootFromTest(): string {
 describe("Android Explorer evidence validator", () => {
   it("accepts the canonical Android physical-device Explorer evidence", () => {
     const report = validateAndroidExplorerEvidence(
-      path.join(repoRootFromTest(), "artifacts/explorer/android-full/2026-04-28T03-38-20"),
+      path.join(repoRootFromTest(), "docs/showcase/evidence/android-explorer-full-2026-04-28T03-38-20"),
       { minPages: 45, minDepth: 4 },
     );
 

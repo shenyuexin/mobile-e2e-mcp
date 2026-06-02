@@ -1,0 +1,45 @@
+Aiden
+├── Bluetooth
+│   ├── Change device name
+│   └── No transfer history  [reached, not expanded: foreign_app_boundary]
+├── Data connection  [reached, not expanded: foreign_app_boundary]
+├── Networks
+│   ├── Personal hotspot
+│   │   ├── Network name  [reached, not expanded: form_editor]
+│   │   ├── Maximum number of
+│   │   ├── No connected devices
+│   │   ├── No blocklisted devices
+│   │   ├── One-time mobile data
+│   │   │   └── Auto-off when no
+│   │   └── Origin island  [reached, not expanded: foreign_app_boundary]
+│   ├── Add VPN network
+│   │   ├── Type  [reached, not expanded: form_editor]
+│   │   ├── Clash Meta for  [reached, not expanded: foreign_app_boundary]
+│   │   └── Add shortcut
+│   ├── Off
+│   │   └── Provider hostname
+│   ├── Connection center,On  [reached, not expanded: foreign_app_boundary]
+│   ├── Agree  [reached, not expanded: foreign_app_boundary]
+│   ├── Agree  [reached, not expanded: foreign_app_boundary]
+│   ├── Print  [reached, not expanded: foreign_app_boundary]
+│   ├── vivo Office Kit  [reached, not expanded: foreign_app_boundary]
+│   ├── NFC
+│   │   └── 卡包  [reached, not expanded: foreign_app_boundary]
+│   └── vivoshare  [reached, not expanded: foreign_app_boundary]
+├── Origin Notification  [reached, not expanded: foreign_app_boundary]
+├── Ring mode
+│   ├── Adjust via Volume
+│   ├── App-specific volume
+│   └── Do Not Disturb
+│       ├── Contacts allowed to
+│       │   ├── Secure access to  [reached, not expanded: foreign_app_boundary]
+│       │   └── Groups allowed to
+│       └── Contacts allowed to
+│           └── Secure access to  [reached, not expanded: foreign_app_boundary]
+├── Appearance
+│   ├── Off
+│   ├── Dim home screen
+│   │   └── 阿里巴巴
+│   ├── Custom brightness
+│   └── App-specific brightness
+└── Wallpapers  [reached, not expanded: foreign_app_boundary]

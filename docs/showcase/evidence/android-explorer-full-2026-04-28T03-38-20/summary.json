@@ -1,0 +1,1908 @@
+{
+  "runId": "2026-04-28T03-38-20",
+  "startedAt": "2026-04-28T03:38:38.044Z",
+  "completedAt": "2026-04-28T04:12:28.708Z",
+  "durationMs": 2030664,
+  "totalPages": 45,
+  "totalPaths": 45,
+  "totalFailures": 0,
+  "maxDepthReached": 4,
+  "uniqueModules": [
+    "Bluetooth, On",
+    "Display, brightness &amp; eye protection",
+    "Home",
+    "Home screen, lock screen &amp; wallpaper",
+    "More connections",
+    "Notifications &amp; status bar",
+    "SIMs &amp; mobile network",
+    "Sounds &amp; vibration"
+  ],
+  "failures": [],
+  "pages": [
+    {
+      "id": "page-001",
+      "screenId": "12ed45faa02c47c9",
+      "screenTitle": "Aiden",
+      "pageContext": {
+        "type": "normal_page",
+        "platform": "android",
+        "detectionSource": "deterministic",
+        "runtimeFlavor": "android_default",
+        "confidence": 0.7,
+        "title": "Search settings",
+        "ownerPackage": "com.android.settings",
+        "visibleSignals": [
+          "Search settings",
+          "Search settings",
+          "Aiden",
+          "vivo account, vivo Cloud, Find Devices, and more",
+          "Airplane mode",
+          "Airplane mode",
+          "Wi-Fi, SHEN2.4",
+          "Wi-Fi",
+          "SHEN2.4",
+          "Bluetooth, On",
+          "Bluetooth",
+          "On"
+        ],
+        "appIdentity": {
+          "appId": "com.android.settings",
+          "source": "input_override"
+        }
+      },
+      "depth": 0,
+      "path": [],
+      "arrivedFrom": null,
+      "viaElement": null,
+      "loadTimeMs": 2441,
+      "clickableCount": 8,
+      "hasFailure": false,
+      "explorationStatus": "expanded"
+    },
+    {
+      "id": "page-002",
+      "screenId": "a2b5965d77a68590",
+      "screenTitle": "Bluetooth",
+      "pageContext": {
+        "type": "normal_page",
+        "platform": "android",
+        "detectionSource": "deterministic",
+        "runtimeFlavor": "android_default",
+        "confidence": 0.7,
+        "title": "Bluetooth",
+        "ownerPackage": "com.android.settings",
+        "visibleSignals": [
+          "Bluetooth",
+          "Available devices",
+          "Back",
+          "Help",
+          "Bluetooth",
+          "Device name",
+          "Aiden的vivo X200 Pro",
+          "Files received via Bluetooth",
+          "Available devices",
+          "Searching",
+          "Bluetooth",
+          "NZOeQyOCnI+mx/+C29L/UfpGk"
+        ],
+        "appIdentity": {
+          "appId": "com.android.settings",
+          "source": "input_override"
+        }
+      },
+      "depth": 1,
+      "path": [
+        "Bluetooth, On"
+      ],
+      "arrivedFrom": null,
+      "viaElement": null,
+      "loadTimeMs": 2380,
+      "clickableCount": 6,
+      "hasFailure": false,
+      "explorationStatus": "expanded"
+    },
+    {
+      "id": "page-003",
+      "screenId": "66ba9569c1eadf7b",
+      "screenTitle": "Change device name",
+      "pageContext": {
+        "type": "normal_page",
+        "platform": "android",
+        "detectionSource": "deterministic",
+        "runtimeFlavor": "android_default",
+        "confidence": 0.7,
+        "title": "Aiden的vivo X200 Pro",
+        "ownerPackage": "com.android.settings",
+        "visibleSignals": [
+          "Aiden的vivo X200 Pro",
+          "Erase",
+          "OK",
+          "Cancel",
+          "Change device name",
+          "When using Bluetooth, Wi-Fi Direct, vivo Account (Device management), and more, other devices will see this name.",
+          "OK",
+          "Cancel"
+        ],
+        "appIdentity": {
+          "appId": "com.android.settings",
+          "source": "input_override"
+        }
+      },
+      "depth": 2,
+      "path": [
+        "Bluetooth, On",
+        "Device name"
+      ],
+      "arrivedFrom": null,
+      "viaElement": null,
+      "loadTimeMs": 2336,
+      "clickableCount": 2,
+      "hasFailure": false,
+      "explorationStatus": "expanded"
+    },
+    {
+      "id": "page-004",
+      "screenId": "62cbf19fc7bed78e",
+      "screenTitle": "No transfer history",
+      "pageContext": {
+        "type": "normal_page",
+        "platform": "android",
+        "detectionSource": "deterministic",
+        "runtimeFlavor": "android_default",
+        "confidence": 0.7,
+        "title": "Clear",
+        "ownerPackage": "com.android.bluetooth",
+        "visibleSignals": [
+          "Back",
+          "Clear",
+          "No transfer history",
+          "No transfer history",
+          "Files received via Bluetooth"
+        ],
+        "appIdentity": {
+          "appId": "com.android.settings",
+          "source": "input_override"
+        }
+      },
+      "depth": 2,
+      "path": [
+        "Bluetooth, On",
+        "Files received via Bluetooth"
+      ],
+      "arrivedFrom": null,
+      "viaElement": null,
+      "loadTimeMs": 2339,
+      "clickableCount": 0,
+      "hasFailure": false,
+      "explorationStatus": "reached-not-expanded",
+      "stoppedByPolicy": "singleTargetAppPolicy:foreign-app",
+      "ruleFamily": "foreign_app_boundary",
+      "recoveryMethod": "backtrack-cancel-first"
+    },
+    {
+      "id": "page-005",
+      "screenId": "3ce9d60d9a8986e4",
+      "screenTitle": "Data connection",
+      "pageContext": {
+        "type": "normal_page",
+        "platform": "android",
+        "detectionSource": "deterministic",
+        "runtimeFlavor": "android_default",
+        "confidence": 0.7,
+        "title": "Data connection",
+        "ownerPackage": "com.android.phone",
+        "visibleSignals": [
+          "Data network",
+          "Back",
+          "Help",
+          "Data connection",
+          "Data network",
+          "Default SIM",
+          "Data",
+          "Default data card",
+          "CTCC",
+          "Dial",
+          "Default calling SIM",
+          "Ask each time"
+        ],
+        "appIdentity": {
+          "appId": "com.android.settings",
+          "source": "input_override"
+        }
+      },
+      "depth": 1,
+      "path": [
+        "SIMs &amp; mobile network"
+      ],
+      "arrivedFrom": null,
+      "viaElement": null,
+      "loadTimeMs": 2412,
+      "clickableCount": 8,
+      "hasFailure": false,
+      "explorationStatus": "reached-not-expanded",
+      "stoppedByPolicy": "singleTargetAppPolicy:foreign-app",
+      "ruleFamily": "foreign_app_boundary",
+      "recoveryMethod": "backtrack-cancel-first"
+    },
+    {
+      "id": "page-006",
+      "screenId": "ec201cb0b8dd9419",
+      "screenTitle": "Networks",
+      "pageContext": {
+        "type": "normal_page",
+        "platform": "android",
+        "detectionSource": "deterministic",
+        "runtimeFlavor": "android_default",
+        "confidence": 0.7,
+        "title": "Networks",
+        "ownerPackage": "com.android.settings",
+        "visibleSignals": [
+          "Back",
+          "Networks",
+          "Personal hotspot",
+          "Off",
+          "VPN",
+          "Private DNS",
+          "Auto",
+          "Terminal connections",
+          "Connection center",
+          "Jovi InCar",
+          "Disconnected",
+          "Screen Mirroring"
+        ],
+        "appIdentity": {
+          "appId": "com.android.settings",
+          "source": "input_override"
+        }
+      },
+      "depth": 1,
+      "path": [
+        "More connections"
+      ],
+      "arrivedFrom": null,
+      "viaElement": null,
+      "loadTimeMs": 2306,
+      "clickableCount": 10,
+      "hasFailure": false,
+      "explorationStatus": "expanded"
+    },
+    {
+      "id": "page-007",
+      "screenId": "10ee38704b457a36",
+      "screenTitle": "Personal hotspot",
+      "pageContext": {
+        "type": "normal_page",
+        "platform": "android",
+        "detectionSource": "deterministic",
+        "runtimeFlavor": "android_default",
+        "confidence": 0.7,
+        "title": "Display hotspot (Origin island)",
+        "ownerPackage": "com.android.settings",
+        "visibleSignals": [
+          "Personal hotspot.Prioritize Wi-Fi tethering. Mobile data tethering may incur charges.",
+          "Display hotspot (Origin island)",
+          "Back",
+          "Personal hotspot",
+          "Prioritize Wi-Fi tethering. Mobile data tethering may incur charges.",
+          "Hotspot configuration",
+          "Name: vivo X200 Pro\nPassword: 3fbww65f7my25gt",
+          "Connection management",
+          "Maximum number of connections",
+          "Number of allowed devices. Your hotspot restarts if changed.",
+          "4",
+          "Connected devices"
+        ],
+        "appIdentity": {
+          "appId": "com.android.settings",
+          "source": "input_override"
+        }
+      },
+      "depth": 2,
+      "path": [
+        "More connections",
+        "Personal hotspot"
+      ],
+      "arrivedFrom": null,
+      "viaElement": null,
+      "loadTimeMs": 2415,
+      "clickableCount": 6,
+      "hasFailure": false,
+      "explorationStatus": "expanded"
+    },
+    {
+      "id": "page-008",
+      "screenId": "bc9128b90c7187bd",
+      "screenTitle": "Network name",
+      "pageContext": {
+        "type": "form_editor",
+        "platform": "android",
+        "detectionSource": "deterministic",
+        "runtimeFlavor": "android_default",
+        "confidence": 0.9,
+        "title": "vivo X200 Pro",
+        "ownerPackage": "com.android.settings",
+        "visibleSignals": [
+          "vivo X200 Pro",
+          "3fbww65f7my25gt",
+          "WPA2 PSK",
+          "WPA2 PSK",
+          "2.4 GHz band",
+          "2.4 GHz band",
+          "Cancel",
+          "Done",
+          "Network name",
+          "Password",
+          "Your password must contain at least 8 characters.",
+          "Security"
+        ],
+        "appIdentity": {
+          "appId": "com.android.settings",
+          "source": "input_override"
+        }
+      },
+      "depth": 3,
+      "path": [
+        "More connections",
+        "Personal hotspot",
+        "Hotspot configuration"
+      ],
+      "arrivedFrom": null,
+      "viaElement": null,
+      "loadTimeMs": 2393,
+      "clickableCount": 4,
+      "hasFailure": false,
+      "explorationStatus": "reached-not-expanded",
+      "stoppedByPolicy": "pageContext:form_editor",
+      "ruleFamily": "form_editor",
+      "recoveryMethod": "cancel-first"
+    },
+    {
+      "id": "page-009",
+      "screenId": "760b0909dd7f2ed8",
+      "screenTitle": "Maximum number of",
+      "pageContext": {
+        "type": "normal_page",
+        "platform": "android",
+        "detectionSource": "deterministic",
+        "runtimeFlavor": "android_default",
+        "confidence": 0.7,
+        "title": "Maximum number of connections",
+        "ownerPackage": "com.android.settings",
+        "visibleSignals": [
+          "1",
+          "2",
+          "3",
+          "5",
+          "6",
+          "7",
+          "Cancel",
+          "Maximum number of connections",
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "appIdentity": {
+          "appId": "com.android.settings",
+          "source": "input_override"
+        }
+      },
+      "depth": 3,
+      "path": [
+        "More connections",
+        "Personal hotspot",
+        "Maximum number of connections"
+      ],
+      "arrivedFrom": null,
+      "viaElement": null,
+      "loadTimeMs": 2368,
+      "clickableCount": 8,
+      "hasFailure": false,
+      "explorationStatus": "expanded"
+    },
+    {
+      "id": "page-010",
+      "screenId": "01d38a53b57ee491",
+      "screenTitle": "No connected devices",
+      "pageContext": {
+        "type": "normal_page",
+        "platform": "android",
+        "detectionSource": "deterministic",
+        "runtimeFlavor": "android_default",
+        "confidence": 0.7,
+        "title": "No connected devices",
+        "ownerPackage": "com.android.settings",
+        "visibleSignals": [
+          "Back",
+          "No connected devices",
+          "No connected devices",
+          "Connected devices"
+        ],
+        "appIdentity": {
+          "appId": "com.android.settings",
+          "source": "input_override"
+        }
+      },
+      "depth": 3,
+      "path": [
+        "More connections",
+        "Personal hotspot",
+        "Connected devices"
+      ],
+      "arrivedFrom": null,
+      "viaElement": null,
+      "loadTimeMs": 2333,
+      "clickableCount": 0,
+      "hasFailure": false,
+      "explorationStatus": "expanded"
+    },
+    {
+      "id": "page-011",
+      "screenId": "830a4f3c77a7c042",
+      "screenTitle": "No blocklisted devices",
+      "pageContext": {
+        "type": "normal_page",
+        "platform": "android",
+        "detectionSource": "deterministic",
+        "runtimeFlavor": "android_default",
+        "confidence": 0.7,
+        "title": "No blocklisted devices",
+        "ownerPackage": "com.android.settings",
+        "visibleSignals": [
+          "Back",
+          "No blocklisted devices",
+          "No blocklisted devices",
+          "Blocklist"
+        ],
+        "appIdentity": {
+          "appId": "com.android.settings",
+          "source": "input_override"
+        }
+      },
+      "depth": 3,
+      "path": [
+        "More connections",
+        "Personal hotspot",
+        "Blocklist"
+      ],
+      "arrivedFrom": null,
+      "viaElement": null,
+      "loadTimeMs": 2338,
+      "clickableCount": 0,
+      "hasFailure": false,
+      "explorationStatus": "expanded"
+    },
+    {
+      "id": "page-012",
+      "screenId": "632754b10cefbaf6",
+      "screenTitle": "One-time mobile data",
+      "pageContext": {
+        "type": "normal_page",
+        "platform": "android",
+        "detectionSource": "deterministic",
+        "runtimeFlavor": "android_default",
+        "confidence": 0.7,
+        "title": "One-time mobile data limit",
+        "ownerPackage": "com.android.settings",
+        "visibleSignals": [
+          "Bluetooth tethering.Pair your phone with your PC or other devices to access the network of your phone from your PC or other devices.",
+          "Back",
+          "One-time mobile data limit",
+          "200 MB",
+          "Connect to Bluetooth to automatically turn on hotspot",
+          "Off",
+          "Auto-off when no device connected",
+          "Turn off hotspot automatically when no devices are connected.",
+          "30 minutes",
+          "Other tethering modes",
+          "Bluetooth tethering",
+          "Pair your phone with your PC or other devices to access the network of your phone from your PC or other devices."
+        ],
+        "appIdentity": {
+          "appId": "com.android.settings",
+          "source": "input_override"
+        }
+      },
+      "depth": 3,
+      "path": [
+        "More connections",
+        "Personal hotspot",
+        "More hotspot settings"
+      ],
+      "arrivedFrom": null,
+      "viaElement": null,
+      "loadTimeMs": 2350,
+      "clickableCount": 3,
+      "hasFailure": false,
+      "explorationStatus": "expanded"
+    },
+    {
+      "id": "page-013",
+      "screenId": "393d3353edad7175",
+      "screenTitle": "Auto-off when no",
+      "pageContext": {
+        "type": "normal_page",
+        "platform": "android",
+        "detectionSource": "deterministic",
+        "runtimeFlavor": "android_default",
+        "confidence": 0.7,
+        "title": "Auto-off when no device connected",
+        "ownerPackage": "com.android.settings",
+        "visibleSignals": [
+          "5 minutes",
+          "10 minutes",
+          "60 minutes",
+          "Never",
+          "Cancel",
+          "Auto-off when no device connected",
+          "5 minutes",
+          "10 minutes",
+          "30 minutes",
+          "30 minutes",
+          "60 minutes",
+          "Never"
+        ],
+        "appIdentity": {
+          "appId": "com.android.settings",
+          "source": "input_override"
+        }
+      },
+      "depth": 4,
+      "path": [
+        "More connections",
+        "Personal hotspot",
+        "More hotspot settings",
+        "Auto-off when no device connected"
+      ],
+      "arrivedFrom": null,
+      "viaElement": null,
+      "loadTimeMs": 2388,
+      "clickableCount": 5,
+      "hasFailure": false,
+      "explorationStatus": "expanded"
+    },
+    {
+      "id": "page-014",
+      "screenId": "fd3976a6c55b6325",
+      "screenTitle": "Origin island",
+      "pageContext": {
+        "type": "normal_page",
+        "platform": "android",
+        "detectionSource": "deterministic",
+        "runtimeFlavor": "android_default",
+        "confidence": 0.7,
+        "title": "Origin island",
+        "ownerPackage": "com.vivo.systemuiplugin",
+        "visibleSignals": [
+          "Display origin notifications",
+          "Display Origin Player",
+          "Display hotspot.Show the personal hotspot on Origin island when a device connects.",
+          "Back",
+          "Origin island",
+          "Origin island is a window for global information transfer, which displays real-time information, service recommendations, and system status.",
+          "Display origin notifications",
+          "Display Origin Player",
+          "Display hotspot",
+          "Show the personal hotspot on Origin island when a device connects.",
+          "AI Adviser",
+          "Manage suggestions for driving services, event reminders, and Copy & go."
+        ],
+        "appIdentity": {
+          "appId": "com.android.settings",
+          "source": "input_override"
+        }
+      },
+      "depth": 3,
+      "path": [
+        "More connections",
+        "Personal hotspot",
+        "Display hotspot (Origin island)"
+      ],
+      "arrivedFrom": null,
+      "viaElement": null,
+      "loadTimeMs": 2357,
+      "clickableCount": 2,
+      "hasFailure": false,
+      "explorationStatus": "reached-not-expanded",
+      "stoppedByPolicy": "singleTargetAppPolicy:foreign-app",
+      "ruleFamily": "foreign_app_boundary",
+      "recoveryMethod": "backtrack-cancel-first"
+    },
+    {
+      "id": "page-015",
+      "screenId": "e73f0fccb0fe5de7",
+      "screenTitle": "Add VPN network",
+      "pageContext": {
+        "type": "normal_page",
+        "platform": "android",
+        "detectionSource": "deterministic",
+        "runtimeFlavor": "android_default",
+        "confidence": 0.7,
+        "title": "Add VPN network",
+        "ownerPackage": "com.android.settings",
+        "visibleSignals": [
+          "Back",
+          "More",
+          "Add VPN network",
+          "Personal VPNs",
+          "Clash Meta for Android",
+          "VPN"
+        ],
+        "appIdentity": {
+          "appId": "com.android.settings",
+          "source": "input_override"
+        }
+      },
+      "depth": 2,
+      "path": [
+        "More connections",
+        "VPN"
+      ],
+      "arrivedFrom": null,
+      "viaElement": null,
+      "loadTimeMs": 2351,
+      "clickableCount": 3,
+      "hasFailure": false,
+      "explorationStatus": "expanded"
+    },
+    {
+      "id": "page-016",
+      "screenId": "14363f07fcc9ef6e",
+      "screenTitle": "Type",
+      "pageContext": {
+        "type": "form_editor",
+        "platform": "android",
+        "detectionSource": "deterministic",
+        "runtimeFlavor": "android_default",
+        "confidence": 0.9,
+        "title": "IKEv2/IPSec MSCHAPv2",
+        "ownerPackage": "com.android.settings",
+        "visibleSignals": [
+          "IKEv2/IPSec MSCHAPv2",
+          "Required",
+          "Required",
+          "Enter content",
+          "Don't verify server",
+          "From server",
+          "Enter username",
+          "Enter password",
+          "Remember the username and the password",
+          "Cancel",
+          "Done",
+          "Type"
+        ],
+        "appIdentity": {
+          "appId": "com.android.settings",
+          "source": "input_override"
+        }
+      },
+      "depth": 3,
+      "path": [
+        "More connections",
+        "VPN",
+        "Add VPN network"
+      ],
+      "arrivedFrom": null,
+      "viaElement": null,
+      "loadTimeMs": 2389,
+      "clickableCount": 3,
+      "hasFailure": false,
+      "explorationStatus": "reached-not-expanded",
+      "stoppedByPolicy": "pageContext:form_editor",
+      "ruleFamily": "form_editor",
+      "recoveryMethod": "cancel-first"
+    },
+    {
+      "id": "page-017",
+      "screenId": "73d4d527cdc94f5f",
+      "screenTitle": "Clash Meta for",
+      "pageContext": {
+        "type": "normal_page",
+        "platform": "android",
+        "detectionSource": "deterministic",
+        "runtimeFlavor": "android_default",
+        "confidence": 0.7,
+        "title": "Clash Meta for Android",
+        "ownerPackage": "com.github.metacubex.clash.meta",
+        "visibleSignals": [
+          "Clash Meta for Android",
+          "Stopped",
+          "Tap to start",
+          "Profile",
+          "新配置 Activated",
+          "Logs",
+          "Settings",
+          "Help",
+          "About"
+        ],
+        "appIdentity": {
+          "appId": "com.android.settings",
+          "source": "input_override"
+        }
+      },
+      "depth": 3,
+      "path": [
+        "More connections",
+        "VPN",
+        "Clash Meta for Android"
+      ],
+      "arrivedFrom": null,
+      "viaElement": null,
+      "loadTimeMs": 2351,
+      "clickableCount": 6,
+      "hasFailure": false,
+      "explorationStatus": "reached-not-expanded",
+      "stoppedByPolicy": "singleTargetAppPolicy:foreign-app",
+      "ruleFamily": "foreign_app_boundary",
+      "recoveryMethod": "backtrack-cancel-first"
+    },
+    {
+      "id": "page-018",
+      "screenId": "f8d8056e98b56ed8",
+      "screenTitle": "Add shortcut",
+      "pageContext": {
+        "type": "normal_page",
+        "platform": "android",
+        "detectionSource": "deterministic",
+        "runtimeFlavor": "android_default",
+        "confidence": 0.7,
+        "title": "Add shortcut",
+        "ownerPackage": "com.android.settings",
+        "visibleSignals": [
+          "Add shortcut"
+        ],
+        "appIdentity": {
+          "appId": "com.android.settings",
+          "source": "input_override"
+        }
+      },
+      "depth": 3,
+      "path": [
+        "More connections",
+        "VPN",
+        "More"
+      ],
+      "arrivedFrom": null,
+      "viaElement": null,
+      "loadTimeMs": 2358,
+      "clickableCount": 2,
+      "hasFailure": false,
+      "explorationStatus": "expanded"
+    },
+    {
+      "id": "page-019",
+      "screenId": "703595a74f7b3cc0",
+      "screenTitle": "Off",
+      "pageContext": {
+        "type": "normal_page",
+        "platform": "android",
+        "detectionSource": "deterministic",
+        "runtimeFlavor": "android_default",
+        "confidence": 0.7,
+        "title": "Private DNS can provide secure transmission, but the connection may cause network delays.",
+        "ownerPackage": "com.android.settings",
+        "visibleSignals": [
+          "Back",
+          "More",
+          "Private DNS can provide secure transmission, but the connection may cause network delays.",
+          "Off",
+          "Auto",
+          "Private DNS provider",
+          "Private DNS"
+        ],
+        "appIdentity": {
+          "appId": "com.android.settings",
+          "source": "input_override"
+        }
+      },
+      "depth": 2,
+      "path": [
+        "More connections",
+        "Private DNS"
+      ],
+      "arrivedFrom": null,
+      "viaElement": null,
+      "loadTimeMs": 2368,
+      "clickableCount": 4,
+      "hasFailure": false,
+      "explorationStatus": "expanded"
+    },
+    {
+      "id": "page-020",
+      "screenId": "7ea12a778c56bdf7",
+      "screenTitle": "Provider hostname",
+      "pageContext": {
+        "type": "normal_page",
+        "platform": "android",
+        "detectionSource": "deterministic",
+        "runtimeFlavor": "android_default",
+        "confidence": 0.7,
+        "title": "proxy.example.com",
+        "ownerPackage": "com.android.settings",
+        "visibleSignals": [
+          "proxy.example.com",
+          "OK",
+          "Cancel",
+          "Provider hostname",
+          "OK",
+          "Cancel"
+        ],
+        "appIdentity": {
+          "appId": "com.android.settings",
+          "source": "input_override"
+        }
+      },
+      "depth": 3,
+      "path": [
+        "More connections",
+        "Private DNS",
+        "Private DNS provider"
+      ],
+      "arrivedFrom": null,
+      "viaElement": null,
+      "loadTimeMs": 2330,
+      "clickableCount": 2,
+      "hasFailure": false,
+      "explorationStatus": "expanded"
+    },
+    {
+      "id": "page-021",
+      "screenId": "76101490d0f1f639",
+      "screenTitle": "Connection center,On",
+      "pageContext": {
+        "type": "normal_page",
+        "platform": "android",
+        "detectionSource": "deterministic",
+        "runtimeFlavor": "android_default",
+        "confidence": 0.7,
+        "title": "vivo devices bound to the same account will be automatically displayed on the list of added devices. You can manage added devices.",
+        "ownerPackage": "com.vivo.connbase",
+        "visibleSignals": [
+          "Tips",
+          "Tips",
+          "Back",
+          "Connection center homepage",
+          "Help & feedback",
+          "vivo devices bound to the same account will be automatically displayed on the list of added devices. You can manage added devices.",
+          "Connection center",
+          "Connection center,On",
+          "On",
+          "Feature settings",
+          "Communication sharing",
+          "Data handoff"
+        ],
+        "appIdentity": {
+          "appId": "com.android.settings",
+          "source": "input_override"
+        }
+      },
+      "depth": 2,
+      "path": [
+        "More connections",
+        "Connection center"
+      ],
+      "arrivedFrom": null,
+      "viaElement": null,
+      "loadTimeMs": 2387,
+      "clickableCount": 9,
+      "hasFailure": false,
+      "explorationStatus": "reached-not-expanded",
+      "stoppedByPolicy": "singleTargetAppPolicy:foreign-app",
+      "ruleFamily": "foreign_app_boundary",
+      "recoveryMethod": "backtrack-cancel-first"
+    },
+    {
+      "id": "page-022",
+      "screenId": "59ac41a30089791f",
+      "screenTitle": "Agree",
+      "pageContext": {
+        "type": "normal_page",
+        "platform": "android",
+        "detectionSource": "deterministic",
+        "runtimeFlavor": "android_default",
+        "confidence": 0.7,
+        "title": "Agree",
+        "ownerPackage": "com.vivo.car.networking",
+        "visibleSignals": [
+          "Agree",
+          "Disagree",
+          "Agree",
+          "Disagree"
+        ],
+        "appIdentity": {
+          "appId": "com.android.settings",
+          "source": "input_override"
+        }
+      },
+      "depth": 2,
+      "path": [
+        "More connections",
+        "Jovi InCar"
+      ],
+      "arrivedFrom": null,
+      "viaElement": null,
+      "loadTimeMs": 2521,
+      "clickableCount": 2,
+      "hasFailure": false,
+      "explorationStatus": "reached-not-expanded",
+      "stoppedByPolicy": "singleTargetAppPolicy:foreign-app",
+      "ruleFamily": "foreign_app_boundary",
+      "recoveryMethod": "backtrack-cancel-first"
+    },
+    {
+      "id": "page-023",
+      "screenId": "59ac41a30089791f",
+      "screenTitle": "Agree",
+      "pageContext": {
+        "type": "normal_page",
+        "platform": "android",
+        "detectionSource": "deterministic",
+        "runtimeFlavor": "android_default",
+        "confidence": 0.7,
+        "title": "Agree",
+        "ownerPackage": "com.vivo.upnpserver",
+        "visibleSignals": [
+          "Agree",
+          "Disagree",
+          "Agree",
+          "Disagree"
+        ],
+        "appIdentity": {
+          "appId": "com.android.settings",
+          "source": "input_override"
+        }
+      },
+      "depth": 2,
+      "path": [
+        "More connections",
+        "Screen Mirroring"
+      ],
+      "arrivedFrom": null,
+      "viaElement": null,
+      "loadTimeMs": 2368,
+      "clickableCount": 4,
+      "hasFailure": false,
+      "explorationStatus": "reached-not-expanded",
+      "stoppedByPolicy": "singleTargetAppPolicy:foreign-app",
+      "ruleFamily": "foreign_app_boundary",
+      "recoveryMethod": "backtrack-cancel-first"
+    },
+    {
+      "id": "page-024",
+      "screenId": "9943285ccd8fe443",
+      "screenTitle": "Print",
+      "pageContext": {
+        "type": "normal_page",
+        "platform": "android",
+        "detectionSource": "deterministic",
+        "runtimeFlavor": "android_default",
+        "confidence": 0.7,
+        "title": "Connect your phone and printer to the same Wi-Fi network or turn on Wi-Fi Direct for your device. Printing introduction",
+        "ownerPackage": "com.android.printspooler",
+        "visibleSignals": [
+          "Back",
+          "More",
+          "Connect your phone and printer to the same Wi-Fi network or turn on Wi-Fi Direct for your device. Printing introduction",
+          "Print",
+          "Print",
+          "Print"
+        ],
+        "appIdentity": {
+          "appId": "com.android.settings",
+          "source": "input_override"
+        }
+      },
+      "depth": 2,
+      "path": [
+        "More connections",
+        "Print"
+      ],
+      "arrivedFrom": null,
+      "viaElement": null,
+      "loadTimeMs": 2363,
+      "clickableCount": 1,
+      "hasFailure": false,
+      "explorationStatus": "reached-not-expanded",
+      "stoppedByPolicy": "singleTargetAppPolicy:foreign-app",
+      "ruleFamily": "foreign_app_boundary",
+      "recoveryMethod": "backtrack-cancel-first"
+    },
+    {
+      "id": "page-025",
+      "screenId": "df8a707fcc546cda",
+      "screenTitle": "vivo Office Kit",
+      "pageContext": {
+        "type": "normal_page",
+        "platform": "android",
+        "detectionSource": "deterministic",
+        "runtimeFlavor": "android_default",
+        "confidence": 0.7,
+        "title": "vivo Office Kit",
+        "ownerPackage": "com.vivo.pcsuite",
+        "visibleSignals": [
+          "Back",
+          "Scan QR code",
+          "Transfer history",
+          "More",
+          "Scan to connect",
+          "vivo Office Kit",
+          "Cross-screen interconnectivity",
+          "On your computer, visit pc.vivo.com to download vivo Office Kit or search for and install it in App Store on iPad to try cross-device file access, screen mirroring, and data sync. Learn more",
+          "Device connectivity",
+          "By signing in to your vivo account on your phone, you can automatically connect to a nearby computer signed in to the same account and on the same network.   ",
+          "Not connected to computer",
+          "Scan to connect"
+        ],
+        "appIdentity": {
+          "appId": "com.android.settings",
+          "source": "input_override"
+        }
+      },
+      "depth": 2,
+      "path": [
+        "More connections",
+        "Office Kit"
+      ],
+      "arrivedFrom": null,
+      "viaElement": null,
+      "loadTimeMs": 2387,
+      "clickableCount": 4,
+      "hasFailure": false,
+      "explorationStatus": "reached-not-expanded",
+      "stoppedByPolicy": "singleTargetAppPolicy:foreign-app",
+      "ruleFamily": "foreign_app_boundary",
+      "recoveryMethod": "backtrack-cancel-first"
+    },
+    {
+      "id": "page-026",
+      "screenId": "15c834e4defbd16a",
+      "screenTitle": "NFC",
+      "pageContext": {
+        "type": "normal_page",
+        "platform": "android",
+        "detectionSource": "deterministic",
+        "runtimeFlavor": "android_default",
+        "confidence": 0.7,
+        "title": "Keep your phone's NFC sensor close to another NFC device during use.",
+        "ownerPackage": "com.android.settings",
+        "visibleSignals": [
+          "NFC",
+          "NFC card reading.Your device can identify the NFC tags of access cards, transit cards, bank cards, and other cards as well as activate relevant apps.",
+          "Back",
+          "To use NFC, bring the area below the camera close to the card swiping device.",
+          "Keep your phone's NFC sensor close to another NFC device during use.",
+          "NFC",
+          "Add NFC cards",
+          "Add your access card, transit card, or bank card to your phone for use (only when Wallet is selected in Tap & pay).",
+          "Tap & pay",
+          "Wallet",
+          "NFC card reading",
+          "Your device can identify the NFC tags of access cards, transit cards, bank cards, and other cards as well as activate relevant apps."
+        ],
+        "appIdentity": {
+          "appId": "com.android.settings",
+          "source": "input_override"
+        }
+      },
+      "depth": 2,
+      "path": [
+        "More connections",
+        "NFC"
+      ],
+      "arrivedFrom": null,
+      "viaElement": null,
+      "loadTimeMs": 2362,
+      "clickableCount": 2,
+      "hasFailure": false,
+      "explorationStatus": "expanded"
+    },
+    {
+      "id": "page-027",
+      "screenId": "ff33c14d7a8a2d98",
+      "screenTitle": "卡包",
+      "pageContext": {
+        "type": "normal_page",
+        "platform": "android",
+        "detectionSource": "deterministic",
+        "runtimeFlavor": "android_default",
+        "confidence": 0.7,
+        "title": "更多",
+        "ownerPackage": "com.vivo.wallet",
+        "visibleSignals": [
+          "Back",
+          "卡片管理",
+          "用卡管理",
+          "添加卡片",
+          "推荐位，手机交通卡，一部手机畅行全国300城",
+          "1 page,3 pages in total",
+          "添加交通卡畅行全国300城,按钮",
+          "添加银行卡支付享优惠,按钮",
+          "添加车钥匙开车不用带钥匙,按钮",
+          "查看更多点击查看更多,按钮",
+          "更多",
+          "大流量卡,按钮"
+        ],
+        "appIdentity": {
+          "appId": "com.android.settings",
+          "source": "input_override"
+        }
+      },
+      "depth": 3,
+      "path": [
+        "More connections",
+        "NFC",
+        "Add NFC cards"
+      ],
+      "arrivedFrom": null,
+      "viaElement": null,
+      "loadTimeMs": 2632,
+      "clickableCount": 18,
+      "hasFailure": false,
+      "explorationStatus": "reached-not-expanded",
+      "stoppedByPolicy": "singleTargetAppPolicy:foreign-app",
+      "ruleFamily": "foreign_app_boundary",
+      "recoveryMethod": "backtrack-cancel-first"
+    },
+    {
+      "id": "page-028",
+      "screenId": "338424ae28ba3024",
+      "screenTitle": "vivoshare",
+      "pageContext": {
+        "type": "normal_page",
+        "platform": "android",
+        "detectionSource": "deterministic",
+        "runtimeFlavor": "android_default",
+        "confidence": 0.7,
+        "title": "vivoshare",
+        "ownerPackage": "com.vivo.share",
+        "visibleSignals": [
+          "vivoshare.Discoverable by nearby devices and automatically turns off after 10 minutes.",
+          "Back",
+          "vivoshare",
+          "Discoverable by nearby devices and automatically turns off after 10 minutes.",
+          "vivoshare"
+        ],
+        "appIdentity": {
+          "appId": "com.android.settings",
+          "source": "input_override"
+        }
+      },
+      "depth": 2,
+      "path": [
+        "More connections",
+        "vivoshare"
+      ],
+      "arrivedFrom": null,
+      "viaElement": null,
+      "loadTimeMs": 2363,
+      "clickableCount": 0,
+      "hasFailure": false,
+      "explorationStatus": "reached-not-expanded",
+      "stoppedByPolicy": "singleTargetAppPolicy:foreign-app",
+      "ruleFamily": "foreign_app_boundary",
+      "recoveryMethod": "backtrack-cancel-first"
+    },
+    {
+      "id": "page-029",
+      "screenId": "61413f2a689206aa",
+      "screenTitle": "Origin Notification",
+      "pageContext": {
+        "type": "normal_page",
+        "platform": "android",
+        "detectionSource": "deterministic",
+        "runtimeFlavor": "android_default",
+        "confidence": 0.7,
+        "title": "Origin Notification",
+        "ownerPackage": "com.vivo.systemuiplugin",
+        "visibleSignals": [
+          "AOD notifications",
+          "Lock screen notifications",
+          "Floating notifications",
+          "Badges",
+          "number sign",
+          "Back",
+          "Origin Notification",
+          "Status bar",
+          "Origin island",
+          "Notification icon style",
+          "Show icons in status bar if there are any notifications.",
+          "Original icon"
+        ],
+        "appIdentity": {
+          "appId": "com.android.settings",
+          "source": "input_override"
+        }
+      },
+      "depth": 1,
+      "path": [
+        "Notifications &amp; status bar"
+      ],
+      "arrivedFrom": null,
+      "viaElement": null,
+      "loadTimeMs": 2383,
+      "clickableCount": 9,
+      "hasFailure": false,
+      "explorationStatus": "reached-not-expanded",
+      "stoppedByPolicy": "singleTargetAppPolicy:foreign-app",
+      "ruleFamily": "foreign_app_boundary",
+      "recoveryMethod": "backtrack-cancel-first"
+    },
+    {
+      "id": "page-030",
+      "screenId": "421f33628c376cb9",
+      "screenTitle": "Ring mode",
+      "pageContext": {
+        "type": "normal_page",
+        "platform": "android",
+        "detectionSource": "deterministic",
+        "runtimeFlavor": "android_default",
+        "confidence": 0.7,
+        "title": "Ring mode",
+        "ownerPackage": "com.android.settings",
+        "visibleSignals": [
+          "Vibrate on ring",
+          "Back",
+          "Ring mode",
+          "Vibration mode",
+          "Silent mode",
+          "Media",
+          "Media",
+          "Ringtone",
+          "Ringtone",
+          "Notifications",
+          "Notifications",
+          "Alarm"
+        ],
+        "appIdentity": {
+          "appId": "com.android.settings",
+          "source": "input_override"
+        }
+      },
+      "depth": 1,
+      "path": [
+        "Sounds &amp; vibration"
+      ],
+      "arrivedFrom": null,
+      "viaElement": null,
+      "loadTimeMs": 2471,
+      "clickableCount": 6,
+      "hasFailure": false,
+      "explorationStatus": "expanded"
+    },
+    {
+      "id": "page-031",
+      "screenId": "5153b8c2edc639af",
+      "screenTitle": "Adjust via Volume",
+      "pageContext": {
+        "type": "normal_page",
+        "platform": "android",
+        "detectionSource": "deterministic",
+        "runtimeFlavor": "android_default",
+        "confidence": 0.7,
+        "title": "Adjust via Volume buttons",
+        "ownerPackage": "com.android.settings",
+        "visibleSignals": [
+          "Ringtone",
+          "Cancel",
+          "Adjust via Volume buttons",
+          "Ringtone",
+          "Media",
+          "Media",
+          "Cancel"
+        ],
+        "appIdentity": {
+          "appId": "com.android.settings",
+          "source": "input_override"
+        }
+      },
+      "depth": 2,
+      "path": [
+        "Sounds &amp; vibration",
+        "Adjust via Volume buttons"
+      ],
+      "arrivedFrom": null,
+      "viaElement": null,
+      "loadTimeMs": 2376,
+      "clickableCount": 2,
+      "hasFailure": false,
+      "explorationStatus": "expanded"
+    },
+    {
+      "id": "page-032",
+      "screenId": "0da951282750b0e0",
+      "screenTitle": "App-specific volume",
+      "pageContext": {
+        "type": "normal_page",
+        "platform": "android",
+        "detectionSource": "deterministic",
+        "runtimeFlavor": "android_default",
+        "confidence": 0.7,
+        "title": "Tap the arrow at the top of the volume panel to expand it and adjust the volume for each app.",
+        "ownerPackage": "com.android.settings",
+        "visibleSignals": [
+          "App-specific volume",
+          "Remember adjustment result.Apply the last volume adjustment setting when you open an app again",
+          "Back",
+          "Tap the arrow at the top of the volume panel to expand it and adjust the volume for each app.",
+          "App-specific volume",
+          "Remember adjustment result",
+          "Apply the last volume adjustment setting when you open an app again",
+          "App-specific volume"
+        ],
+        "appIdentity": {
+          "appId": "com.android.settings",
+          "source": "input_override"
+        }
+      },
+      "depth": 2,
+      "path": [
+        "Sounds &amp; vibration",
+        "App-specific volume"
+      ],
+      "arrivedFrom": null,
+      "viaElement": null,
+      "loadTimeMs": 2366,
+      "clickableCount": 0,
+      "hasFailure": false,
+      "explorationStatus": "expanded"
+    },
+    {
+      "id": "page-033",
+      "screenId": "654d3458dbe21381",
+      "screenTitle": "Do Not Disturb",
+      "pageContext": {
+        "type": "normal_page",
+        "platform": "android",
+        "detectionSource": "deterministic",
+        "runtimeFlavor": "android_default",
+        "confidence": 0.7,
+        "title": "In Focus mode, calls, messages, and notifications that are not allowed will be muted.",
+        "ownerPackage": "com.android.settings",
+        "visibleSignals": [
+          "Back",
+          "In Focus mode, calls, messages, and notifications that are not allowed will be muted.",
+          "Do Not Disturb",
+          "Sleep",
+          "Work",
+          "Not set",
+          "Personal",
+          "Not set",
+          "Exercise",
+          "Not set",
+          "Read",
+          "Not set"
+        ],
+        "appIdentity": {
+          "appId": "com.android.settings",
+          "source": "input_override"
+        }
+      },
+      "depth": 2,
+      "path": [
+        "Sounds &amp; vibration",
+        "Focus mode"
+      ],
+      "arrivedFrom": null,
+      "viaElement": null,
+      "loadTimeMs": 2335,
+      "clickableCount": 7,
+      "hasFailure": false,
+      "explorationStatus": "expanded"
+    },
+    {
+      "id": "page-034",
+      "screenId": "86ed9e279855b101",
+      "screenTitle": "Contacts allowed to",
+      "pageContext": {
+        "type": "normal_page",
+        "platform": "android",
+        "detectionSource": "deterministic",
+        "runtimeFlavor": "android_default",
+        "confidence": 0.7,
+        "title": "Contacts allowed to send messages",
+        "ownerPackage": "com.android.settings",
+        "visibleSignals": [
+          "Remove all",
+          "Back",
+          "Contacts allowed to send messages",
+          "Remove all",
+          "Add",
+          "Groups allowed to send messages",
+          "None",
+          "Information"
+        ],
+        "appIdentity": {
+          "appId": "com.android.settings",
+          "source": "input_override"
+        }
+      },
+      "depth": 3,
+      "path": [
+        "Sounds &amp; vibration",
+        "Focus mode",
+        "Work"
+      ],
+      "arrivedFrom": null,
+      "viaElement": null,
+      "loadTimeMs": 2357,
+      "clickableCount": 2,
+      "hasFailure": false,
+      "explorationStatus": "expanded"
+    },
+    {
+      "id": "page-035",
+      "screenId": "fd3ae54a6b7ab4a3",
+      "screenTitle": "Secure access to",
+      "pageContext": {
+        "type": "normal_page",
+        "platform": "android",
+        "detectionSource": "deterministic",
+        "runtimeFlavor": "android_default",
+        "confidence": 0.7,
+        "title": "Cancel",
+        "ownerPackage": "com.android.contacts",
+        "visibleSignals": [
+          "Close",
+          "Learn more",
+          "Cancel",
+          "Done",
+          "Search contacts",
+          "Search contacts",
+          "Secure access to contacts",
+          "The app can only access your selected contacts.",
+          "Learn more",
+          "G",
+          "giffgaff top-up",
+          "giffgaff voicemail"
+        ],
+        "appIdentity": {
+          "appId": "com.android.settings",
+          "source": "input_override"
+        }
+      },
+      "depth": 4,
+      "path": [
+        "Sounds &amp; vibration",
+        "Focus mode",
+        "Work",
+        "Add"
+      ],
+      "arrivedFrom": null,
+      "viaElement": null,
+      "loadTimeMs": 2373,
+      "clickableCount": 5,
+      "hasFailure": false,
+      "explorationStatus": "reached-not-expanded",
+      "stoppedByPolicy": "singleTargetAppPolicy:foreign-app",
+      "ruleFamily": "foreign_app_boundary",
+      "recoveryMethod": "backtrack-cancel-first"
+    },
+    {
+      "id": "page-036",
+      "screenId": "f859f893c9fd2ce2",
+      "screenTitle": "Groups allowed to",
+      "pageContext": {
+        "type": "normal_page",
+        "platform": "android",
+        "detectionSource": "deterministic",
+        "runtimeFlavor": "android_default",
+        "confidence": 0.7,
+        "title": "Groups allowed to send messages",
+        "ownerPackage": "com.android.settings",
+        "visibleSignals": [
+          "Favorite contacts",
+          "Contacts",
+          "Anyone",
+          "Friends-shenyuexin2006@gmail.com",
+          "Family-shenyuexin2006@gmail.com",
+          "Coworkers-shenyuexin2006@gmail.com",
+          "Cancel",
+          "Groups allowed to send messages",
+          "None",
+          "None",
+          "Favorite contacts",
+          "Contacts"
+        ],
+        "appIdentity": {
+          "appId": "com.android.settings",
+          "source": "input_override"
+        }
+      },
+      "depth": 4,
+      "path": [
+        "Sounds &amp; vibration",
+        "Focus mode",
+        "Work",
+        "Groups allowed to send messages"
+      ],
+      "arrivedFrom": null,
+      "viaElement": null,
+      "loadTimeMs": 2404,
+      "clickableCount": 8,
+      "hasFailure": false,
+      "explorationStatus": "expanded"
+    },
+    {
+      "id": "page-037",
+      "screenId": "aa8908720ad2abe0",
+      "screenTitle": "Contacts allowed to",
+      "pageContext": {
+        "type": "normal_page",
+        "platform": "android",
+        "detectionSource": "deterministic",
+        "runtimeFlavor": "android_default",
+        "confidence": 0.7,
+        "title": "Contacts allowed to send messages",
+        "ownerPackage": "com.android.settings",
+        "visibleSignals": [
+          "Remove all",
+          "Back",
+          "Contacts allowed to send messages",
+          "Remove all",
+          "Add",
+          "Groups allowed to send messages",
+          "Anyone",
+          "Information"
+        ],
+        "appIdentity": {
+          "appId": "com.android.settings",
+          "source": "input_override"
+        }
+      },
+      "depth": 3,
+      "path": [
+        "Sounds &amp; vibration",
+        "Focus mode",
+        "Personal"
+      ],
+      "arrivedFrom": null,
+      "viaElement": null,
+      "loadTimeMs": 2324,
+      "clickableCount": 2,
+      "hasFailure": false,
+      "explorationStatus": "expanded"
+    },
+    {
+      "id": "page-038",
+      "screenId": "fd3ae54a6b7ab4a3",
+      "screenTitle": "Secure access to",
+      "pageContext": {
+        "type": "normal_page",
+        "platform": "android",
+        "detectionSource": "deterministic",
+        "runtimeFlavor": "android_default",
+        "confidence": 0.7,
+        "title": "Cancel",
+        "ownerPackage": "com.android.contacts",
+        "visibleSignals": [
+          "Close",
+          "Learn more",
+          "Cancel",
+          "Done",
+          "Search contacts",
+          "Search contacts",
+          "Secure access to contacts",
+          "The app can only access your selected contacts.",
+          "Learn more",
+          "G",
+          "giffgaff top-up",
+          "giffgaff voicemail"
+        ],
+        "appIdentity": {
+          "appId": "com.android.settings",
+          "source": "input_override"
+        }
+      },
+      "depth": 4,
+      "path": [
+        "Sounds &amp; vibration",
+        "Focus mode",
+        "Personal",
+        "Add"
+      ],
+      "arrivedFrom": null,
+      "viaElement": null,
+      "loadTimeMs": 2365,
+      "clickableCount": 5,
+      "hasFailure": false,
+      "explorationStatus": "reached-not-expanded",
+      "stoppedByPolicy": "singleTargetAppPolicy:foreign-app",
+      "ruleFamily": "foreign_app_boundary",
+      "recoveryMethod": "backtrack-cancel-first"
+    },
+    {
+      "id": "page-039",
+      "screenId": "08c8c43ca3e406ec",
+      "screenTitle": "Appearance",
+      "pageContext": {
+        "type": "normal_page",
+        "platform": "android",
+        "detectionSource": "deterministic",
+        "runtimeFlavor": "android_default",
+        "confidence": 0.7,
+        "title": "Appearance",
+        "ownerPackage": "com.android.settings",
+        "visibleSignals": [
+          "Auto-brightness",
+          "Back",
+          "Appearance",
+          "Light mode",
+          "Dark mode",
+          "Scheduled switch",
+          "Off",
+          "Dark mode settings",
+          "Brightness",
+          "Auto-brightness",
+          "Custom brightness",
+          "Off"
+        ],
+        "appIdentity": {
+          "appId": "com.android.settings",
+          "source": "input_override"
+        }
+      },
+      "depth": 1,
+      "path": [
+        "Display, brightness &amp; eye protection"
+      ],
+      "arrivedFrom": null,
+      "viaElement": null,
+      "loadTimeMs": 2437,
+      "clickableCount": 6,
+      "hasFailure": false,
+      "explorationStatus": "expanded"
+    },
+    {
+      "id": "page-040",
+      "screenId": "ee08ab3bbd78b301",
+      "screenTitle": "Off",
+      "pageContext": {
+        "type": "normal_page",
+        "platform": "android",
+        "detectionSource": "deterministic",
+        "runtimeFlavor": "android_default",
+        "confidence": 0.7,
+        "title": "Off",
+        "ownerPackage": "com.android.settings",
+        "visibleSignals": [
+          "Back",
+          "Off",
+          "Follow Sleep",
+          "Sunset to sunrise",
+          "Custom",
+          "Scheduled switch"
+        ],
+        "appIdentity": {
+          "appId": "com.android.settings",
+          "source": "input_override"
+        }
+      },
+      "depth": 2,
+      "path": [
+        "Display, brightness &amp; eye protection",
+        "Scheduled switch"
+      ],
+      "arrivedFrom": null,
+      "viaElement": null,
+      "loadTimeMs": 2363,
+      "clickableCount": 4,
+      "hasFailure": false,
+      "explorationStatus": "expanded"
+    },
+    {
+      "id": "page-041",
+      "screenId": "de552706df73d467",
+      "screenTitle": "Dim home screen",
+      "pageContext": {
+        "type": "normal_page",
+        "platform": "android",
+        "detectionSource": "deterministic",
+        "runtimeFlavor": "android_default",
+        "confidence": 0.7,
+        "title": "Dim home screen wallpaper",
+        "ownerPackage": "com.android.settings",
+        "visibleSignals": [
+          "Dim home screen wallpaper.Automatically adjust the brightness of static home screen wallpapers based on ambient light.",
+          "Dim icons",
+          "Back",
+          "Dim home screen wallpaper",
+          "Automatically adjust the brightness of static home screen wallpapers based on ambient light.",
+          "Dim icons",
+          "Third-party App Management",
+          "Customize whether to turn on Dark mode by following system settings.",
+          "Dark mode settings"
+        ],
+        "appIdentity": {
+          "appId": "com.android.settings",
+          "source": "input_override"
+        }
+      },
+      "depth": 2,
+      "path": [
+        "Display, brightness &amp; eye protection",
+        "Dark mode settings"
+      ],
+      "arrivedFrom": null,
+      "viaElement": null,
+      "loadTimeMs": 2363,
+      "clickableCount": 1,
+      "hasFailure": false,
+      "explorationStatus": "expanded"
+    },
+    {
+      "id": "page-042",
+      "screenId": "69dddc9057cb19e9",
+      "screenTitle": "阿里巴巴",
+      "pageContext": {
+        "type": "normal_page",
+        "platform": "android",
+        "detectionSource": "deterministic",
+        "runtimeFlavor": "android_default",
+        "confidence": 0.7,
+        "title": "Third-party apps that have been adapted to the system are listed below. The apps that have already supported Dark mode are not in the list, and the images of some apps may not be displayed properly.",
+        "ownerPackage": "com.android.settings",
+        "visibleSignals": [
+          "阿里巴巴",
+          "拼多多",
+          "淘宝",
+          "Weibo",
+          "Back",
+          "Third-party apps that have been adapted to the system are listed below. The apps that have already supported Dark mode are not in the list, and the images of some apps may not be displayed properly.",
+          "阿里巴巴",
+          "拼多多",
+          "淘宝",
+          "Weibo",
+          "Third-party App Management"
+        ],
+        "appIdentity": {
+          "appId": "com.android.settings",
+          "source": "input_override"
+        }
+      },
+      "depth": 3,
+      "path": [
+        "Display, brightness &amp; eye protection",
+        "Dark mode settings",
+        "Third-party App Management"
+      ],
+      "arrivedFrom": null,
+      "viaElement": null,
+      "loadTimeMs": 2352,
+      "clickableCount": 0,
+      "hasFailure": false,
+      "explorationStatus": "expanded"
+    },
+    {
+      "id": "page-043",
+      "screenId": "c215735cd89d41c5",
+      "screenTitle": "Custom brightness",
+      "pageContext": {
+        "type": "normal_page",
+        "platform": "android",
+        "detectionSource": "deterministic",
+        "runtimeFlavor": "android_default",
+        "confidence": 0.7,
+        "title": "Customize an automatic brightness plan based on the contrast sensitivity test result.",
+        "ownerPackage": "com.android.settings",
+        "visibleSignals": [
+          "Custom brightness",
+          "Back",
+          "Customize an automatic brightness plan based on the contrast sensitivity test result.",
+          "Custom brightness",
+          "Custom brightness"
+        ],
+        "appIdentity": {
+          "appId": "com.android.settings",
+          "source": "input_override"
+        }
+      },
+      "depth": 2,
+      "path": [
+        "Display, brightness &amp; eye protection",
+        "Custom brightness"
+      ],
+      "arrivedFrom": null,
+      "viaElement": null,
+      "loadTimeMs": 2344,
+      "clickableCount": 0,
+      "hasFailure": false,
+      "explorationStatus": "expanded"
+    },
+    {
+      "id": "page-044",
+      "screenId": "105c33ebabbb5985",
+      "screenTitle": "App-specific brightness",
+      "pageContext": {
+        "type": "normal_page",
+        "platform": "android",
+        "detectionSource": "deterministic",
+        "runtimeFlavor": "android_default",
+        "confidence": 0.7,
+        "title": "Learn the brightness adjustment habits for different apps and personalize automatic adjustment of screen brightness.",
+        "ownerPackage": "com.android.settings",
+        "visibleSignals": [
+          "App-specific brightness",
+          "Back",
+          "Learn the brightness adjustment habits for different apps and personalize automatic adjustment of screen brightness.",
+          "App-specific brightness",
+          "Learned apps",
+          "No apps",
+          "No apps",
+          "App-specific brightness"
+        ],
+        "appIdentity": {
+          "appId": "com.android.settings",
+          "source": "input_override"
+        }
+      },
+      "depth": 2,
+      "path": [
+        "Display, brightness &amp; eye protection",
+        "App-specific brightness"
+      ],
+      "arrivedFrom": null,
+      "viaElement": null,
+      "loadTimeMs": 2358,
+      "clickableCount": 0,
+      "hasFailure": false,
+      "explorationStatus": "expanded"
+    },
+    {
+      "id": "page-045",
+      "screenId": "4bbd49181e2405b4",
+      "screenTitle": "Wallpapers",
+      "pageContext": {
+        "type": "normal_page",
+        "platform": "android",
+        "detectionSource": "deterministic",
+        "runtimeFlavor": "android_default",
+        "confidence": 0.7,
+        "title": "Wallpapers",
+        "ownerPackage": "com.bbk.theme",
+        "visibleSignals": [
+          "Wallpapers",
+          "Always On Display",
+          "Lock screen",
+          "Themes",
+          "Icons",
+          "Back Button Double-tap to activate",
+          "Wallpapers",
+          "Always On Display",
+          "Lock screen",
+          "Combinations",
+          "Themes",
+          "Icons"
+        ],
+        "appIdentity": {
+          "appId": "com.android.settings",
+          "source": "input_override"
+        }
+      },
+      "depth": 1,
+      "path": [
+        "Home screen, lock screen &amp; wallpaper"
+      ],
+      "arrivedFrom": null,
+      "viaElement": null,
+      "loadTimeMs": 2799,
+      "clickableCount": 8,
+      "hasFailure": false,
+      "explorationStatus": "reached-not-expanded",
+      "stoppedByPolicy": "singleTargetAppPolicy:foreign-app",
+      "ruleFamily": "foreign_app_boundary",
+      "recoveryMethod": "backtrack-cancel-first"
+    }
+  ],
+  "pageTypeCounts": {
+    "normalPages": 43,
+    "formEditorPages": 2,
+    "dialogPages": 0,
+    "alertPages": 0,
+    "actionSheetPages": 0,
+    "modalPages": 0,
+    "overlayPages": 0,
+    "permissionPages": 0,
+    "keyboardPages": 0,
+    "unknownPages": 0
+  }
+}

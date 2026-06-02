@@ -1,0 +1,781 @@
+[2026-04-28T03:38:20.759Z] [LOG] 
+[CLEANUP] Terminating target app to ensure clean state...
+[2026-04-28T03:38:23.032Z] [LOG] [CLEANUP] Target app terminated.
+
+[2026-04-28T03:38:23.033Z] [LOG] === Explorer Test Harness: Android Physical Device ===
+[2026-04-28T03:38:23.033Z] [LOG] Target app: com.android.settings
+[2026-04-28T03:38:23.033Z] [LOG] Device ID: 10AEA40Z3Y000R5
+[2026-04-28T03:38:23.033Z] [LOG] Mode: full (deep coverage)
+
+[2026-04-28T03:38:23.033Z] [LOG] [PROBE] Running MCP UI probe before explorer...
+[2026-04-28T03:38:26.541Z] [LOG] [ENTRY] Foreground after launch_app: com.android.chrome
+[2026-04-28T03:38:28.820Z] [LOG] [ENTRY-EVIDENCE] after-launch_app: currentFocus=unknown
+[2026-04-28T03:38:28.820Z] [LOG] [ENTRY-EVIDENCE] after-launch_app: topActivity=com.android.chrome/org.chromium.chrome.browser.ChromeTabbedActivity
+[2026-04-28T03:38:28.820Z] [LOG] [ENTRY-EVIDENCE] after-launch_app: sampleTexts=["Aiden","vivo account, vivo Cloud, Find Devices, and more","Airplane mode","Wi-Fi","SHEN2.4","Bluetooth","On","SIMs &amp; mobile network","More connections","Notifications &amp; status bar","Sounds &amp; vibration","Display, brightness &amp; eye protection"]
+[2026-04-28T03:38:28.820Z] [LOG] [ENTRY] Settings UI semantics detected after launch_app; accepting launch despite foreground mismatch.
+[2026-04-28T03:38:38.043Z] [LOG] [PROBE] inspect_ui status=success, reason=OK, totalNodes=76, clickableNodes=14
+[2026-04-28T03:38:38.043Z] [LOG] [PROBE] inspect_ui contentLength=29761, firstLine=<?xml version='1.0' encoding='UTF-8' standalone='yes' ?><hierarchy rotation="0"><node index="0" text="" resource-id="" class="android.widget.FrameLayout" package="com.android.settings" content-desc="" checkable="false" checked="false" clickable="false" enabled="true" focusable="false" focused="false" scrollable="false" long-clickable="false" password="false" selected="false" bounds="[0,0][1260,2800]" drawing-order="0" hint=""><node index="0" text="" resource-id="" class="android.widget.LinearLayout" package="com.android.settings" content-desc="" checkable="false" checked="false" clickable="false" enabled="true" focusable="false" focused="false" scrollable="false" long-clickable="false" password="false" selected="false" bounds="[0,0][1260,2653]" drawing-order="1" hint=""><node index="0" text="" resource-id="android:id/content" class="android.widget.FrameLayout" package="com.android.settings" content-desc="" checkable="false" checked="false" clickable="false" enabled="true" focusable="false" focused="false" scrollable="false" long-clickable="false" password="false" selected="false" bounds="[0,0][1260,2653]" drawing-order="2" hint=""><node index="0" text="" resource-id="com.android.settings:id/homepage_container" class="android.widget.LinearLayout" package="com.android.settings" content-desc="" checkable="false" checked="false" clickable="false" enabled="true" focusable="false" focused="false" scrollable="false" long-clickable="false" password="false" selected="false" bounds="[0,0][1260,2653]" drawing-order="1" hint=""><node index="0" text="" resource-id="com.android.settings:id/main_content" class="android.widget.FrameLayout" package="com.android.settings" content-desc="" checkable="false" checked="false" clickable="false" enabled="true" focusable="false" focused="false" scrollable="false" long-clickable="false" password="false" selected="false" bounds="[0,0][1259,2653]" drawing-order="1" hint=""><node index="0" text="" resource-id="com.android.settings:id/home_dashboard_rootview" class="android.view.ViewGroup" package="com.android.settings" content-desc="" checkable="false" checked="false" clickable="false" enabled="true" focusable="false" focused="false" scrollable="false" long-clickable="false" password="false" selected="false" bounds="[0,0][1259,2653]" drawing-order="1" hint=""><node index="0" text="" resource-id="com.android.settings:id/main_content_scrollable_container" class="android.view.ViewGroup" package="com.android.settings" content-desc="" checkable="false" checked="false" clickable="false" enabled="true" focusable="false" focused="false" scrollable="false" long-clickable="false" password="false" selected="false" bounds="[0,0][1259,2653]" drawing-order="1" hint=""><node index="0" text="" resource-id="com.android.settings:id/dashboard_container" class="androidx.recyclerview.widget.RecyclerView" package="com.android.settings" content-desc="" checkable="false" checked="false" clickable="false" enabled="true" focusable="true" focused="false" scrollable="true" long-clickable="false" password="false" selected="false" bounds="[0,0][1259,2653]" drawing-order="1" hint=""><node index="1" text="" resource-id="com.android.settings:id/account_category" class="android.widget.LinearLayout" package="com.android.settings" content-desc="" checkable="false" checked="false" clickable="true" enabled="true" focusable="true" focused="false" scrollable="false" long-clickable="false" password="false" selected="false" bounds="[70,623][1189,897]" drawing-order="2" hint=""><node index="0" text="" resource-id="com.android.settings:id/bbk_account_tile" class="android.widget.LinearLayout" package="com.android.settings" content-desc="" checkable="false" checked="false" clickable="false" enabled="true" focusable="false" focused="false" scrollable="false" long-clickable="false" password="false" selected="false" bounds="[70,623][1189,897]" drawing-order="1" hint=""><node index="0" text="" resource-id="android:id/icon" class="android.widget.ImageView" package="com.android.settings" content-desc="" checkable="false" checked="false" clickable="false" enabled="true" focusable="false" focused="false" scrollable="false" long-clickable="false" password="false" selected="false" bounds="[119,686][266,833]" drawing-order="1" hint="" /><node index="1" text="" resource-id="" class="android.widget.RelativeLayout" package="com.android.settings" content-desc="" checkable="false" checked="false" clickable="false" enabled="true" focusable="false" focused="false" scrollable="false" long-clickable="false" password="false" selected="false" bounds="[308,669][1140,851]" drawing-order="2" hint=""><node index="0" text="" resource-id="" class="android.widget.RelativeLayout" package="com.android.settings" content-desc="" checkable="false" checked="false" clickable="false" enabled="true" focusable="false" focused="false" scrollable="false" long-clickable="false" password="false" selected="false" bounds="[308,669][1049,851]" drawing-order="1" hint=""><node index="0" text="" resource-id="com.android.settings:id/title_widget" class="android.widget.LinearLayout" package="com.android.settings" content-desc="" checkable="false" checked="false" clickable="false" enabled="true" focusable="false" focused="false" scrollable="false" long-clickable="false" password="false" selected="false" bounds="[308,669][477,749]" drawing-order="1" hint=""><node index="0" text="Aiden" resource-id="com.android.settings:id/account_title" class="android.widget.TextView" package="com.android.settings" content-desc="" checkable="false" checked="false" clickable="false" enabled="true" focusable="false" focused="false" scrollable="false" long-clickable="false" password="false" selected="false" bounds="[308,669][477,749]" drawing-order="1" hint="" /></node><node index="1" text="vivo account, vivo Cloud, Find Devices, and more" resource-id="com.android.settings:id/summary_ex" class="android.widget.TextView" package="com.android.settings" content-desc="" checkable="false" checked="false" clickable="false" enabled="true" focusable="false" focused="false" scrollable="false" long-clickable="false" password="false" selected="false" bounds="[308,749][1049,847]" drawing-order="2" hint="" /></node><node index="1" text="" resource-id="com.android.settings:id/arrow" class="android.widget.ImageView" package="com.android.settings" content-desc="" checkable="false" checked="false" clickable="false" enabled="true" focusable="false" focused="false" scrollable="false" long-clickable="false" password="false" selected="false" bounds="[1105,718][1140,802]" drawing-order="2" hint="" /></node></node></node><node index="2" text="" resource-id="com.android.settings:id/category" class="android.widget.LinearLayout" package="com.android.settings" content-desc="" checkable="false" checked="false" clickable="false" enabled="false" focusable="false" focused="false" scrollable="false" long-clickable="false" password="false" selected="false" bounds="[70,897][1189,953]" drawing-order="3" hint="" /><node index="3" text="" resource-id="com.android.settings:id/vlist_content" class="android.widget.Switch" package="com.android.settings" content-desc="Airplane mode" checkable="true" checked="false" clickable="false" enabled="true" focusable="true" focused="false" scrollable="false" long-clickable="false" password="false" selected="false" bounds="[70,953][1189,1142]" drawing-order="4" hint=""><node index="0" text="" resource-id="android:id/icon" class="android.widget.ImageView" package="com.android.settings" content-desc="" checkable="false" checked="false" clickable="false" enabled="true" focusable="false" focused="false" scrollable="false" long-clickable="false" password="false" selected="false" bounds="[119,1012][203,1096]" drawing-order="4" hint="" /><node index="1" text="Airplane mode" resource-id="android:id/title" class="android.widget.TextView" package="com.android.settings" content-desc="" checkable="false" checked="false" clickable="false" enabled="true" focusable="false" focused="false" scrollable="false" long-clickable="false" password="false" selected="false" bounds="[245,1017][634,1092]" drawing-order="1" hint="" /><node index="2" text="" resource-id="com.android.settings:id/switch_btn" class="android.widget.RelativeLayout" package="com.android.settings" content-desc="" checkable="false" checked="false" clickable="false" enabled="true" focusable="false" focused="false" scrollable="false" long-clickable="false" password="false" selected="false" bounds="[992,973][1154,1135]" drawing-order="3" hint=""><node index="0" text="" resource-id="" class="android.widget.Switch" package="com.android.settings" content-desc="" checkable="true" checked="false" clickable="false" enabled="true" focusable="false" focused="false" scrollable="false" long-clickable="false" password="false" selected="false" bounds="[992,973][1154,1135]" drawing-order="1" hint="" /></node></node><node index="4" text="" resource-id="" class="android.widget.FrameLayout" package="com.android.settings" content-desc="" checkable="false" checked="false" clickable="true" enabled="true" focusable="true" focused="false" scrollable="false" long-clickable="false" password="false" selected="false" bounds="[70,1142][1189,1317]" drawing-order="5" hint=""><node index="0" text="" resource-id="com.android.settings:id/vlist_content" class="android.view.ViewGroup" package="com.android.settings" content-desc="Wi-Fi, SHEN2.4" checkable="false" checked="false" clickable="false" enabled="true" focusable="false" focused="false" scrollable="false" long-clickable="false" password="false" selected="false" bounds="[70,1142][1189,1317]" drawing-order="1" hint=""><node index="0" text="" resource-id="android:id/icon" class="android.widget.ImageView" package="com.android.settings" content-desc="" checkable="false" checked="false" clickable="false" enabled="true" focusable="false" focused="false" scrollable="false" long-clickable="false" password="false" selected="false" bounds="[119,1187][203,1271]" drawing-order="3" hint="" /><node index="1" text="Wi-Fi" resource-id="android:id/title" class="android.widget.TextView" package="com.android.settings" content-desc="" checkable="false" checked="false" clickable="false" enabled="true" focusable="false" focused="false" scrollable="false" long-clickable="false" password="false" selected="false" bounds="[245,1192][386,1267]" drawing-order="1" hint="" /><node index="2" text="SHEN2.4" resource-id="android:id/summary" class="android.widget.TextView" package="com.android.settings" content-desc="" checkable="false" checked="false" clickable="false" enabled="true" focusable="false" focused="false" scrollable="false" long-clickable="false" password="false" selected="false" bounds="[885,1199][1070,1260]" drawing-order="4" hint="" /><node index="3" text="" resource-id="com.android.settings:id/arrow" class="android.widget.ImageView" package="com.android.settings" content-desc="" checkable="false" checked="false" clickable="false" enabled="true" focusable="false" focused="false" scrollable="false" long-clickable="false" password="false" selected="false" bounds="[1105,1191][1140,1275]" drawing-order="2" hint="" /></node></node><node index="5" text="" resource-id="" class="android.widget.FrameLayout" package="com.android.settings" content-desc="" checkable="false" checked="false" clickable="true" enabled="true" focusable="true" focused="false" scrollable="false" long-clickable="false" password="false" selected="false" bounds="[70,1317][1189,1492]" drawing-order="6" hint=""><node index="0" text="" resource-id="com.android.settings:id/vlist_content" class="android.view.ViewGroup" package="com.android.settings" content-desc="Bluetooth, On" checkable="false" checked="false" clickable="false" enabled="true" focusable="false" focused="false" scrollable="false" long-clickable="false" password="false" selected="false" bounds="[70,1317][1189,1492]" drawing-order="1" hint=""><node index="0" text="" resource-id="android:id/icon" class="android.widget.ImageView" package="com.android.settings" content-desc="" checkable="false" checked="false" clickable="false" enabled="true" focusable="false" focused="false" scrollable="false" long-clickable="false" password="false" selected="false" bounds="[119,1362][203,1446]" drawing-order="3" hint="" /><node index="1" text="Bluetooth" resource-id="android:id/title" class="android.widget.TextView" package="com.android.settings" content-desc="" checkable="false" checked="false" clickable="false" enabled="true" focusable="false" focused="false" scrollable="false" long-clickable="false" password="false" selected="false" bounds="[245,1367][506,1442]" drawing-order="1" hint="" /><node index="2" text="On" resource-id="android:id/summary" class="android.widget.TextView" package="com.android.settings" content-desc="" checkable="false" checked="false" clickable="false" enabled="true" focusable="false" focused="false" scrollable="false" long-clickable="false" password="false" selected="false" bounds="[1007,1374][1070,1435]" drawing-order="4" hint="" /><node index="3" text="" resource-id="com.android.settings:id/arrow" class="android.widget.ImageView" package="com.android.settings" content-desc="" checkable="false" checked="false" clickable="false" enabled="true" focusable="false" focused="false" scrollable="false" long-clickable="false" password="false" selected="false" bounds="[1105,1366][1140,1450]" drawing-order="2" hint="" /></node></node><node index="6" text="" resource-id="" class="android.widget.FrameLayout" package="com.android.settings" content-desc="" checkable="false" checked="false" clickable="true" enabled="true" focusable="true" focused="false" scrollable="false" long-clickable="false" password="false" selected="false" bounds="[70,1492][1189,1667]" drawing-order="7" hint=""><node index="0" text="" resource-id="com.android.settings:id/vlist_content" class="android.view.ViewGroup" package="com.android.settings" content-desc="SIMs &amp; mobile network" checkable="false" checked="false" clickable="false" enabled="true" focusable="false" focused="false" scrollable="false" long-clickable="false" password="false" selected="false" bounds="[70,1492][1189,1667]" drawing-order="1" hint=""><node index="0" text="" resource-id="android:id/icon" class="android.widget.ImageView" package="com.android.settings" content-desc="" checkable="false" checked="false" clickable="false" enabled="true" focusable="false" focused="false" scrollable="false" long-clickable="false" password="false" selected="false" bounds="[119,1537][203,1621]" drawing-order="3" hint="" /><node index="1" text="SIMs &amp; mobile network" resource-id="android:id/title" class="android.widget.TextView" package="com.android.settings" content-desc="" checkable="false" checked="false" clickable="false" enabled="true" focusable="false" focused="false" scrollable="false" long-clickable="false" password="false" selected="false" bounds="[245,1542][864,1617]" drawing-order="1" hint="" /><node index="2" text="" resource-id="com.android.settings:id/arrow" class="android.widget.ImageView" package="com.android.settings" content-desc="" checkable="false" checked="false" clickable="false" enabled="true" focusable="false" focused="false" scrollable="false" long-clickable="false" password="false" selected="false" bounds="[1105,1541][1140,1625]" drawing-order="2" hint="" /></node></node><node index="7" text="" resource-id="" class="android.widget.FrameLayout" package="com.android.settings" content-desc="" checkable="false" checked="false" clickable="true" enabled="true" focusable="true" focused="false" scrollable="false" long-clickable="false" password="false" selected="false" bounds="[70,1667][1189,1856]" drawing-order="8" hint=""><node index="0" text="" resource-id="com.android.settings:id/vlist_content" class="android.view.ViewGroup" package="com.android.settings" content-desc="More connections" checkable="false" checked="false" clickable="false" enabled="true" focusable="false" focused="false" scrollable="false" long-clickable="false" password="false" selected="false" bounds="[70,1667][1189,1856]" drawing-order="1" hint=""><node index="0" text="" resource-id="android:id/icon" class="android.widget.ImageView" package="com.android.settings" content-desc="" checkable="false" checked="false" clickable="false" enabled="true" focusable="false" focused="false" scrollable="false" long-clickable="false" password="false" selected="false" bounds="[119,1712][203,1796]" drawing-order="3" hint="" /><node index="1" text="More connections" resource-id="android:id/title" class="android.widget.TextView" package="com.android.settings" content-desc="" checkable="false" checked="false" clickable="false" enabled="true" focusable="false" focused="false" scrollable="false" long-clickable="false" password="false" selected="false" bounds="[245,1717][715,1792]" drawing-order="1" hint="" /><node index="2" text="" resource-id="com.android.settings:id/arrow" class="android.widget.ImageView" package="com.android.settings" content-desc="" checkable="false" checked="false" clickable="false" enabled="true" focusable="false" focused="false" scrollable="false" long-clickable="false" password="false" selected="false" bounds="[1105,1716][1140,1800]" drawing-order="2" hint="" /></node></node><node index="8" text="" resource-id="com.android.settings:id/category" class="android.widget.LinearLayout" package="com.android.settings" content-desc="" checkable="false" checked="false" clickable="false" enabled="false" focusable="false" focused="false" scrollable="false" long-clickable="false" password="false" selected="false" bounds="[70,1856][1189,1912]" drawing-order="9" hint="" /><node index="9" text="" resource-id="" class="android.widget.FrameLayout" package="com.android.settings" content-desc="" checkable="false" checked="false" clickable="true" enabled="true" focusable="true" focused="false" scrollable="false" long-clickable="false" password="false" selected="false" bounds="[70,1912][1189,2101]" drawing-order="10" hint=""><node index="0" text="" resource-id="com.android.settings:id/vlist_content" class="android.view.ViewGroup" package="com.android.settings" content-desc="Notifications &amp; status bar" checkable="false" checked="false" clickable="false" enabled="true" focusable="false" focused="false" scrollable="false" long-clickable="false" password="false" selected="false" bounds="[70,1912][1189,2101]" drawing-order="1" hint=""><node index="0" text="" resource-id="android:id/icon" class="android.widget.ImageView" package="com.android.settings" content-desc="" checkable="false" checked="false" clickable="false" enabled="true" focusable="false" focused="false" scrollable="false" long-clickable="false" password="false" selected="false" bounds="[119,1971][203,2055]" drawing-order="3" hint="" /><node index="1" text="Notifications &amp; status bar" resource-id="android:id/title" class="android.widget.TextView" package="com.android.settings" content-desc="" checkable="false" checked="false" clickable="false" enabled="true" focusable="false" focused="false" scrollable="false" long-clickable="false" password="false" selected="false" bounds="[245,1976][922,2051]" drawing-order="1" hint="" /><node index="2" text="" resource-id="com.android.settings:id/arrow" class="android.widget.ImageView" package="com.android.settings" content-desc="" checkable="false" checked="false" clickable="false" enabled="true" focusable="false" focused="false" scrollable="false" long-clickable="false" password="false" selected="false" bounds="[1105,1975][1140,2059]" drawing-order="2" hint="" /></node></node><node index="10" text="" resource-id="" class="android.widget.FrameLayout" package="com.android.settings" content-desc="" checkable="false" checked="false" clickable="true" enabled="true" focusable="true" focused="false" scrollable="false" long-clickable="false" password="false" selected="false" bounds="[70,2101][1189,2276]" drawing-order="11" hint=""><node index="0" text="" resource-id="com.android.settings:id/vlist_content" class="android.view.ViewGroup" package="com.android.settings" content-desc="Sounds &amp; vibration" checkable="false" checked="false" clickable="false" enabled="true" focusable="false" focused="false" scrollable="false" long-clickable="false" password="false" selected="false" bounds="[70,2101][1189,2276]" drawing-order="1" hint=""><node index="0" text="" resource-id="android:id/icon" class="android.widget.ImageView" package="com.android.settings" content-desc="" checkable="false" checked="false" clickable="false" enabled="true" focusable="false" focused="false" scrollable="false" long-clickable="false" password="false" selected="false" bounds="[119,2146][203,2230]" drawing-order="3" hint="" /><node index="1" text="Sounds &amp; vibration" resource-id="android:id/title" class="android.widget.TextView" package="com.android.settings" content-desc="" checkable="false" checked="false" clickable="false" enabled="true" focusable="false" focused="false" scrollable="false" long-clickable="false" password="false" selected="false" bounds="[245,2151][756,2226]" drawing-order="1" hint="" /><node index="2" text="" resource-id="com.android.settings:id/arrow" class="android.widget.ImageView" package="com.android.settings" content-desc="" checkable="false" checked="false" clickable="false" enabled="true" focusable="false" focused="false" scrollable="false" long-clickable="false" password="false" selected="false" bounds="[1105,2150][1140,2234]" drawing-order="2" hint="" /></node></node><node index="11" text="" resource-id="" class="android.widget.FrameLayout" package="com.android.settings" content-desc="" checkable="false" checked="false" clickable="true" enabled="true" focusable="true" focused="false" scrollable="false" long-clickable="false" password="false" selected="false" bounds="[70,2276][1189,2501]" drawing-order="12" hint=""><node index="0" text="" resource-id="com.android.settings:id/vlist_content" class="android.view.ViewGroup" package="com.android.settings" content-desc="Display, brightness &amp; eye protection" checkable="false" checked="false" clickable="false" enabled="true" focusable="false" focused="false" scrollable="false" long-clickable="false" password="false" selected="false" bounds="[70,2276][1189,2501]" drawing-order="1" hint=""><node index="0" text="" resource-id="android:id/icon" class="android.widget.ImageView" package="com.android.settings" content-desc="" checkable="false" checked="false" clickable="false" enabled="true" focusable="false" focused="false" scrollable="false" long-clickable="false" password="false" selected="false" bounds="[119,2346][203,2430]" drawing-order="3" hint="" /><node index="1" text="Display, brightness &amp; eye protection" resource-id="android:id/title" class="android.widget.TextView" package="com.android.settings" content-desc="" checkable="false" checked="false" clickable="false" enabled="true" focusable="false" focused="false" scrollable="false" long-clickable="false" password="false" selected="false" bounds="[245,2318][1063,2459]" drawing-order="1" hint="" /><node index="2" text="" resource-id="com.android.settings:id/arrow" class="android.widget.ImageView" package="com.android.settings" content-desc="" checkable="false" checked="false" clickable="false" enabled="true" focusable="false" focused="false" scrollable="false" long-clickable="false" password="false" selected="false" bounds="[1105,2350][1140,2434]" drawing-order="2" hint="" /></node></node><node index="12" text="" resource-id="" class="android.widget.FrameLayout" package="com.android.settings" content-desc="" checkable="false" checked="false" clickable="true" enabled="true" focusable="true" focused="false" scrollable="false" long-clickable="false" password="false" selected="false" bounds="[70,2501][1189,2653]" drawing-order="13" hint=""><node index="0" text="" resource-id="com.android.settings:id/vlist_content" class="android.view.ViewGroup" package="com.android.settings" content-desc="Home screen, lock screen &amp; wallpaper" checkable="false" checked="false" clickable="false" enabled="true" focusable="false" focused="false" scrollable="false" long-clickable="false" password="false" selected="false" bounds="[70,2501][1189,2653]" drawing-order="1" hint=""><node index="0" text="" resource-id="android:id/icon" class="android.widget.ImageView" package="com.android.settings" content-desc="" checkable="false" checked="false" clickable="false" enabled="true" focusable="false" focused="false" scrollable="false" long-clickable="false" password="false" selected="false" bounds="[119,2571][203,2653]" drawing-order="3" hint="" /><node index="1" text="Home screen, lock screen &amp; wallpaper" resource-id="android:id/title" class="android.widget.TextView" package="com.android.settings" content-desc="" checkable="false" checked="false" clickable="false" enabled="true" focusable="false" focused="false" scrollable="false" long-clickable="false" password="false" selected="false" bounds="[245,2543][1063,2653]" drawing-order="1" hint="" /><node index="2" text="" resource-id="com.android.settings:id/arrow" class="android.widget.ImageView" package="com.android.settings" content-desc="" checkable="false" checked="false" clickable="false" enabled="true" focusable="false" focused="false" scrollable="false" long-clickable="false" password="false" selected="false" bounds="[1105,2575][1140,2653]" drawing-order="2" hint="" /></node></node></node></node><node index="1" text="" resource-id="com.android.settings:id/orginui_vcommonlayout_toptargetview" class="android.widget.LinearLayout" package="com.android.settings" content-desc="" checkable="false" checked="false" clickable="true" enabled="true" focusable="true" focused="false" scrollable="false" long-clickable="false" password="false" selected="false" bounds="[0,0][1259,581]" drawing-order="5" hint=""><node index="0" text="" resource-id="com.android.settings:id/toolbar_collapsing_toolbarlayout" class="android.widget.FrameLayout" package="com.android.settings" content-desc="" checkable="false" checked="false" clickable="false" enabled="true" focusable="false" focused="false" scrollable="false" long-clickable="false" password="false" selected="false" bounds="[0,147][1259,427]" drawing-order="1" hint=""><node index="0" text="" resource-id="com.android.settings:id/orginui_vcommonlayout_toptargetview_vtoobar" class="android.widget.FrameLayout" package="com.android.settings" content-desc="" checkable="false" checked="false" clickable="false" enabled="true" focusable="false" focused="false" scrollable="false" long-clickable="false" password="false" selected="false" bounds="[0,231][1259,427]" drawing-order="2" hint=""><node index="0" text="" resource-id="com.android.settings:id/originui_vtoolbar_vtoolbarinternal_container_rom14_0" class="android.view.ViewGroup" package="com.android.settings" content-desc="" checkable="false" checked="false" clickable="false" enabled="true" focusable="true" focused="false" scrollable="false" long-clickable="false" password="false" selected="false" bounds="[21,231][1238,416]" drawing-order="2" hint=""><node index="0" text="Settings" resource-id="com.android.settings:id/originui_vtoolbar_normal_title_rom14_0" class="android.widget.TextView" package="com.android.settings" content-desc="" checkable="false" checked="false" clickable="false" enabled="true" focusable="false" focused="false" scrollable="false" long-clickable="false" password="false" selected="false" bounds="[84,251][483,381]" drawing-order="1" hint="" /></node></node></node><node index="1" text="" resource-id="com.android.settings:id/originui_vcommonlayout_topaddmoreview_container" class="android.widget.FrameLayout" package="com.android.settings" content-desc="" checkable="false" checked="false" clickable="false" enabled="true" focusable="false" focused="false" scrollable="false" long-clickable="false" password="false" selected="false" bounds="[0,427][1259,581]" drawing-order="2" hint=""><node index="0" text="" resource-id="com.android.settings:id/orginui_vcommonlayout_toptargetview_addmoreview_vsearchview" class="android.widget.RelativeLayout" package="com.android.settings" content-desc="" checkable="false" checked="false" clickable="true" enabled="true" focusable="true" focused="false" scrollable="false" long-clickable="false" password="false" selected="false" bounds="[0,427][1259,581]" drawing-order="1" hint=""><node index="0" text="" resource-id="com.android.settings:id/vigour_search_content" class="android.widget.LinearLayout" package="com.android.settings" content-desc="Search settings" checkable="false" checked="false" clickable="true" enabled="true" focusable="true" focused="false" scrollable="false" long-clickable="false" password="false" selected="false" bounds="[84,427][1175,539]" drawing-order="1" hint=""><node NAF="true" index="0" text="" resource-id="com.android.settings:id/vigour_search_indicator_image" class="android.widget.ImageView" package="com.android.settings" content-desc="" checkable="false" checked="false" clickable="true" enabled="true" focusable="true" focused="false" scrollable="false" long-clickable="false" password="false" selected="false" bounds="[126,444][185,522]" drawing-order="1" hint="" /><node index="1" text="Search settings" resource-id="com.android.settings:id/vigour_search_edit" class="android.widget.EditText" package="com.android.settings" content-desc="" checkable="false" checked="false" clickable="true" enabled="true" focusable="false" focused="false" scrollable="false" long-clickable="true" password="false" selected="false" bounds="[213,450][1175,516]" drawing-order="2" hint="Search settings" /></node></node></node></node></node></node></node></node></node></node></hierarchy>, outputPath=artifacts/explorer/debug-inspect-probe-1777347503033.xml
+[2026-04-28T03:38:38.044Z] [LOG] [RUNNER] Stage 1/5: Loading configuration...
+[2026-04-28T03:38:38.045Z] [LOG] [RUNNER]   mode=full, appId=com.android.settings, platform=android-device
+[2026-04-28T03:38:38.045Z] [LOG] [RUNNER] Stage 2/6: Creating session context...
+[2026-04-28T03:38:38.045Z] [LOG] [RUNNER]   sessionId=explorer-1777347518045, platform=android, runnerProfile=native_android
+[2026-04-28T03:38:38.045Z] [LOG] [RUNNER] Stage 3/6: Auth pre-flight...
+[2026-04-28T03:38:40.198Z] [LOG] [AUTH] App launched — assuming already logged in
+[2026-04-28T03:38:40.198Z] [LOG] [RUNNER] Stage 4/6: Running exploration engine...
+[2026-04-28T03:38:49.894Z] [LOG] [ENGINE] Home page: screenId=12ed45faa02c47c9, screenTitle="Aiden", clickable=8, pageType=normal_page
+[2026-04-28T03:38:49.894Z] [LOG] [ENGINE] First element: label="Bluetooth, On", elementType="android.widget.FrameLayout"
+[2026-04-28T03:38:49.894Z] [LOG]   clickable: "Bluetooth, On" (android.widget.FrameLayout)
+[2026-04-28T03:38:49.894Z] [LOG]   clickable: "SIMs &amp; mobile network" (android.widget.FrameLayout)
+[2026-04-28T03:38:49.894Z] [LOG]   clickable: "More connections" (android.widget.FrameLayout)
+[2026-04-28T03:38:49.894Z] [LOG]   clickable: "Notifications &amp; status bar" (android.widget.FrameLayout)
+[2026-04-28T03:38:49.894Z] [LOG]   clickable: "Sounds &amp; vibration" (android.widget.FrameLayout)
+[2026-04-28T03:38:49.894Z] [LOG]   clickable: "Display, brightness &amp; eye protection" (android.widget.FrameLayout)
+[2026-04-28T03:38:49.894Z] [LOG]   clickable: "Home screen, lock screen &amp; wallpaper" (android.widget.FrameLayout)
+[2026-04-28T03:38:49.894Z] [LOG]   clickable: "Settings" (android.widget.LinearLayout)
+[2026-04-28T03:38:49.894Z] [LOG] [ENGINE] Target app identity: com.android.settings
+[2026-04-28T03:38:49.899Z] [LOG] [FRAME-LOOP] depth=0, stack=1, cursor=0/8, frameTitle="Aiden", frameScreenId="12ed45faa02c47c9"
+[2026-04-28T03:38:54.224Z] [LOG] [FRAME-PLAN] depth=0, stack=1, cursor=0/8, current="Aiden", expected="Bluetooth, On", nextAction=tap "Bluetooth, On"
+[2026-04-28T03:38:54.224Z] [LOG] [FRAME-NEXT] current="Aiden", expected="Bluetooth, On", action=tap "Bluetooth, On"
+[2026-04-28T03:38:54.224Z] [LOG] [ACTION-START] action=tap_element, label="Bluetooth, On", from="Aiden", expected="Bluetooth, On", selector={"position":{"x":630,"y":1405},"elementType":"android.widget.FrameLayout"}
+[2026-04-28T03:39:01.842Z] [LOG] [ACTION-RESULT] action=tap_element, label="Bluetooth, On", expected="Bluetooth, On", status=success, from="Aiden", to="Bluetooth"
+[2026-04-28T03:39:01.844Z] [LOG] [FRAME-PUSH] Creating child frame for "Bluetooth", parentTitle="Aiden", parentFrameTitle="Aiden"
+[2026-04-28T03:39:01.844Z] [LOG] [FRAME-LOOP] depth=1, stack=2, cursor=0/0, frameTitle="Bluetooth", frameScreenId="a2b5965d77a68590"
+[2026-04-28T03:39:06.393Z] [LOG] [FRAME-ELEMENTS] depth=1, title="Bluetooth", count=4, labels=["Device name","Files received via Bluetooth","Available devices","Bluetooth"], skipped=2
+[2026-04-28T03:39:06.393Z] [LOG] [SAMPLING-DEBUG] path=[Bluetooth, On], title="Bluetooth", mode="full", rules=1, matched=no
+[2026-04-28T03:39:10.327Z] [LOG] [FRAME-PLAN] depth=1, stack=2, cursor=0/4, current="Bluetooth", expected="Device name", nextAction=tap "Device name"
+[2026-04-28T03:39:10.327Z] [LOG] [FRAME-NEXT] current="Bluetooth", expected="Device name", action=tap "Device name"
+[2026-04-28T03:39:10.328Z] [LOG] [ACTION-START] action=tap_element, label="Device name", from="Bluetooth", expected="Device name", selector={"position":{"x":630,"y":655},"elementType":"android.view.ViewGroup"}
+[2026-04-28T03:39:17.785Z] [LOG] [ACTION-RESULT] action=tap_element, label="Device name", expected="Device name", status=success, from="Bluetooth", to="Change device name"
+[2026-04-28T03:39:17.785Z] [LOG] [FRAME-PUSH] Creating child frame for "Change device name", parentTitle="Bluetooth", parentFrameTitle="Bluetooth"
+[2026-04-28T03:39:17.785Z] [LOG] [FRAME-LOOP] depth=2, stack=3, cursor=0/0, frameTitle="Change device name", frameScreenId="66ba9569c1eadf7b"
+[2026-04-28T03:39:22.235Z] [LOG] [FRAME-ELEMENTS] depth=2, title="Change device name", count=2, labels=["OK","OK"]
+[2026-04-28T03:39:22.235Z] [LOG] [SAMPLING-DEBUG] path=[Bluetooth, On, Device name], title="Change device name", mode="full", rules=1, matched=no
+[2026-04-28T03:39:24.338Z] [LOG] [FRAME-PLAN] depth=2, stack=3, cursor=0/2, current="Change device name", expected="OK", nextAction=tap "OK"
+[2026-04-28T03:39:24.338Z] [LOG] [FRAME-NEXT] current="Change device name", expected="OK", action=tap "OK"
+[2026-04-28T03:39:24.338Z] [LOG] [ACTION-START] action=tap_element, label="OK", from="Change device name", expected="OK", selector={"resourceId":"android:id/button1"}
+[2026-04-28T03:39:34.058Z] [LOG] [ACTION-RESULT] action=tap_element, label="OK", expected="OK", status=success, from="Change device name", to="Bluetooth"
+[2026-04-28T03:39:34.058Z] [LOG] [FRAME-RESUME-CONTEXT] frameTitle="Change device name", cursor=1/2, remainingLabels=["OK"]
+[2026-04-28T03:39:34.058Z] [LOG] [FRAME-RESUME] "OK" returned to ancestor frame depth=1 title="Bluetooth"
+[2026-04-28T03:39:34.058Z] [LOG] [FRAME-LOOP] depth=1, stack=2, cursor=1/4, frameTitle="Bluetooth", frameScreenId="a2b5965d77a68590"
+[2026-04-28T03:39:38.381Z] [LOG] [FRAME-PLAN] depth=1, stack=2, cursor=1/4, current="Bluetooth", expected="Files received via Bluetooth", nextAction=tap "Files received via Bluetooth"
+[2026-04-28T03:39:38.381Z] [LOG] [FRAME-NEXT] current="Bluetooth", expected="Files received via Bluetooth", action=tap "Files received via Bluetooth"
+[2026-04-28T03:39:38.382Z] [LOG] [ACTION-START] action=tap_element, label="Files received via Bluetooth", from="Bluetooth", expected="Files received via Bluetooth", selector={"position":{"x":630,"y":823},"elementType":"android.view.ViewGroup"}
+[2026-04-28T03:39:45.808Z] [LOG] [ACTION-RESULT] action=tap_element, label="Files received via Bluetooth", expected="Files received via Bluetooth", status=success, from="Bluetooth", to="No transfer history"
+[2026-04-28T03:39:45.808Z] [LOG] [APP-SWITCH] Detected: com.android.settings -> com.android.bluetooth (via "Files received via Bluetooth")
+[2026-04-28T03:39:45.808Z] [LOG] [APP-SWITCH] In external app: com.android.bluetooth (via "Files received via Bluetooth")
+[2026-04-28T03:39:45.809Z] [LOG] [APP-SWITCH] Attempting Android system back before relaunch...
+[2026-04-28T03:40:03.641Z] [LOG] [BACKTRACK-TRACE] method=navigate_back:system_back_fast, status=success, reason=OK, executed=android_keyevent, stateChanged=unknown, pageTreeHashUnchanged=false, fallbackUsed=false => success (before=No transfer history[62cbf19fc7bed78e], after=Bluetooth[a2b5965d77a68590], expectedParent=<none>)
+[2026-04-28T03:40:06.048Z] [LOG] [APP-SWITCH] Returned via system back at page "Bluetooth" (app=com.android.settings)
+[2026-04-28T03:40:06.048Z] [LOG] [FRAME-LOOP] depth=1, stack=2, cursor=2/4, frameTitle="Bluetooth", frameScreenId="a2b5965d77a68590"
+[2026-04-28T03:40:10.463Z] [LOG] [FRAME-PLAN] depth=1, stack=2, cursor=2/4, current="Bluetooth", expected="Available devices", nextAction=tap "Available devices"
+[2026-04-28T03:40:10.463Z] [LOG] [FRAME-NEXT] current="Bluetooth", expected="Available devices", action=tap "Available devices"
+[2026-04-28T03:40:10.463Z] [LOG] [ACTION-START] action=tap_element, label="Available devices", from="Bluetooth", expected="Available devices", selector={"contentDesc":"Available devices"}
+[2026-04-28T03:40:19.983Z] [LOG] [ACTION-RESULT] action=tap_element, label="Available devices", expected="Available devices", status=success, from="Bluetooth", to="Bluetooth"
+[2026-04-28T03:40:19.983Z] [LOG] [ACTION-RESULT] action=tap_element, label="Available devices", expected="Available devices", status=partial, from="Bluetooth", to="Bluetooth", reason="screenId unchanged — element had no navigation effect"
+[2026-04-28T03:40:19.983Z] [LOG] [FRAME-LOOP] depth=1, stack=2, cursor=3/4, frameTitle="Bluetooth", frameScreenId="a2b5965d77a68590"
+[2026-04-28T03:40:25.168Z] [LOG] [FRAME-PLAN] depth=1, stack=2, cursor=3/4, current="Bluetooth", expected="Bluetooth", nextAction=tap "Bluetooth"
+[2026-04-28T03:40:25.168Z] [LOG] [FRAME-NEXT] current="Bluetooth", expected="Bluetooth", action=tap "Bluetooth"
+[2026-04-28T03:40:25.168Z] [LOG] [ACTION-START] action=tap_element, label="Bluetooth", from="Bluetooth", expected="Bluetooth", selector={"position":{"x":630,"y":1195},"elementType":"android.widget.RelativeLayout"}
+[2026-04-28T03:40:34.628Z] [LOG] [ACTION-RESULT] action=tap_element, label="Bluetooth", expected="Bluetooth", status=success, from="Bluetooth", to="Bluetooth"
+[2026-04-28T03:40:34.628Z] [LOG] [ACTION-RESULT] action=tap_element, label="Bluetooth", expected="Bluetooth", status=partial, from="Bluetooth", to="Bluetooth", reason="screenId unchanged — element had no navigation effect"
+[2026-04-28T03:40:34.628Z] [LOG] [FRAME-LOOP] depth=1, stack=2, cursor=4/4, frameTitle="Bluetooth", frameScreenId="a2b5965d77a68590"
+[2026-04-28T03:40:38.861Z] [LOG] [FRAME-PLAN] depth=1, stack=2, cursor=4/4, current="Bluetooth", expected="Aiden", nextAction=pop frame and backtrack
+[2026-04-28T03:40:38.861Z] [LOG] [POP] Frame "Bluetooth" all 4 elements explored. Stack now: 1
+[2026-04-28T03:40:38.861Z] [LOG] [POP] Next frame: depth=0, cursor=1/8, title="Aiden"
+[2026-04-28T03:40:58.798Z] [LOG] [BACKTRACK-TRACE] method=navigate_back:system_back_fast, status=success, reason=OK, executed=android_keyevent, stateChanged=unknown, pageTreeHashUnchanged=false, fallbackUsed=false => success (before=Bluetooth[a2b5965d77a68590], after=Aiden[12ed45faa02c47c9], expectedParent=Aiden)
+[2026-04-28T03:41:01.203Z] [LOG] [POP-RETURN] Reconciled stack to page "Aiden" at depth=0
+[2026-04-28T03:41:01.203Z] [LOG] [FRAME-LOOP] depth=0, stack=1, cursor=1/8, frameTitle="Aiden", frameScreenId="12ed45faa02c47c9"
+[2026-04-28T03:41:05.547Z] [LOG] [FRAME-PLAN] depth=0, stack=1, cursor=1/8, current="Aiden", expected="SIMs &amp; mobile network", nextAction=tap "SIMs &amp; mobile network"
+[2026-04-28T03:41:05.547Z] [LOG] [FRAME-NEXT] current="Aiden", expected="SIMs &amp; mobile network", action=tap "SIMs &amp; mobile network"
+[2026-04-28T03:41:05.547Z] [LOG] [ACTION-START] action=tap_element, label="SIMs &amp; mobile network", from="Aiden", expected="SIMs &amp; mobile network", selector={"position":{"x":630,"y":1580},"elementType":"android.widget.FrameLayout"}
+[2026-04-28T03:41:13.039Z] [LOG] [ACTION-RESULT] action=tap_element, label="SIMs &amp; mobile network", expected="SIMs &amp; mobile network", status=success, from="Aiden", to="Data connection"
+[2026-04-28T03:41:13.039Z] [LOG] [APP-SWITCH] Detected: com.android.settings -> com.android.phone (via "SIMs &amp; mobile network")
+[2026-04-28T03:41:13.039Z] [LOG] [APP-SWITCH] In external app: com.android.phone (via "SIMs &amp; mobile network")
+[2026-04-28T03:41:13.040Z] [LOG] [APP-SWITCH] Attempting Android system back before relaunch...
+[2026-04-28T03:41:30.916Z] [LOG] [BACKTRACK-TRACE] method=navigate_back:system_back_fast, status=success, reason=OK, executed=android_keyevent, stateChanged=unknown, pageTreeHashUnchanged=false, fallbackUsed=false => success (before=Data connection[3ce9d60d9a8986e4], after=Aiden[12ed45faa02c47c9], expectedParent=<none>)
+[2026-04-28T03:41:33.326Z] [LOG] [APP-SWITCH] Returned via system back at page "Aiden" (app=com.android.settings)
+[2026-04-28T03:41:33.326Z] [LOG] [FRAME-LOOP] depth=0, stack=1, cursor=2/8, frameTitle="Aiden", frameScreenId="12ed45faa02c47c9"
+[2026-04-28T03:41:37.720Z] [LOG] [FRAME-PLAN] depth=0, stack=1, cursor=2/8, current="Aiden", expected="More connections", nextAction=tap "More connections"
+[2026-04-28T03:41:37.721Z] [LOG] [FRAME-NEXT] current="Aiden", expected="More connections", action=tap "More connections"
+[2026-04-28T03:41:37.721Z] [LOG] [ACTION-START] action=tap_element, label="More connections", from="Aiden", expected="More connections", selector={"position":{"x":630,"y":1762},"elementType":"android.widget.FrameLayout"}
+[2026-04-28T03:41:46.108Z] [LOG] [ACTION-RESULT] action=tap_element, label="More connections", expected="More connections", status=success, from="Aiden", to="Networks"
+[2026-04-28T03:41:46.109Z] [LOG] [FRAME-PUSH] Creating child frame for "Networks", parentTitle="Aiden", parentFrameTitle="Aiden"
+[2026-04-28T03:41:46.109Z] [LOG] [FRAME-LOOP] depth=1, stack=2, cursor=0/0, frameTitle="Networks", frameScreenId="ec201cb0b8dd9419"
+[2026-04-28T03:41:50.637Z] [LOG] [FRAME-ELEMENTS] depth=1, title="Networks", count=10, labels=["Personal hotspot","VPN","Private DNS","Connection center","Jovi InCar","Screen Mirroring","Print","Office Kit","NFC","vivoshare"]
+[2026-04-28T03:41:50.638Z] [LOG] [SAMPLING-DEBUG] path=[More connections], title="Networks", mode="full", rules=1, matched=no
+[2026-04-28T03:41:52.736Z] [LOG] [FRAME-PLAN] depth=1, stack=2, cursor=0/10, current="Networks", expected="Personal hotspot", nextAction=tap "Personal hotspot"
+[2026-04-28T03:41:52.736Z] [LOG] [FRAME-NEXT] current="Networks", expected="Personal hotspot", action=tap "Personal hotspot"
+[2026-04-28T03:41:52.736Z] [LOG] [ACTION-START] action=tap_element, label="Personal hotspot", from="Networks", expected="Personal hotspot", selector={"position":{"x":630,"y":573},"elementType":"android.view.ViewGroup"}
+[2026-04-28T03:42:00.260Z] [LOG] [ACTION-RESULT] action=tap_element, label="Personal hotspot", expected="Personal hotspot", status=success, from="Networks", to="Personal hotspot"
+[2026-04-28T03:42:00.260Z] [LOG] [FRAME-PUSH] Creating child frame for "Personal hotspot", parentTitle="Networks", parentFrameTitle="Networks"
+[2026-04-28T03:42:00.261Z] [LOG] [FRAME-LOOP] depth=2, stack=3, cursor=0/0, frameTitle="Personal hotspot", frameScreenId="10ee38704b457a36"
+[2026-04-28T03:42:04.816Z] [LOG] [FRAME-ELEMENTS] depth=2, title="Personal hotspot", count=6, labels=["Hotspot configuration","Maximum number of connections","Connected devices","Blocklist","More hotspot settings","Display hotspot (Origin island)"]
+[2026-04-28T03:42:04.816Z] [LOG] [SAMPLING-DEBUG] path=[More connections, Personal hotspot], title="Personal hotspot", mode="full", rules=1, matched=no
+[2026-04-28T03:42:06.941Z] [LOG] [FRAME-PLAN] depth=2, stack=3, cursor=0/6, current="Personal hotspot", expected="Hotspot configuration", nextAction=tap "Hotspot configuration"
+[2026-04-28T03:42:06.941Z] [LOG] [FRAME-NEXT] current="Personal hotspot", expected="Hotspot configuration", action=tap "Hotspot configuration"
+[2026-04-28T03:42:06.941Z] [LOG] [ACTION-START] action=tap_element, label="Hotspot configuration", from="Personal hotspot", expected="Hotspot configuration", selector={"position":{"x":630,"y":795},"elementType":"android.view.ViewGroup"}
+[2026-04-28T03:42:16.488Z] [LOG] [ACTION-RESULT] action=tap_element, label="Hotspot configuration", expected="Hotspot configuration", status=success, from="Personal hotspot", to="Network name"
+[2026-04-28T03:42:16.488Z] [LOG] [PAGE-CONTEXT] gated page after tap "Hotspot configuration": title="Network name", reason="form_editor detected — editable settings form should not be deep-expanded by DFS"
+[2026-04-28T03:42:21.061Z] [LOG] [PAGE-CONTEXT] cancel-first recovered to "Personal hotspot" at depth=2
+[2026-04-28T03:42:21.061Z] [LOG] [FRAME-LOOP] depth=2, stack=3, cursor=1/6, frameTitle="Personal hotspot", frameScreenId="10ee38704b457a36"
+[2026-04-28T03:42:25.353Z] [LOG] [FRAME-PLAN] depth=2, stack=3, cursor=1/6, current="Personal hotspot", expected="Maximum number of connections", nextAction=tap "Maximum number of connections"
+[2026-04-28T03:42:25.353Z] [LOG] [FRAME-NEXT] current="Personal hotspot", expected="Maximum number of connections", action=tap "Maximum number of connections"
+[2026-04-28T03:42:25.353Z] [LOG] [ACTION-START] action=tap_element, label="Maximum number of connections", from="Personal hotspot", expected="Maximum number of connections", selector={"position":{"x":630,"y":1261},"elementType":"android.view.ViewGroup"}
+[2026-04-28T03:42:34.998Z] [LOG] [ACTION-RESULT] action=tap_element, label="Maximum number of connections", expected="Maximum number of connections", status=success, from="Personal hotspot", to="Maximum number of"
+[2026-04-28T03:42:34.999Z] [LOG] [FRAME-PUSH] Creating child frame for "Maximum number of", parentTitle="Personal hotspot", parentFrameTitle="Personal hotspot"
+[2026-04-28T03:42:34.999Z] [LOG] [FRAME-LOOP] depth=3, stack=4, cursor=0/0, frameTitle="Maximum number of", frameScreenId="760b0909dd7f2ed8"
+[2026-04-28T03:42:39.595Z] [LOG] [FRAME-ELEMENTS] depth=3, title="Maximum number of", count=8, labels=["1","1","2","3","5","6","7","android.view.View"]
+[2026-04-28T03:42:39.595Z] [LOG] [SAMPLING-DEBUG] path=[More connections, Personal hotspot, Maximum number of connections], title="Maximum number of", mode="full", rules=1, matched=no
+[2026-04-28T03:42:41.818Z] [LOG] [FRAME-PLAN] depth=3, stack=4, cursor=0/8, current="Maximum number of", expected="1", nextAction=tap "1"
+[2026-04-28T03:42:41.818Z] [LOG] [FRAME-NEXT] current="Maximum number of", expected="1", action=tap "1"
+[2026-04-28T03:42:41.818Z] [LOG] [ACTION-START] action=tap_element, label="1", from="Maximum number of", expected="1", selector={"resourceId":"com.android.settings:id/select_dialog_listview"}
+[2026-04-28T03:42:51.639Z] [LOG] [ACTION-RESULT] action=tap_element, label="1", expected="1", status=success, from="Maximum number of", to="Personal hotspot"
+[2026-04-28T03:42:51.639Z] [LOG] [FRAME-RESUME-CONTEXT] frameTitle="Maximum number of", cursor=1/8, remainingLabels=["1","2","3","5","6","7","android.view.View"]
+[2026-04-28T03:42:51.639Z] [LOG] [FRAME-RESUME] "1" returned to ancestor frame depth=2 title="Personal hotspot"
+[2026-04-28T03:42:51.640Z] [LOG] [FRAME-LOOP] depth=2, stack=3, cursor=2/6, frameTitle="Personal hotspot", frameScreenId="10ee38704b457a36"
+[2026-04-28T03:42:55.983Z] [LOG] [FRAME-PLAN] depth=2, stack=3, cursor=2/6, current="Personal hotspot", expected="Connected devices", nextAction=tap "Connected devices"
+[2026-04-28T03:42:55.983Z] [LOG] [FRAME-NEXT] current="Personal hotspot", expected="Connected devices", action=tap "Connected devices"
+[2026-04-28T03:42:55.983Z] [LOG] [ACTION-START] action=tap_element, label="Connected devices", from="Personal hotspot", expected="Connected devices", selector={"position":{"x":630,"y":1509},"elementType":"android.view.ViewGroup"}
+[2026-04-28T03:43:03.536Z] [LOG] [ACTION-RESULT] action=tap_element, label="Connected devices", expected="Connected devices", status=success, from="Personal hotspot", to="No connected devices"
+[2026-04-28T03:43:03.537Z] [LOG] [FRAME-PUSH] Creating child frame for "No connected devices", parentTitle="Personal hotspot", parentFrameTitle="Personal hotspot"
+[2026-04-28T03:43:03.537Z] [LOG] [FRAME-LOOP] depth=3, stack=4, cursor=0/0, frameTitle="No connected devices", frameScreenId="01d38a53b57ee491"
+[2026-04-28T03:43:07.963Z] [LOG] [FRAME-ELEMENTS] depth=3, title="No connected devices", count=0, labels=[]
+[2026-04-28T03:43:07.963Z] [LOG] [SAMPLING-DEBUG] path=[More connections, Personal hotspot, Connected devices], title="No connected devices", mode="full", rules=1, matched=no
+[2026-04-28T03:43:10.095Z] [LOG] [FRAME-PLAN] depth=3, stack=4, cursor=0/0, current="No connected devices", expected="Personal hotspot", nextAction=pop frame and backtrack
+[2026-04-28T03:43:10.095Z] [LOG] [POP] Frame "No connected devices" all 0 elements explored. Stack now: 3
+[2026-04-28T03:43:10.095Z] [LOG] [POP] Next frame: depth=2, cursor=3/6, title="Personal hotspot"
+[2026-04-28T03:43:27.728Z] [LOG] [BACKTRACK-TRACE] method=navigate_back:system_back_fast, status=success, reason=OK, executed=android_keyevent, stateChanged=unknown, pageTreeHashUnchanged=false, fallbackUsed=false => success (before=No connected devices[01d38a53b57ee491], after=Personal hotspot[10ee38704b457a36], expectedParent=Personal hotspot)
+[2026-04-28T03:43:30.124Z] [LOG] [POP-RETURN] Reconciled stack to page "Personal hotspot" at depth=2
+[2026-04-28T03:43:30.125Z] [LOG] [FRAME-LOOP] depth=2, stack=3, cursor=3/6, frameTitle="Personal hotspot", frameScreenId="10ee38704b457a36"
+[2026-04-28T03:43:34.407Z] [LOG] [FRAME-PLAN] depth=2, stack=3, cursor=3/6, current="Personal hotspot", expected="Blocklist", nextAction=tap "Blocklist"
+[2026-04-28T03:43:34.407Z] [LOG] [FRAME-NEXT] current="Personal hotspot", expected="Blocklist", action=tap "Blocklist"
+[2026-04-28T03:43:34.407Z] [LOG] [ACTION-START] action=tap_element, label="Blocklist", from="Personal hotspot", expected="Blocklist", selector={"position":{"x":630,"y":1677},"elementType":"android.view.ViewGroup"}
+[2026-04-28T03:43:41.958Z] [LOG] [ACTION-RESULT] action=tap_element, label="Blocklist", expected="Blocklist", status=success, from="Personal hotspot", to="No blocklisted devices"
+[2026-04-28T03:43:41.959Z] [LOG] [FRAME-PUSH] Creating child frame for "No blocklisted devices", parentTitle="Personal hotspot", parentFrameTitle="Personal hotspot"
+[2026-04-28T03:43:41.959Z] [LOG] [FRAME-LOOP] depth=3, stack=4, cursor=0/0, frameTitle="No blocklisted devices", frameScreenId="830a4f3c77a7c042"
+[2026-04-28T03:43:46.449Z] [LOG] [FRAME-ELEMENTS] depth=3, title="No blocklisted devices", count=0, labels=[]
+[2026-04-28T03:43:46.449Z] [LOG] [SAMPLING-DEBUG] path=[More connections, Personal hotspot, Blocklist], title="No blocklisted devices", mode="full", rules=1, matched=no
+[2026-04-28T03:43:48.565Z] [LOG] [FRAME-PLAN] depth=3, stack=4, cursor=0/0, current="No blocklisted devices", expected="Personal hotspot", nextAction=pop frame and backtrack
+[2026-04-28T03:43:48.565Z] [LOG] [POP] Frame "No blocklisted devices" all 0 elements explored. Stack now: 3
+[2026-04-28T03:43:48.565Z] [LOG] [POP] Next frame: depth=2, cursor=4/6, title="Personal hotspot"
+[2026-04-28T03:44:06.236Z] [LOG] [BACKTRACK-TRACE] method=navigate_back:system_back_fast, status=success, reason=OK, executed=android_keyevent, stateChanged=unknown, pageTreeHashUnchanged=false, fallbackUsed=false => success (before=No blocklisted devices[830a4f3c77a7c042], after=Personal hotspot[10ee38704b457a36], expectedParent=Personal hotspot)
+[2026-04-28T03:44:08.659Z] [LOG] [POP-RETURN] Reconciled stack to page "Personal hotspot" at depth=2
+[2026-04-28T03:44:08.659Z] [LOG] [FRAME-LOOP] depth=2, stack=3, cursor=4/6, frameTitle="Personal hotspot", frameScreenId="10ee38704b457a36"
+[2026-04-28T03:44:12.921Z] [LOG] [FRAME-PLAN] depth=2, stack=3, cursor=4/6, current="Personal hotspot", expected="More hotspot settings", nextAction=tap "More hotspot settings"
+[2026-04-28T03:44:12.921Z] [LOG] [FRAME-NEXT] current="Personal hotspot", expected="More hotspot settings", action=tap "More hotspot settings"
+[2026-04-28T03:44:12.921Z] [LOG] [ACTION-START] action=tap_element, label="More hotspot settings", from="Personal hotspot", expected="More hotspot settings", selector={"position":{"x":630,"y":1915},"elementType":"android.view.ViewGroup"}
+[2026-04-28T03:44:20.405Z] [LOG] [ACTION-RESULT] action=tap_element, label="More hotspot settings", expected="More hotspot settings", status=success, from="Personal hotspot", to="One-time mobile data"
+[2026-04-28T03:44:20.405Z] [LOG] [FRAME-PUSH] Creating child frame for "One-time mobile data", parentTitle="Personal hotspot", parentFrameTitle="Personal hotspot"
+[2026-04-28T03:44:20.406Z] [LOG] [FRAME-LOOP] depth=3, stack=4, cursor=0/0, frameTitle="One-time mobile data", frameScreenId="632754b10cefbaf6"
+[2026-04-28T03:44:24.911Z] [LOG] [FRAME-ELEMENTS] depth=3, title="One-time mobile data", count=3, labels=["One-time mobile data limit","Connect to Bluetooth to automatically turn on hotspot","Auto-off when no device connected"]
+[2026-04-28T03:44:24.911Z] [LOG] [SAMPLING-DEBUG] path=[More connections, Personal hotspot, More hotspot settings], title="One-time mobile data", mode="full", rules=1, matched=no
+[2026-04-28T03:44:27.062Z] [LOG] [FRAME-PLAN] depth=3, stack=4, cursor=0/3, current="One-time mobile data", expected="One-time mobile data limit", nextAction=tap "One-time mobile data limit"
+[2026-04-28T03:44:27.062Z] [LOG] [FRAME-NEXT] current="One-time mobile data", expected="One-time mobile data limit", action=tap "One-time mobile data limit"
+[2026-04-28T03:44:27.062Z] [LOG] [ACTION-START] action=tap_element, label="One-time mobile data limit", from="One-time mobile data", expected="One-time mobile data limit", selector={"position":{"x":630,"y":480},"elementType":"android.view.ViewGroup"}
+[2026-04-28T03:44:36.631Z] [LOG] [ACTION-RESULT] action=tap_element, label="One-time mobile data limit", expected="One-time mobile data limit", status=success, from="One-time mobile data", to="One-time mobile data"
+[2026-04-28T03:44:36.632Z] [LOG] [FRAME-RESUME] screenId drift detected: matched by title "One-time mobile data" at depth=3 (snapshot screenId=cf6d51523d84070f, frame screenId=632754b10cefbaf6)
+[2026-04-28T03:44:36.632Z] [LOG] [SCREEN-DRIFT] "One-time mobile data limit" changed state on "One-time mobile data" without page transition — updating current frame instead of pushing child
+[2026-04-28T03:44:36.632Z] [LOG] [FRAME-LOOP] depth=3, stack=4, cursor=1/3, frameTitle="One-time mobile data", frameScreenId="cf6d51523d84070f"
+[2026-04-28T03:44:40.978Z] [LOG] [FRAME-PLAN] depth=3, stack=4, cursor=1/3, current="One-time mobile data", expected="Connect to Bluetooth to automatically turn on hots", nextAction=tap "Connect to Bluetooth to automatically turn on hots"
+[2026-04-28T03:44:40.978Z] [LOG] [FRAME-NEXT] current="One-time mobile data", expected="Connect to Bluetooth to automatically turn on hots", action=tap "Connect to Bluetooth to automatically turn on hots"
+[2026-04-28T03:44:40.978Z] [LOG] [ACTION-START] action=tap_element, label="Connect to Bluetooth to automatically tu", from="One-time mobile data", expected="Connect to Bluetooth to automatically turn on hots", selector={"position":{"x":630,"y":750},"elementType":"android.view.ViewGroup"}
+[2026-04-28T03:44:50.429Z] [LOG] [ACTION-RESULT] action=tap_element, label="Connect to Bluetooth to automatically tu", expected="Connect to Bluetooth to automatically turn on hots", status=success, from="One-time mobile data", to="One-time mobile data"
+[2026-04-28T03:44:50.429Z] [LOG] [FRAME-RESUME] screenId drift detected: matched by title "One-time mobile data" at depth=3 (snapshot screenId=632754b10cefbaf6, frame screenId=cf6d51523d84070f)
+[2026-04-28T03:44:50.429Z] [LOG] [SCREEN-DRIFT] "Connect to Bluetooth to automatically turn on hotspot" changed state on "One-time mobile data" without page transition — updating current frame instead of pushing child
+[2026-04-28T03:44:50.429Z] [LOG] [FRAME-LOOP] depth=3, stack=4, cursor=2/3, frameTitle="One-time mobile data", frameScreenId="632754b10cefbaf6"
+[2026-04-28T03:44:54.678Z] [LOG] [FRAME-PLAN] depth=3, stack=4, cursor=2/3, current="One-time mobile data", expected="Auto-off when no device connected", nextAction=tap "Auto-off when no device connected"
+[2026-04-28T03:44:54.679Z] [LOG] [FRAME-NEXT] current="One-time mobile data", expected="Auto-off when no device connected", action=tap "Auto-off when no device connected"
+[2026-04-28T03:44:54.679Z] [LOG] [ACTION-START] action=tap_element, label="Auto-off when no device connected", from="One-time mobile data", expected="Auto-off when no device connected", selector={"position":{"x":630,"y":1036},"elementType":"android.view.ViewGroup"}
+[2026-04-28T03:45:04.260Z] [LOG] [ACTION-RESULT] action=tap_element, label="Auto-off when no device connected", expected="Auto-off when no device connected", status=success, from="One-time mobile data", to="Auto-off when no"
+[2026-04-28T03:45:04.261Z] [LOG] [FRAME-PUSH] Creating child frame for "Auto-off when no", parentTitle="One-time mobile data", parentFrameTitle="One-time mobile data"
+[2026-04-28T03:45:04.261Z] [LOG] [FRAME-LOOP] depth=4, stack=5, cursor=0/0, frameTitle="Auto-off when no", frameScreenId="393d3353edad7175"
+[2026-04-28T03:45:08.766Z] [LOG] [FRAME-ELEMENTS] depth=4, title="Auto-off when no", count=5, labels=["5 minutes","5 minutes","10 minutes","60 minutes","Never"]
+[2026-04-28T03:45:08.766Z] [LOG] [SAMPLING-DEBUG] path=[More connections, Personal hotspot, More hotspot settings, Auto-off when no device connected], title="Auto-off when no", mode="full", rules=1, matched=no
+[2026-04-28T03:45:10.937Z] [LOG] [FRAME-PLAN] depth=4, stack=5, cursor=0/5, current="Auto-off when no", expected="5 minutes", nextAction=tap "5 minutes"
+[2026-04-28T03:45:10.937Z] [LOG] [FRAME-NEXT] current="Auto-off when no", expected="5 minutes", action=tap "5 minutes"
+[2026-04-28T03:45:10.938Z] [LOG] [ACTION-START] action=tap_element, label="5 minutes", from="Auto-off when no", expected="5 minutes", selector={"resourceId":"com.android.settings:id/select_dialog_listview"}
+[2026-04-28T03:45:20.657Z] [LOG] [ACTION-RESULT] action=tap_element, label="5 minutes", expected="5 minutes", status=success, from="Auto-off when no", to="One-time mobile data"
+[2026-04-28T03:45:20.658Z] [LOG] [FRAME-RESUME-CONTEXT] frameTitle="Auto-off when no", cursor=1/5, remainingLabels=["5 minutes","10 minutes","60 minutes","Never"]
+[2026-04-28T03:45:20.658Z] [LOG] [FRAME-RESUME] "5 minutes" returned to ancestor frame depth=3 title="One-time mobile data"
+[2026-04-28T03:45:20.658Z] [LOG] [FRAME-LOOP] depth=3, stack=4, cursor=3/3, frameTitle="One-time mobile data", frameScreenId="632754b10cefbaf6"
+[2026-04-28T03:45:24.931Z] [LOG] [FRAME-PLAN] depth=3, stack=4, cursor=3/3, current="One-time mobile data", expected="Personal hotspot", nextAction=pop frame and backtrack
+[2026-04-28T03:45:24.931Z] [LOG] [POP] Frame "One-time mobile data" all 3 elements explored. Stack now: 3
+[2026-04-28T03:45:24.931Z] [LOG] [POP] Next frame: depth=2, cursor=5/6, title="Personal hotspot"
+[2026-04-28T03:45:42.637Z] [LOG] [BACKTRACK-TRACE] method=navigate_back:system_back_fast, status=success, reason=OK, executed=android_keyevent, stateChanged=unknown, pageTreeHashUnchanged=false, fallbackUsed=false => success (before=One-time mobile data[632754b10cefbaf6], after=Personal hotspot[10ee38704b457a36], expectedParent=Personal hotspot)
+[2026-04-28T03:45:45.028Z] [LOG] [POP-RETURN] Reconciled stack to page "Personal hotspot" at depth=2
+[2026-04-28T03:45:45.028Z] [LOG] [FRAME-LOOP] depth=2, stack=3, cursor=5/6, frameTitle="Personal hotspot", frameScreenId="10ee38704b457a36"
+[2026-04-28T03:45:49.272Z] [LOG] [FRAME-PLAN] depth=2, stack=3, cursor=5/6, current="Personal hotspot", expected="Display hotspot (Origin island)", nextAction=tap "Display hotspot (Origin island)"
+[2026-04-28T03:45:49.272Z] [LOG] [FRAME-NEXT] current="Personal hotspot", expected="Display hotspot (Origin island)", action=tap "Display hotspot (Origin island)"
+[2026-04-28T03:45:49.273Z] [LOG] [ACTION-START] action=tap_element, label="Display hotspot (Origin island)", from="Personal hotspot", expected="Display hotspot (Origin island)", selector={"text":"Display hotspot (Origin island)","elementType":"android.widget.TextView"}
+[2026-04-28T03:46:00.913Z] [LOG] [ACTION-RESULT] action=tap_element, label="Display hotspot (Origin island)", expected="Display hotspot (Origin island)", status=success, from="Personal hotspot", to="Origin island"
+[2026-04-28T03:46:00.914Z] [LOG] [APP-SWITCH] Detected: com.android.settings -> com.vivo.systemuiplugin (via "Display hotspot (Origin island)")
+[2026-04-28T03:46:00.914Z] [LOG] [APP-SWITCH] In external app: com.vivo.systemuiplugin (via "Display hotspot (Origin island)")
+[2026-04-28T03:46:00.914Z] [LOG] [APP-SWITCH] Attempting Android system back before relaunch...
+[2026-04-28T03:46:18.619Z] [LOG] [BACKTRACK-TRACE] method=navigate_back:system_back_fast, status=success, reason=OK, executed=android_keyevent, stateChanged=unknown, pageTreeHashUnchanged=false, fallbackUsed=false => success (before=Origin island[fd3976a6c55b6325], after=Personal hotspot[10ee38704b457a36], expectedParent=<none>)
+[2026-04-28T03:46:21.048Z] [LOG] [APP-SWITCH] Returned via system back at page "Personal hotspot" (app=com.android.settings)
+[2026-04-28T03:46:21.049Z] [LOG] [FRAME-LOOP] depth=2, stack=3, cursor=6/6, frameTitle="Personal hotspot", frameScreenId="10ee38704b457a36"
+[2026-04-28T03:46:25.282Z] [LOG] [FRAME-PLAN] depth=2, stack=3, cursor=6/6, current="Personal hotspot", expected="Networks", nextAction=pop frame and backtrack
+[2026-04-28T03:46:25.282Z] [LOG] [POP] Frame "Personal hotspot" all 6 elements explored. Stack now: 2
+[2026-04-28T03:46:25.282Z] [LOG] [POP] Next frame: depth=1, cursor=1/10, title="Networks"
+[2026-04-28T03:46:44.490Z] [LOG] [BACKTRACK-TRACE] method=navigate_back:system_back_fast, status=success, reason=OK, executed=android_keyevent, stateChanged=unknown, pageTreeHashUnchanged=false, fallbackUsed=false => success (before=Personal hotspot[10ee38704b457a36], after=Networks[ec201cb0b8dd9419], expectedParent=Networks)
+[2026-04-28T03:46:46.929Z] [LOG] [POP-RETURN] Reconciled stack to page "Networks" at depth=1
+[2026-04-28T03:46:46.929Z] [LOG] [FRAME-LOOP] depth=1, stack=2, cursor=1/10, frameTitle="Networks", frameScreenId="ec201cb0b8dd9419"
+[2026-04-28T03:46:52.231Z] [LOG] [FRAME-PLAN] depth=1, stack=2, cursor=1/10, current="Networks", expected="VPN", nextAction=tap "VPN"
+[2026-04-28T03:46:52.232Z] [LOG] [FRAME-NEXT] current="Networks", expected="VPN", action=tap "VPN"
+[2026-04-28T03:46:52.232Z] [LOG] [ACTION-START] action=tap_element, label="VPN", from="Networks", expected="VPN", selector={"position":{"x":630,"y":811},"elementType":"android.view.ViewGroup"}
+[2026-04-28T03:47:01.717Z] [LOG] [ACTION-RESULT] action=tap_element, label="VPN", expected="VPN", status=success, from="Networks", to="Add VPN network"
+[2026-04-28T03:47:01.718Z] [LOG] [FRAME-PUSH] Creating child frame for "Add VPN network", parentTitle="Networks", parentFrameTitle="Networks"
+[2026-04-28T03:47:01.718Z] [LOG] [FRAME-LOOP] depth=2, stack=3, cursor=0/0, frameTitle="Add VPN network", frameScreenId="e73f0fccb0fe5de7"
+[2026-04-28T03:47:06.180Z] [LOG] [FRAME-ELEMENTS] depth=2, title="Add VPN network", count=3, labels=["Add VPN network","Clash Meta for Android","More"]
+[2026-04-28T03:47:06.180Z] [LOG] [SAMPLING-DEBUG] path=[More connections, VPN], title="Add VPN network", mode="full", rules=1, matched=no
+[2026-04-28T03:47:08.287Z] [LOG] [FRAME-PLAN] depth=2, stack=3, cursor=0/3, current="Add VPN network", expected="Add VPN network", nextAction=tap "Add VPN network"
+[2026-04-28T03:47:08.287Z] [LOG] [FRAME-NEXT] current="Add VPN network", expected="Add VPN network", action=tap "Add VPN network"
+[2026-04-28T03:47:08.287Z] [LOG] [ACTION-START] action=tap_element, label="Add VPN network", from="Add VPN network", expected="Add VPN network", selector={"position":{"x":630,"y":480},"elementType":"android.view.ViewGroup"}
+[2026-04-28T03:47:15.845Z] [LOG] [ACTION-RESULT] action=tap_element, label="Add VPN network", expected="Add VPN network", status=success, from="Add VPN network", to="Type"
+[2026-04-28T03:47:15.845Z] [LOG] [PAGE-CONTEXT] gated page after tap "Add VPN network": title="Type", reason="form_editor detected — editable settings form should not be deep-expanded by DFS"
+[2026-04-28T03:47:20.379Z] [LOG] [PAGE-CONTEXT] cancel-first recovered to "Add VPN network" at depth=2
+[2026-04-28T03:47:20.379Z] [LOG] [FRAME-LOOP] depth=2, stack=3, cursor=1/3, frameTitle="Add VPN network", frameScreenId="e73f0fccb0fe5de7"
+[2026-04-28T03:47:24.593Z] [LOG] [FRAME-PLAN] depth=2, stack=3, cursor=1/3, current="Add VPN network", expected="Clash Meta for Android", nextAction=tap "Clash Meta for Android"
+[2026-04-28T03:47:24.593Z] [LOG] [FRAME-NEXT] current="Add VPN network", expected="Clash Meta for Android", action=tap "Clash Meta for Android"
+[2026-04-28T03:47:24.593Z] [LOG] [ACTION-START] action=tap_element, label="Clash Meta for Android", from="Add VPN network", expected="Clash Meta for Android", selector={"position":{"x":630,"y":832},"elementType":"android.widget.RelativeLayout"}
+[2026-04-28T03:47:33.993Z] [LOG] [ACTION-RESULT] action=tap_element, label="Clash Meta for Android", expected="Clash Meta for Android", status=success, from="Add VPN network", to="Clash Meta for"
+[2026-04-28T03:47:33.994Z] [LOG] [APP-SWITCH] Detected: com.android.settings -> com.github.metacubex.clash.meta (via "Clash Meta for Android")
+[2026-04-28T03:47:33.994Z] [LOG] [APP-SWITCH] In external app: com.github.metacubex.clash.meta (via "Clash Meta for Android")
+[2026-04-28T03:47:33.994Z] [LOG] [APP-SWITCH] Attempting Android system back before relaunch...
+[2026-04-28T03:47:51.522Z] [LOG] [BACKTRACK-TRACE] method=navigate_back:system_back_fast, status=success, reason=OK, executed=android_keyevent, stateChanged=unknown, pageTreeHashUnchanged=false, fallbackUsed=false => success (before=Clash Meta for[73d4d527cdc94f5f], after=Add VPN network[e73f0fccb0fe5de7], expectedParent=<none>)
+[2026-04-28T03:47:53.863Z] [LOG] [APP-SWITCH] Returned via system back at page "Add VPN network" (app=com.android.settings)
+[2026-04-28T03:47:53.863Z] [LOG] [FRAME-LOOP] depth=2, stack=3, cursor=2/3, frameTitle="Add VPN network", frameScreenId="e73f0fccb0fe5de7"
+[2026-04-28T03:47:58.115Z] [LOG] [FRAME-PLAN] depth=2, stack=3, cursor=2/3, current="Add VPN network", expected="More", nextAction=tap "More"
+[2026-04-28T03:47:58.115Z] [LOG] [FRAME-NEXT] current="Add VPN network", expected="More", action=tap "More"
+[2026-04-28T03:47:58.115Z] [LOG] [ACTION-START] action=tap_element, label="More", from="Add VPN network", expected="More", selector={"contentDesc":"More"}
+[2026-04-28T03:48:09.548Z] [LOG] [ACTION-RESULT] action=tap_element, label="More", expected="More", status=success, from="Add VPN network", to="Add shortcut"
+[2026-04-28T03:48:09.549Z] [LOG] [FRAME-PUSH] Creating child frame for "Add shortcut", parentTitle="Add VPN network", parentFrameTitle="Add VPN network"
+[2026-04-28T03:48:09.549Z] [LOG] [FRAME-LOOP] depth=3, stack=4, cursor=0/0, frameTitle="Add shortcut", frameScreenId="f8d8056e98b56ed8"
+[2026-04-28T03:48:14.012Z] [LOG] [FRAME-ELEMENTS] depth=3, title="Add shortcut", count=2, labels=["Add shortcut","Add shortcut"]
+[2026-04-28T03:48:14.012Z] [LOG] [SAMPLING-DEBUG] path=[More connections, VPN, More], title="Add shortcut", mode="full", rules=1, matched=no
+[2026-04-28T03:48:16.113Z] [LOG] [FRAME-PLAN] depth=3, stack=4, cursor=0/2, current="Add shortcut", expected="Add shortcut", nextAction=tap "Add shortcut"
+[2026-04-28T03:48:16.113Z] [LOG] [FRAME-NEXT] current="Add shortcut", expected="Add shortcut", action=tap "Add shortcut"
+[2026-04-28T03:48:16.113Z] [LOG] [ACTION-START] action=tap_element, label="Add shortcut", from="Add shortcut", expected="Add shortcut", selector={"position":{"x":955,"y":414},"elementType":"android.widget.ListView"}
+[2026-04-28T03:48:25.457Z] [LOG] [ACTION-RESULT] action=tap_element, label="Add shortcut", expected="Add shortcut", status=success, from="Add shortcut", to="Add shortcut"
+[2026-04-28T03:48:25.457Z] [LOG] [ACTION-RESULT] action=tap_element, label="Add shortcut", expected="Add shortcut", status=partial, from="Add shortcut", to="Add shortcut", reason="screen title unchanged after tapping page-title-like element — treating as self-loop"
+[2026-04-28T03:48:25.458Z] [LOG] [FRAME-LOOP] depth=3, stack=4, cursor=1/2, frameTitle="Add shortcut", frameScreenId="f8d8056e98b56ed8"
+[2026-04-28T03:48:29.666Z] [LOG] [NO-OP-SKIP] skipping known no-op element "Add shortcut" at index=1/2
+[2026-04-28T03:48:29.666Z] [LOG] [FRAME-LOOP] depth=3, stack=4, cursor=2/2, frameTitle="Add shortcut", frameScreenId="f8d8056e98b56ed8"
+[2026-04-28T03:48:33.878Z] [LOG] [FRAME-PLAN] depth=3, stack=4, cursor=2/2, current="Add shortcut", expected="Add VPN network", nextAction=pop frame and backtrack
+[2026-04-28T03:48:33.878Z] [LOG] [POP] Frame "Add shortcut" all 2 elements explored. Stack now: 3
+[2026-04-28T03:48:33.878Z] [LOG] [POP] Next frame: depth=2, cursor=3/3, title="Add VPN network"
+[2026-04-28T03:48:51.384Z] [LOG] [BACKTRACK-TRACE] method=navigate_back:system_back_fast, status=success, reason=OK, executed=android_keyevent, stateChanged=unknown, pageTreeHashUnchanged=false, fallbackUsed=false => success (before=Add shortcut[305fae1fe7d76608], after=Add VPN network[e73f0fccb0fe5de7], expectedParent=Add VPN network)
+[2026-04-28T03:48:53.723Z] [LOG] [POP-RETURN] Reconciled stack to page "Add VPN network" at depth=2
+[2026-04-28T03:48:53.723Z] [LOG] [FRAME-LOOP] depth=2, stack=3, cursor=3/3, frameTitle="Add VPN network", frameScreenId="e73f0fccb0fe5de7"
+[2026-04-28T03:48:57.962Z] [LOG] [FRAME-PLAN] depth=2, stack=3, cursor=3/3, current="Add VPN network", expected="Networks", nextAction=pop frame and backtrack
+[2026-04-28T03:48:57.962Z] [LOG] [POP] Frame "Add VPN network" all 3 elements explored. Stack now: 2
+[2026-04-28T03:48:57.962Z] [LOG] [POP] Next frame: depth=1, cursor=2/10, title="Networks"
+[2026-04-28T03:49:16.992Z] [LOG] [BACKTRACK-TRACE] method=navigate_back:system_back_fast, status=success, reason=OK, executed=android_keyevent, stateChanged=unknown, pageTreeHashUnchanged=false, fallbackUsed=false => success (before=Add VPN network[e73f0fccb0fe5de7], after=Networks[ec201cb0b8dd9419], expectedParent=Networks)
+[2026-04-28T03:49:19.414Z] [LOG] [POP-RETURN] Reconciled stack to page "Networks" at depth=1
+[2026-04-28T03:49:19.414Z] [LOG] [FRAME-LOOP] depth=1, stack=2, cursor=2/10, frameTitle="Networks", frameScreenId="ec201cb0b8dd9419"
+[2026-04-28T03:49:24.921Z] [LOG] [FRAME-PLAN] depth=1, stack=2, cursor=2/10, current="Networks", expected="Private DNS", nextAction=tap "Private DNS"
+[2026-04-28T03:49:24.922Z] [LOG] [FRAME-NEXT] current="Networks", expected="Private DNS", action=tap "Private DNS"
+[2026-04-28T03:49:24.922Z] [LOG] [ACTION-START] action=tap_element, label="Private DNS", from="Networks", expected="Private DNS", selector={"position":{"x":630,"y":986},"elementType":"android.view.ViewGroup"}
+[2026-04-28T03:49:32.367Z] [LOG] [ACTION-RESULT] action=tap_element, label="Private DNS", expected="Private DNS", status=success, from="Networks", to="Off"
+[2026-04-28T03:49:32.367Z] [LOG] [FRAME-PUSH] Creating child frame for "Off", parentTitle="Networks", parentFrameTitle="Networks"
+[2026-04-28T03:49:32.368Z] [LOG] [FRAME-LOOP] depth=2, stack=3, cursor=0/0, frameTitle="Off", frameScreenId="703595a74f7b3cc0"
+[2026-04-28T03:49:36.880Z] [LOG] [FRAME-ELEMENTS] depth=2, title="Off", count=4, labels=["Off","Auto","Private DNS provider","More"]
+[2026-04-28T03:49:36.880Z] [LOG] [SAMPLING-DEBUG] path=[More connections, Private DNS], title="Off", mode="full", rules=1, matched=no
+[2026-04-28T03:49:38.998Z] [LOG] [FRAME-PLAN] depth=2, stack=3, cursor=0/4, current="Off", expected="Off", nextAction=tap "Off"
+[2026-04-28T03:49:38.999Z] [LOG] [FRAME-NEXT] current="Off", expected="Off", action=tap "Off"
+[2026-04-28T03:49:38.999Z] [LOG] [ACTION-START] action=tap_element, label="Off", from="Off", expected="Off", selector={"position":{"x":630,"y":666},"elementType":"android.view.ViewGroup"}
+[2026-04-28T03:49:48.319Z] [LOG] [ACTION-RESULT] action=tap_element, label="Off", expected="Off", status=success, from="Off", to="Off"
+[2026-04-28T03:49:48.319Z] [LOG] [ACTION-RESULT] action=tap_element, label="Off", expected="Off", status=partial, from="Off", to="Off", reason="screenId unchanged — element had no navigation effect"
+[2026-04-28T03:49:48.319Z] [LOG] [FRAME-LOOP] depth=2, stack=3, cursor=1/4, frameTitle="Off", frameScreenId="703595a74f7b3cc0"
+[2026-04-28T03:49:52.552Z] [LOG] [FRAME-PLAN] depth=2, stack=3, cursor=1/4, current="Off", expected="Auto", nextAction=tap "Auto"
+[2026-04-28T03:49:52.553Z] [LOG] [FRAME-NEXT] current="Off", expected="Auto", action=tap "Auto"
+[2026-04-28T03:49:52.553Z] [LOG] [ACTION-START] action=tap_element, label="Auto", from="Off", expected="Auto", selector={"position":{"x":630,"y":848},"elementType":"android.view.ViewGroup"}
+[2026-04-28T03:50:01.922Z] [LOG] [ACTION-RESULT] action=tap_element, label="Auto", expected="Auto", status=success, from="Off", to="Off"
+[2026-04-28T03:50:01.923Z] [LOG] [ACTION-RESULT] action=tap_element, label="Auto", expected="Auto", status=partial, from="Off", to="Off", reason="screenId unchanged — element had no navigation effect"
+[2026-04-28T03:50:01.923Z] [LOG] [FRAME-LOOP] depth=2, stack=3, cursor=2/4, frameTitle="Off", frameScreenId="703595a74f7b3cc0"
+[2026-04-28T03:50:06.124Z] [LOG] [FRAME-PLAN] depth=2, stack=3, cursor=2/4, current="Off", expected="Private DNS provider", nextAction=tap "Private DNS provider"
+[2026-04-28T03:50:06.124Z] [LOG] [FRAME-NEXT] current="Off", expected="Private DNS provider", action=tap "Private DNS provider"
+[2026-04-28T03:50:06.124Z] [LOG] [ACTION-START] action=tap_element, label="Private DNS provider", from="Off", expected="Private DNS provider", selector={"position":{"x":630,"y":1030},"elementType":"android.view.ViewGroup"}
+[2026-04-28T03:50:15.560Z] [LOG] [ACTION-RESULT] action=tap_element, label="Private DNS provider", expected="Private DNS provider", status=success, from="Off", to="Provider hostname"
+[2026-04-28T03:50:15.560Z] [LOG] [FRAME-PUSH] Creating child frame for "Provider hostname", parentTitle="Off", parentFrameTitle="Off"
+[2026-04-28T03:50:15.560Z] [LOG] [FRAME-LOOP] depth=3, stack=4, cursor=0/0, frameTitle="Provider hostname", frameScreenId="7ea12a778c56bdf7"
+[2026-04-28T03:50:20.010Z] [LOG] [FRAME-ELEMENTS] depth=3, title="Provider hostname", count=2, labels=["OK","OK"]
+[2026-04-28T03:50:20.010Z] [LOG] [SAMPLING-DEBUG] path=[More connections, Private DNS, Private DNS provider], title="Provider hostname", mode="full", rules=1, matched=no
+[2026-04-28T03:50:22.110Z] [LOG] [FRAME-PLAN] depth=3, stack=4, cursor=0/2, current="Provider hostname", expected="OK", nextAction=tap "OK"
+[2026-04-28T03:50:22.110Z] [LOG] [FRAME-NEXT] current="Provider hostname", expected="OK", action=tap "OK"
+[2026-04-28T03:50:22.110Z] [LOG] [ACTION-START] action=tap_element, label="OK", from="Provider hostname", expected="OK", selector={"resourceId":"android:id/button1"}
+[2026-04-28T03:50:33.484Z] [LOG] [ACTION-RESULT] action=tap_element, label="OK", expected="OK", status=success, from="Provider hostname", to="Provider hostname"
+[2026-04-28T03:50:33.484Z] [LOG] [ACTION-RESULT] action=tap_element, label="OK", expected="OK", status=partial, from="Provider hostname", to="Provider hostname", reason="screenId unchanged — element had no navigation effect"
+[2026-04-28T03:50:33.484Z] [LOG] [FRAME-LOOP] depth=3, stack=4, cursor=1/2, frameTitle="Provider hostname", frameScreenId="7ea12a778c56bdf7"
+[2026-04-28T03:50:37.705Z] [LOG] [NO-OP-SKIP] skipping known no-op element "OK" at index=1/2
+[2026-04-28T03:50:37.705Z] [LOG] [FRAME-LOOP] depth=3, stack=4, cursor=2/2, frameTitle="Provider hostname", frameScreenId="7ea12a778c56bdf7"
+[2026-04-28T03:50:41.927Z] [LOG] [FRAME-PLAN] depth=3, stack=4, cursor=2/2, current="Provider hostname", expected="Off", nextAction=pop frame and backtrack
+[2026-04-28T03:50:41.928Z] [LOG] [POP] Frame "Provider hostname" all 2 elements explored. Stack now: 3
+[2026-04-28T03:50:41.928Z] [LOG] [POP] Next frame: depth=2, cursor=3/4, title="Off"
+[2026-04-28T03:50:59.432Z] [LOG] [BACKTRACK-WARN] method=navigate_back:system_back_fast, status=success, reason=OK, executed=android_keyevent, stateChanged=unknown, pageTreeHashUnchanged=false, fallbackUsed=false => transition rejected (before=Provider hostname[7ea12a778c56bdf7], after=Provider hostname[7ea12a778c56bdf7], expectedParent=Off)
+[2026-04-28T03:51:01.530Z] [LOG] [BACKTRACK-TRACE] affordance status=not_detected, selectorCandidates=[], navBarFrame=null, searchActiveLike=false, dialogLike=true
+[2026-04-28T03:51:16.949Z] [LOG] [BACKTRACK-TRACE] method=navigate_back:system_back, status=success, reason=OK, executed=android_keyevent, stateChanged=unknown, pageTreeHashUnchanged=false, fallbackUsed=false => success (before=Provider hostname[7ea12a778c56bdf7], after=Off[703595a74f7b3cc0], expectedParent=Off)
+[2026-04-28T03:51:19.306Z] [LOG] [POP-RETURN] Reconciled stack to page "Off" at depth=2
+[2026-04-28T03:51:19.306Z] [LOG] [FRAME-LOOP] depth=2, stack=3, cursor=3/4, frameTitle="Off", frameScreenId="703595a74f7b3cc0"
+[2026-04-28T03:51:23.515Z] [LOG] [FRAME-PLAN] depth=2, stack=3, cursor=3/4, current="Off", expected="More", nextAction=tap "More"
+[2026-04-28T03:51:23.515Z] [LOG] [FRAME-NEXT] current="Off", expected="More", action=tap "More"
+[2026-04-28T03:51:23.515Z] [LOG] [ACTION-START] action=tap_element, label="More", from="Off", expected="More", selector={"contentDesc":"More"}
+[2026-04-28T03:51:35.007Z] [LOG] [ACTION-RESULT] action=tap_element, label="More", expected="More", status=success, from="Off", to="Add shortcut"
+[2026-04-28T03:51:35.007Z] [LOG] [FRAME-PUSH] Creating child frame for "Add shortcut", parentTitle="Off", parentFrameTitle="Off"
+[2026-04-28T03:51:35.007Z] [LOG] [FRAME-LOOP] depth=3, stack=4, cursor=0/0, frameTitle="Add shortcut", frameScreenId="f8d8056e98b56ed8"
+[2026-04-28T03:51:56.968Z] [LOG] [BACKTRACK-TRACE] method=navigate_back:system_back_fast, status=success, reason=OK, executed=android_keyevent, stateChanged=unknown, pageTreeHashUnchanged=false, fallbackUsed=false => success (before=Add shortcut[f8d8056e98b56ed8], after=Off[703595a74f7b3cc0], expectedParent=Off)
+[2026-04-28T03:51:59.328Z] [LOG] [DEDUP-RETURN] Reconciled stack to page "Off" at depth=2
+[2026-04-28T03:51:59.328Z] [LOG] [FRAME-LOOP] depth=2, stack=3, cursor=4/4, frameTitle="Off", frameScreenId="703595a74f7b3cc0"
+[2026-04-28T03:52:03.574Z] [LOG] [FRAME-PLAN] depth=2, stack=3, cursor=4/4, current="Off", expected="Networks", nextAction=pop frame and backtrack
+[2026-04-28T03:52:03.574Z] [LOG] [POP] Frame "Off" all 4 elements explored. Stack now: 2
+[2026-04-28T03:52:03.574Z] [LOG] [POP] Next frame: depth=1, cursor=3/10, title="Networks"
+[2026-04-28T03:52:22.559Z] [LOG] [BACKTRACK-TRACE] method=navigate_back:system_back_fast, status=success, reason=OK, executed=android_keyevent, stateChanged=unknown, pageTreeHashUnchanged=false, fallbackUsed=false => success (before=Off[703595a74f7b3cc0], after=Networks[ec201cb0b8dd9419], expectedParent=Networks)
+[2026-04-28T03:52:24.925Z] [LOG] [POP-RETURN] Reconciled stack to page "Networks" at depth=1
+[2026-04-28T03:52:24.925Z] [LOG] [FRAME-LOOP] depth=1, stack=2, cursor=3/10, frameTitle="Networks", frameScreenId="ec201cb0b8dd9419"
+[2026-04-28T03:52:30.236Z] [LOG] [FRAME-PLAN] depth=1, stack=2, cursor=3/10, current="Networks", expected="Connection center", nextAction=tap "Connection center"
+[2026-04-28T03:52:30.236Z] [LOG] [FRAME-NEXT] current="Networks", expected="Connection center", action=tap "Connection center"
+[2026-04-28T03:52:30.236Z] [LOG] [ACTION-START] action=tap_element, label="Connection center", from="Networks", expected="Connection center", selector={"position":{"x":630,"y":1331},"elementType":"android.view.ViewGroup"}
+[2026-04-28T03:52:37.854Z] [LOG] [ACTION-RESULT] action=tap_element, label="Connection center", expected="Connection center", status=success, from="Networks", to="Connection center,On"
+[2026-04-28T03:52:37.855Z] [LOG] [APP-SWITCH] Detected: com.android.settings -> com.vivo.connbase (via "Connection center")
+[2026-04-28T03:52:37.855Z] [LOG] [APP-SWITCH] In external app: com.vivo.connbase (via "Connection center")
+[2026-04-28T03:52:37.855Z] [LOG] [APP-SWITCH] Attempting Android system back before relaunch...
+[2026-04-28T03:52:56.928Z] [LOG] [BACKTRACK-TRACE] method=navigate_back:system_back_fast, status=success, reason=OK, executed=android_keyevent, stateChanged=unknown, pageTreeHashUnchanged=false, fallbackUsed=false => success (before=Connection center,On[76101490d0f1f639], after=Networks[ec201cb0b8dd9419], expectedParent=<none>)
+[2026-04-28T03:52:59.286Z] [LOG] [APP-SWITCH] Returned via system back at page "Networks" (app=com.android.settings)
+[2026-04-28T03:52:59.286Z] [LOG] [FRAME-LOOP] depth=1, stack=2, cursor=4/10, frameTitle="Networks", frameScreenId="ec201cb0b8dd9419"
+[2026-04-28T03:53:04.545Z] [LOG] [FRAME-PLAN] depth=1, stack=2, cursor=4/10, current="Networks", expected="Jovi InCar", nextAction=tap "Jovi InCar"
+[2026-04-28T03:53:04.545Z] [LOG] [FRAME-NEXT] current="Networks", expected="Jovi InCar", action=tap "Jovi InCar"
+[2026-04-28T03:53:04.545Z] [LOG] [ACTION-START] action=tap_element, label="Jovi InCar", from="Networks", expected="Jovi InCar", selector={"position":{"x":630,"y":1569},"elementType":"android.view.ViewGroup"}
+[2026-04-28T03:53:14.187Z] [LOG] [ACTION-RESULT] action=tap_element, label="Jovi InCar", expected="Jovi InCar", status=success, from="Networks", to="Agree"
+[2026-04-28T03:53:14.187Z] [LOG] [APP-SWITCH] Detected: com.android.settings -> com.vivo.car.networking (via "Jovi InCar")
+[2026-04-28T03:53:14.187Z] [LOG] [APP-SWITCH] In external app: com.vivo.car.networking (via "Jovi InCar")
+[2026-04-28T03:53:14.187Z] [LOG] [APP-SWITCH] Attempting Android system back before relaunch...
+[2026-04-28T03:53:33.220Z] [LOG] [BACKTRACK-TRACE] method=navigate_back:system_back_fast, status=success, reason=OK, executed=android_keyevent, stateChanged=unknown, pageTreeHashUnchanged=false, fallbackUsed=false => success (before=Agree[59ac41a30089791f], after=Networks[ec201cb0b8dd9419], expectedParent=<none>)
+[2026-04-28T03:53:35.606Z] [LOG] [APP-SWITCH] Returned via system back at page "Networks" (app=com.android.settings)
+[2026-04-28T03:53:35.606Z] [LOG] [FRAME-LOOP] depth=1, stack=2, cursor=5/10, frameTitle="Networks", frameScreenId="ec201cb0b8dd9419"
+[2026-04-28T03:53:40.864Z] [LOG] [FRAME-PLAN] depth=1, stack=2, cursor=5/10, current="Networks", expected="Screen Mirroring", nextAction=tap "Screen Mirroring"
+[2026-04-28T03:53:40.865Z] [LOG] [FRAME-NEXT] current="Networks", expected="Screen Mirroring", action=tap "Screen Mirroring"
+[2026-04-28T03:53:40.865Z] [LOG] [ACTION-START] action=tap_element, label="Screen Mirroring", from="Networks", expected="Screen Mirroring", selector={"position":{"x":630,"y":1737},"elementType":"android.view.ViewGroup"}
+[2026-04-28T03:53:50.302Z] [LOG] [ACTION-RESULT] action=tap_element, label="Screen Mirroring", expected="Screen Mirroring", status=success, from="Networks", to="Agree"
+[2026-04-28T03:53:50.302Z] [LOG] [APP-SWITCH] Detected: com.android.settings -> com.vivo.upnpserver (via "Screen Mirroring")
+[2026-04-28T03:53:50.302Z] [LOG] [APP-SWITCH] In external app: com.vivo.upnpserver (via "Screen Mirroring")
+[2026-04-28T03:53:50.302Z] [LOG] [APP-SWITCH] Attempting Android system back before relaunch...
+[2026-04-28T03:54:07.214Z] [LOG] [BACKTRACK-TRACE] method=navigate_back:system_back_fast, status=success, reason=OK, executed=android_keyevent, stateChanged=unknown, pageTreeHashUnchanged=false, fallbackUsed=false => success (before=Agree[59ac41a30089791f], after=Networks[ec201cb0b8dd9419], expectedParent=<none>)
+[2026-04-28T03:54:09.774Z] [LOG] [APP-SWITCH] Returned via system back at page "Networks" (app=com.android.settings)
+[2026-04-28T03:54:09.775Z] [LOG] [FRAME-LOOP] depth=1, stack=2, cursor=6/10, frameTitle="Networks", frameScreenId="ec201cb0b8dd9419"
+[2026-04-28T03:54:15.249Z] [LOG] [FRAME-PLAN] depth=1, stack=2, cursor=6/10, current="Networks", expected="Print", nextAction=tap "Print"
+[2026-04-28T03:54:15.249Z] [LOG] [FRAME-NEXT] current="Networks", expected="Print", action=tap "Print"
+[2026-04-28T03:54:15.249Z] [LOG] [ACTION-START] action=tap_element, label="Print", from="Networks", expected="Print", selector={"position":{"x":630,"y":1898},"elementType":"android.view.ViewGroup"}
+[2026-04-28T03:54:22.772Z] [LOG] [ACTION-RESULT] action=tap_element, label="Print", expected="Print", status=success, from="Networks", to="Print"
+[2026-04-28T03:54:22.772Z] [LOG] [APP-SWITCH] Detected: com.android.settings -> com.android.printspooler (via "Print")
+[2026-04-28T03:54:22.772Z] [LOG] [APP-SWITCH] In external app: com.android.printspooler (via "Print")
+[2026-04-28T03:54:22.773Z] [LOG] [APP-SWITCH] Attempting Android system back before relaunch...
+[2026-04-28T03:54:41.797Z] [LOG] [BACKTRACK-TRACE] method=navigate_back:system_back_fast, status=success, reason=OK, executed=android_keyevent, stateChanged=unknown, pageTreeHashUnchanged=false, fallbackUsed=false => success (before=Print[9943285ccd8fe443], after=Networks[ec201cb0b8dd9419], expectedParent=<none>)
+[2026-04-28T03:54:44.234Z] [LOG] [APP-SWITCH] Returned via system back at page "Networks" (app=com.android.settings)
+[2026-04-28T03:54:44.234Z] [LOG] [FRAME-LOOP] depth=1, stack=2, cursor=7/10, frameTitle="Networks", frameScreenId="ec201cb0b8dd9419"
+[2026-04-28T03:54:49.458Z] [LOG] [FRAME-PLAN] depth=1, stack=2, cursor=7/10, current="Networks", expected="Office Kit", nextAction=tap "Office Kit"
+[2026-04-28T03:54:49.458Z] [LOG] [FRAME-NEXT] current="Networks", expected="Office Kit", action=tap "Office Kit"
+[2026-04-28T03:54:49.458Z] [LOG] [ACTION-START] action=tap_element, label="Office Kit", from="Networks", expected="Office Kit", selector={"position":{"x":630,"y":2115},"elementType":"android.view.ViewGroup"}
+[2026-04-28T03:54:56.980Z] [LOG] [ACTION-RESULT] action=tap_element, label="Office Kit", expected="Office Kit", status=success, from="Networks", to="vivo Office Kit"
+[2026-04-28T03:54:56.980Z] [LOG] [APP-SWITCH] Detected: com.android.settings -> com.vivo.pcsuite (via "Office Kit")
+[2026-04-28T03:54:56.980Z] [LOG] [APP-SWITCH] In external app: com.vivo.pcsuite (via "Office Kit")
+[2026-04-28T03:54:56.980Z] [LOG] [APP-SWITCH] Attempting Android system back before relaunch...
+[2026-04-28T03:55:16.038Z] [LOG] [BACKTRACK-TRACE] method=navigate_back:system_back_fast, status=success, reason=OK, executed=android_keyevent, stateChanged=unknown, pageTreeHashUnchanged=false, fallbackUsed=false => success (before=vivo Office Kit[df8a707fcc546cda], after=Networks[ec201cb0b8dd9419], expectedParent=<none>)
+[2026-04-28T03:55:18.415Z] [LOG] [APP-SWITCH] Returned via system back at page "Networks" (app=com.android.settings)
+[2026-04-28T03:55:18.415Z] [LOG] [FRAME-LOOP] depth=1, stack=2, cursor=8/10, frameTitle="Networks", frameScreenId="ec201cb0b8dd9419"
+[2026-04-28T03:55:23.847Z] [LOG] [FRAME-PLAN] depth=1, stack=2, cursor=8/10, current="Networks", expected="NFC", nextAction=tap "NFC"
+[2026-04-28T03:55:23.847Z] [LOG] [FRAME-NEXT] current="Networks", expected="NFC", action=tap "NFC"
+[2026-04-28T03:55:23.847Z] [LOG] [ACTION-START] action=tap_element, label="NFC", from="Networks", expected="NFC", selector={"position":{"x":630,"y":2395},"elementType":"android.view.ViewGroup"}
+[2026-04-28T03:55:31.335Z] [LOG] [ACTION-RESULT] action=tap_element, label="NFC", expected="NFC", status=success, from="Networks", to="NFC"
+[2026-04-28T03:55:31.336Z] [LOG] [FRAME-PUSH] Creating child frame for "NFC", parentTitle="Networks", parentFrameTitle="Networks"
+[2026-04-28T03:55:31.336Z] [LOG] [FRAME-LOOP] depth=2, stack=3, cursor=0/0, frameTitle="NFC", frameScreenId="15c834e4defbd16a"
+[2026-04-28T03:55:35.864Z] [LOG] [FRAME-ELEMENTS] depth=2, title="NFC", count=2, labels=["Add NFC cards","Tap &amp; pay"]
+[2026-04-28T03:55:35.864Z] [LOG] [SAMPLING-DEBUG] path=[More connections, NFC], title="NFC", mode="full", rules=1, matched=no
+[2026-04-28T03:55:38.028Z] [LOG] [FRAME-PLAN] depth=2, stack=3, cursor=0/2, current="NFC", expected="Add NFC cards", nextAction=tap "Add NFC cards"
+[2026-04-28T03:55:38.028Z] [LOG] [FRAME-NEXT] current="NFC", expected="Add NFC cards", action=tap "Add NFC cards"
+[2026-04-28T03:55:38.028Z] [LOG] [ACTION-START] action=tap_element, label="Add NFC cards", from="NFC", expected="Add NFC cards", selector={"position":{"x":630,"y":2181},"elementType":"android.view.ViewGroup"}
+[2026-04-28T03:55:46.092Z] [LOG] [ACTION-RESULT] action=tap_element, label="Add NFC cards", expected="Add NFC cards", status=success, from="NFC", to="卡包"
+[2026-04-28T03:55:46.095Z] [LOG] [APP-SWITCH] Detected: com.android.settings -> com.vivo.wallet (via "Add NFC cards")
+[2026-04-28T03:55:46.095Z] [LOG] [APP-SWITCH] In external app: com.vivo.wallet (via "Add NFC cards")
+[2026-04-28T03:55:46.096Z] [LOG] [APP-SWITCH] Attempting Android system back before relaunch...
+[2026-04-28T03:56:05.040Z] [LOG] [BACKTRACK-TRACE] method=navigate_back:system_back_fast, status=success, reason=OK, executed=android_keyevent, stateChanged=unknown, pageTreeHashUnchanged=false, fallbackUsed=false => success (before=卡包[db4388d32dbc4e5b], after=NFC[15c834e4defbd16a], expectedParent=<none>)
+[2026-04-28T03:56:07.842Z] [LOG] [APP-SWITCH] Returned via system back at page "NFC" (app=com.android.settings)
+[2026-04-28T03:56:07.842Z] [LOG] [FRAME-LOOP] depth=2, stack=3, cursor=1/2, frameTitle="NFC", frameScreenId="15c834e4defbd16a"
+[2026-04-28T03:56:12.284Z] [LOG] [FRAME-PLAN] depth=2, stack=3, cursor=1/2, current="NFC", expected="Tap &amp; pay", nextAction=tap "Tap &amp; pay"
+[2026-04-28T03:56:12.284Z] [LOG] [FRAME-NEXT] current="NFC", expected="Tap &amp; pay", action=tap "Tap &amp; pay"
+[2026-04-28T03:56:12.284Z] [LOG] [ACTION-START] action=tap_element, label="Tap &amp; pay", from="NFC", expected="Tap &amp; pay", selector={"position":{"x":630,"y":2418},"elementType":"android.view.ViewGroup"}
+[2026-04-28T03:56:21.627Z] [LOG] [ACTION-RESULT] action=tap_element, label="Tap &amp; pay", expected="Tap &amp; pay", status=success, from="NFC", to="NFC"
+[2026-04-28T03:56:21.627Z] [LOG] [ACTION-RESULT] action=tap_element, label="Tap &amp; pay", expected="Tap &amp; pay", status=partial, from="NFC", to="NFC", reason="screenId unchanged — element had no navigation effect"
+[2026-04-28T03:56:21.628Z] [LOG] [FRAME-LOOP] depth=2, stack=3, cursor=2/2, frameTitle="NFC", frameScreenId="15c834e4defbd16a"
+[2026-04-28T03:56:25.850Z] [LOG] [FRAME-PLAN] depth=2, stack=3, cursor=2/2, current="NFC", expected="Networks", nextAction=pop frame and backtrack
+[2026-04-28T03:56:25.850Z] [LOG] [POP] Frame "NFC" all 2 elements explored. Stack now: 2
+[2026-04-28T03:56:25.850Z] [LOG] [POP] Next frame: depth=1, cursor=9/10, title="Networks"
+[2026-04-28T03:56:44.764Z] [LOG] [BACKTRACK-TRACE] method=navigate_back:system_back_fast, status=success, reason=OK, executed=android_keyevent, stateChanged=unknown, pageTreeHashUnchanged=false, fallbackUsed=false => success (before=NFC[15c834e4defbd16a], after=Networks[ec201cb0b8dd9419], expectedParent=Networks)
+[2026-04-28T03:56:47.165Z] [LOG] [POP-RETURN] Reconciled stack to page "Networks" at depth=1
+[2026-04-28T03:56:47.165Z] [LOG] [FRAME-LOOP] depth=1, stack=2, cursor=9/10, frameTitle="Networks", frameScreenId="ec201cb0b8dd9419"
+[2026-04-28T03:56:52.567Z] [LOG] [FRAME-PLAN] depth=1, stack=2, cursor=9/10, current="Networks", expected="vivoshare", nextAction=tap "vivoshare"
+[2026-04-28T03:56:52.567Z] [LOG] [FRAME-NEXT] current="Networks", expected="vivoshare", action=tap "vivoshare"
+[2026-04-28T03:56:52.567Z] [LOG] [ACTION-START] action=tap_element, label="vivoshare", from="Networks", expected="vivoshare", selector={"position":{"x":630,"y":2568},"elementType":"android.view.ViewGroup"}
+[2026-04-28T03:57:00.020Z] [LOG] [ACTION-RESULT] action=tap_element, label="vivoshare", expected="vivoshare", status=success, from="Networks", to="vivoshare"
+[2026-04-28T03:57:00.023Z] [LOG] [APP-SWITCH] Detected: com.android.settings -> com.vivo.share (via "vivoshare")
+[2026-04-28T03:57:00.023Z] [LOG] [APP-SWITCH] In external app: com.vivo.share (via "vivoshare")
+[2026-04-28T03:57:00.023Z] [LOG] [APP-SWITCH] Attempting Android system back before relaunch...
+[2026-04-28T03:57:18.895Z] [LOG] [BACKTRACK-TRACE] method=navigate_back:system_back_fast, status=success, reason=OK, executed=android_keyevent, stateChanged=unknown, pageTreeHashUnchanged=false, fallbackUsed=false => success (before=vivoshare[338424ae28ba3024], after=Networks[ec201cb0b8dd9419], expectedParent=<none>)
+[2026-04-28T03:57:21.232Z] [LOG] [APP-SWITCH] Returned via system back at page "Networks" (app=com.android.settings)
+[2026-04-28T03:57:21.232Z] [LOG] [FRAME-LOOP] depth=1, stack=2, cursor=10/10, frameTitle="Networks", frameScreenId="ec201cb0b8dd9419"
+[2026-04-28T03:57:26.486Z] [LOG] [FRAME-PLAN] depth=1, stack=2, cursor=10/10, current="Networks", expected="Aiden", nextAction=pop frame and backtrack
+[2026-04-28T03:57:26.486Z] [LOG] [POP] Frame "Networks" all 10 elements explored. Stack now: 1
+[2026-04-28T03:57:26.486Z] [LOG] [POP] Next frame: depth=0, cursor=3/8, title="Aiden"
+[2026-04-28T03:57:42.560Z] [LOG] [BACKTRACK-TRACE] method=navigate_back:system_back_fast, status=success, reason=OK, executed=android_keyevent, stateChanged=unknown, pageTreeHashUnchanged=false, fallbackUsed=false => success (before=Networks[ec201cb0b8dd9419], after=Aiden[12ed45faa02c47c9], expectedParent=Aiden)
+[2026-04-28T03:57:44.919Z] [LOG] [POP-RETURN] Reconciled stack to page "Aiden" at depth=0
+[2026-04-28T03:57:44.920Z] [LOG] [FRAME-LOOP] depth=0, stack=1, cursor=3/8, frameTitle="Aiden", frameScreenId="12ed45faa02c47c9"
+[2026-04-28T03:57:49.133Z] [LOG] [FRAME-PLAN] depth=0, stack=1, cursor=3/8, current="Aiden", expected="Notifications &amp; status bar", nextAction=tap "Notifications &amp; status bar"
+[2026-04-28T03:57:49.133Z] [LOG] [FRAME-NEXT] current="Aiden", expected="Notifications &amp; status bar", action=tap "Notifications &amp; status bar"
+[2026-04-28T03:57:49.133Z] [LOG] [ACTION-START] action=tap_element, label="Notifications &amp; status bar", from="Aiden", expected="Notifications &amp; status bar", selector={"position":{"x":630,"y":2007},"elementType":"android.widget.FrameLayout"}
+[2026-04-28T03:57:56.684Z] [LOG] [ACTION-RESULT] action=tap_element, label="Notifications &amp; status bar", expected="Notifications &amp; status bar", status=success, from="Aiden", to="Origin Notification"
+[2026-04-28T03:57:56.685Z] [LOG] [APP-SWITCH] Detected: com.android.settings -> com.vivo.systemuiplugin (via "Notifications &amp; status bar")
+[2026-04-28T03:57:56.685Z] [LOG] [APP-SWITCH] In external app: com.vivo.systemuiplugin (via "Notifications &amp; status bar")
+[2026-04-28T03:57:56.685Z] [LOG] [APP-SWITCH] Attempting Android system back before relaunch...
+[2026-04-28T03:58:14.621Z] [LOG] [BACKTRACK-TRACE] method=navigate_back:system_back_fast, status=success, reason=OK, executed=android_keyevent, stateChanged=unknown, pageTreeHashUnchanged=false, fallbackUsed=false => success (before=Origin Notification[61413f2a689206aa], after=Aiden[12ed45faa02c47c9], expectedParent=<none>)
+[2026-04-28T03:58:17.061Z] [LOG] [APP-SWITCH] Returned via system back at page "Aiden" (app=com.android.settings)
+[2026-04-28T03:58:17.062Z] [LOG] [FRAME-LOOP] depth=0, stack=1, cursor=4/8, frameTitle="Aiden", frameScreenId="12ed45faa02c47c9"
+[2026-04-28T03:58:21.420Z] [LOG] [FRAME-PLAN] depth=0, stack=1, cursor=4/8, current="Aiden", expected="Sounds &amp; vibration", nextAction=tap "Sounds &amp; vibration"
+[2026-04-28T03:58:21.421Z] [LOG] [FRAME-NEXT] current="Aiden", expected="Sounds &amp; vibration", action=tap "Sounds &amp; vibration"
+[2026-04-28T03:58:21.421Z] [LOG] [ACTION-START] action=tap_element, label="Sounds &amp; vibration", from="Aiden", expected="Sounds &amp; vibration", selector={"position":{"x":630,"y":2189},"elementType":"android.widget.FrameLayout"}
+[2026-04-28T03:58:29.019Z] [LOG] [ACTION-RESULT] action=tap_element, label="Sounds &amp; vibration", expected="Sounds &amp; vibration", status=success, from="Aiden", to="Ring mode"
+[2026-04-28T03:58:29.019Z] [LOG] [FRAME-PUSH] Creating child frame for "Ring mode", parentTitle="Aiden", parentFrameTitle="Aiden"
+[2026-04-28T03:58:29.019Z] [LOG] [FRAME-LOOP] depth=1, stack=2, cursor=0/0, frameTitle="Ring mode", frameScreenId="421f33628c376cb9"
+[2026-04-28T03:58:33.641Z] [LOG] [FRAME-ELEMENTS] depth=1, title="Ring mode", count=6, labels=["Ring mode","Vibration mode","Silent mode","Adjust via Volume buttons","App-specific volume","Focus mode"]
+[2026-04-28T03:58:33.641Z] [LOG] [SAMPLING-DEBUG] path=[Sounds &amp; vibration], title="Ring mode", mode="full", rules=1, matched=no
+[2026-04-28T03:58:35.841Z] [LOG] [FRAME-PLAN] depth=1, stack=2, cursor=0/6, current="Ring mode", expected="Ring mode", nextAction=tap "Ring mode"
+[2026-04-28T03:58:35.841Z] [LOG] [FRAME-NEXT] current="Ring mode", expected="Ring mode", action=tap "Ring mode"
+[2026-04-28T03:58:35.841Z] [LOG] [ACTION-START] action=tap_element, label="Ring mode", from="Ring mode", expected="Ring mode", selector={"resourceId":"com.android.settings:id/ring_mode_layout"}
+[2026-04-28T03:58:45.814Z] [LOG] [ACTION-RESULT] action=tap_element, label="Ring mode", expected="Ring mode", status=success, from="Ring mode", to="Ring mode"
+[2026-04-28T03:58:45.815Z] [LOG] [ACTION-RESULT] action=tap_element, label="Ring mode", expected="Ring mode", status=partial, from="Ring mode", to="Ring mode", reason="screenId unchanged — element had no navigation effect"
+[2026-04-28T03:58:45.815Z] [LOG] [FRAME-LOOP] depth=1, stack=2, cursor=1/6, frameTitle="Ring mode", frameScreenId="421f33628c376cb9"
+[2026-04-28T03:58:50.227Z] [LOG] [FRAME-PLAN] depth=1, stack=2, cursor=1/6, current="Ring mode", expected="Vibration mode", nextAction=tap "Vibration mode"
+[2026-04-28T03:58:50.227Z] [LOG] [FRAME-NEXT] current="Ring mode", expected="Vibration mode", action=tap "Vibration mode"
+[2026-04-28T03:58:50.227Z] [LOG] [ACTION-START] action=tap_element, label="Vibration mode", from="Ring mode", expected="Vibration mode", selector={"resourceId":"com.android.settings:id/vibrate_mode_layout"}
+[2026-04-28T03:59:00.627Z] [LOG] [ACTION-RESULT] action=tap_element, label="Vibration mode", expected="Vibration mode", status=success, from="Ring mode", to="Ring mode"
+[2026-04-28T03:59:00.627Z] [LOG] [ACTION-RESULT] action=tap_element, label="Vibration mode", expected="Vibration mode", status=partial, from="Ring mode", to="Ring mode", reason="screenId unchanged — element had no navigation effect"
+[2026-04-28T03:59:00.627Z] [LOG] [FRAME-LOOP] depth=1, stack=2, cursor=2/6, frameTitle="Ring mode", frameScreenId="421f33628c376cb9"
+[2026-04-28T03:59:04.973Z] [LOG] [FRAME-PLAN] depth=1, stack=2, cursor=2/6, current="Ring mode", expected="Silent mode", nextAction=tap "Silent mode"
+[2026-04-28T03:59:04.973Z] [LOG] [FRAME-NEXT] current="Ring mode", expected="Silent mode", action=tap "Silent mode"
+[2026-04-28T03:59:04.973Z] [LOG] [ACTION-START] action=tap_element, label="Silent mode", from="Ring mode", expected="Silent mode", selector={"resourceId":"com.android.settings:id/mute_mode_layout"}
+[2026-04-28T03:59:14.941Z] [LOG] [ACTION-RESULT] action=tap_element, label="Silent mode", expected="Silent mode", status=success, from="Ring mode", to="Ring mode"
+[2026-04-28T03:59:14.942Z] [LOG] [ACTION-RESULT] action=tap_element, label="Silent mode", expected="Silent mode", status=partial, from="Ring mode", to="Ring mode", reason="screenId unchanged — element had no navigation effect"
+[2026-04-28T03:59:14.943Z] [LOG] [CIRCUIT-BREAKER] Page 421f33628c376cb9 exceeded failure threshold (3/3)
+[2026-04-28T03:59:14.943Z] [LOG] [FRAME-LOOP] depth=1, stack=2, cursor=3/6, frameTitle="Ring mode", frameScreenId="421f33628c376cb9"
+[2026-04-28T03:59:19.373Z] [LOG] [FRAME-PLAN] depth=1, stack=2, cursor=3/6, current="Ring mode", expected="Adjust via Volume buttons", nextAction=tap "Adjust via Volume buttons"
+[2026-04-28T03:59:19.373Z] [LOG] [FRAME-NEXT] current="Ring mode", expected="Adjust via Volume buttons", action=tap "Adjust via Volume buttons"
+[2026-04-28T03:59:19.373Z] [LOG] [ACTION-START] action=tap_element, label="Adjust via Volume buttons", from="Ring mode", expected="Adjust via Volume buttons", selector={"position":{"x":630,"y":1944},"elementType":"android.view.ViewGroup"}
+[2026-04-28T03:59:28.838Z] [LOG] [ACTION-RESULT] action=tap_element, label="Adjust via Volume buttons", expected="Adjust via Volume buttons", status=success, from="Ring mode", to="Adjust via Volume"
+[2026-04-28T03:59:28.838Z] [LOG] [FRAME-PUSH] Creating child frame for "Adjust via Volume", parentTitle="Ring mode", parentFrameTitle="Ring mode"
+[2026-04-28T03:59:28.839Z] [LOG] [FRAME-LOOP] depth=2, stack=3, cursor=0/0, frameTitle="Adjust via Volume", frameScreenId="5153b8c2edc639af"
+[2026-04-28T03:59:33.363Z] [LOG] [FRAME-ELEMENTS] depth=2, title="Adjust via Volume", count=2, labels=["Ringtone","Ringtone"]
+[2026-04-28T03:59:33.363Z] [LOG] [SAMPLING-DEBUG] path=[Sounds &amp; vibration, Adjust via Volume buttons], title="Adjust via Volume", mode="full", rules=1, matched=no
+[2026-04-28T03:59:35.498Z] [LOG] [FRAME-PLAN] depth=2, stack=3, cursor=0/2, current="Adjust via Volume", expected="Ringtone", nextAction=tap "Ringtone"
+[2026-04-28T03:59:35.498Z] [LOG] [FRAME-NEXT] current="Adjust via Volume", expected="Ringtone", action=tap "Ringtone"
+[2026-04-28T03:59:35.498Z] [LOG] [ACTION-START] action=tap_element, label="Ringtone", from="Adjust via Volume", expected="Ringtone", selector={"resourceId":"com.android.settings:id/select_dialog_listview"}
+[2026-04-28T03:59:45.411Z] [LOG] [ACTION-RESULT] action=tap_element, label="Ringtone", expected="Ringtone", status=success, from="Adjust via Volume", to="Ring mode"
+[2026-04-28T03:59:45.412Z] [LOG] [FRAME-RESUME-CONTEXT] frameTitle="Adjust via Volume", cursor=1/2, remainingLabels=["Ringtone"]
+[2026-04-28T03:59:45.412Z] [LOG] [FRAME-RESUME] "Ringtone" returned to ancestor frame depth=1 title="Ring mode"
+[2026-04-28T03:59:45.412Z] [LOG] [FRAME-LOOP] depth=1, stack=2, cursor=4/6, frameTitle="Ring mode", frameScreenId="421f33628c376cb9"
+[2026-04-28T03:59:49.796Z] [LOG] [FRAME-PLAN] depth=1, stack=2, cursor=4/6, current="Ring mode", expected="App-specific volume", nextAction=tap "App-specific volume"
+[2026-04-28T03:59:49.796Z] [LOG] [FRAME-NEXT] current="Ring mode", expected="App-specific volume", action=tap "App-specific volume"
+[2026-04-28T03:59:49.796Z] [LOG] [ACTION-START] action=tap_element, label="App-specific volume", from="Ring mode", expected="App-specific volume", selector={"position":{"x":630,"y":2119},"elementType":"android.view.ViewGroup"}
+[2026-04-28T03:59:57.231Z] [LOG] [ACTION-RESULT] action=tap_element, label="App-specific volume", expected="App-specific volume", status=success, from="Ring mode", to="App-specific volume"
+[2026-04-28T03:59:57.231Z] [LOG] [FRAME-PUSH] Creating child frame for "App-specific volume", parentTitle="Ring mode", parentFrameTitle="Ring mode"
+[2026-04-28T03:59:57.231Z] [LOG] [FRAME-LOOP] depth=2, stack=3, cursor=0/0, frameTitle="App-specific volume", frameScreenId="0da951282750b0e0"
+[2026-04-28T04:00:01.696Z] [LOG] [FRAME-ELEMENTS] depth=2, title="App-specific volume", count=0, labels=[]
+[2026-04-28T04:00:01.696Z] [LOG] [SAMPLING-DEBUG] path=[Sounds &amp; vibration, App-specific volume], title="App-specific volume", mode="full", rules=1, matched=no
+[2026-04-28T04:00:03.816Z] [LOG] [FRAME-PLAN] depth=2, stack=3, cursor=0/0, current="App-specific volume", expected="Ring mode", nextAction=pop frame and backtrack
+[2026-04-28T04:00:03.816Z] [LOG] [POP] Frame "App-specific volume" all 0 elements explored. Stack now: 2
+[2026-04-28T04:00:03.816Z] [LOG] [POP] Next frame: depth=1, cursor=5/6, title="Ring mode"
+[2026-04-28T04:00:21.745Z] [LOG] [BACKTRACK-TRACE] method=navigate_back:system_back_fast, status=success, reason=OK, executed=android_keyevent, stateChanged=unknown, pageTreeHashUnchanged=false, fallbackUsed=false => success (before=App-specific volume[0da951282750b0e0], after=Ring mode[421f33628c376cb9], expectedParent=Ring mode)
+[2026-04-28T04:00:24.176Z] [LOG] [POP-RETURN] Reconciled stack to page "Ring mode" at depth=1
+[2026-04-28T04:00:24.176Z] [LOG] [FRAME-LOOP] depth=1, stack=2, cursor=5/6, frameTitle="Ring mode", frameScreenId="421f33628c376cb9"
+[2026-04-28T04:00:28.602Z] [LOG] [FRAME-PLAN] depth=1, stack=2, cursor=5/6, current="Ring mode", expected="Focus mode", nextAction=tap "Focus mode"
+[2026-04-28T04:00:28.602Z] [LOG] [FRAME-NEXT] current="Ring mode", expected="Focus mode", action=tap "Focus mode"
+[2026-04-28T04:00:28.602Z] [LOG] [ACTION-START] action=tap_element, label="Focus mode", from="Ring mode", expected="Focus mode", selector={"position":{"x":630,"y":2406},"elementType":"android.view.ViewGroup"}
+[2026-04-28T04:00:36.073Z] [LOG] [ACTION-RESULT] action=tap_element, label="Focus mode", expected="Focus mode", status=success, from="Ring mode", to="Do Not Disturb"
+[2026-04-28T04:00:36.074Z] [LOG] [FRAME-PUSH] Creating child frame for "Do Not Disturb", parentTitle="Ring mode", parentFrameTitle="Ring mode"
+[2026-04-28T04:00:36.074Z] [LOG] [FRAME-LOOP] depth=2, stack=3, cursor=0/0, frameTitle="Do Not Disturb", frameScreenId="654d3458dbe21381"
+[2026-04-28T04:00:40.578Z] [LOG] [FRAME-ELEMENTS] depth=2, title="Do Not Disturb", count=7, labels=["Do Not Disturb","Sleep","Work","Personal","Exercise","Read","Meditation"]
+[2026-04-28T04:00:40.579Z] [LOG] [SAMPLING-DEBUG] path=[Sounds &amp; vibration, Focus mode], title="Do Not Disturb", mode="full", rules=1, matched=no
+[2026-04-28T04:00:42.678Z] [LOG] [FRAME-PLAN] depth=2, stack=3, cursor=0/7, current="Do Not Disturb", expected="Do Not Disturb", nextAction=tap "Do Not Disturb"
+[2026-04-28T04:00:42.678Z] [LOG] [FRAME-NEXT] current="Do Not Disturb", expected="Do Not Disturb", action=tap "Do Not Disturb"
+[2026-04-28T04:00:42.678Z] [LOG] [ACTION-START] action=tap_element, label="Do Not Disturb", from="Do Not Disturb", expected="Do Not Disturb", selector={"position":{"x":630,"y":619},"elementType":"android.widget.LinearLayout"}
+[2026-04-28T04:00:50.305Z] [LOG] [ACTION-RESULT] action=tap_element, label="Do Not Disturb", expected="Do Not Disturb", status=success, from="Do Not Disturb", to="Do Not Disturb"
+[2026-04-28T04:00:50.305Z] [LOG] [ACTION-RESULT] action=tap_element, label="Do Not Disturb", expected="Do Not Disturb", status=partial, from="Do Not Disturb", to="Do Not Disturb", reason="screen title unchanged after tapping page-title-like element — treating as self-loop"
+[2026-04-28T04:00:50.305Z] [LOG] [FRAME-LOOP] depth=2, stack=3, cursor=1/7, frameTitle="Do Not Disturb", frameScreenId="654d3458dbe21381"
+[2026-04-28T04:00:54.664Z] [LOG] [FRAME-PLAN] depth=2, stack=3, cursor=1/7, current="Do Not Disturb", expected="Sleep", nextAction=tap "Sleep"
+[2026-04-28T04:00:54.664Z] [LOG] [FRAME-NEXT] current="Do Not Disturb", expected="Sleep", action=tap "Sleep"
+[2026-04-28T04:00:54.664Z] [LOG] [ACTION-START] action=tap_element, label="Sleep", from="Do Not Disturb", expected="Sleep", selector={"position":{"x":630,"y":794},"elementType":"android.widget.LinearLayout"}
+[2026-04-28T04:01:04.345Z] [LOG] [ACTION-RESULT] action=tap_element, label="Sleep", expected="Sleep", status=success, from="Do Not Disturb", to="Do Not Disturb"
+[2026-04-28T04:01:04.345Z] [LOG] [FRAME-RESUME] screenId drift detected: matched by title "Do Not Disturb" at depth=2 (snapshot screenId=98a4769407eb2406, frame screenId=654d3458dbe21381)
+[2026-04-28T04:01:04.345Z] [LOG] [SCREEN-DRIFT] "Sleep" changed state on "Do Not Disturb" without page transition — updating current frame instead of pushing child
+[2026-04-28T04:01:04.345Z] [LOG] [FRAME-LOOP] depth=2, stack=3, cursor=2/7, frameTitle="Do Not Disturb", frameScreenId="98a4769407eb2406"
+[2026-04-28T04:01:08.725Z] [LOG] [FRAME-PLAN] depth=2, stack=3, cursor=2/7, current="Do Not Disturb", expected="Work", nextAction=tap "Work"
+[2026-04-28T04:01:08.725Z] [LOG] [FRAME-NEXT] current="Do Not Disturb", expected="Work", action=tap "Work"
+[2026-04-28T04:01:08.725Z] [LOG] [ACTION-START] action=tap_element, label="Work", from="Do Not Disturb", expected="Work", selector={"position":{"x":630,"y":969},"elementType":"android.widget.LinearLayout"}
+[2026-04-28T04:01:18.318Z] [LOG] [ACTION-RESULT] action=tap_element, label="Work", expected="Work", status=success, from="Do Not Disturb", to="Contacts allowed to"
+[2026-04-28T04:01:18.319Z] [LOG] [FRAME-PUSH] Creating child frame for "Contacts allowed to", parentTitle="Do Not Disturb", parentFrameTitle="Do Not Disturb"
+[2026-04-28T04:01:18.319Z] [LOG] [FRAME-LOOP] depth=3, stack=4, cursor=0/0, frameTitle="Contacts allowed to", frameScreenId="86ed9e279855b101"
+[2026-04-28T04:01:22.765Z] [LOG] [FRAME-ELEMENTS] depth=3, title="Contacts allowed to", count=2, labels=["Add","Groups allowed to send messages"]
+[2026-04-28T04:01:22.766Z] [LOG] [SAMPLING-DEBUG] path=[Sounds &amp; vibration, Focus mode, Work], title="Contacts allowed to", mode="full", rules=1, matched=no
+[2026-04-28T04:01:24.887Z] [LOG] [FRAME-PLAN] depth=3, stack=4, cursor=0/2, current="Contacts allowed to", expected="Add", nextAction=tap "Add"
+[2026-04-28T04:01:24.887Z] [LOG] [FRAME-NEXT] current="Contacts allowed to", expected="Add", action=tap "Add"
+[2026-04-28T04:01:24.887Z] [LOG] [ACTION-START] action=tap_element, label="Add", from="Contacts allowed to", expected="Add", selector={"position":{"x":210,"y":746},"elementType":"android.widget.RelativeLayout"}
+[2026-04-28T04:01:34.384Z] [LOG] [ACTION-RESULT] action=tap_element, label="Add", expected="Add", status=success, from="Contacts allowed to", to="Secure access to"
+[2026-04-28T04:01:34.384Z] [LOG] [APP-SWITCH] Detected: com.android.settings -> com.android.contacts (via "Add")
+[2026-04-28T04:01:34.384Z] [LOG] [APP-SWITCH] In external app: com.android.contacts (via "Add")
+[2026-04-28T04:01:34.384Z] [LOG] [APP-SWITCH] Attempting Android system back before relaunch...
+[2026-04-28T04:01:51.974Z] [LOG] [BACKTRACK-TRACE] method=navigate_back:system_back_fast, status=success, reason=OK, executed=android_keyevent, stateChanged=unknown, pageTreeHashUnchanged=false, fallbackUsed=false => success (before=Secure access to[fd3ae54a6b7ab4a3], after=Contacts allowed to[86ed9e279855b101], expectedParent=<none>)
+[2026-04-28T04:01:54.309Z] [LOG] [APP-SWITCH] Returned via system back at page "Contacts allowed to" (app=com.android.settings)
+[2026-04-28T04:01:54.310Z] [LOG] [FRAME-LOOP] depth=3, stack=4, cursor=1/2, frameTitle="Contacts allowed to", frameScreenId="86ed9e279855b101"
+[2026-04-28T04:01:58.522Z] [LOG] [FRAME-PLAN] depth=3, stack=4, cursor=1/2, current="Contacts allowed to", expected="Groups allowed to send messages", nextAction=tap "Groups allowed to send messages"
+[2026-04-28T04:01:58.522Z] [LOG] [FRAME-NEXT] current="Contacts allowed to", expected="Groups allowed to send messages", action=tap "Groups allowed to send messages"
+[2026-04-28T04:01:58.522Z] [LOG] [ACTION-START] action=tap_element, label="Groups allowed to send messages", from="Contacts allowed to", expected="Groups allowed to send messages", selector={"position":{"x":630,"y":1180},"elementType":"android.view.ViewGroup"}
+[2026-04-28T04:02:06.076Z] [LOG] [ACTION-RESULT] action=tap_element, label="Groups allowed to send messages", expected="Groups allowed to send messages", status=success, from="Contacts allowed to", to="Groups allowed to"
+[2026-04-28T04:02:06.076Z] [LOG] [FRAME-PUSH] Creating child frame for "Groups allowed to", parentTitle="Contacts allowed to", parentFrameTitle="Contacts allowed to"
+[2026-04-28T04:02:06.076Z] [LOG] [FRAME-LOOP] depth=4, stack=5, cursor=0/0, frameTitle="Groups allowed to", frameScreenId="f859f893c9fd2ce2"
+[2026-04-28T04:02:10.624Z] [LOG] [FRAME-ELEMENTS] depth=4, title="Groups allowed to", count=8, labels=["None","Favorite contacts","Contacts","Anyone","Friends-shenyuexin2006@gmail.com","Family-shenyuexin2006@gmail.com","Coworkers-shenyuexin2006@gmail.com","android.view.View"]
+[2026-04-28T04:02:10.624Z] [LOG] [SAMPLING-DEBUG] path=[Sounds &amp; vibration, Focus mode, Work, Groups allowed to send messages], title="Groups allowed to", mode="full", rules=1, matched=no
+[2026-04-28T04:02:12.834Z] [LOG] [FRAME-PLAN] depth=4, stack=5, cursor=0/8, current="Groups allowed to", expected="None", nextAction=tap "None"
+[2026-04-28T04:02:12.834Z] [LOG] [FRAME-NEXT] current="Groups allowed to", expected="None", action=tap "None"
+[2026-04-28T04:02:12.834Z] [LOG] [ACTION-START] action=tap_element, label="None", from="Groups allowed to", expected="None", selector={"resourceId":"com.android.settings:id/select_dialog_listview"}
+[2026-04-28T04:02:22.541Z] [LOG] [ACTION-RESULT] action=tap_element, label="None", expected="None", status=success, from="Groups allowed to", to="Contacts allowed to"
+[2026-04-28T04:02:22.541Z] [LOG] [FRAME-RESUME] screenId drift detected: matched by title "Contacts allowed to" at depth=3 (snapshot screenId=aa8908720ad2abe0, frame screenId=86ed9e279855b101)
+[2026-04-28T04:02:22.541Z] [LOG] [FRAME-RESUME-CONTEXT] frameTitle="Groups allowed to", cursor=1/8, remainingLabels=["Favorite contacts","Contacts","Anyone","Friends-shenyuexin2006@gmail.com","Family-shenyuexin2006@gmail.com","Coworkers-shenyuexin2006@gmail.com","android.view.View"]
+[2026-04-28T04:02:22.541Z] [LOG] [FRAME-RESUME] "None" returned to ancestor frame depth=3 title="Contacts allowed to"
+[2026-04-28T04:02:22.541Z] [LOG] [FRAME-LOOP] depth=3, stack=4, cursor=2/2, frameTitle="Contacts allowed to", frameScreenId="aa8908720ad2abe0"
+[2026-04-28T04:02:26.803Z] [LOG] [FRAME-PLAN] depth=3, stack=4, cursor=2/2, current="Contacts allowed to", expected="Do Not Disturb", nextAction=pop frame and backtrack
+[2026-04-28T04:02:26.803Z] [LOG] [POP] Frame "Contacts allowed to" all 2 elements explored. Stack now: 3
+[2026-04-28T04:02:26.803Z] [LOG] [POP] Next frame: depth=2, cursor=3/7, title="Do Not Disturb"
+[2026-04-28T04:02:44.662Z] [LOG] [BACKTRACK-TRACE] method=navigate_back:system_back_fast, status=success, reason=OK, executed=android_keyevent, stateChanged=unknown, pageTreeHashUnchanged=false, fallbackUsed=false => success (before=Contacts allowed to[aa8908720ad2abe0], after=Do Not Disturb[98a4769407eb2406], expectedParent=Do Not Disturb)
+[2026-04-28T04:02:47.084Z] [LOG] [POP-RETURN] Reconciled stack to page "Do Not Disturb" at depth=2
+[2026-04-28T04:02:47.084Z] [LOG] [FRAME-LOOP] depth=2, stack=3, cursor=3/7, frameTitle="Do Not Disturb", frameScreenId="98a4769407eb2406"
+[2026-04-28T04:02:51.400Z] [LOG] [FRAME-PLAN] depth=2, stack=3, cursor=3/7, current="Do Not Disturb", expected="Personal", nextAction=tap "Personal"
+[2026-04-28T04:02:51.400Z] [LOG] [FRAME-NEXT] current="Do Not Disturb", expected="Personal", action=tap "Personal"
+[2026-04-28T04:02:51.400Z] [LOG] [ACTION-START] action=tap_element, label="Personal", from="Do Not Disturb", expected="Personal", selector={"position":{"x":630,"y":1144},"elementType":"android.widget.LinearLayout"}
+[2026-04-28T04:03:00.965Z] [LOG] [ACTION-RESULT] action=tap_element, label="Personal", expected="Personal", status=success, from="Do Not Disturb", to="Contacts allowed to"
+[2026-04-28T04:03:00.965Z] [LOG] [FRAME-PUSH] Creating child frame for "Contacts allowed to", parentTitle="Do Not Disturb", parentFrameTitle="Do Not Disturb"
+[2026-04-28T04:03:00.965Z] [LOG] [FRAME-LOOP] depth=3, stack=4, cursor=0/0, frameTitle="Contacts allowed to", frameScreenId="aa8908720ad2abe0"
+[2026-04-28T04:03:05.392Z] [LOG] [FRAME-ELEMENTS] depth=3, title="Contacts allowed to", count=2, labels=["Add","Groups allowed to send messages"]
+[2026-04-28T04:03:05.392Z] [LOG] [SAMPLING-DEBUG] path=[Sounds &amp; vibration, Focus mode, Personal], title="Contacts allowed to", mode="full", rules=1, matched=no
+[2026-04-28T04:03:07.528Z] [LOG] [FRAME-PLAN] depth=3, stack=4, cursor=0/2, current="Contacts allowed to", expected="Add", nextAction=tap "Add"
+[2026-04-28T04:03:07.528Z] [LOG] [FRAME-NEXT] current="Contacts allowed to", expected="Add", action=tap "Add"
+[2026-04-28T04:03:07.528Z] [LOG] [ACTION-START] action=tap_element, label="Add", from="Contacts allowed to", expected="Add", selector={"position":{"x":210,"y":746},"elementType":"android.widget.RelativeLayout"}
+[2026-04-28T04:03:17.057Z] [LOG] [ACTION-RESULT] action=tap_element, label="Add", expected="Add", status=success, from="Contacts allowed to", to="Secure access to"
+[2026-04-28T04:03:17.057Z] [LOG] [APP-SWITCH] Detected: com.android.settings -> com.android.contacts (via "Add")
+[2026-04-28T04:03:17.057Z] [LOG] [APP-SWITCH] In external app: com.android.contacts (via "Add")
+[2026-04-28T04:03:17.057Z] [LOG] [APP-SWITCH] Attempting Android system back before relaunch...
+[2026-04-28T04:03:34.695Z] [LOG] [BACKTRACK-TRACE] method=navigate_back:system_back_fast, status=success, reason=OK, executed=android_keyevent, stateChanged=unknown, pageTreeHashUnchanged=false, fallbackUsed=false => success (before=Secure access to[fd3ae54a6b7ab4a3], after=Contacts allowed to[aa8908720ad2abe0], expectedParent=<none>)
+[2026-04-28T04:03:37.043Z] [LOG] [APP-SWITCH] Returned via system back at page "Contacts allowed to" (app=com.android.settings)
+[2026-04-28T04:03:37.043Z] [LOG] [FRAME-LOOP] depth=3, stack=4, cursor=1/2, frameTitle="Contacts allowed to", frameScreenId="aa8908720ad2abe0"
+[2026-04-28T04:03:41.277Z] [LOG] [FRAME-PLAN] depth=3, stack=4, cursor=1/2, current="Contacts allowed to", expected="Groups allowed to send messages", nextAction=tap "Groups allowed to send messages"
+[2026-04-28T04:03:41.277Z] [LOG] [FRAME-NEXT] current="Contacts allowed to", expected="Groups allowed to send messages", action=tap "Groups allowed to send messages"
+[2026-04-28T04:03:41.277Z] [LOG] [ACTION-START] action=tap_element, label="Groups allowed to send messages", from="Contacts allowed to", expected="Groups allowed to send messages", selector={"position":{"x":630,"y":1180},"elementType":"android.view.ViewGroup"}
+[2026-04-28T04:03:50.215Z] [LOG] [ACTION-RESULT] action=tap_element, label="Groups allowed to send messages", expected="Groups allowed to send messages", status=success, from="Contacts allowed to", to="Groups allowed to"
+[2026-04-28T04:03:50.215Z] [LOG] [FRAME-PUSH] Creating child frame for "Groups allowed to", parentTitle="Contacts allowed to", parentFrameTitle="Contacts allowed to"
+[2026-04-28T04:03:50.215Z] [LOG] [FRAME-LOOP] depth=4, stack=5, cursor=0/0, frameTitle="Groups allowed to", frameScreenId="f859f893c9fd2ce2"
+[2026-04-28T04:04:12.654Z] [LOG] [BACKTRACK-TRACE] method=navigate_back:system_back_fast, status=success, reason=OK, executed=android_keyevent, stateChanged=unknown, pageTreeHashUnchanged=false, fallbackUsed=false => success (before=Groups allowed to[f859f893c9fd2ce2], after=Contacts allowed to[aa8908720ad2abe0], expectedParent=Contacts allowed to)
+[2026-04-28T04:04:15.016Z] [LOG] [DEDUP-RETURN] Reconciled stack to page "Contacts allowed to" at depth=3
+[2026-04-28T04:04:15.016Z] [LOG] [FRAME-LOOP] depth=3, stack=4, cursor=2/2, frameTitle="Contacts allowed to", frameScreenId="aa8908720ad2abe0"
+[2026-04-28T04:04:19.242Z] [LOG] [FRAME-PLAN] depth=3, stack=4, cursor=2/2, current="Contacts allowed to", expected="Do Not Disturb", nextAction=pop frame and backtrack
+[2026-04-28T04:04:19.242Z] [LOG] [POP] Frame "Contacts allowed to" all 2 elements explored. Stack now: 3
+[2026-04-28T04:04:19.242Z] [LOG] [POP] Next frame: depth=2, cursor=4/7, title="Do Not Disturb"
+[2026-04-28T04:04:37.051Z] [LOG] [BACKTRACK-TRACE] method=navigate_back:system_back_fast, status=success, reason=OK, executed=android_keyevent, stateChanged=unknown, pageTreeHashUnchanged=false, fallbackUsed=false => success (before=Contacts allowed to[aa8908720ad2abe0], after=Do Not Disturb[98a4769407eb2406], expectedParent=Do Not Disturb)
+[2026-04-28T04:04:39.454Z] [LOG] [POP-RETURN] Reconciled stack to page "Do Not Disturb" at depth=2
+[2026-04-28T04:04:39.454Z] [LOG] [FRAME-LOOP] depth=2, stack=3, cursor=4/7, frameTitle="Do Not Disturb", frameScreenId="98a4769407eb2406"
+[2026-04-28T04:04:43.806Z] [LOG] [FRAME-PLAN] depth=2, stack=3, cursor=4/7, current="Do Not Disturb", expected="Exercise", nextAction=tap "Exercise"
+[2026-04-28T04:04:43.806Z] [LOG] [FRAME-NEXT] current="Do Not Disturb", expected="Exercise", action=tap "Exercise"
+[2026-04-28T04:04:43.806Z] [LOG] [ACTION-START] action=tap_element, label="Exercise", from="Do Not Disturb", expected="Exercise", selector={"position":{"x":630,"y":1319},"elementType":"android.widget.LinearLayout"}
+[2026-04-28T04:04:53.458Z] [LOG] [ACTION-RESULT] action=tap_element, label="Exercise", expected="Exercise", status=success, from="Do Not Disturb", to="Do Not Disturb"
+[2026-04-28T04:04:53.458Z] [LOG] [ACTION-RESULT] action=tap_element, label="Exercise", expected="Exercise", status=partial, from="Do Not Disturb", to="Do Not Disturb", reason="screenId unchanged — element had no navigation effect"
+[2026-04-28T04:04:53.458Z] [LOG] [FRAME-LOOP] depth=2, stack=3, cursor=5/7, frameTitle="Do Not Disturb", frameScreenId="98a4769407eb2406"
+[2026-04-28T04:04:57.843Z] [LOG] [FRAME-PLAN] depth=2, stack=3, cursor=5/7, current="Do Not Disturb", expected="Read", nextAction=tap "Read"
+[2026-04-28T04:04:57.843Z] [LOG] [FRAME-NEXT] current="Do Not Disturb", expected="Read", action=tap "Read"
+[2026-04-28T04:04:57.843Z] [LOG] [ACTION-START] action=tap_element, label="Read", from="Do Not Disturb", expected="Read", selector={"position":{"x":630,"y":1494},"elementType":"android.widget.LinearLayout"}
+[2026-04-28T04:05:07.458Z] [LOG] [ACTION-RESULT] action=tap_element, label="Read", expected="Read", status=success, from="Do Not Disturb", to="Do Not Disturb"
+[2026-04-28T04:05:07.459Z] [LOG] [ACTION-RESULT] action=tap_element, label="Read", expected="Read", status=partial, from="Do Not Disturb", to="Do Not Disturb", reason="screenId unchanged — element had no navigation effect"
+[2026-04-28T04:05:07.459Z] [LOG] [FRAME-LOOP] depth=2, stack=3, cursor=6/7, frameTitle="Do Not Disturb", frameScreenId="98a4769407eb2406"
+[2026-04-28T04:05:11.828Z] [LOG] [FRAME-PLAN] depth=2, stack=3, cursor=6/7, current="Do Not Disturb", expected="Meditation", nextAction=tap "Meditation"
+[2026-04-28T04:05:11.828Z] [LOG] [FRAME-NEXT] current="Do Not Disturb", expected="Meditation", action=tap "Meditation"
+[2026-04-28T04:05:11.828Z] [LOG] [ACTION-START] action=tap_element, label="Meditation", from="Do Not Disturb", expected="Meditation", selector={"position":{"x":630,"y":1669},"elementType":"android.widget.LinearLayout"}
+[2026-04-28T04:05:21.456Z] [LOG] [ACTION-RESULT] action=tap_element, label="Meditation", expected="Meditation", status=success, from="Do Not Disturb", to="Do Not Disturb"
+[2026-04-28T04:05:21.456Z] [LOG] [ACTION-RESULT] action=tap_element, label="Meditation", expected="Meditation", status=partial, from="Do Not Disturb", to="Do Not Disturb", reason="screenId unchanged — element had no navigation effect"
+[2026-04-28T04:05:21.457Z] [LOG] [CIRCUIT-BREAKER] Page 98a4769407eb2406 exceeded failure threshold (3/3)
+[2026-04-28T04:05:21.457Z] [LOG] [FRAME-LOOP] depth=2, stack=3, cursor=7/7, frameTitle="Do Not Disturb", frameScreenId="98a4769407eb2406"
+[2026-04-28T04:05:25.834Z] [LOG] [FRAME-PLAN] depth=2, stack=3, cursor=7/7, current="Do Not Disturb", expected="Ring mode", nextAction=pop frame and backtrack
+[2026-04-28T04:05:25.834Z] [LOG] [POP] Frame "Do Not Disturb" all 7 elements explored. Stack now: 2
+[2026-04-28T04:05:25.834Z] [LOG] [POP] Next frame: depth=1, cursor=6/6, title="Ring mode"
+[2026-04-28T04:05:43.690Z] [LOG] [BACKTRACK-TRACE] back landed on "Do Not Disturb" instead of expected parent "Ring mode", attempting chained back 1/2...
+[2026-04-28T04:05:59.524Z] [LOG] [BACKTRACK-TRACE] method=navigate_back:system_back_fast, status=success, reason=OK, executed=android_keyevent, stateChanged=unknown, pageTreeHashUnchanged=false, fallbackUsed=false => success after chained back 1 (before=Do Not Disturb[98a4769407eb2406], after=Ring mode[421f33628c376cb9], expectedParent=Ring mode)
+[2026-04-28T04:06:01.945Z] [LOG] [POP-RETURN] Reconciled stack to page "Ring mode" at depth=1
+[2026-04-28T04:06:01.945Z] [LOG] [FRAME-LOOP] depth=1, stack=2, cursor=6/6, frameTitle="Ring mode", frameScreenId="421f33628c376cb9"
+[2026-04-28T04:06:06.263Z] [LOG] [FRAME-PLAN] depth=1, stack=2, cursor=6/6, current="Ring mode", expected="Aiden", nextAction=pop frame and backtrack
+[2026-04-28T04:06:06.263Z] [LOG] [POP] Frame "Ring mode" all 6 elements explored. Stack now: 1
+[2026-04-28T04:06:06.263Z] [LOG] [POP] Next frame: depth=0, cursor=5/8, title="Aiden"
+[2026-04-28T04:06:22.460Z] [LOG] [BACKTRACK-TRACE] method=navigate_back:system_back_fast, status=success, reason=OK, executed=android_keyevent, stateChanged=unknown, pageTreeHashUnchanged=false, fallbackUsed=false => success (before=Ring mode[421f33628c376cb9], after=Aiden[12ed45faa02c47c9], expectedParent=Aiden)
+[2026-04-28T04:06:24.851Z] [LOG] [POP-RETURN] Reconciled stack to page "Aiden" at depth=0
+[2026-04-28T04:06:24.851Z] [LOG] [FRAME-LOOP] depth=0, stack=1, cursor=5/8, frameTitle="Aiden", frameScreenId="12ed45faa02c47c9"
+[2026-04-28T04:06:29.133Z] [LOG] [FRAME-PLAN] depth=0, stack=1, cursor=5/8, current="Aiden", expected="Display, brightness &amp; eye protection", nextAction=tap "Display, brightness &amp; eye protection"
+[2026-04-28T04:06:29.133Z] [LOG] [FRAME-NEXT] current="Aiden", expected="Display, brightness &amp; eye protection", action=tap "Display, brightness &amp; eye protection"
+[2026-04-28T04:06:29.133Z] [LOG] [ACTION-START] action=tap_element, label="Display, brightness &amp; eye protection", from="Aiden", expected="Display, brightness &amp; eye protection", selector={"position":{"x":630,"y":2389},"elementType":"android.widget.FrameLayout"}
+[2026-04-28T04:06:36.770Z] [LOG] [ACTION-RESULT] action=tap_element, label="Display, brightness &amp; eye protection", expected="Display, brightness &amp; eye protection", status=success, from="Aiden", to="Appearance"
+[2026-04-28T04:06:36.771Z] [LOG] [FRAME-PUSH] Creating child frame for "Appearance", parentTitle="Aiden", parentFrameTitle="Aiden"
+[2026-04-28T04:06:36.771Z] [LOG] [FRAME-LOOP] depth=1, stack=2, cursor=0/0, frameTitle="Appearance", frameScreenId="08c8c43ca3e406ec"
+[2026-04-28T04:06:41.400Z] [LOG] [FRAME-ELEMENTS] depth=1, title="Appearance", count=6, labels=["Light mode","Dark mode","Scheduled switch","Dark mode settings","Custom brightness","App-specific brightness"]
+[2026-04-28T04:06:41.400Z] [LOG] [SAMPLING-DEBUG] path=[Display, brightness &amp; eye protection], title="Appearance", mode="full", rules=1, matched=no
+[2026-04-28T04:06:43.567Z] [LOG] [FRAME-PLAN] depth=1, stack=2, cursor=0/6, current="Appearance", expected="Light mode", nextAction=tap "Light mode"
+[2026-04-28T04:06:43.567Z] [LOG] [FRAME-NEXT] current="Appearance", expected="Light mode", action=tap "Light mode"
+[2026-04-28T04:06:43.567Z] [LOG] [ACTION-START] action=tap_element, label="Light mode", from="Appearance", expected="Light mode", selector={"resourceId":"com.android.settings:id/light_mode_layout"}
+[2026-04-28T04:06:55.303Z] [LOG] [ACTION-RESULT] action=tap_element, label="Light mode", expected="Light mode", status=success, from="Appearance", to="Appearance"
+[2026-04-28T04:06:55.304Z] [LOG] [ACTION-RESULT] action=tap_element, label="Light mode", expected="Light mode", status=partial, from="Appearance", to="Appearance", reason="screenId unchanged — element had no navigation effect"
+[2026-04-28T04:06:55.304Z] [LOG] [FRAME-LOOP] depth=1, stack=2, cursor=1/6, frameTitle="Appearance", frameScreenId="08c8c43ca3e406ec"
+[2026-04-28T04:06:59.631Z] [LOG] [FRAME-PLAN] depth=1, stack=2, cursor=1/6, current="Appearance", expected="Dark mode", nextAction=tap "Dark mode"
+[2026-04-28T04:06:59.631Z] [LOG] [FRAME-NEXT] current="Appearance", expected="Dark mode", action=tap "Dark mode"
+[2026-04-28T04:06:59.631Z] [LOG] [ACTION-START] action=tap_element, label="Dark mode", from="Appearance", expected="Dark mode", selector={"resourceId":"com.android.settings:id/dark_mode_layout"}
+[2026-04-28T04:07:09.408Z] [LOG] [ACTION-RESULT] action=tap_element, label="Dark mode", expected="Dark mode", status=success, from="Appearance", to="Appearance"
+[2026-04-28T04:07:09.409Z] [LOG] [ACTION-RESULT] action=tap_element, label="Dark mode", expected="Dark mode", status=partial, from="Appearance", to="Appearance", reason="screenId unchanged — element had no navigation effect"
+[2026-04-28T04:07:09.409Z] [LOG] [FRAME-LOOP] depth=1, stack=2, cursor=2/6, frameTitle="Appearance", frameScreenId="08c8c43ca3e406ec"
+[2026-04-28T04:07:13.696Z] [LOG] [FRAME-PLAN] depth=1, stack=2, cursor=2/6, current="Appearance", expected="Scheduled switch", nextAction=tap "Scheduled switch"
+[2026-04-28T04:07:13.696Z] [LOG] [FRAME-NEXT] current="Appearance", expected="Scheduled switch", action=tap "Scheduled switch"
+[2026-04-28T04:07:13.696Z] [LOG] [ACTION-START] action=tap_element, label="Scheduled switch", from="Appearance", expected="Scheduled switch", selector={"position":{"x":630,"y":1329},"elementType":"android.view.ViewGroup"}
+[2026-04-28T04:07:23.208Z] [LOG] [ACTION-RESULT] action=tap_element, label="Scheduled switch", expected="Scheduled switch", status=success, from="Appearance", to="Off"
+[2026-04-28T04:07:23.209Z] [LOG] [FRAME-PUSH] Creating child frame for "Off", parentTitle="Appearance", parentFrameTitle="Appearance"
+[2026-04-28T04:07:23.209Z] [LOG] [FRAME-LOOP] depth=2, stack=3, cursor=0/0, frameTitle="Off", frameScreenId="ee08ab3bbd78b301"
+[2026-04-28T04:07:27.707Z] [LOG] [FRAME-ELEMENTS] depth=2, title="Off", count=4, labels=["Off","Follow Sleep","Sunset to sunrise","Custom"]
+[2026-04-28T04:07:27.707Z] [LOG] [SAMPLING-DEBUG] path=[Display, brightness &amp; eye protection, Scheduled switch], title="Off", mode="full", rules=1, matched=no
+[2026-04-28T04:07:29.826Z] [LOG] [FRAME-PLAN] depth=2, stack=3, cursor=0/4, current="Off", expected="Off", nextAction=tap "Off"
+[2026-04-28T04:07:29.826Z] [LOG] [FRAME-NEXT] current="Off", expected="Off", action=tap "Off"
+[2026-04-28T04:07:29.826Z] [LOG] [ACTION-START] action=tap_element, label="Off", from="Off", expected="Off", selector={"position":{"x":630,"y":480},"elementType":"android.view.ViewGroup"}
+[2026-04-28T04:07:39.149Z] [LOG] [ACTION-RESULT] action=tap_element, label="Off", expected="Off", status=success, from="Off", to="Off"
+[2026-04-28T04:07:39.149Z] [LOG] [ACTION-RESULT] action=tap_element, label="Off", expected="Off", status=partial, from="Off", to="Off", reason="screenId unchanged — element had no navigation effect"
+[2026-04-28T04:07:39.149Z] [LOG] [FRAME-LOOP] depth=2, stack=3, cursor=1/4, frameTitle="Off", frameScreenId="ee08ab3bbd78b301"
+[2026-04-28T04:07:43.360Z] [LOG] [FRAME-PLAN] depth=2, stack=3, cursor=1/4, current="Off", expected="Follow Sleep", nextAction=tap "Follow Sleep"
+[2026-04-28T04:07:43.360Z] [LOG] [FRAME-NEXT] current="Off", expected="Follow Sleep", action=tap "Follow Sleep"
+[2026-04-28T04:07:43.360Z] [LOG] [ACTION-START] action=tap_element, label="Follow Sleep", from="Off", expected="Follow Sleep", selector={"position":{"x":630,"y":662},"elementType":"android.view.ViewGroup"}
+[2026-04-28T04:07:51.005Z] [LOG] [ACTION-RESULT] action=tap_element, label="Follow Sleep", expected="Follow Sleep", status=success, from="Off", to="Off"
+[2026-04-28T04:07:51.005Z] [LOG] [FRAME-RESUME] screenId drift detected: matched by title "Off" at depth=2 (snapshot screenId=dd8af6ca8cb1e631, frame screenId=ee08ab3bbd78b301)
+[2026-04-28T04:07:51.005Z] [LOG] [SCREEN-DRIFT] "Follow Sleep" changed state on "Off" without page transition — updating current frame instead of pushing child
+[2026-04-28T04:07:51.005Z] [LOG] [FRAME-LOOP] depth=2, stack=3, cursor=2/4, frameTitle="Off", frameScreenId="dd8af6ca8cb1e631"
+[2026-04-28T04:07:55.313Z] [LOG] [FRAME-PLAN] depth=2, stack=3, cursor=2/4, current="Off", expected="Sunset to sunrise", nextAction=tap "Sunset to sunrise"
+[2026-04-28T04:07:55.313Z] [LOG] [FRAME-NEXT] current="Off", expected="Sunset to sunrise", action=tap "Sunset to sunrise"
+[2026-04-28T04:07:55.313Z] [LOG] [ACTION-START] action=tap_element, label="Sunset to sunrise", from="Off", expected="Sunset to sunrise", selector={"position":{"x":630,"y":837},"elementType":"android.view.ViewGroup"}
+[2026-04-28T04:08:02.827Z] [LOG] [ACTION-RESULT] action=tap_element, label="Sunset to sunrise", expected="Sunset to sunrise", status=success, from="Off", to="Off"
+[2026-04-28T04:08:02.828Z] [LOG] [FRAME-RESUME] screenId drift detected: matched by title "Off" at depth=2 (snapshot screenId=36afedc78b64f85c, frame screenId=dd8af6ca8cb1e631)
+[2026-04-28T04:08:02.828Z] [LOG] [SCREEN-DRIFT] "Sunset to sunrise" changed state on "Off" without page transition — updating current frame instead of pushing child
+[2026-04-28T04:08:02.828Z] [LOG] [FRAME-LOOP] depth=2, stack=3, cursor=3/4, frameTitle="Off", frameScreenId="36afedc78b64f85c"
+[2026-04-28T04:08:07.074Z] [LOG] [FRAME-PLAN] depth=2, stack=3, cursor=3/4, current="Off", expected="Custom", nextAction=tap "Custom"
+[2026-04-28T04:08:07.074Z] [LOG] [FRAME-NEXT] current="Off", expected="Custom", action=tap "Custom"
+[2026-04-28T04:08:07.074Z] [LOG] [ACTION-START] action=tap_element, label="Custom", from="Off", expected="Custom", selector={"position":{"x":630,"y":1019},"elementType":"android.view.ViewGroup"}
+[2026-04-28T04:08:14.695Z] [LOG] [ACTION-RESULT] action=tap_element, label="Custom", expected="Custom", status=success, from="Off", to="Off"
+[2026-04-28T04:08:14.695Z] [LOG] [FRAME-RESUME] screenId drift detected: matched by title "Off" at depth=2 (snapshot screenId=763e4764262863fe, frame screenId=36afedc78b64f85c)
+[2026-04-28T04:08:14.695Z] [LOG] [SCREEN-DRIFT] "Custom" changed state on "Off" without page transition — updating current frame instead of pushing child
+[2026-04-28T04:08:14.695Z] [LOG] [FRAME-LOOP] depth=2, stack=3, cursor=4/4, frameTitle="Off", frameScreenId="763e4764262863fe"
+[2026-04-28T04:08:18.951Z] [LOG] [FRAME-PLAN] depth=2, stack=3, cursor=4/4, current="Off", expected="Appearance", nextAction=pop frame and backtrack
+[2026-04-28T04:08:18.951Z] [LOG] [POP] Frame "Off" all 4 elements explored. Stack now: 2
+[2026-04-28T04:08:18.951Z] [LOG] [POP] Next frame: depth=1, cursor=3/6, title="Appearance"
+[2026-04-28T04:08:34.782Z] [LOG] [BACKTRACK-TRACE] method=navigate_back:system_back_fast, status=success, reason=OK, executed=android_keyevent, stateChanged=unknown, pageTreeHashUnchanged=false, fallbackUsed=false => success (before=Off[763e4764262863fe], after=Appearance[3bfe752aea223d3d], expectedParent=Appearance)
+[2026-04-28T04:08:37.189Z] [LOG] [FRAME-RESUME] screenId drift detected: matched by title "Appearance" at depth=1 (snapshot screenId=3bfe752aea223d3d, frame screenId=08c8c43ca3e406ec)
+[2026-04-28T04:08:37.190Z] [LOG] [POP-RETURN] Reconciled stack to page "Appearance" at depth=1
+[2026-04-28T04:08:37.190Z] [LOG] [FRAME-LOOP] depth=1, stack=2, cursor=3/6, frameTitle="Appearance", frameScreenId="3bfe752aea223d3d"
+[2026-04-28T04:08:41.463Z] [LOG] [FRAME-PLAN] depth=1, stack=2, cursor=3/6, current="Appearance", expected="Dark mode settings", nextAction=tap "Dark mode settings"
+[2026-04-28T04:08:41.463Z] [LOG] [FRAME-NEXT] current="Appearance", expected="Dark mode settings", action=tap "Dark mode settings"
+[2026-04-28T04:08:41.463Z] [LOG] [ACTION-START] action=tap_element, label="Dark mode settings", from="Appearance", expected="Dark mode settings", selector={"position":{"x":630,"y":1497},"elementType":"android.view.ViewGroup"}
+[2026-04-28T04:08:50.980Z] [LOG] [ACTION-RESULT] action=tap_element, label="Dark mode settings", expected="Dark mode settings", status=success, from="Appearance", to="Dim home screen"
+[2026-04-28T04:08:50.980Z] [LOG] [FRAME-PUSH] Creating child frame for "Dim home screen", parentTitle="Appearance", parentFrameTitle="Appearance"
+[2026-04-28T04:08:50.980Z] [LOG] [FRAME-LOOP] depth=2, stack=3, cursor=0/0, frameTitle="Dim home screen", frameScreenId="de552706df73d467"
+[2026-04-28T04:08:55.453Z] [LOG] [FRAME-ELEMENTS] depth=2, title="Dim home screen", count=1, labels=["Third-party App Management"]
+[2026-04-28T04:08:55.453Z] [LOG] [SAMPLING-DEBUG] path=[Display, brightness &amp; eye protection, Dark mode settings], title="Dim home screen", mode="full", rules=1, matched=no
+[2026-04-28T04:08:57.568Z] [LOG] [FRAME-PLAN] depth=2, stack=3, cursor=0/1, current="Dim home screen", expected="Third-party App Management", nextAction=tap "Third-party App Management"
+[2026-04-28T04:08:57.568Z] [LOG] [FRAME-NEXT] current="Dim home screen", expected="Third-party App Management", action=tap "Third-party App Management"
+[2026-04-28T04:08:57.568Z] [LOG] [ACTION-START] action=tap_element, label="Third-party App Management", from="Dim home screen", expected="Third-party App Management", selector={"position":{"x":630,"y":1101},"elementType":"android.view.ViewGroup"}
+[2026-04-28T04:09:05.054Z] [LOG] [ACTION-RESULT] action=tap_element, label="Third-party App Management", expected="Third-party App Management", status=success, from="Dim home screen", to="阿里巴巴"
+[2026-04-28T04:09:05.055Z] [LOG] [FRAME-PUSH] Creating child frame for "阿里巴巴", parentTitle="Dim home screen", parentFrameTitle="Dim home screen"
+[2026-04-28T04:09:05.055Z] [LOG] [FRAME-LOOP] depth=3, stack=4, cursor=0/0, frameTitle="阿里巴巴", frameScreenId="69dddc9057cb19e9"
+[2026-04-28T04:09:09.538Z] [LOG] [FRAME-ELEMENTS] depth=3, title="阿里巴巴", count=0, labels=[]
+[2026-04-28T04:09:09.539Z] [LOG] [SAMPLING-DEBUG] path=[Display, brightness &amp; eye protection, Dark mode settings, Third-party App Management], title="阿里巴巴", mode="full", rules=1, matched=no
+[2026-04-28T04:09:11.668Z] [LOG] [FRAME-PLAN] depth=3, stack=4, cursor=0/0, current="阿里巴巴", expected="Dim home screen", nextAction=pop frame and backtrack
+[2026-04-28T04:09:11.668Z] [LOG] [POP] Frame "阿里巴巴" all 0 elements explored. Stack now: 3
+[2026-04-28T04:09:11.668Z] [LOG] [POP] Next frame: depth=2, cursor=1/1, title="Dim home screen"
+[2026-04-28T04:09:29.204Z] [LOG] [BACKTRACK-TRACE] method=navigate_back:system_back_fast, status=success, reason=OK, executed=android_keyevent, stateChanged=unknown, pageTreeHashUnchanged=false, fallbackUsed=false => success (before=阿里巴巴[69dddc9057cb19e9], after=Dim home screen[de552706df73d467], expectedParent=Dim home screen)
+[2026-04-28T04:09:31.545Z] [LOG] [POP-RETURN] Reconciled stack to page "Dim home screen" at depth=2
+[2026-04-28T04:09:31.545Z] [LOG] [FRAME-LOOP] depth=2, stack=3, cursor=1/1, frameTitle="Dim home screen", frameScreenId="de552706df73d467"
+[2026-04-28T04:09:35.763Z] [LOG] [FRAME-PLAN] depth=2, stack=3, cursor=1/1, current="Dim home screen", expected="Appearance", nextAction=pop frame and backtrack
+[2026-04-28T04:09:35.763Z] [LOG] [POP] Frame "Dim home screen" all 1 elements explored. Stack now: 2
+[2026-04-28T04:09:35.763Z] [LOG] [POP] Next frame: depth=1, cursor=4/6, title="Appearance"
+[2026-04-28T04:09:53.587Z] [LOG] [BACKTRACK-TRACE] method=navigate_back:system_back_fast, status=success, reason=OK, executed=android_keyevent, stateChanged=unknown, pageTreeHashUnchanged=false, fallbackUsed=false => success (before=Dim home screen[de552706df73d467], after=Appearance[3bfe752aea223d3d], expectedParent=Appearance)
+[2026-04-28T04:09:56.041Z] [LOG] [POP-RETURN] Reconciled stack to page "Appearance" at depth=1
+[2026-04-28T04:09:56.041Z] [LOG] [FRAME-LOOP] depth=1, stack=2, cursor=4/6, frameTitle="Appearance", frameScreenId="3bfe752aea223d3d"
+[2026-04-28T04:10:00.391Z] [LOG] [FRAME-PLAN] depth=1, stack=2, cursor=4/6, current="Appearance", expected="Custom brightness", nextAction=tap "Custom brightness"
+[2026-04-28T04:10:00.392Z] [LOG] [FRAME-NEXT] current="Appearance", expected="Custom brightness", action=tap "Custom brightness"
+[2026-04-28T04:10:00.392Z] [LOG] [ACTION-START] action=tap_element, label="Custom brightness", from="Appearance", expected="Custom brightness", selector={"position":{"x":630,"y":2255},"elementType":"android.view.ViewGroup"}
+[2026-04-28T04:10:07.824Z] [LOG] [ACTION-RESULT] action=tap_element, label="Custom brightness", expected="Custom brightness", status=success, from="Appearance", to="Custom brightness"
+[2026-04-28T04:10:07.824Z] [LOG] [FRAME-PUSH] Creating child frame for "Custom brightness", parentTitle="Appearance", parentFrameTitle="Appearance"
+[2026-04-28T04:10:07.824Z] [LOG] [FRAME-LOOP] depth=2, stack=3, cursor=0/0, frameTitle="Custom brightness", frameScreenId="c215735cd89d41c5"
+[2026-04-28T04:10:12.286Z] [LOG] [FRAME-ELEMENTS] depth=2, title="Custom brightness", count=0, labels=[]
+[2026-04-28T04:10:12.286Z] [LOG] [SAMPLING-DEBUG] path=[Display, brightness &amp; eye protection, Custom brightness], title="Custom brightness", mode="full", rules=1, matched=no
+[2026-04-28T04:10:14.403Z] [LOG] [FRAME-PLAN] depth=2, stack=3, cursor=0/0, current="Custom brightness", expected="Appearance", nextAction=pop frame and backtrack
+[2026-04-28T04:10:14.403Z] [LOG] [POP] Frame "Custom brightness" all 0 elements explored. Stack now: 2
+[2026-04-28T04:10:14.403Z] [LOG] [POP] Next frame: depth=1, cursor=5/6, title="Appearance"
+[2026-04-28T04:10:32.198Z] [LOG] [BACKTRACK-TRACE] method=navigate_back:system_back_fast, status=success, reason=OK, executed=android_keyevent, stateChanged=unknown, pageTreeHashUnchanged=false, fallbackUsed=false => success (before=Custom brightness[c215735cd89d41c5], after=Appearance[3bfe752aea223d3d], expectedParent=Appearance)
+[2026-04-28T04:10:34.696Z] [LOG] [POP-RETURN] Reconciled stack to page "Appearance" at depth=1
+[2026-04-28T04:10:34.696Z] [LOG] [FRAME-LOOP] depth=1, stack=2, cursor=5/6, frameTitle="Appearance", frameScreenId="3bfe752aea223d3d"
+[2026-04-28T04:10:39.018Z] [LOG] [FRAME-PLAN] depth=1, stack=2, cursor=5/6, current="Appearance", expected="App-specific brightness", nextAction=tap "App-specific brightness"
+[2026-04-28T04:10:39.018Z] [LOG] [FRAME-NEXT] current="Appearance", expected="App-specific brightness", action=tap "App-specific brightness"
+[2026-04-28T04:10:39.018Z] [LOG] [ACTION-START] action=tap_element, label="App-specific brightness", from="Appearance", expected="App-specific brightness", selector={"position":{"x":630,"y":2423},"elementType":"android.view.ViewGroup"}
+[2026-04-28T04:10:46.490Z] [LOG] [ACTION-RESULT] action=tap_element, label="App-specific brightness", expected="App-specific brightness", status=success, from="Appearance", to="App-specific brightness"
+[2026-04-28T04:10:46.490Z] [LOG] [FRAME-PUSH] Creating child frame for "App-specific brightness", parentTitle="Appearance", parentFrameTitle="Appearance"
+[2026-04-28T04:10:46.490Z] [LOG] [FRAME-LOOP] depth=2, stack=3, cursor=0/0, frameTitle="App-specific brightness", frameScreenId="105c33ebabbb5985"
+[2026-04-28T04:10:50.994Z] [LOG] [FRAME-ELEMENTS] depth=2, title="App-specific brightness", count=0, labels=[]
+[2026-04-28T04:10:50.994Z] [LOG] [SAMPLING-DEBUG] path=[Display, brightness &amp; eye protection, App-specific brightness], title="App-specific brightness", mode="full", rules=1, matched=no
+[2026-04-28T04:10:53.089Z] [LOG] [FRAME-PLAN] depth=2, stack=3, cursor=0/0, current="App-specific brightness", expected="Appearance", nextAction=pop frame and backtrack
+[2026-04-28T04:10:53.089Z] [LOG] [POP] Frame "App-specific brightness" all 0 elements explored. Stack now: 2
+[2026-04-28T04:10:53.089Z] [LOG] [POP] Next frame: depth=1, cursor=6/6, title="Appearance"
+[2026-04-28T04:11:10.817Z] [LOG] [BACKTRACK-TRACE] method=navigate_back:system_back_fast, status=success, reason=OK, executed=android_keyevent, stateChanged=unknown, pageTreeHashUnchanged=false, fallbackUsed=false => success (before=App-specific brightness[105c33ebabbb5985], after=Appearance[3bfe752aea223d3d], expectedParent=Appearance)
+[2026-04-28T04:11:13.233Z] [LOG] [POP-RETURN] Reconciled stack to page "Appearance" at depth=1
+[2026-04-28T04:11:13.233Z] [LOG] [FRAME-LOOP] depth=1, stack=2, cursor=6/6, frameTitle="Appearance", frameScreenId="3bfe752aea223d3d"
+[2026-04-28T04:11:17.521Z] [LOG] [FRAME-PLAN] depth=1, stack=2, cursor=6/6, current="Appearance", expected="Aiden", nextAction=pop frame and backtrack
+[2026-04-28T04:11:17.521Z] [LOG] [POP] Frame "Appearance" all 6 elements explored. Stack now: 1
+[2026-04-28T04:11:17.521Z] [LOG] [POP] Next frame: depth=0, cursor=6/8, title="Aiden"
+[2026-04-28T04:11:33.517Z] [LOG] [BACKTRACK-TRACE] method=navigate_back:system_back_fast, status=success, reason=OK, executed=android_keyevent, stateChanged=unknown, pageTreeHashUnchanged=false, fallbackUsed=false => success (before=Appearance[3bfe752aea223d3d], after=Aiden[12ed45faa02c47c9], expectedParent=Aiden)
+[2026-04-28T04:11:35.918Z] [LOG] [POP-RETURN] Reconciled stack to page "Aiden" at depth=0
+[2026-04-28T04:11:35.918Z] [LOG] [FRAME-LOOP] depth=0, stack=1, cursor=6/8, frameTitle="Aiden", frameScreenId="12ed45faa02c47c9"
+[2026-04-28T04:11:40.289Z] [LOG] [FRAME-PLAN] depth=0, stack=1, cursor=6/8, current="Aiden", expected="Home screen, lock screen &amp; wallpaper", nextAction=tap "Home screen, lock screen &amp; wallpaper"
+[2026-04-28T04:11:40.289Z] [LOG] [FRAME-NEXT] current="Aiden", expected="Home screen, lock screen &amp; wallpaper", action=tap "Home screen, lock screen &amp; wallpaper"
+[2026-04-28T04:11:40.289Z] [LOG] [ACTION-START] action=tap_element, label="Home screen, lock screen &amp; wallpaper", from="Aiden", expected="Home screen, lock screen &amp; wallpaper", selector={"position":{"x":630,"y":2577},"elementType":"android.widget.FrameLayout"}
+[2026-04-28T04:11:48.236Z] [LOG] [ACTION-RESULT] action=tap_element, label="Home screen, lock screen &amp; wallpaper", expected="Home screen, lock screen &amp; wallpaper", status=success, from="Aiden", to="Wallpapers"
+[2026-04-28T04:11:48.236Z] [LOG] [APP-SWITCH] Detected: com.android.settings -> com.bbk.theme (via "Home screen, lock screen &amp; wallpaper")
+[2026-04-28T04:11:48.236Z] [LOG] [APP-SWITCH] In external app: com.bbk.theme (via "Home screen, lock screen &amp; wallpaper")
+[2026-04-28T04:11:48.237Z] [LOG] [APP-SWITCH] Attempting Android system back before relaunch...
+[2026-04-28T04:12:06.079Z] [LOG] [BACKTRACK-TRACE] method=navigate_back:system_back_fast, status=success, reason=OK, executed=android_keyevent, stateChanged=unknown, pageTreeHashUnchanged=false, fallbackUsed=false => success (before=Wallpapers[4bbd49181e2405b4], after=Aiden[12ed45faa02c47c9], expectedParent=<none>)
+[2026-04-28T04:12:08.450Z] [LOG] [APP-SWITCH] Returned via system back at page "Aiden" (app=com.android.settings)
+[2026-04-28T04:12:08.451Z] [LOG] [FRAME-LOOP] depth=0, stack=1, cursor=7/8, frameTitle="Aiden", frameScreenId="12ed45faa02c47c9"
+[2026-04-28T04:12:12.732Z] [LOG] [FRAME-PLAN] depth=0, stack=1, cursor=7/8, current="Aiden", expected="Settings", nextAction=tap "Settings"
+[2026-04-28T04:12:12.732Z] [LOG] [FRAME-NEXT] current="Aiden", expected="Settings", action=tap "Settings"
+[2026-04-28T04:12:12.732Z] [LOG] [ACTION-START] action=tap_element, label="Settings", from="Aiden", expected="Settings", selector={"resourceId":"com.android.settings:id/orginui_vcommonlayout_toptargetview"}
+[2026-04-28T04:12:24.359Z] [LOG] [ACTION-RESULT] action=tap_element, label="Settings", expected="Settings", status=success, from="Aiden", to="Aiden"
+[2026-04-28T04:12:24.359Z] [LOG] [ACTION-RESULT] action=tap_element, label="Settings", expected="Settings", status=partial, from="Aiden", to="Aiden", reason="screenId unchanged — element had no navigation effect"
+[2026-04-28T04:12:24.359Z] [LOG] [FRAME-LOOP] depth=0, stack=1, cursor=8/8, frameTitle="Aiden", frameScreenId="12ed45faa02c47c9"
+[2026-04-28T04:12:28.682Z] [LOG] [FRAME-PLAN] depth=0, stack=1, cursor=8/8, current="Aiden", expected="(root)", nextAction=pop frame and backtrack
+[2026-04-28T04:12:28.682Z] [LOG] [POP] Frame "Aiden" all 8 elements explored. Stack now: 0
+[2026-04-28T04:12:28.708Z] [LOG] [RUNNER]   Visited 45 pages, 0 failures
+[2026-04-28T04:12:28.708Z] [LOG] [RUNNER] Stage 5/6: Generating report...
+[2026-04-28T04:12:28.712Z] [LOG] [RUNNER]   Report written to artifacts/explorer/android-full/
+[2026-04-28T04:12:28.712Z] [LOG] [RUNNER] Stage 6/6: Cleanup...
+[2026-04-28T04:12:28.712Z] [LOG] 
+==================================================
+[2026-04-28T04:12:28.712Z] [LOG]   Explorer Session Summary
+[2026-04-28T04:12:28.712Z] [LOG] ==================================================
+[2026-04-28T04:12:28.712Z] [LOG]   Status:       COMPLETE
+[2026-04-28T04:12:28.712Z] [LOG]   Stage:        complete
+[2026-04-28T04:12:28.712Z] [LOG]   Pages:        45
+[2026-04-28T04:12:28.712Z] [LOG]   Failures:     0
+[2026-04-28T04:12:28.712Z] [LOG]   Duration:     2030.7s
+[2026-04-28T04:12:28.712Z] [LOG]   Report:       artifacts/explorer/android-full/index.json
+[2026-04-28T04:12:28.712Z] [LOG] ==================================================
+[2026-04-28T04:12:28.712Z] [LOG] 
+full mode complete. Reports in artifacts/explorer/android-full/

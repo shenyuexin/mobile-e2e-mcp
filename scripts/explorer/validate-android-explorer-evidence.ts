@@ -31,7 +31,7 @@ Usage:
   pnpm run validate:explorer-android-evidence -- [artifact-dir] [options]
 
 Default artifact dir:
-  artifacts/explorer/android-full/2026-04-28T03-38-20
+  docs/showcase/evidence/android-explorer-full-2026-04-28T03-38-20
 
 Options:
   --app-id <id>          Expected app id (default: com.android.settings)
@@ -64,7 +64,7 @@ function parseArgs(argv: string[]): { artifactDir: string; expectations: Android
   }
   const artifactDir = positional
     ? path.resolve(repoRoot, positional)
-    : path.join(repoRoot, "artifacts/explorer/android-full/2026-04-28T03-38-20");
+    : path.join(repoRoot, "docs/showcase/evidence/android-explorer-full-2026-04-28T03-38-20");
 
   return {
     artifactDir,
