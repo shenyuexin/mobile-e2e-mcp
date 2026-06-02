@@ -77,10 +77,10 @@
 
 证据：
 
-- `artifacts/explorer/android-full/2026-04-28T03-38-20/log.txt`
-- `artifacts/explorer/android-full/2026-04-28T03-38-20/summary.json`
-- `artifacts/explorer/android-full/2026-04-28T03-38-20/report.md`
-- `artifacts/explorer/android-full/2026-04-28T03-38-20/tree.txt`
+- `docs/showcase/evidence/android-explorer-full-2026-04-28T03-38-20/log.txt`
+- `docs/showcase/evidence/android-explorer-full-2026-04-28T03-38-20/summary.json`
+- `docs/showcase/evidence/android-explorer-full-2026-04-28T03-38-20/report.md`
+- `docs/showcase/evidence/android-explorer-full-2026-04-28T03-38-20/tree.txt`
 
 汇总：Android physical device `10AEA40Z3Y000R5`，目标 app `com.android.settings`，full mode，45 pages，0 failures，max depth 4，duration 33m 50s。
 

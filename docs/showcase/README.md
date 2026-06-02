@@ -62,7 +62,7 @@ This folder contains reproducible, real-device demo evidence used by README.
 
 ## Explorer real-device evidence
 
-- Android physical-device Explorer run: `artifacts/explorer/android-full/2026-04-28T03-38-20/`
+- Android physical-device Explorer run: `docs/showcase/evidence/android-explorer-full-2026-04-28T03-38-20/`
 - Evidence summary: Settings app on device `10AEA40Z3Y000R5`, full mode, 45 pages, max depth 4, 0 failures, 33m 50s duration.
 - Key exercised paths: `inspect_ui`, `tap_element`, Android `navigate_back` via system back, external-app boundary recovery, page-context gating, screen-drift reconciliation, and report generation.
 
@@ -83,7 +83,7 @@ This folder contains reproducible, real-device demo evidence used by README.
 
 ## Current real-device entrypoints
 
-- Android Explorer evidence: `artifacts/explorer/android-full/2026-04-28T03-38-20/`
+- Android Explorer evidence: `docs/showcase/evidence/android-explorer-full-2026-04-28T03-38-20/`
 - Android Explorer evidence gate: `pnpm run validate:explorer-android-evidence -- --min-pages 45 --min-depth 4`
 - Android probe: `pnpm run validate:android-tool-probe`
 - iOS probe: `pnpm run validate:ios-tool-probe`

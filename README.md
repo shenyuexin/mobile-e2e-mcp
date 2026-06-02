@@ -134,7 +134,7 @@ If you want a quick hands-on tour before diving into architecture details, start
 - Visible interruption + recovery video (HOME interruption -> recover_to_known_state -> continue action):
   - `docs/showcase/videos/m2e-interruption-home-recovery-35s.mp4`
 - Current real-device verification:
-  - Android Explorer evidence: `artifacts/explorer/android-full/2026-04-28T03-38-20/`
+  - Android Explorer evidence: `docs/showcase/evidence/android-explorer-full-2026-04-28T03-38-20/`
   - Android probe entrypoint: `pnpm run validate:android-tool-probe` (latest Vivo V2405A run: 20/23 success, 0 partial, 3 expected diagnostic failures; core UI and interruption-resume paths passed)
   - iOS probe entrypoint: `pnpm run validate:ios-tool-probe`
 - Governed-control proof:
@@ -242,7 +242,7 @@ AI agents that need safe mobile device access, release-gate mobile regression, f
 
 Explorer automatically traverses your app's screens without predefined flows. Use it when you need broad coverage discovery, want to map an unfamiliar app's navigation structure, or need to identify all reachable screens before writing targeted test flows. It is available via the `explore` CLI command.
 
-Android physical-device Explorer evidence is tracked under `artifacts/explorer/android-full/2026-04-28T03-38-20/`: a full Settings traversal completed in 33m 50s with 45 pages, max depth 4, and 0 failures.
+Android physical-device Explorer evidence is tracked under `docs/showcase/evidence/android-explorer-full-2026-04-28T03-38-20/`: a full Settings traversal completed in 33m 50s with 45 pages, max depth 4, and 0 failures.
 
 Validate that evidence offline with `pnpm run validate:explorer-android-evidence -- --min-pages 45 --min-depth 4`.
 

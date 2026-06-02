@@ -80,7 +80,7 @@ For each run of `Real Device Acceptance` (`.github/workflows/real-device-accepta
 - `validate:phase2-rn-android-acceptance` is the smallest dedicated command path for the default Phase 02 framework lane; it reuses the shared report generators but isolates the RN Android lane as an explicit entrypoint.
 - `validate:phase3-real-run` remains a compatibility wrapper for historical sample lanes. It is useful for report continuity, but Explorer/probe artifacts are the current primary real-device tool-surface proof.
 - Real-device confidence should be validated through Explorer/probe artifacts first, then historical showcase assets when reviewing demos:
-  - `artifacts/explorer/android-full/2026-04-28T03-38-20/` for Android physical-device Explorer evidence
+  - `docs/showcase/evidence/android-explorer-full-2026-04-28T03-38-20/` for Android physical-device Explorer evidence
   - `docs/showcase/evidence/governed-control-vivo-2026-05-23/` plus `pnpm run validate:governed-control-evidence` for governed-control vivo evidence
   - `docs/showcase/evidence/governed-business-app-vivo-2026-05-24/` plus `pnpm run validate:governed-business-app-evidence` and `pnpm run validate:governed-business-app-comparison` for governed business-app vivo evidence
   - `docs/showcase/evidence/governed-policy-escalation-dry-run-2026-05-25/` plus `pnpm run validate:governed-policy-escalation-evidence` for policy escalation dry-run evidence

@@ -212,7 +212,7 @@
 - 该 preview 会返回 `executionMode`、`replayProgress`、`stepOutcomes`
 - Android 真机 replay 对常用命令走 `owned-adb` 主路径；`launchApp`、`tapOn`（selector/coordinate）、`inputText`、`assertVisible`、`assertNotVisible`、`swipe`、`back`、`home`、`hideKeyboard`、`stopApp`、`clearState` 不再要求 Maestro helper app
 - Maestro / `runner_compat` 仅作为 Android edge-case 命令 fallback，或用于尚未迁移的平台/路径；不要把 Android common-command replay 描述成仍以 helper app 为主
-- Android 真机 Explorer 已有完整实跑证据：`artifacts/explorer/android-full/2026-04-28T03-38-20/` 覆盖 45 页、0 failures
+- Android 真机 Explorer 已有完整实跑证据：`docs/showcase/evidence/android-explorer-full-2026-04-28T03-38-20/` 覆盖 45 页、0 failures
 
 ### 3.11 抓 React Native / Expo JS 调试信号
 

@@ -134,7 +134,7 @@ Explorer 会生成一个包含结构化产物的目录：
 - 可见中断与恢复录屏（HOME 中断 -> recover_to_known_state -> 继续动作）：
   - `docs/showcase/videos/m2e-interruption-home-recovery-35s.mp4`
 - 当前真机验证：
-  - Android Explorer 证据：`artifacts/explorer/android-full/2026-04-28T03-38-20/`
+  - Android Explorer 证据：`docs/showcase/evidence/android-explorer-full-2026-04-28T03-38-20/`
   - Android probe 入口：`pnpm run validate:android-tool-probe`（最新 Vivo V2405A 真机结果：20/23 success、0 partial、3 个预期诊断类失败；核心 UI action 与中断恢复链路已通过）
   - iOS probe 入口：`pnpm run validate:ios-tool-probe`
 - 受治理控制 proof：
@@ -218,7 +218,7 @@ Explorer 会生成一个包含结构化产物的目录：
 
 Explorer 可以在没有预定义流程的情况下自动遍历应用页面。当你需要大范围覆盖发现、想 mapping 一个不熟悉的应用导航结构，或在编写定向测试流程前需要先识别所有可达页面时，就可以使用它。通过 `explore` CLI 命令即可调用。
 
-Android 真机 Explorer 证据保存在 `artifacts/explorer/android-full/2026-04-28T03-38-20/`：Settings 全量遍历已完成，耗时 33m 50s，覆盖 45 个页面，最大深度 4，失败数 0。
+Android 真机 Explorer 证据保存在 `docs/showcase/evidence/android-explorer-full-2026-04-28T03-38-20/`：Settings 全量遍历已完成，耗时 33m 50s，覆盖 45 个页面，最大深度 4，失败数 0。
 
 可用 `pnpm run validate:explorer-android-evidence -- --min-pages 45 --min-depth 4` 离线校验这组证据。
 
