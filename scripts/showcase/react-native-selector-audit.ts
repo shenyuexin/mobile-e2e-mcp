@@ -241,7 +241,7 @@ function envList(name: string, fallback: string[]): string[] {
 }
 
 export async function writeReactNativeSelectorAudit(check: boolean): Promise<ReactNativeSelectorAuditResult> {
-  const sourceRoots = envList("M2E_RN_SELECTOR_SOURCE_ROOTS", ["examples/rn-login-demo"]);
+  const sourceRoots = envList("M2E_RN_SELECTOR_SOURCE_ROOTS", ["docs/showcase/fixtures/react-native-login"]);
   const declaredSelectors = envList("M2E_RN_STABLE_SELECTORS", ["login-screen", "phone-input", "password-input", "login-button"]);
   const result = buildReactNativeSelectorAudit({
     runId: process.env.M2E_RN_SELECTOR_AUDIT_RUN_ID ?? "react-native-selector-audit-2026-06-01",
