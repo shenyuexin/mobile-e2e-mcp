@@ -157,10 +157,11 @@ export async function buildRepoOwnedAppSuccessCandidate(input: {
   contractPath?: string;
   verification: CandidateVerification;
   intake?: CandidateIntake;
+  artifactExistsOverride?: boolean;
 }): Promise<RepoOwnedAppSuccessCandidate> {
   assert.equal(input.contract.platform, "android", "repo-owned success candidate currently supports Android contracts only");
   const contractValidation = validateMobileChangeReadinessContract(input.contract);
-  const artifactExists = await pathExists(input.contract.appArtifact);
+  const artifactExists = input.artifactExistsOverride ?? await pathExists(input.contract.appArtifact);
   const blockers = [...(input.verification.blockers ?? [])];
   if (!artifactExists) {
     blockers.push({
@@ -306,12 +307,14 @@ async function writeCandidateArtifacts(input: {
 async function buildDefaultCandidate(input: {
   runId: string;
   contractPath: string;
+  artifactExistsOverride?: boolean;
 }): Promise<RepoOwnedAppSuccessCandidate> {
   const contract = await readMobileChangeReadinessContract(input.contractPath);
   return buildRepoOwnedAppSuccessCandidate({
     runId: input.runId,
     contract,
     contractPath: input.contractPath,
+    artifactExistsOverride: input.artifactExistsOverride,
     verification: {
       verdict: "blocked",
       proofLevel: "blocked_before_live",
@@ -328,6 +331,21 @@ async function buildDefaultCandidate(input: {
   });
 }
 
+async function readExistingArtifactAvailability(outputDir: string): Promise<{
+  artifactPath: string;
+  exists: boolean;
+} | undefined> {
+  try {
+    const existing = JSON.parse(await readFile(path.join(repoRoot(), outputDir, "candidate.json"), "utf8")) as RepoOwnedAppSuccessCandidate;
+    return {
+      artifactPath: existing.repoApp.artifact.path,
+      exists: existing.repoApp.artifact.exists,
+    };
+  } catch {
+    return undefined;
+  }
+}
+
 async function main(): Promise<void> {
   const check = process.argv.includes("--check");
   const runIdArg = process.argv.find((arg) => arg.startsWith("--run-id="));
@@ -336,7 +354,13 @@ async function main(): Promise<void> {
   const runId = runIdArg?.slice("--run-id=".length) ?? defaultRunId;
   const contractPath = contractArg?.slice("--contract=".length) ?? defaultContractPath;
   const outputDir = outputArg?.slice("--output-dir=".length) ?? defaultOutputDir;
-  const candidate = await buildDefaultCandidate({ runId, contractPath });
+  const existingArtifact = check ? await readExistingArtifactAvailability(outputDir) : undefined;
+  const contract = await readMobileChangeReadinessContract(contractPath);
+  const candidate = await buildDefaultCandidate({
+    runId,
+    contractPath,
+    artifactExistsOverride: existingArtifact?.artifactPath === (contract.appArtifact ?? "") ? existingArtifact.exists : undefined,
+  });
   const validation = validateRepoOwnedAppSuccessCandidate(candidate);
   await writeCandidateArtifacts({ outputDir, candidate, check });
   console.log(JSON.stringify({
