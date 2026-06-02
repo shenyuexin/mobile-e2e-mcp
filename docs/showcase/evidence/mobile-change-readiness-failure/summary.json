@@ -28,7 +28,8 @@
         "id": "discover-device",
         "tool": "list_devices",
         "status": "success",
-        "reasonCode": "OK"
+        "reasonCode": "OK",
+        "detail": "Selected device controlled-live-runner."
       },
       {
         "id": "describe-capabilities",
