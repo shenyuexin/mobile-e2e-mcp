@@ -1,5 +1,15 @@
 import assert from "node:assert/strict";
+import { mkdtemp, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import test from "node:test";
+
+async function createTestApkArtifact(): Promise<string> {
+  const dir = await mkdtemp(path.join(tmpdir(), "mobile-e2e-repo-app-"));
+  const artifactPath = path.join(dir, "app-debug.apk");
+  await writeFile(artifactPath, "test apk placeholder\n", "utf8");
+  return artifactPath;
+}
 
 test("repo-owned app candidate records APK and contract readiness without promoting no-device output", async () => {
   const {
@@ -11,7 +21,7 @@ test("repo-owned app candidate records APK and contract readiness without promot
   const contract = buildMobileChangeReadinessContract({
     platform: "android",
     appId: "com.epam.mobitru",
-    appArtifact: "examples/demo-android-app/app/build/outputs/apk/debug/app-debug.apk",
+    appArtifact: await createTestApkArtifact(),
     runnerProfile: "native_android",
     policyProfile: "interactive",
     readiness: {
@@ -55,7 +65,7 @@ test("repo-owned app candidate rejects success promotion without accepted intake
   const contract = buildMobileChangeReadinessContract({
     platform: "android",
     appId: "com.epam.mobitru",
-    appArtifact: "examples/demo-android-app/app/build/outputs/apk/debug/app-debug.apk",
+    appArtifact: await createTestApkArtifact(),
     runnerProfile: "native_android",
     policyProfile: "interactive",
     readiness: {
