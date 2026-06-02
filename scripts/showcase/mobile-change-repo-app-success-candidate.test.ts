@@ -100,3 +100,42 @@ test("repo-owned app candidate rejects success promotion without accepted intake
     /promoted repo app success requires promotable intake/,
   );
 });
+
+test("repo-owned app candidate can reuse committed artifact availability for offline checks", async () => {
+  const {
+    buildRepoOwnedAppSuccessCandidate,
+    validateRepoOwnedAppSuccessCandidate,
+  } = await import("./mobile-change-repo-app-success-candidate.ts");
+  const { buildMobileChangeReadinessContract } = await import("./mobile-change-readiness-contract.ts");
+
+  const contract = buildMobileChangeReadinessContract({
+    platform: "android",
+    appId: "com.epam.mobitru",
+    appArtifact: "/tmp/mobile-e2e-missing-test-app.apk",
+    runnerProfile: "native_android",
+    policyProfile: "interactive",
+    readiness: {
+      screenId: "login",
+      appPhase: "authentication",
+      selector: {
+        strategy: "resource_id",
+        value: "com.epam.mobitru:id/login_signin",
+      },
+    },
+  });
+
+  const candidate = await buildRepoOwnedAppSuccessCandidate({
+    runId: "repo-app-offline-check",
+    contract,
+    artifactExistsOverride: true,
+    verification: {
+      verdict: "blocked",
+      proofLevel: "blocked_before_live",
+      blockers: [{ reasonCode: "DEVICE_UNAVAILABLE", detail: "No Android devices were visible." }],
+    },
+  });
+
+  assert.equal(candidate.repoApp.artifact.exists, true);
+  assert.deepEqual(candidate.blockers.map((blocker) => blocker.reasonCode), ["DEVICE_UNAVAILABLE"]);
+  assert.equal(validateRepoOwnedAppSuccessCandidate(candidate).promotable, false);
+});
