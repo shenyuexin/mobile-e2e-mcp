@@ -1296,6 +1296,7 @@ scripts/
       vivo-user0-login-adb-fallback.ts
     README.md
   release/
+    mcp-package-scripts.test.ts
     prepare-mcp-release-lib.ts
     prepare-mcp-release.test.ts
     prepare-mcp-release.ts
@@ -7899,6 +7900,312 @@ This project communicates with WDA via Node.js `fetch()` — no Python, no Appiu
 │             │ ←──────────── │             │ ←───────────── │             │
 └─────────────┘   JSON resp   └─────────────┘   port 8100    └─────────────┘
 ```
+</file>
+
+<file path="docs/showcase/explorer/report.md">
+# APP Exploration Report — com.apple.Preferences vunknown
+
+## Overview
+| Metric | Value |
+|--------|-------|
+| Exploration Time | 2026-05-04T08:02:11.616Z |
+| Duration | 104m 7s |
+| Mode | full |
+| Total Pages | 181 |
+| Total Paths | 181 |
+| Failures | 1 |
+| Max Depth | 5 |
+| Platform | ios-simulator |
+
+## Page Map
+
+See [tree.txt](./tree.txt)
+
+## Rule Decisions
+
+| Rule | Category | Action | Example | Reason |
+|------|----------|--------|---------|--------|
+| default.risk.side-effect-actions | side-effect | defer-action | Download | Side-effect actions are deferred to preserve deterministic and safe exploration |
+| default.risk.side-effect-actions | side-effect | defer-action | Download | Side-effect actions are deferred to preserve deterministic and safe exploration |
+| default.risk.side-effect-actions | side-effect | defer-action | Download | Side-effect actions are deferred to preserve deterministic and safe exploration |
+| default.risk.side-effect-actions | side-effect | defer-action | Download | Side-effect actions are deferred to preserve deterministic and safe exploration |
+| default.risk.side-effect-actions | side-effect | defer-action | Download | Side-effect actions are deferred to preserve deterministic and safe exploration |
+| default.navigation.system-fonts-detail-back | navigation-control | defer-action | System Fonts | The System Fonts entry is a navigation control on font detail pages, not a content child |
+| default.navigation.system-fonts-detail-back | navigation-control | defer-action | System Fonts | The System Fonts entry is a navigation control on font detail pages, not a content child |
+| default.navigation.system-fonts-detail-back | navigation-control | defer-action | System Fonts | The System Fonts entry is a navigation control on font detail pages, not a content child |
+| default.navigation.system-fonts-detail-back | navigation-control | defer-action | System Fonts | The System Fonts entry is a navigation control on font detail pages, not a content child |
+| default.navigation.system-fonts-detail-back | navigation-control | defer-action | System Fonts | The System Fonts entry is a navigation control on font detail pages, not a content child |
+
+## Module Breakdown
+
+### com.apple.settings.accessibility (12 pages)
+
+| Page | Depth | Path | Status |
+|------|-------|------|--------|
+| Accessibility | 1 | com.apple.settings.accessibility | ✅ |
+| Display & Text Size | 2 | com.apple.settings.accessibility → Display & Text Size | ✅ |
+| Motion | 2 | com.apple.settings.accessibility → Motion | ✅ |
+| Speak Selection | 2 | com.apple.settings.accessibility → Spoken Content | ✅ |
+| a60493f9f6a1b03f | 3 | com.apple.settings.accessibility → Spoken Content → Pronunciations | ✅ |
+| Face ID & Attention | 2 | com.apple.settings.accessibility → Face ID & Attention | ✅ |
+| Control Nearby Devices | 2 | com.apple.settings.accessibility → Control Nearby Devices | ✅ |
+| Subtitles & Captioning | 2 | com.apple.settings.accessibility → Subtitles & Captioning | ✅ |
+| Transparent Background | 3 | com.apple.settings.accessibility → Subtitles & Captioning → Style | ✅ |
+| bcf75bce2f46a22e | 4 | com.apple.settings.accessibility → Subtitles & Captioning → Style → Show full-screen subtitle preview | ✅ |
+| Keyboards & Typing | 2 | com.apple.settings.accessibility → Keyboards & Typing | ✅ |
+| Typing Feedback | 3 | com.apple.settings.accessibility → Keyboards & Typing → Typing Feedback | ✅ |
+
+### com.apple.settings.actionButton (1 pages)
+
+| Page | Depth | Path | Status |
+|------|-------|------|--------|
+| No Action | 1 | com.apple.settings.actionButton | ✅ |
+
+### com.apple.settings.apps (10 pages)
+
+| Page | Depth | Path | Status |
+|------|-------|------|--------|
+| C | 1 | com.apple.settings.apps | ✅ |
+| Default Apps | 2 | com.apple.settings.apps → com.apple.Settings.Apps.DefaultApps | ✅ |
+| Calendar | 2 | com.apple.settings.apps → com.apple.mobilecal | ✅ |
+| Contacts | 2 | com.apple.settings.apps → com.apple.MobileAddressBook | ✅ |
+| Expo Go | 2 | com.apple.settings.apps → host.exp.Exponent | ✅ |
+| Files | 2 | com.apple.settings.apps → com.apple.DocumentsApp | ✅ |
+| Fitness | 2 | com.apple.settings.apps → com.apple.Fitness | ✅ |
+| Health | 2 | com.apple.settings.apps → com.apple.Health | ✅ |
+| Maps | 2 | com.apple.settings.apps → com.apple.Maps | ✅ |
+| Material 3 Demo | 2 | com.apple.settings.apps → com.example.material3Demo | ✅ |
+
+### com.apple.settings.camera (7 pages)
+
+| Page | Depth | Path | Status |
+|------|-------|------|--------|
+| Camera | 1 | com.apple.settings.camera | ✅ |
+| Photographic Styles | 2 | com.apple.settings.camera → Photographic Styles | ✅ |
+| Record Video | 2 | com.apple.settings.camera → Record Video | ✅ |
+| Record Slo-mo | 2 | com.apple.settings.camera → Record Slo-mo | ✅ |
+| Record Sound | 2 | com.apple.settings.camera → Record Sound | ✅ |
+| Formats | 2 | com.apple.settings.camera → Formats | ✅ |
+| Preserve Settings | 2 | com.apple.settings.camera → Preserve Settings | ✅ |
+
+### com.apple.settings.developer (7 pages)
+
+| Page | Depth | Path | Status |
+|------|-------|------|--------|
+| Developer | 1 | com.apple.settings.developer | ✅ |
+| Larger Text | 2 | com.apple.settings.developer → View | ✅ |
+| TV Provider | 2 | com.apple.settings.developer → TV Provider | ✅ |
+| AUTHENTICATION SCHEMES | 3 | com.apple.settings.developer → TV Provider → Add TV Provider | ✅ |
+| Certificate validation failed | 4 | com.apple.settings.developer → TV Provider → Add TV Provider → Test Auth URL | ✅ |
+| TV App | 2 | com.apple.settings.developer → TV App | ✅ |
+| e3b0c44298fc1c14:alias:177 | 2 | com.apple.settings.developer → Sign In | ✅ |
+
+### com.apple.settings.general (48 pages)
+
+| Page | Depth | Path | Status |
+|------|-------|------|--------|
+| General | 1 | com.apple.settings.general | ✅ |
+| About | 2 | com.apple.settings.general → About | ✅ |
+| Certificate Trust Settings | 3 | com.apple.settings.general → About → Certificate Trust Settings | ✅ |
+| 6b9933e86c301931 | 4 | com.apple.settings.general → About → Certificate Trust Settings → Learn more about trusted certificates | ✅ |
+| iOS Version | 3 | com.apple.settings.general → About → iOS Version | ✅ |
+| AutoFill & Passwords | 2 | com.apple.settings.general → AutoFill & Passwords | ✅ |
+| Dictionary | 2 | com.apple.settings.general → Dictionary | ✅ |
+| Fonts | 2 | com.apple.settings.general → Fonts | ✅ |
+| INSTALLED FONTS | 3 | com.apple.settings.general → Fonts → System Fonts | ✅ |
+| Academy Engraved LET | 4 | com.apple.settings.general → Fonts → System Fonts → Academy Engraved LET | ✅ |
+| Plain | 5 | com.apple.settings.general → Fonts → System Fonts → Academy Engraved LET → Plain | ✅ |
+| Al Nile | 4 | com.apple.settings.general → Fonts → System Fonts → Al Nile | ✅ |
+| Regular | 5 | com.apple.settings.general → Fonts → System Fonts → Al Nile → Regular | ✅ |
+| Bold | 5 | com.apple.settings.general → Fonts → System Fonts → Al Nile → Bold | ✅ |
+| American Typewriter | 4 | com.apple.settings.general → Fonts → System Fonts → American Typewriter | ✅ |
+| Light | 5 | com.apple.settings.general → Fonts → System Fonts → American Typewriter → Light | ✅ |
+| Condensed Light | 5 | com.apple.settings.general → Fonts → System Fonts → American Typewriter → Condensed Light | ✅ |
+| Regular | 5 | com.apple.settings.general → Fonts → System Fonts → American Typewriter → Regular | ✅ |
+| Semibold | 5 | com.apple.settings.general → Fonts → System Fonts → American Typewriter → Semibold | ✅ |
+| Bold | 5 | com.apple.settings.general → Fonts → System Fonts → American Typewriter → Bold | ✅ |
+| Condensed Bold | 5 | com.apple.settings.general → Fonts → System Fonts → American Typewriter → Condensed Bold | ✅ |
+| ONE TYPEFACE | 4 | com.apple.settings.general → Fonts → System Fonts → Andale Mono | ✅ |
+| Regular | 5 | com.apple.settings.general → Fonts → System Fonts → Andale Mono → Regular | ✅ |
+| Apple Color Emoji | 4 | com.apple.settings.general → Fonts → System Fonts → Apple Color Emoji | ✅ |
+| Regular | 5 | com.apple.settings.general → Fonts → System Fonts → Apple Color Emoji → Regular | ✅ |
+| Apple Symbols | 4 | com.apple.settings.general → Fonts → System Fonts → Apple Symbols | ✅ |
+| Regular | 5 | com.apple.settings.general → Fonts → System Fonts → Apple Symbols → Regular | ✅ |
+| Arial Hebrew | 4 | com.apple.settings.general → Fonts → System Fonts → Arial Hebrew | ✅ |
+| Light | 5 | com.apple.settings.general → Fonts → System Fonts → Arial Hebrew → Light | ✅ |
+| Regular | 5 | com.apple.settings.general → Fonts → System Fonts → Arial Hebrew → Regular | ✅ |
+| Bold | 5 | com.apple.settings.general → Fonts → System Fonts → Arial Hebrew → Bold | ✅ |
+| Arial Rounded MT Bold | 4 | com.apple.settings.general → Fonts → System Fonts → Arial Rounded MT Bold | ✅ |
+| Regular | 5 | com.apple.settings.general → Fonts → System Fonts → Arial Rounded MT Bold → Regular | ✅ |
+| No Fonts Installed | 3 | com.apple.settings.general → Fonts → My Fonts | ✅ |
+| Keyboards | 2 | com.apple.settings.general → Keyboard | ✅ |
+| M | 3 | com.apple.settings.general → Keyboard → Text Replacement | ✅ |
+| Hardware Keyboard | 3 | com.apple.settings.general → Keyboard → Hardware Keyboard | ✅ |
+| Chinese, Simplified – Pinyin | 4 | com.apple.settings.general → Keyboard → Hardware Keyboard → Chinese, Simplified – Pinyin | ✅ |
+| English (US) | 4 | com.apple.settings.general → Keyboard → Hardware Keyboard → English (US) | ✅ |
+| Thai | 4 | com.apple.settings.general → Keyboard → Hardware Keyboard → Thai | ✅ |
+| Modifier Keys | 4 | com.apple.settings.general → Keyboard → Hardware Keyboard → Modifier Keys | ✅ |
+| Keyboard Type | 4 | com.apple.settings.general → Keyboard → Hardware Keyboard → Keyboard Type | ✅ |
+| Dictation Languages | 3 | com.apple.settings.general → Keyboard → Dictation Languages | ✅ |
+| Dictation Shortcut | 3 | com.apple.settings.general → Keyboard → Dictation Shortcut | ✅ |
+| Fuzzy Pinyin | 3 | com.apple.settings.general → Keyboard → Fuzzy Pinyin | ✅ |
+| Regional Dialect | 3 | com.apple.settings.general → Keyboard → Regional Dialect | ✅ |
+| PREFERRED LANGUAGES | 2 | com.apple.settings.general → Language & Region | ✅ |
+| VPN & Device Management | 2 | com.apple.settings.general → VPN & Device Management | ✅ |
+
+### com.apple.settings.homeScreen (1 pages)
+
+| Page | Depth | Path | Status |
+|------|-------|------|--------|
+| Home Screen & App Library | 1 | com.apple.settings.homeScreen | ✅ |
+
+### com.apple.settings.iCloud (1 pages)
+
+| Page | Depth | Path | Status |
+|------|-------|------|--------|
+| e3b0c44298fc1c14:alias:160 | 1 | com.apple.settings.iCloud | ✅ |
+
+### com.apple.settings.primaryAppleAccount (1 pages)
+
+| Page | Depth | Path | Status |
+|------|-------|------|--------|
+| e3b0c44298fc1c14 | 1 | com.apple.settings.primaryAppleAccount | ✅ |
+
+### com.apple.settings.privacyAndSecurity (29 pages)
+
+| Page | Depth | Path | Status |
+|------|-------|------|--------|
+| Privacy & Security | 1 | com.apple.settings.privacyAndSecurity | ✅ |
+| Location Services | 2 | com.apple.settings.privacyAndSecurity → LOCATION | ✅ |
+| Tracking | 2 | com.apple.settings.privacyAndSecurity → USER_TRACKING | ✅ |
+| Calendars | 2 | com.apple.settings.privacyAndSecurity → CALENDARS | ✅ |
+| Mobitru | 3 | com.apple.settings.privacyAndSecurity → CALENDARS → Mobitru | ✅ |
+| Contacts | 2 | com.apple.settings.privacyAndSecurity → CONTACTS | ✅ |
+| Mobitru | 3 | com.apple.settings.privacyAndSecurity → CONTACTS → Mobitru | ✅ |
+| Files & Folders | 2 | com.apple.settings.privacyAndSecurity → FILEACCESS | ✅ |
+| Focus | 2 | com.apple.settings.privacyAndSecurity → FOCUS | ✅ |
+| Health | 2 | com.apple.settings.privacyAndSecurity → HEALTH | ✅ |
+| Headphone Audio Levels | 3 | com.apple.settings.privacyAndSecurity → HEALTH → UIA.Health.Source.HeadphoneAudioLevels | ✅ |
+| Bluetooth | 2 | com.apple.settings.privacyAndSecurity → BT_PERIPHERAL | ✅ |
+| App Clips | 3 | com.apple.settings.privacyAndSecurity → BT_PERIPHERAL → App Clips | ✅ |
+| Camera | 2 | com.apple.settings.privacyAndSecurity → CAMERA | ✅ |
+| App Clips | 3 | com.apple.settings.privacyAndSecurity → CAMERA → App Clips | ✅ |
+| Local Network | 2 | com.apple.settings.privacyAndSecurity → LOCAL_NETWORK | ✅ |
+| Microphone | 2 | com.apple.settings.privacyAndSecurity → MICROPHONE | ✅ |
+| App Clips | 3 | com.apple.settings.privacyAndSecurity → MICROPHONE → App Clips | ✅ |
+| Motion & Fitness | 2 | com.apple.settings.privacyAndSecurity → MOTION | ✅ |
+| Nearby Interactions | 2 | com.apple.settings.privacyAndSecurity → NEARBY_INTERACTIONS | ✅ |
+| Research Sensor & Usage Data | 2 | com.apple.settings.privacyAndSecurity → ALMANAC | ✅ |
+| cde0fb0dec1400c5:alias:152 | 3 | com.apple.settings.privacyAndSecurity → ALMANAC → Enable Sensor & Usage Data Collection | ✅ |
+| Speech Recognition | 2 | com.apple.settings.privacyAndSecurity → SPEECH_RECOGNITION | ✅ |
+| Safety Check | 2 | com.apple.settings.privacyAndSecurity → SAFETY_CHECK | ✅ |
+| 89c2e6841fa5b5fd | 3 | com.apple.settings.privacyAndSecurity → SAFETY_CHECK → Manage Sharing & Access, Customize which people and apps can access your information, and review your account security. | ✅ |
+| Analytics & Improvements | 2 | com.apple.settings.privacyAndSecurity → PROBLEM_REPORTING | ✅ |
+| Data | 3 | com.apple.settings.privacyAndSecurity → PROBLEM_REPORTING → Analytics Data | ✅ |
+| Apple Advertising | 2 | com.apple.settings.privacyAndSecurity → ADVERTISING | ✅ |
+| Ad Targeting Information | 3 | com.apple.settings.privacyAndSecurity → ADVERTISING → View Ad Targeting Information | ✅ |
+
+### com.apple.settings.screenTime (11 pages)
+
+| Page | Depth | Path | Status |
+|------|-------|------|--------|
+| Screen Time | 1 | com.apple.settings.screenTime | ✅ |
+| See All App & Website Activity | 2 | com.apple.settings.screenTime → See All App & Website Activity | ✅ |
+| Downtime | 2 | com.apple.settings.screenTime → Downtime | ✅ |
+| App Limits | 2 | com.apple.settings.screenTime → App Limits | ✅ |
+| MOST USED APPS, CATEGORIES, AND WEBSITES | 3 | com.apple.settings.screenTime → App Limits → Add Limit | ✅ |
+| Always Allowed | 2 | com.apple.settings.screenTime → Always Allowed | ✅ |
+| Content & Privacy Restrictions | 2 | com.apple.settings.screenTime → Content & Privacy Restrictions | ✅ |
+| Set Passcode | 2 | com.apple.settings.screenTime → Lock Screen Time Settings | ✅ |
+| e3b0c44298fc1c14:alias:128 | 2 | com.apple.settings.screenTime → Use with Other Devices or Family | ✅ |
+| 201a7dc2cecc92cb | 2 | com.apple.settings.screenTime → Turn Off App & Website Activity | ✅ |
+| App & Website Activity | 2 | com.apple.settings.screenTime → App & Website Activity | ✅ |
+
+### com.apple.settings.search (19 pages)
+
+| Page | Depth | Path | Status |
+|------|-------|------|--------|
+| Search | 1 | com.apple.settings.search | ✅ |
+| Search Engine | 2 | com.apple.settings.search → Search Engine | ✅ |
+| App Clips | 2 | com.apple.settings.search → App Clips | ✅ |
+| Calendar | 2 | com.apple.settings.search → Calendar | ✅ |
+| Contacts | 2 | com.apple.settings.search → Contacts | ✅ |
+| Expo Go | 2 | com.apple.settings.search → Expo Go | ✅ |
+| Files | 2 | com.apple.settings.search → Files | ✅ |
+| Health | 2 | com.apple.settings.search → Health | ✅ |
+| Maps | 2 | com.apple.settings.search → Maps | ✅ |
+| Material 3 Demo | 2 | com.apple.settings.search → Material 3 Demo | ✅ |
+| Mobitru | 2 | com.apple.settings.search → Mobitru | ✅ |
+| News | 2 | com.apple.settings.search → News | ✅ |
+| Passwords | 2 | com.apple.settings.search → Passwords | ✅ |
+| Photos | 2 | com.apple.settings.search → Photos | ✅ |
+| Reminders | 2 | com.apple.settings.search → Reminders | ✅ |
+| Safari | 2 | com.apple.settings.search → Safari | ✅ |
+| Shortcuts | 2 | com.apple.settings.search → Shortcuts | ✅ |
+| Wallet | 2 | com.apple.settings.search → Wallet | ✅ |
+| Watch | 2 | com.apple.settings.search → Watch | ✅ |
+
+### com.apple.settings.siri (28 pages)
+
+| Page | Depth | Path | Status |
+|------|-------|------|--------|
+| Apple Intelligence & Siri | 1 | com.apple.settings.siri | ✅ |
+| Language | 2 | com.apple.settings.siri → Language | ✅ |
+| English (India) | 3 | com.apple.settings.siri → Language → English (India) | ✅ |
+| Talk to Siri | 2 | com.apple.settings.siri → Talk to Siri | ✅ |
+| Voice | 2 | com.apple.settings.siri → Voice | ✅ |
+| Siri Responses | 2 | com.apple.settings.siri → Siri Responses | ✅ |
+| Messaging with Siri | 2 | com.apple.settings.siri → Messaging with Siri | ✅ |
+| Siri & Dictation History | 2 | com.apple.settings.siri → Siri & Dictation History | ✅ |
+| cde0fb0dec1400c5 | 2 | com.apple.settings.siri → My Information | ✅ |
+| App Clips | 2 | com.apple.settings.siri → App Clips | ✅ |
+| Apps | 2 | com.apple.settings.siri → Apps | ✅ |
+| Calendar | 3 | com.apple.settings.siri → Apps → Calendar | ✅ |
+| Contacts | 3 | com.apple.settings.siri → Apps → Contacts | ✅ |
+| Expo Go | 3 | com.apple.settings.siri → Apps → Expo Go | ✅ |
+| Files | 3 | com.apple.settings.siri → Apps → Files | ✅ |
+| Fitness | 3 | com.apple.settings.siri → Apps → Fitness | ✅ |
+| Health | 3 | com.apple.settings.siri → Apps → Health | ✅ |
+| Maps | 3 | com.apple.settings.siri → Apps → Maps | ✅ |
+| Material 3 Demo | 3 | com.apple.settings.siri → Apps → Material 3 Demo | ✅ |
+| Mobitru | 3 | com.apple.settings.siri → Apps → Mobitru | ✅ |
+| News | 3 | com.apple.settings.siri → Apps → News | ✅ |
+| Passwords | 3 | com.apple.settings.siri → Apps → Passwords | ✅ |
+| Photos | 3 | com.apple.settings.siri → Apps → Photos | ✅ |
+| Reminders | 3 | com.apple.settings.siri → Apps → Reminders | ✅ |
+| Safari | 3 | com.apple.settings.siri → Apps → Safari | ✅ |
+| Shortcuts | 3 | com.apple.settings.siri → Apps → Shortcuts | ✅ |
+| Wallet | 3 | com.apple.settings.siri → Apps → Wallet | ✅ |
+| Watch | 3 | com.apple.settings.siri → Apps → Watch | ✅ |
+
+### com.apple.settings.standBy (1 pages)
+
+| Page | Depth | Path | Status |
+|------|-------|------|--------|
+| StandBy | 1 | com.apple.settings.standBy | ✅ |
+
+### com.apple.settings.walletAndApplePay (4 pages)
+
+| Page | Depth | Path | Status |
+|------|-------|------|--------|
+| Wallet & Apple Pay | 1 | com.apple.settings.walletAndApplePay | ✅ |
+| Siri | 2 | com.apple.settings.walletAndApplePay → Siri | ✅ |
+| Search | 2 | com.apple.settings.walletAndApplePay → Search | ✅ |
+| Notifications | 2 | com.apple.settings.walletAndApplePay → Notifications | ✅ |
+
+### Home (1 pages)
+
+| Page | Depth | Path | Status |
+|------|-------|------|--------|
+| Settings | 0 | (root) | ✅ |
+
+## Alerts
+
+### ❌ Failed Pages (1)
+
+- **8d5cb0b6995f8377**: BACKTRACK_MISMATCH on "Research Sensor & Usage Data" at depth 2
+  Path: com.apple.settings.privacyAndSecurity → ALMANAC
+  Error: ensureFrameAligned mismatch for "Research Sensor & Usage Data"
 </file>
 
 <file path="docs/showcase/explorer/summary.json">
@@ -22992,6 +23299,64 @@ timeline logic that should not depend on a specific adapter implementation.
 }
 </file>
 
+<file path="packages/explorer/src/report/ascii.ts">
+import type { PageEntry } from '../types.js';
+import { derivePageLink } from './hierarchy.js';
+⋮----
+interface SamplingPageDetail {
+  screenTitle?: string;
+  totalChildren: number;
+  exploredChildren: number;
+  skippedChildren: number;
+  exploredLabels: string[];
+  skippedLabels: string[];
+}
+⋮----
+interface SampledSkippedChild {
+  kind: 'sampled-skipped';
+  label: string;
+}
+⋮----
+function isSampledSkippedChild(
+  node: PageEntry | SampledSkippedChild,
+): node is SampledSkippedChild
+⋮----
+/** Generate an ASCII tree representation of the explored page structure. */
+export function generateAsciiTree(
+  pages: PageEntry[],
+  samplingDetails: Record<string, SamplingPageDetail> = {},
+): string
+⋮----
+function walk(page: PageEntry, prefix: string, isLast: boolean): void
+⋮----
+function walkChild(
+    node: PageEntry | SampledSkippedChild,
+    prefix: string,
+    isLast: boolean,
+): void
+⋮----
+function getSkippedChildren(
+    screenId: string,
+    realChildren: PageEntry[],
+): SampledSkippedChild[]
+⋮----
+/** Detect whether a value looks like a 16-char hex hash. */
+function isHashLike(value: string | undefined): boolean
+⋮----
+/** Extract short hash (first 8 chars) for disambiguation. */
+function shortHash(value: string | undefined): string | undefined
+⋮----
+/** Map internal ruleFamily identifiers to human-readable labels. */
+function displayNameForRuleFamily(ruleFamily: string | undefined): string | undefined
+⋮----
+function formatPageLabel(
+  page: PageEntry,
+  samplingDetail?: SamplingPageDetail,
+): string
+⋮----
+// Alias inherits the original page's screenTitle via ...snapshot spread
+</file>
+
 <file path="packages/explorer/src/report/hierarchy.ts">
 import type { PageEntry } from '../types.js';
 ⋮----
@@ -25637,6 +26002,24 @@ function mockConfig(): ExplorerConfig
 function flattenTree(node: UiHierarchy, result: UiHierarchy[] = []): UiHierarchy[]
 </file>
 
+<file path="packages/explorer/tests/report/ascii.test.ts">
+import { describe, it } from 'node:test';
+import assert from 'node:assert/strict';
+import type { PageEntry } from '../../src/types.js';
+import { generateAsciiTree } from '../../src/report/index.js';
+⋮----
+function makePage(
+  id: string,
+  screenId: string,
+  depth: number,
+  path: string[],
+  arrivedFrom: string | null = null,
+  viaElement: string | null = null,
+  screenTitle?: string,
+  extra?: Partial<PageEntry>,
+): PageEntry
+</file>
+
 <file path="packages/explorer/tests/report/mermaid.test.ts">
 /**
  * Tests for Mermaid graph generation.
@@ -27291,65 +27674,6 @@ async function cleanupSessionArtifact(sessionId: string): Promise<void>
 // Each device in android/ios arrays should have structured info
 </file>
 
-<file path="packages/mcp-server/package.json">
-{
-  "name": "@shenyuexin/mobile-e2e-mcp",
-  "private": false,
-  "version": "0.1.15",
-  "description": "AI-first Mobile E2E MCP server for Android/iOS/React Native/Flutter",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/shenyuexin/mobile-e2e.git",
-    "directory": "packages/mcp-server"
-  },
-  "homepage": "https://github.com/shenyuexin/mobile-e2e/tree/main/packages/mcp-server#readme",
-  "bugs": {
-    "url": "https://github.com/shenyuexin/mobile-e2e/issues"
-  },
-  "type": "module",
-  "main": "./bundle/index.cjs",
-  "types": "./dist/index.d.ts",
-  "bin": {
-    "mobile-e2e-mcp": "./bundle/bin-stdio.cjs"
-  },
-  "files": [
-    "bundle",
-    "dist"
-  ],
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "default": "./bundle/index.cjs"
-    }
-  },
-  "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.17.5"
-  },
-  "devDependencies": {
-    "@mobile-e2e-mcp/adapter-maestro": "workspace:*",
-    "@mobile-e2e-mcp/adapter-vision": "workspace:*",
-    "@mobile-e2e-mcp/contracts": "workspace:*",
-    "@mobile-e2e-mcp/core": "workspace:*",
-    "@mobile-e2e-mcp/explorer": "workspace:*",
-    "tsup": "^8.5.0"
-  },
-  "scripts": {
-    "build": "pnpm --filter @mobile-e2e-mcp/contracts build && pnpm --filter @mobile-e2e-mcp/core build && pnpm --filter @mobile-e2e-mcp/adapter-vision build && pnpm --filter @mobile-e2e-mcp/adapter-maestro build && tsc -p tsconfig.json",
-    "bundle": "pnpm run build && tsup --config tsup.config.ts",
-    "test": "tsx --test test/*.test.ts",
-    "test:coverage": "bash ../../scripts/coverage.sh src",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
-    "dev": "tsx src/dev-cli.ts",
-    "stdio": "tsx src/mcp-stdio-server.ts",
-    "stdio:minimal": "tsx src/stdio-server.ts",
-    "release:publish": "pnpm run bundle && pnpm publish --access public",
-    "release:publish:ci": "pnpm run bundle && pnpm publish --access public --no-git-checks",
-    "release:publish:dry-run": "pnpm run bundle && pnpm publish --access public --dry-run --no-git-checks",
-    "release:patch": "pnpm version patch && pnpm run release:publish"
-  }
-}
-</file>
-
 <file path="packages/mcp-server/README.md">
 # @shenyuexin/mobile-e2e-mcp
 
@@ -28239,22 +28563,6 @@ import {
   parsePrepareReleaseArgs,
   resolveTargetVersion,
 } from "./prepare-mcp-release-lib.ts";
-</file>
-
-<file path="scripts/release/prepare-mcp-release.ts">
-import { execSync } from 'node:child_process';
-import { readFileSync, writeFileSync } from 'node:fs';
-import { resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { parsePrepareReleaseArgs, resolveTargetVersion } from './prepare-mcp-release-lib.ts';
-⋮----
-function run(command: string): string
-⋮----
-function runWithOutput(command: string): void
-⋮----
-// .gitnexus may be gitignored in some setups — only add if tracked
-⋮----
-// Verify tag was successfully pushed to remote
 </file>
 
 <file path="scripts/release/release-changelog.ts">
@@ -30401,160 +30709,6 @@ Important boundary note:
   "reporter": ["text", "html"],
   "all": true
 }
-</file>
-
-<file path="CHANGELOG.md">
-# Changelog
-
-All notable changes to this project will be documented in this file.
-
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
-and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-
-## [Unreleased]
-
-## [0.1.15] - 2026-06-03
-
-### Added
-- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
-- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
-
-### Changed
-- Improved diagnostics, evidence capture, and performance analysis workflows for mobile automation runs.
-- Refined operator documentation, governance guidance, and architecture references around the release.
-- Release scope includes 103 merged commits between mcp-server-v0.1.14 and the target tag.
-
-### Fixed
-- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
-
-## [0.1.14] - 2026-05-04
-
-### Added
-- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
-- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
-
-### Changed
-- Improved diagnostics, evidence capture, and performance analysis workflows for mobile automation runs.
-- Refined operator documentation, governance guidance, and architecture references around the release.
-- Release scope includes 36 merged commits between mcp-server-v0.1.13 and the target tag.
-
-### Fixed
-- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
-
-## [0.1.13] - 2026-04-12
-
-### Added
-- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
-- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
-
-### Changed
-- Refined operator documentation, governance guidance, and architecture references around the release.
-- Release scope includes 15 merged commits between mcp-server-v0.1.12 and the target tag.
-
-### Fixed
-- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
-
-## [0.1.12] - 2026-04-12
-
-### Added
-- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
-- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
-- Improved bounded OCR and vision fallback support for cases where deterministic selectors are unavailable.
-
-### Changed
-- Improved diagnostics, evidence capture, and performance analysis workflows for mobile automation runs.
-- Refined operator documentation, governance guidance, and architecture references around the release.
-- Release scope includes 147 merged commits between mcp-server-v0.1.11 and the target tag.
-
-### Fixed
-- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
-
-## [0.1.11] - 2026-03-29
-
-### Added
-- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
-- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
-- Improved bounded OCR and vision fallback support for cases where deterministic selectors are unavailable.
-
-### Changed
-- Improved diagnostics, evidence capture, and performance analysis workflows for mobile automation runs.
-- Refined operator documentation, governance guidance, and architecture references around the release.
-- Release scope includes 48 merged commits between mcp-server-v0.1.9 and the target tag.
-
-### Fixed
-- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
-
-## [0.1.9] - 2026-03-26
-
-### Added
-- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
-- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
-- Improved bounded OCR and vision fallback support for cases where deterministic selectors are unavailable.
-
-### Changed
-- Refined operator documentation, governance guidance, and architecture references around the release.
-- Release scope includes 9 merged commits between mcp-server-v0.1.8 and the target tag.
-
-### Fixed
-- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
-
-## [0.1.8] - 2026-03-23
-
-### Added
-- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
-- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
-
-### Changed
-- Improved diagnostics, evidence capture, and performance analysis workflows for mobile automation runs.
-- Refined operator documentation, governance guidance, and architecture references around the release.
-- Release scope includes 19 merged commits between mcp-server-v0.1.7 and the target tag.
-
-### Fixed
-- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
-
-## [0.1.7] - 2026-03-21
-
-### Added
-- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
-- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
-- Improved bounded OCR and vision fallback support for cases where deterministic selectors are unavailable.
-
-### Changed
-- Improved diagnostics, evidence capture, and performance analysis workflows for mobile automation runs.
-- Refined operator documentation, governance guidance, and architecture references around the release.
-- Release scope includes 38 merged commits between mcp-server-v0.1.6 and the target tag.
-
-### Fixed
-- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
-
-## [0.1.6] - 2026-03-20
-
-### Added
-- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
-- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
-- Improved bounded OCR and vision fallback support for cases where deterministic selectors are unavailable.
-
-### Changed
-- Improved diagnostics, evidence capture, and performance analysis workflows for mobile automation runs.
-- Refined operator documentation, governance guidance, and architecture references around the release.
-- Release scope includes 39 merged commits between mcp-server-v0.1.5 and the target tag.
-
-### Fixed
-- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
-
-## [0.1.5] - 2026-03-20
-
-### Added
-- Introduced the first public AI-first mobile E2E MCP server with session lifecycle, app control, UI inspection, interaction, diagnostics, interruption handling, and failure-analysis tools.
-- Established deterministic-first execution adapters plus bounded OCR/vision fallback for Android, iOS, React Native, and Flutter automation workflows.
-- Published runnable sample flows, showcase demos, and real-device/simulator validation assets for login, recovery, and harness onboarding scenarios.
-
-### Changed
-- Reorganized the repository into a pnpm monorepo with explicit contracts, core orchestration, adapters, and MCP server package boundaries.
-- Added stdio/dev CLI entrypoints, package metadata, governance baselines, and release automation needed for public npm distribution.
-
-### Fixed
-- Hardened doctor checks, dry-run behavior, selector resolution, and session or lease stability during the initial release cycle.
 </file>
 
 <file path="CODE_OF_CONDUCT.md">
@@ -184100,312 +184254,6 @@ Boundaries:
 }
 </file>
 
-<file path="docs/showcase/explorer/report.md">
-# APP Exploration Report — com.apple.Preferences vunknown
-
-## Overview
-| Metric | Value |
-|--------|-------|
-| Exploration Time | 2026-05-04T08:02:11.616Z |
-| Duration | 104m 7s |
-| Mode | full |
-| Total Pages | 181 |
-| Total Paths | 181 |
-| Failures | 1 |
-| Max Depth | 5 |
-| Platform | ios-simulator |
-
-## Page Map
-
-See [tree.txt](./tree.txt)
-
-## Rule Decisions
-
-| Rule | Category | Action | Example | Reason |
-|------|----------|--------|---------|--------|
-| default.risk.side-effect-actions | side-effect | defer-action | Download | Side-effect actions are deferred to preserve deterministic and safe exploration |
-| default.risk.side-effect-actions | side-effect | defer-action | Download | Side-effect actions are deferred to preserve deterministic and safe exploration |
-| default.risk.side-effect-actions | side-effect | defer-action | Download | Side-effect actions are deferred to preserve deterministic and safe exploration |
-| default.risk.side-effect-actions | side-effect | defer-action | Download | Side-effect actions are deferred to preserve deterministic and safe exploration |
-| default.risk.side-effect-actions | side-effect | defer-action | Download | Side-effect actions are deferred to preserve deterministic and safe exploration |
-| default.navigation.system-fonts-detail-back | navigation-control | defer-action | System Fonts | The System Fonts entry is a navigation control on font detail pages, not a content child |
-| default.navigation.system-fonts-detail-back | navigation-control | defer-action | System Fonts | The System Fonts entry is a navigation control on font detail pages, not a content child |
-| default.navigation.system-fonts-detail-back | navigation-control | defer-action | System Fonts | The System Fonts entry is a navigation control on font detail pages, not a content child |
-| default.navigation.system-fonts-detail-back | navigation-control | defer-action | System Fonts | The System Fonts entry is a navigation control on font detail pages, not a content child |
-| default.navigation.system-fonts-detail-back | navigation-control | defer-action | System Fonts | The System Fonts entry is a navigation control on font detail pages, not a content child |
-
-## Module Breakdown
-
-### com.apple.settings.accessibility (12 pages)
-
-| Page | Depth | Path | Status |
-|------|-------|------|--------|
-| Accessibility | 1 | com.apple.settings.accessibility | ✅ |
-| Display & Text Size | 2 | com.apple.settings.accessibility → Display & Text Size | ✅ |
-| Motion | 2 | com.apple.settings.accessibility → Motion | ✅ |
-| Speak Selection | 2 | com.apple.settings.accessibility → Spoken Content | ✅ |
-| a60493f9f6a1b03f | 3 | com.apple.settings.accessibility → Spoken Content → Pronunciations | ✅ |
-| Face ID & Attention | 2 | com.apple.settings.accessibility → Face ID & Attention | ✅ |
-| Control Nearby Devices | 2 | com.apple.settings.accessibility → Control Nearby Devices | ✅ |
-| Subtitles & Captioning | 2 | com.apple.settings.accessibility → Subtitles & Captioning | ✅ |
-| Transparent Background | 3 | com.apple.settings.accessibility → Subtitles & Captioning → Style | ✅ |
-| bcf75bce2f46a22e | 4 | com.apple.settings.accessibility → Subtitles & Captioning → Style → Show full-screen subtitle preview | ✅ |
-| Keyboards & Typing | 2 | com.apple.settings.accessibility → Keyboards & Typing | ✅ |
-| Typing Feedback | 3 | com.apple.settings.accessibility → Keyboards & Typing → Typing Feedback | ✅ |
-
-### com.apple.settings.actionButton (1 pages)
-
-| Page | Depth | Path | Status |
-|------|-------|------|--------|
-| No Action | 1 | com.apple.settings.actionButton | ✅ |
-
-### com.apple.settings.apps (10 pages)
-
-| Page | Depth | Path | Status |
-|------|-------|------|--------|
-| C | 1 | com.apple.settings.apps | ✅ |
-| Default Apps | 2 | com.apple.settings.apps → com.apple.Settings.Apps.DefaultApps | ✅ |
-| Calendar | 2 | com.apple.settings.apps → com.apple.mobilecal | ✅ |
-| Contacts | 2 | com.apple.settings.apps → com.apple.MobileAddressBook | ✅ |
-| Expo Go | 2 | com.apple.settings.apps → host.exp.Exponent | ✅ |
-| Files | 2 | com.apple.settings.apps → com.apple.DocumentsApp | ✅ |
-| Fitness | 2 | com.apple.settings.apps → com.apple.Fitness | ✅ |
-| Health | 2 | com.apple.settings.apps → com.apple.Health | ✅ |
-| Maps | 2 | com.apple.settings.apps → com.apple.Maps | ✅ |
-| Material 3 Demo | 2 | com.apple.settings.apps → com.example.material3Demo | ✅ |
-
-### com.apple.settings.camera (7 pages)
-
-| Page | Depth | Path | Status |
-|------|-------|------|--------|
-| Camera | 1 | com.apple.settings.camera | ✅ |
-| Photographic Styles | 2 | com.apple.settings.camera → Photographic Styles | ✅ |
-| Record Video | 2 | com.apple.settings.camera → Record Video | ✅ |
-| Record Slo-mo | 2 | com.apple.settings.camera → Record Slo-mo | ✅ |
-| Record Sound | 2 | com.apple.settings.camera → Record Sound | ✅ |
-| Formats | 2 | com.apple.settings.camera → Formats | ✅ |
-| Preserve Settings | 2 | com.apple.settings.camera → Preserve Settings | ✅ |
-
-### com.apple.settings.developer (7 pages)
-
-| Page | Depth | Path | Status |
-|------|-------|------|--------|
-| Developer | 1 | com.apple.settings.developer | ✅ |
-| Larger Text | 2 | com.apple.settings.developer → View | ✅ |
-| TV Provider | 2 | com.apple.settings.developer → TV Provider | ✅ |
-| AUTHENTICATION SCHEMES | 3 | com.apple.settings.developer → TV Provider → Add TV Provider | ✅ |
-| Certificate validation failed | 4 | com.apple.settings.developer → TV Provider → Add TV Provider → Test Auth URL | ✅ |
-| TV App | 2 | com.apple.settings.developer → TV App | ✅ |
-| e3b0c44298fc1c14:alias:177 | 2 | com.apple.settings.developer → Sign In | ✅ |
-
-### com.apple.settings.general (48 pages)
-
-| Page | Depth | Path | Status |
-|------|-------|------|--------|
-| General | 1 | com.apple.settings.general | ✅ |
-| About | 2 | com.apple.settings.general → About | ✅ |
-| Certificate Trust Settings | 3 | com.apple.settings.general → About → Certificate Trust Settings | ✅ |
-| 6b9933e86c301931 | 4 | com.apple.settings.general → About → Certificate Trust Settings → Learn more about trusted certificates | ✅ |
-| iOS Version | 3 | com.apple.settings.general → About → iOS Version | ✅ |
-| AutoFill & Passwords | 2 | com.apple.settings.general → AutoFill & Passwords | ✅ |
-| Dictionary | 2 | com.apple.settings.general → Dictionary | ✅ |
-| Fonts | 2 | com.apple.settings.general → Fonts | ✅ |
-| INSTALLED FONTS | 3 | com.apple.settings.general → Fonts → System Fonts | ✅ |
-| Academy Engraved LET | 4 | com.apple.settings.general → Fonts → System Fonts → Academy Engraved LET | ✅ |
-| Plain | 5 | com.apple.settings.general → Fonts → System Fonts → Academy Engraved LET → Plain | ✅ |
-| Al Nile | 4 | com.apple.settings.general → Fonts → System Fonts → Al Nile | ✅ |
-| Regular | 5 | com.apple.settings.general → Fonts → System Fonts → Al Nile → Regular | ✅ |
-| Bold | 5 | com.apple.settings.general → Fonts → System Fonts → Al Nile → Bold | ✅ |
-| American Typewriter | 4 | com.apple.settings.general → Fonts → System Fonts → American Typewriter | ✅ |
-| Light | 5 | com.apple.settings.general → Fonts → System Fonts → American Typewriter → Light | ✅ |
-| Condensed Light | 5 | com.apple.settings.general → Fonts → System Fonts → American Typewriter → Condensed Light | ✅ |
-| Regular | 5 | com.apple.settings.general → Fonts → System Fonts → American Typewriter → Regular | ✅ |
-| Semibold | 5 | com.apple.settings.general → Fonts → System Fonts → American Typewriter → Semibold | ✅ |
-| Bold | 5 | com.apple.settings.general → Fonts → System Fonts → American Typewriter → Bold | ✅ |
-| Condensed Bold | 5 | com.apple.settings.general → Fonts → System Fonts → American Typewriter → Condensed Bold | ✅ |
-| ONE TYPEFACE | 4 | com.apple.settings.general → Fonts → System Fonts → Andale Mono | ✅ |
-| Regular | 5 | com.apple.settings.general → Fonts → System Fonts → Andale Mono → Regular | ✅ |
-| Apple Color Emoji | 4 | com.apple.settings.general → Fonts → System Fonts → Apple Color Emoji | ✅ |
-| Regular | 5 | com.apple.settings.general → Fonts → System Fonts → Apple Color Emoji → Regular | ✅ |
-| Apple Symbols | 4 | com.apple.settings.general → Fonts → System Fonts → Apple Symbols | ✅ |
-| Regular | 5 | com.apple.settings.general → Fonts → System Fonts → Apple Symbols → Regular | ✅ |
-| Arial Hebrew | 4 | com.apple.settings.general → Fonts → System Fonts → Arial Hebrew | ✅ |
-| Light | 5 | com.apple.settings.general → Fonts → System Fonts → Arial Hebrew → Light | ✅ |
-| Regular | 5 | com.apple.settings.general → Fonts → System Fonts → Arial Hebrew → Regular | ✅ |
-| Bold | 5 | com.apple.settings.general → Fonts → System Fonts → Arial Hebrew → Bold | ✅ |
-| Arial Rounded MT Bold | 4 | com.apple.settings.general → Fonts → System Fonts → Arial Rounded MT Bold | ✅ |
-| Regular | 5 | com.apple.settings.general → Fonts → System Fonts → Arial Rounded MT Bold → Regular | ✅ |
-| No Fonts Installed | 3 | com.apple.settings.general → Fonts → My Fonts | ✅ |
-| Keyboards | 2 | com.apple.settings.general → Keyboard | ✅ |
-| M | 3 | com.apple.settings.general → Keyboard → Text Replacement | ✅ |
-| Hardware Keyboard | 3 | com.apple.settings.general → Keyboard → Hardware Keyboard | ✅ |
-| Chinese, Simplified – Pinyin | 4 | com.apple.settings.general → Keyboard → Hardware Keyboard → Chinese, Simplified – Pinyin | ✅ |
-| English (US) | 4 | com.apple.settings.general → Keyboard → Hardware Keyboard → English (US) | ✅ |
-| Thai | 4 | com.apple.settings.general → Keyboard → Hardware Keyboard → Thai | ✅ |
-| Modifier Keys | 4 | com.apple.settings.general → Keyboard → Hardware Keyboard → Modifier Keys | ✅ |
-| Keyboard Type | 4 | com.apple.settings.general → Keyboard → Hardware Keyboard → Keyboard Type | ✅ |
-| Dictation Languages | 3 | com.apple.settings.general → Keyboard → Dictation Languages | ✅ |
-| Dictation Shortcut | 3 | com.apple.settings.general → Keyboard → Dictation Shortcut | ✅ |
-| Fuzzy Pinyin | 3 | com.apple.settings.general → Keyboard → Fuzzy Pinyin | ✅ |
-| Regional Dialect | 3 | com.apple.settings.general → Keyboard → Regional Dialect | ✅ |
-| PREFERRED LANGUAGES | 2 | com.apple.settings.general → Language & Region | ✅ |
-| VPN & Device Management | 2 | com.apple.settings.general → VPN & Device Management | ✅ |
-
-### com.apple.settings.homeScreen (1 pages)
-
-| Page | Depth | Path | Status |
-|------|-------|------|--------|
-| Home Screen & App Library | 1 | com.apple.settings.homeScreen | ✅ |
-
-### com.apple.settings.iCloud (1 pages)
-
-| Page | Depth | Path | Status |
-|------|-------|------|--------|
-| e3b0c44298fc1c14:alias:160 | 1 | com.apple.settings.iCloud | ✅ |
-
-### com.apple.settings.primaryAppleAccount (1 pages)
-
-| Page | Depth | Path | Status |
-|------|-------|------|--------|
-| e3b0c44298fc1c14 | 1 | com.apple.settings.primaryAppleAccount | ✅ |
-
-### com.apple.settings.privacyAndSecurity (29 pages)
-
-| Page | Depth | Path | Status |
-|------|-------|------|--------|
-| Privacy & Security | 1 | com.apple.settings.privacyAndSecurity | ✅ |
-| Location Services | 2 | com.apple.settings.privacyAndSecurity → LOCATION | ✅ |
-| Tracking | 2 | com.apple.settings.privacyAndSecurity → USER_TRACKING | ✅ |
-| Calendars | 2 | com.apple.settings.privacyAndSecurity → CALENDARS | ✅ |
-| Mobitru | 3 | com.apple.settings.privacyAndSecurity → CALENDARS → Mobitru | ✅ |
-| Contacts | 2 | com.apple.settings.privacyAndSecurity → CONTACTS | ✅ |
-| Mobitru | 3 | com.apple.settings.privacyAndSecurity → CONTACTS → Mobitru | ✅ |
-| Files & Folders | 2 | com.apple.settings.privacyAndSecurity → FILEACCESS | ✅ |
-| Focus | 2 | com.apple.settings.privacyAndSecurity → FOCUS | ✅ |
-| Health | 2 | com.apple.settings.privacyAndSecurity → HEALTH | ✅ |
-| Headphone Audio Levels | 3 | com.apple.settings.privacyAndSecurity → HEALTH → UIA.Health.Source.HeadphoneAudioLevels | ✅ |
-| Bluetooth | 2 | com.apple.settings.privacyAndSecurity → BT_PERIPHERAL | ✅ |
-| App Clips | 3 | com.apple.settings.privacyAndSecurity → BT_PERIPHERAL → App Clips | ✅ |
-| Camera | 2 | com.apple.settings.privacyAndSecurity → CAMERA | ✅ |
-| App Clips | 3 | com.apple.settings.privacyAndSecurity → CAMERA → App Clips | ✅ |
-| Local Network | 2 | com.apple.settings.privacyAndSecurity → LOCAL_NETWORK | ✅ |
-| Microphone | 2 | com.apple.settings.privacyAndSecurity → MICROPHONE | ✅ |
-| App Clips | 3 | com.apple.settings.privacyAndSecurity → MICROPHONE → App Clips | ✅ |
-| Motion & Fitness | 2 | com.apple.settings.privacyAndSecurity → MOTION | ✅ |
-| Nearby Interactions | 2 | com.apple.settings.privacyAndSecurity → NEARBY_INTERACTIONS | ✅ |
-| Research Sensor & Usage Data | 2 | com.apple.settings.privacyAndSecurity → ALMANAC | ✅ |
-| cde0fb0dec1400c5:alias:152 | 3 | com.apple.settings.privacyAndSecurity → ALMANAC → Enable Sensor & Usage Data Collection | ✅ |
-| Speech Recognition | 2 | com.apple.settings.privacyAndSecurity → SPEECH_RECOGNITION | ✅ |
-| Safety Check | 2 | com.apple.settings.privacyAndSecurity → SAFETY_CHECK | ✅ |
-| 89c2e6841fa5b5fd | 3 | com.apple.settings.privacyAndSecurity → SAFETY_CHECK → Manage Sharing & Access, Customize which people and apps can access your information, and review your account security. | ✅ |
-| Analytics & Improvements | 2 | com.apple.settings.privacyAndSecurity → PROBLEM_REPORTING | ✅ |
-| Data | 3 | com.apple.settings.privacyAndSecurity → PROBLEM_REPORTING → Analytics Data | ✅ |
-| Apple Advertising | 2 | com.apple.settings.privacyAndSecurity → ADVERTISING | ✅ |
-| Ad Targeting Information | 3 | com.apple.settings.privacyAndSecurity → ADVERTISING → View Ad Targeting Information | ✅ |
-
-### com.apple.settings.screenTime (11 pages)
-
-| Page | Depth | Path | Status |
-|------|-------|------|--------|
-| Screen Time | 1 | com.apple.settings.screenTime | ✅ |
-| See All App & Website Activity | 2 | com.apple.settings.screenTime → See All App & Website Activity | ✅ |
-| Downtime | 2 | com.apple.settings.screenTime → Downtime | ✅ |
-| App Limits | 2 | com.apple.settings.screenTime → App Limits | ✅ |
-| MOST USED APPS, CATEGORIES, AND WEBSITES | 3 | com.apple.settings.screenTime → App Limits → Add Limit | ✅ |
-| Always Allowed | 2 | com.apple.settings.screenTime → Always Allowed | ✅ |
-| Content & Privacy Restrictions | 2 | com.apple.settings.screenTime → Content & Privacy Restrictions | ✅ |
-| Set Passcode | 2 | com.apple.settings.screenTime → Lock Screen Time Settings | ✅ |
-| e3b0c44298fc1c14:alias:128 | 2 | com.apple.settings.screenTime → Use with Other Devices or Family | ✅ |
-| 201a7dc2cecc92cb | 2 | com.apple.settings.screenTime → Turn Off App & Website Activity | ✅ |
-| App & Website Activity | 2 | com.apple.settings.screenTime → App & Website Activity | ✅ |
-
-### com.apple.settings.search (19 pages)
-
-| Page | Depth | Path | Status |
-|------|-------|------|--------|
-| Search | 1 | com.apple.settings.search | ✅ |
-| Search Engine | 2 | com.apple.settings.search → Search Engine | ✅ |
-| App Clips | 2 | com.apple.settings.search → App Clips | ✅ |
-| Calendar | 2 | com.apple.settings.search → Calendar | ✅ |
-| Contacts | 2 | com.apple.settings.search → Contacts | ✅ |
-| Expo Go | 2 | com.apple.settings.search → Expo Go | ✅ |
-| Files | 2 | com.apple.settings.search → Files | ✅ |
-| Health | 2 | com.apple.settings.search → Health | ✅ |
-| Maps | 2 | com.apple.settings.search → Maps | ✅ |
-| Material 3 Demo | 2 | com.apple.settings.search → Material 3 Demo | ✅ |
-| Mobitru | 2 | com.apple.settings.search → Mobitru | ✅ |
-| News | 2 | com.apple.settings.search → News | ✅ |
-| Passwords | 2 | com.apple.settings.search → Passwords | ✅ |
-| Photos | 2 | com.apple.settings.search → Photos | ✅ |
-| Reminders | 2 | com.apple.settings.search → Reminders | ✅ |
-| Safari | 2 | com.apple.settings.search → Safari | ✅ |
-| Shortcuts | 2 | com.apple.settings.search → Shortcuts | ✅ |
-| Wallet | 2 | com.apple.settings.search → Wallet | ✅ |
-| Watch | 2 | com.apple.settings.search → Watch | ✅ |
-
-### com.apple.settings.siri (28 pages)
-
-| Page | Depth | Path | Status |
-|------|-------|------|--------|
-| Apple Intelligence & Siri | 1 | com.apple.settings.siri | ✅ |
-| Language | 2 | com.apple.settings.siri → Language | ✅ |
-| English (India) | 3 | com.apple.settings.siri → Language → English (India) | ✅ |
-| Talk to Siri | 2 | com.apple.settings.siri → Talk to Siri | ✅ |
-| Voice | 2 | com.apple.settings.siri → Voice | ✅ |
-| Siri Responses | 2 | com.apple.settings.siri → Siri Responses | ✅ |
-| Messaging with Siri | 2 | com.apple.settings.siri → Messaging with Siri | ✅ |
-| Siri & Dictation History | 2 | com.apple.settings.siri → Siri & Dictation History | ✅ |
-| cde0fb0dec1400c5 | 2 | com.apple.settings.siri → My Information | ✅ |
-| App Clips | 2 | com.apple.settings.siri → App Clips | ✅ |
-| Apps | 2 | com.apple.settings.siri → Apps | ✅ |
-| Calendar | 3 | com.apple.settings.siri → Apps → Calendar | ✅ |
-| Contacts | 3 | com.apple.settings.siri → Apps → Contacts | ✅ |
-| Expo Go | 3 | com.apple.settings.siri → Apps → Expo Go | ✅ |
-| Files | 3 | com.apple.settings.siri → Apps → Files | ✅ |
-| Fitness | 3 | com.apple.settings.siri → Apps → Fitness | ✅ |
-| Health | 3 | com.apple.settings.siri → Apps → Health | ✅ |
-| Maps | 3 | com.apple.settings.siri → Apps → Maps | ✅ |
-| Material 3 Demo | 3 | com.apple.settings.siri → Apps → Material 3 Demo | ✅ |
-| Mobitru | 3 | com.apple.settings.siri → Apps → Mobitru | ✅ |
-| News | 3 | com.apple.settings.siri → Apps → News | ✅ |
-| Passwords | 3 | com.apple.settings.siri → Apps → Passwords | ✅ |
-| Photos | 3 | com.apple.settings.siri → Apps → Photos | ✅ |
-| Reminders | 3 | com.apple.settings.siri → Apps → Reminders | ✅ |
-| Safari | 3 | com.apple.settings.siri → Apps → Safari | ✅ |
-| Shortcuts | 3 | com.apple.settings.siri → Apps → Shortcuts | ✅ |
-| Wallet | 3 | com.apple.settings.siri → Apps → Wallet | ✅ |
-| Watch | 3 | com.apple.settings.siri → Apps → Watch | ✅ |
-
-### com.apple.settings.standBy (1 pages)
-
-| Page | Depth | Path | Status |
-|------|-------|------|--------|
-| StandBy | 1 | com.apple.settings.standBy | ✅ |
-
-### com.apple.settings.walletAndApplePay (4 pages)
-
-| Page | Depth | Path | Status |
-|------|-------|------|--------|
-| Wallet & Apple Pay | 1 | com.apple.settings.walletAndApplePay | ✅ |
-| Siri | 2 | com.apple.settings.walletAndApplePay → Siri | ✅ |
-| Search | 2 | com.apple.settings.walletAndApplePay → Search | ✅ |
-| Notifications | 2 | com.apple.settings.walletAndApplePay → Notifications | ✅ |
-
-### Home (1 pages)
-
-| Page | Depth | Path | Status |
-|------|-------|------|--------|
-| Settings | 0 | (root) | ✅ |
-
-## Alerts
-
-### ❌ Failed Pages (1)
-
-- **8d5cb0b6995f8377**: BACKTRACK_MISMATCH on "Research Sensor & Usage Data" at depth 2
-  Path: com.apple.settings.privacyAndSecurity → ALMANAC
-  Error: ensureFrameAligned mismatch for "Research Sensor & Usage Data"
-</file>
-
 <file path="docs/showcase/fixtures/react-native-login/App.tsx.template">
 import React, { useMemo, useState } from 'react';
 import { SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
@@ -189374,64 +189222,6 @@ async function cleanupSessionAndLease(sessionId: string, platform: "android" | "
 function buildSession(sessionId: string, deviceId: string): Session
 </file>
 
-<file path="packages/explorer/src/report/ascii.ts">
-import type { PageEntry } from '../types.js';
-import { derivePageLink } from './hierarchy.js';
-⋮----
-interface SamplingPageDetail {
-  screenTitle?: string;
-  totalChildren: number;
-  exploredChildren: number;
-  skippedChildren: number;
-  exploredLabels: string[];
-  skippedLabels: string[];
-}
-⋮----
-interface SampledSkippedChild {
-  kind: 'sampled-skipped';
-  label: string;
-}
-⋮----
-function isSampledSkippedChild(
-  node: PageEntry | SampledSkippedChild,
-): node is SampledSkippedChild
-⋮----
-/** Generate an ASCII tree representation of the explored page structure. */
-export function generateAsciiTree(
-  pages: PageEntry[],
-  samplingDetails: Record<string, SamplingPageDetail> = {},
-): string
-⋮----
-function walk(page: PageEntry, prefix: string, isLast: boolean): void
-⋮----
-function walkChild(
-    node: PageEntry | SampledSkippedChild,
-    prefix: string,
-    isLast: boolean,
-): void
-⋮----
-function getSkippedChildren(
-    screenId: string,
-    realChildren: PageEntry[],
-): SampledSkippedChild[]
-⋮----
-/** Detect whether a value looks like a 16-char hex hash. */
-function isHashLike(value: string | undefined): boolean
-⋮----
-/** Extract short hash (first 8 chars) for disambiguation. */
-function shortHash(value: string | undefined): string | undefined
-⋮----
-/** Map internal ruleFamily identifiers to human-readable labels. */
-function displayNameForRuleFamily(ruleFamily: string | undefined): string | undefined
-⋮----
-function formatPageLabel(
-  page: PageEntry,
-  samplingDetail?: SamplingPageDetail,
-): string
-⋮----
-// Alias inherits the original page's screenTitle via ...snapshot spread
-</file>
-
 <file path="packages/explorer/src/rules/default-rules.ts">
 import type { SamplingRule, SkipElementRule, SkipPageRule } from "../types.js";
 import type { ExplorerRule } from "./rule-types.js";
@@ -189727,24 +189517,6 @@ const baseInput = () => (
  * Unwrap a ToolResult into either the data or an Error.
  */
 export function unwrapResult<T>(result: ToolResult<T>): T
-</file>
-
-<file path="packages/explorer/tests/report/ascii.test.ts">
-import { describe, it } from 'node:test';
-import assert from 'node:assert/strict';
-import type { PageEntry } from '../../src/types.js';
-import { generateAsciiTree } from '../../src/report/index.js';
-⋮----
-function makePage(
-  id: string,
-  screenId: string,
-  depth: number,
-  path: string[],
-  arrivedFrom: string | null = null,
-  viaElement: string | null = null,
-  screenTitle?: string,
-  extra?: Partial<PageEntry>,
-): PageEntry
 </file>
 
 <file path="packages/explorer/tests/rules/default-rules.test.ts">
@@ -192560,6 +192332,30 @@ Legacy scripts may still be referenced by archived planning notes or compatibili
 `scripts/legacy/dev/run-sample-phase-matrix.sh` is intentionally kept as the `validate:phase3-real-run` compatibility matrix wrapper. It replays historical sample lanes for report generation; it is not the primary real-device proof path now that Explorer and probe runs cover the tool surface directly.
 </file>
 
+<file path="scripts/release/mcp-package-scripts.test.ts">
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import test from "node:test";
+import { fileURLToPath } from "node:url";
+</file>
+
+<file path="scripts/release/prepare-mcp-release.ts">
+import { execSync } from 'node:child_process';
+import { readFileSync, writeFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { parsePrepareReleaseArgs, resolveTargetVersion } from './prepare-mcp-release-lib.ts';
+⋮----
+function run(command: string): string
+⋮----
+function runWithOutput(command: string): void
+⋮----
+// .gitnexus may be gitignored in some setups — only add if tracked
+⋮----
+// Verify tag was successfully pushed to remote
+</file>
+
 <file path="scripts/report/generate-acceptance-evidence.py">
 #!/usr/bin/env python3
 ⋮----
@@ -194500,6 +194296,172 @@ import { execFile } from "node:child_process";
 import path from "node:path";
 import test from "node:test";
 import { promisify } from "node:util";
+</file>
+
+<file path="CHANGELOG.md">
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+## [0.1.16] - 2026-06-03
+
+### Added
+- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
+- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
+
+### Changed
+- Release scope includes 1 merged commit between mcp-server-v0.1.15 and the target tag.
+
+### Fixed
+- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
+
+## [0.1.15] - 2026-06-03
+
+### Added
+- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
+- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
+
+### Changed
+- Improved diagnostics, evidence capture, and performance analysis workflows for mobile automation runs.
+- Refined operator documentation, governance guidance, and architecture references around the release.
+- Release scope includes 103 merged commits between mcp-server-v0.1.14 and the target tag.
+
+### Fixed
+- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
+
+## [0.1.14] - 2026-05-04
+
+### Added
+- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
+- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
+
+### Changed
+- Improved diagnostics, evidence capture, and performance analysis workflows for mobile automation runs.
+- Refined operator documentation, governance guidance, and architecture references around the release.
+- Release scope includes 36 merged commits between mcp-server-v0.1.13 and the target tag.
+
+### Fixed
+- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
+
+## [0.1.13] - 2026-04-12
+
+### Added
+- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
+- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
+
+### Changed
+- Refined operator documentation, governance guidance, and architecture references around the release.
+- Release scope includes 15 merged commits between mcp-server-v0.1.12 and the target tag.
+
+### Fixed
+- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
+
+## [0.1.12] - 2026-04-12
+
+### Added
+- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
+- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
+- Improved bounded OCR and vision fallback support for cases where deterministic selectors are unavailable.
+
+### Changed
+- Improved diagnostics, evidence capture, and performance analysis workflows for mobile automation runs.
+- Refined operator documentation, governance guidance, and architecture references around the release.
+- Release scope includes 147 merged commits between mcp-server-v0.1.11 and the target tag.
+
+### Fixed
+- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
+
+## [0.1.11] - 2026-03-29
+
+### Added
+- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
+- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
+- Improved bounded OCR and vision fallback support for cases where deterministic selectors are unavailable.
+
+### Changed
+- Improved diagnostics, evidence capture, and performance analysis workflows for mobile automation runs.
+- Refined operator documentation, governance guidance, and architecture references around the release.
+- Release scope includes 48 merged commits between mcp-server-v0.1.9 and the target tag.
+
+### Fixed
+- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
+
+## [0.1.9] - 2026-03-26
+
+### Added
+- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
+- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
+- Improved bounded OCR and vision fallback support for cases where deterministic selectors are unavailable.
+
+### Changed
+- Refined operator documentation, governance guidance, and architecture references around the release.
+- Release scope includes 9 merged commits between mcp-server-v0.1.8 and the target tag.
+
+### Fixed
+- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
+
+## [0.1.8] - 2026-03-23
+
+### Added
+- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
+- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
+
+### Changed
+- Improved diagnostics, evidence capture, and performance analysis workflows for mobile automation runs.
+- Refined operator documentation, governance guidance, and architecture references around the release.
+- Release scope includes 19 merged commits between mcp-server-v0.1.7 and the target tag.
+
+### Fixed
+- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
+
+## [0.1.7] - 2026-03-21
+
+### Added
+- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
+- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
+- Improved bounded OCR and vision fallback support for cases where deterministic selectors are unavailable.
+
+### Changed
+- Improved diagnostics, evidence capture, and performance analysis workflows for mobile automation runs.
+- Refined operator documentation, governance guidance, and architecture references around the release.
+- Release scope includes 38 merged commits between mcp-server-v0.1.6 and the target tag.
+
+### Fixed
+- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
+
+## [0.1.6] - 2026-03-20
+
+### Added
+- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
+- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
+- Improved bounded OCR and vision fallback support for cases where deterministic selectors are unavailable.
+
+### Changed
+- Improved diagnostics, evidence capture, and performance analysis workflows for mobile automation runs.
+- Refined operator documentation, governance guidance, and architecture references around the release.
+- Release scope includes 39 merged commits between mcp-server-v0.1.5 and the target tag.
+
+### Fixed
+- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
+
+## [0.1.5] - 2026-03-20
+
+### Added
+- Introduced the first public AI-first mobile E2E MCP server with session lifecycle, app control, UI inspection, interaction, diagnostics, interruption handling, and failure-analysis tools.
+- Established deterministic-first execution adapters plus bounded OCR/vision fallback for Android, iOS, React Native, and Flutter automation workflows.
+- Published runnable sample flows, showcase demos, and real-device/simulator validation assets for login, recovery, and harness onboarding scenarios.
+
+### Changed
+- Reorganized the repository into a pnpm monorepo with explicit contracts, core orchestration, adapters, and MCP server package boundaries.
+- Added stdio/dev CLI entrypoints, package metadata, governance baselines, and release automation needed for public npm distribution.
+
+### Fixed
+- Hardened doctor checks, dry-run behavior, selector resolution, and session or lease stability during the initial release cycle.
 </file>
 
 <file path="CONTRIBUTING.md">
@@ -200157,6 +200119,54 @@ export interface BacktrackResult {
 // ---------------------------------------------------------------------------
 </file>
 
+<file path="packages/explorer/tests/integration/pipeline.test.ts">
+/**
+ * End-to-end pipeline test with mocked MCP adapter.
+ *
+ * Verifies: config load -> interview skip -> engine run -> report generate.
+ * Uses a mocked MCP adapter to avoid real device interaction.
+ */
+⋮----
+import assert from "node:assert/strict";
+import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { describe, it } from "node:test";
+import { ConfigStore } from "../../src/config-store.js";
+import { buildDefaultConfig } from "../../src/config.js";
+import { FailureLog } from "../../src/engine.js";
+import { PageRegistry } from "../../src/page-registry.js";
+import { formatRunTimestamp } from "../../src/report/summary.js";
+import { generateReport } from "../../src/report.js";
+import type { ExplorerConfig, McpToolInterface } from "../../src/types.js";
+⋮----
+// ---------------------------------------------------------------------------
+// Mock MCP Adapter
+// ---------------------------------------------------------------------------
+⋮----
+function createMockMcpAdapter(): McpToolInterface
+⋮----
+// ---------------------------------------------------------------------------
+// Mock ExplorerConfig
+// ---------------------------------------------------------------------------
+⋮----
+function createMockConfig(reportDir: string): ExplorerConfig
+⋮----
+// ---------------------------------------------------------------------------
+// Pipeline tests
+// ---------------------------------------------------------------------------
+⋮----
+// Verify config is valid
+⋮----
+// Verify MCP adapter is callable
+⋮----
+// Generate a minimal report manually (engine requires real device)
+⋮----
+// Verify output files exist
+⋮----
+// Dedup again — should already be visited
+</file>
+
 <file path="packages/explorer/tests/report/failure-review-fixtures.test.ts">
 import assert from "node:assert/strict";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
@@ -200609,6 +200619,65 @@ async invoke<TName extends MobileE2EMcpToolName>(
 		toolName: TName,
 		input: ToolInput<TName>,
 ): Promise<ToolResult<ToolOutputData<TName>>>
+</file>
+
+<file path="packages/mcp-server/package.json">
+{
+  "name": "@shenyuexin/mobile-e2e-mcp",
+  "private": false,
+  "version": "0.1.16",
+  "description": "AI-first Mobile E2E MCP server for Android/iOS/React Native/Flutter",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shenyuexin/mobile-e2e.git",
+    "directory": "packages/mcp-server"
+  },
+  "homepage": "https://github.com/shenyuexin/mobile-e2e/tree/main/packages/mcp-server#readme",
+  "bugs": {
+    "url": "https://github.com/shenyuexin/mobile-e2e/issues"
+  },
+  "type": "module",
+  "main": "./bundle/index.cjs",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "mobile-e2e-mcp": "./bundle/bin-stdio.cjs"
+  },
+  "files": [
+    "bundle",
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./bundle/index.cjs"
+    }
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.17.5"
+  },
+  "devDependencies": {
+    "@mobile-e2e-mcp/adapter-maestro": "workspace:*",
+    "@mobile-e2e-mcp/adapter-vision": "workspace:*",
+    "@mobile-e2e-mcp/contracts": "workspace:*",
+    "@mobile-e2e-mcp/core": "workspace:*",
+    "@mobile-e2e-mcp/explorer": "workspace:*",
+    "tsup": "^8.5.0"
+  },
+  "scripts": {
+    "build": "pnpm --filter @mobile-e2e-mcp/contracts build && pnpm --filter @mobile-e2e-mcp/core build && pnpm --filter @mobile-e2e-mcp/adapter-vision build && pnpm --filter @mobile-e2e-mcp/adapter-maestro build && pnpm --filter @mobile-e2e-mcp/explorer build && tsc -p tsconfig.json",
+    "bundle": "pnpm run build && tsup --config tsup.config.ts",
+    "test": "tsx --test test/*.test.ts",
+    "test:coverage": "bash ../../scripts/coverage.sh src",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "dev": "tsx src/dev-cli.ts",
+    "stdio": "tsx src/mcp-stdio-server.ts",
+    "stdio:minimal": "tsx src/stdio-server.ts",
+    "release:publish": "pnpm run bundle && pnpm publish --access public",
+    "release:publish:ci": "pnpm run bundle && pnpm publish --access public --no-git-checks",
+    "release:publish:dry-run": "pnpm run bundle && pnpm publish --access public --dry-run --no-git-checks",
+    "release:patch": "pnpm version patch && pnpm run release:publish"
+  }
+}
 </file>
 
 <file path="scripts/dev/tool-probe-report-contract.test.ts">
@@ -203704,6 +203773,105 @@ import {
 
 </file>
 
+<file path="packages/explorer/src/report/markdown.ts">
+/**
+ * Markdown report generation for exploration reports.
+ *
+ * Renders `report.md` from a structured template including overview table,
+ * module breakdown, failure report, and slow page warnings.
+ *
+ * §5.4 — Markdown report template.
+ */
+⋮----
+import type { ExplorerConfig, FailureEntry, PageEntry } from '../types.js';
+import type { ModuleGroup } from './modules.js';
+import { countUniquePaths } from './summary.js';
+⋮----
+/** Options passed to markdown generation. */
+export interface MarkdownOpts {
+  /** Whether the exploration was partial/aborted. */
+  partial: boolean;
+  /** Reason for abortion, if applicable. */
+  abortReason?: string;
+  /** Total duration in milliseconds. */
+  durationMs: number;
+  /** Sampling metadata for high-fanout collection pages. */
+  sampling?: {
+    appliedPages: string[];
+    skippedChildren: number;
+    details?: Record<
+      string,
+      {
+        screenTitle?: string;
+        totalChildren: number;
+        exploredChildren: number;
+        skippedChildren: number;
+        exploredLabels: string[];
+        skippedLabels: string[];
+      }
+    >;
+  };
+}
+⋮----
+/** Whether the exploration was partial/aborted. */
+⋮----
+/** Reason for abortion, if applicable. */
+⋮----
+/** Total duration in milliseconds. */
+⋮----
+/** Sampling metadata for high-fanout collection pages. */
+⋮----
+/** Threshold in milliseconds for marking a page as "slow". */
+⋮----
+/**
+ * Generate a Markdown-formatted exploration report.
+ *
+ * @param pages - All visited page entries
+ * @param failures - All failure entries
+ * @param modules - Inferred module groups
+ * @param config - Explorer configuration
+ * @param opts - Markdown options
+ * @returns Markdown string ready for writing to report.md
+ */
+export function generateMarkdown(
+  pages: PageEntry[],
+  failures: FailureEntry[],
+  modules: ModuleGroup[],
+  config: ExplorerConfig,
+  opts: MarkdownOpts,
+): string
+⋮----
+// Title
+⋮----
+// Overview table
+⋮----
+// Page map reference
+⋮----
+// Module breakdown
+⋮----
+// Failure report
+⋮----
+// Slow pages
+⋮----
+/** Format milliseconds to a human-readable duration string. */
+function formatDuration(ms: number): string
+⋮----
+/** Escape special Markdown characters in text that could break table rendering. */
+function escapeMarkdown(text: string): string
+⋮----
+// In table cells, pipe characters need escaping
+⋮----
+function formatLabelList(labels: string[]): string
+⋮----
+function summarizeRuleDecisionPairs(
+	decisions: NonNullable<PageEntry["ruleDecision"]>[],
+): Array<
+⋮----
+function summarizeRuleDecisionReasons(
+	decisions: NonNullable<PageEntry["ruleDecision"]>[],
+): Array<
+</file>
+
 <file path="packages/explorer/src/engine.ts">
 /**
  * DFS Exploration Engine — per-element immediate exploration.
@@ -203957,52 +204125,28 @@ continue; // element didn't lead anywhere — try next sibling
 // --- Generate report ---
 </file>
 
-<file path="packages/explorer/tests/integration/pipeline.test.ts">
+<file path="packages/explorer/tests/report/markdown.test.ts">
 /**
- * End-to-end pipeline test with mocked MCP adapter.
+ * Tests for Markdown report template rendering.
  *
- * Verifies: config load -> interview skip -> engine run -> report generate.
- * Uses a mocked MCP adapter to avoid real device interaction.
+ * Validates that the generated Markdown includes correct structure and values.
  */
 ⋮----
-import assert from "node:assert/strict";
-import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { describe, it } from "node:test";
-import { ConfigStore } from "../../src/config-store.js";
-import { buildDefaultConfig } from "../../src/config.js";
-import { FailureLog } from "../../src/engine.js";
-import { PageRegistry } from "../../src/page-registry.js";
-import { formatRunTimestamp } from "../../src/report/summary.js";
-import { generateReport } from "../../src/report.js";
-import type { ExplorerConfig, McpToolInterface } from "../../src/types.js";
+import assert from 'node:assert/strict';
+import { describe, it } from 'node:test';
+import { generateMarkdown } from '../../src/report/markdown.js';
+import { inferModules } from '../../src/report/modules.js';
+import type { ExplorerConfig, FailureEntry, PageEntry } from '../../src/types.js';
 ⋮----
-// ---------------------------------------------------------------------------
-// Mock MCP Adapter
-// ---------------------------------------------------------------------------
+function makePage(id: string, depth: number, path: string[], hasFailure = false, loadTimeMs = 100): PageEntry
 ⋮----
-function createMockMcpAdapter(): McpToolInterface
+function makeFailure(pageScreenId: string, elementLabel = 'btn'): FailureEntry
 ⋮----
-// ---------------------------------------------------------------------------
-// Mock ExplorerConfig
-// ---------------------------------------------------------------------------
+// No slow pages
 ⋮----
-function createMockConfig(reportDir: string): ExplorerConfig
+// With slow pages
 ⋮----
-// ---------------------------------------------------------------------------
-// Pipeline tests
-// ---------------------------------------------------------------------------
-⋮----
-// Verify config is valid
-⋮----
-// Verify MCP adapter is callable
-⋮----
-// Generate a minimal report manually (engine requires real device)
-⋮----
-// Verify output files exist
-⋮----
-// Dedup again — should already be visited
+// Pipes should be escaped in table cells
 </file>
 
 <file path="packages/mcp-server/test/stdio-server.test.ts">
@@ -205800,44 +205944,63 @@ function escapeMarkdownLink(text: string): string
 function escapeXml(text: string): string
 </file>
 
-<file path="packages/explorer/src/report/markdown.ts">
+<file path="packages/explorer/src/report/index.ts">
 /**
- * Markdown report generation for exploration reports.
+ * Main entry point for report generation.
  *
- * Renders `report.md` from a structured template including overview table,
- * module breakdown, failure report, and slow page warnings.
- *
- * §5.4 — Markdown report template.
+ * Orchestrates module inference, summary JSON, Markdown report, Mermaid graph,
+ * config snapshot, and index management.
  */
 ⋮----
-import type { ExplorerConfig, FailureEntry, PageEntry } from '../types.js';
-import type { ModuleGroup } from './modules.js';
-import { countUniquePaths } from './summary.js';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+import type {
+  ExplorerConfig,
+  FailureEntry,
+  PageEntry,
+  StateGraphSummary,
+  TransitionLifecycleSummary,
+} from '../types.js';
+import { generateAsciiTree } from './ascii.js';
+import {
+  attachFailureReviewVisualBaselineComparisons,
+  generateFailureReviewJson,
+  generateFailureReviewMarkdown,
+} from './failure-review.js';
+import { updateIndex } from './index-manager.js';
+import { generateMarkdown } from './markdown.js';
+import { inferModules } from './modules.js';
+import { generateSummaryJson, resolveRunId, type RunIndexEntry } from './summary.js';
 ⋮----
-/** Options passed to markdown generation. */
-export interface MarkdownOpts {
+/** Options for report generation. */
+export interface ReportOpts {
   /** Whether the exploration was partial/aborted. */
   partial: boolean;
   /** Reason for abortion, if applicable. */
   abortReason?: string;
   /** Total duration in milliseconds. */
   durationMs: number;
+  /** ISO timestamp when exploration started. */
+  startedAt?: string;
   /** Sampling metadata for high-fanout collection pages. */
   sampling?: {
     appliedPages: string[];
     skippedChildren: number;
-    details?: Record<
-      string,
-      {
-        screenTitle?: string;
-        totalChildren: number;
-        exploredChildren: number;
-        skippedChildren: number;
-        exploredLabels: string[];
-        skippedLabels: string[];
-      }
-    >;
+    details?: Record<string, {
+      screenTitle?: string;
+      totalChildren: number;
+      exploredChildren: number;
+      skippedChildren: number;
+      exploredLabels: string[];
+      skippedLabels: string[];
+    }>;
   };
+  /** Transition lifecycle counters from the engine. */
+  transitionLifecycle?: TransitionLifecycleSummary;
+  /** StateGraph aggregate counters from engine. */
+  stateGraph?: StateGraphSummary;
+  /** Precomputed run id so callers can create the run directory before report generation. */
+  runId?: string;
 }
 ⋮----
 /** Whether the exploration was partial/aborted. */
@@ -205846,81 +206009,52 @@ export interface MarkdownOpts {
 ⋮----
 /** Total duration in milliseconds. */
 ⋮----
+/** ISO timestamp when exploration started. */
+⋮----
 /** Sampling metadata for high-fanout collection pages. */
 ⋮----
-/** Threshold in milliseconds for marking a page as "slow". */
+/** Transition lifecycle counters from the engine. */
+⋮----
+/** StateGraph aggregate counters from engine. */
+⋮----
+/** Precomputed run id so callers can create the run directory before report generation. */
 ⋮----
 /**
- * Generate a Markdown-formatted exploration report.
+ * Generate a complete exploration report.
+ *
+ * Writes the following to the output directory:
+ * - summary.json — structured run data
+ * - report.md — human-readable Markdown report
+ * - failure-review.json / failure-review.md — focused failure diagnostics
+ * - tree.txt — ASCII tree of discovered pages
+ * - config.json — configuration snapshot
+ * - Updates index.json in the parent report directory
  *
  * @param pages - All visited page entries
  * @param failures - All failure entries
- * @param modules - Inferred module groups
  * @param config - Explorer configuration
- * @param opts - Markdown options
- * @returns Markdown string ready for writing to report.md
+ * @param opts - Report generation options
  */
-export function generateMarkdown(
+export async function generateReport(
   pages: PageEntry[],
   failures: FailureEntry[],
-  modules: ModuleGroup[],
   config: ExplorerConfig,
-  opts: MarkdownOpts,
-): string
+  opts: ReportOpts,
+): Promise<void>
 ⋮----
-// Title
+// Ensure output directory exists
 ⋮----
-// Overview table
+// Generate summary.json
 ⋮----
-// Page map reference
+// Generate report.md
 ⋮----
-// Module breakdown
+// Generate failure-review artifacts as diagnostic companions to report.md.
 ⋮----
-// Failure report
+// Generate tree.txt
 ⋮----
-// Slow pages
+// Save config snapshot
 ⋮----
-/** Format milliseconds to a human-readable duration string. */
-function formatDuration(ms: number): string
-⋮----
-/** Escape special Markdown characters in text that could break table rendering. */
-function escapeMarkdown(text: string): string
-⋮----
-// In table cells, pipe characters need escaping
-⋮----
-function formatLabelList(labels: string[]): string
-⋮----
-function summarizeRuleDecisionPairs(
-	decisions: NonNullable<PageEntry["ruleDecision"]>[],
-): Array<
-⋮----
-function summarizeRuleDecisionReasons(
-	decisions: NonNullable<PageEntry["ruleDecision"]>[],
-): Array<
-</file>
-
-<file path="packages/explorer/tests/report/markdown.test.ts">
-/**
- * Tests for Markdown report template rendering.
- *
- * Validates that the generated Markdown includes correct structure and values.
- */
-⋮----
-import assert from 'node:assert/strict';
-import { describe, it } from 'node:test';
-import { generateMarkdown } from '../../src/report/markdown.js';
-import { inferModules } from '../../src/report/modules.js';
-import type { ExplorerConfig, FailureEntry, PageEntry } from '../../src/types.js';
-⋮----
-function makePage(id: string, depth: number, path: string[], hasFailure = false, loadTimeMs = 100): PageEntry
-⋮----
-function makeFailure(pageScreenId: string, elementLabel = 'btn'): FailureEntry
-⋮----
-// No slow pages
-⋮----
-// With slow pages
-⋮----
-// Pipes should be escaped in table cells
+// Update index.json
 </file>
 
 <file path="packages/mcp-server/src/index.ts">
@@ -206982,119 +207116,6 @@ Result: PASS. The tracked summary preserves the vivo proof verdict and compact e
 如果你只记住一句话：
 
 > 先确认 readiness 与 capability，再建立 session；优先确定性定位与结构化 evidence，失败后先归因和恢复，最后才升级重诊断。
-</file>
-
-<file path="packages/explorer/src/report/index.ts">
-/**
- * Main entry point for report generation.
- *
- * Orchestrates module inference, summary JSON, Markdown report, Mermaid graph,
- * config snapshot, and index management.
- */
-⋮----
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
-import type {
-  ExplorerConfig,
-  FailureEntry,
-  PageEntry,
-  StateGraphSummary,
-  TransitionLifecycleSummary,
-} from '../types.js';
-import { generateAsciiTree } from './ascii.js';
-import {
-  attachFailureReviewVisualBaselineComparisons,
-  generateFailureReviewJson,
-  generateFailureReviewMarkdown,
-} from './failure-review.js';
-import { updateIndex } from './index-manager.js';
-import { generateMarkdown } from './markdown.js';
-import { inferModules } from './modules.js';
-import { generateSummaryJson, resolveRunId, type RunIndexEntry } from './summary.js';
-⋮----
-/** Options for report generation. */
-export interface ReportOpts {
-  /** Whether the exploration was partial/aborted. */
-  partial: boolean;
-  /** Reason for abortion, if applicable. */
-  abortReason?: string;
-  /** Total duration in milliseconds. */
-  durationMs: number;
-  /** ISO timestamp when exploration started. */
-  startedAt?: string;
-  /** Sampling metadata for high-fanout collection pages. */
-  sampling?: {
-    appliedPages: string[];
-    skippedChildren: number;
-    details?: Record<string, {
-      screenTitle?: string;
-      totalChildren: number;
-      exploredChildren: number;
-      skippedChildren: number;
-      exploredLabels: string[];
-      skippedLabels: string[];
-    }>;
-  };
-  /** Transition lifecycle counters from the engine. */
-  transitionLifecycle?: TransitionLifecycleSummary;
-  /** StateGraph aggregate counters from engine. */
-  stateGraph?: StateGraphSummary;
-  /** Precomputed run id so callers can create the run directory before report generation. */
-  runId?: string;
-}
-⋮----
-/** Whether the exploration was partial/aborted. */
-⋮----
-/** Reason for abortion, if applicable. */
-⋮----
-/** Total duration in milliseconds. */
-⋮----
-/** ISO timestamp when exploration started. */
-⋮----
-/** Sampling metadata for high-fanout collection pages. */
-⋮----
-/** Transition lifecycle counters from the engine. */
-⋮----
-/** StateGraph aggregate counters from engine. */
-⋮----
-/** Precomputed run id so callers can create the run directory before report generation. */
-⋮----
-/**
- * Generate a complete exploration report.
- *
- * Writes the following to the output directory:
- * - summary.json — structured run data
- * - report.md — human-readable Markdown report
- * - failure-review.json / failure-review.md — focused failure diagnostics
- * - tree.txt — ASCII tree of discovered pages
- * - config.json — configuration snapshot
- * - Updates index.json in the parent report directory
- *
- * @param pages - All visited page entries
- * @param failures - All failure entries
- * @param config - Explorer configuration
- * @param opts - Report generation options
- */
-export async function generateReport(
-  pages: PageEntry[],
-  failures: FailureEntry[],
-  config: ExplorerConfig,
-  opts: ReportOpts,
-): Promise<void>
-⋮----
-// Ensure output directory exists
-⋮----
-// Generate summary.json
-⋮----
-// Generate report.md
-⋮----
-// Generate failure-review artifacts as diagnostic companions to report.md.
-⋮----
-// Generate tree.txt
-⋮----
-// Save config snapshot
-⋮----
-// Update index.json
 </file>
 
 <file path="packages/mcp-server/test/server.test.ts">
