@@ -46,7 +46,7 @@
 3. 根据“上一个 MCP tag -> 当前 tag”的 commit diff 自动生成/更新 `CHANGELOG.md` 中该版本节
 4. 再次校验 tag / package version / changelog 三者一致
 5. 将同步后的 `CHANGELOG.md` 回写到默认分支
-6. 同步生成最新 `repomix-output.xml` 并与 release 元数据一起回写默认分支
+6. 同步生成最新 `repomix-output.xml`，并将 GitNexus 刷新可能更新的 `AGENTS.md` 与 release 元数据一起回写默认分支
 7. 构建打包
 8. 发布到 npm（使用 `NPM_TOKEN`）
 9. 创建 GitHub Release

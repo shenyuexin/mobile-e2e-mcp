@@ -22,3 +22,12 @@ test("mcp-server build script prepares explorer before TypeScript compile", () =
     "explorer must be built before mcp-server tsc resolves its package types"
   );
 });
+
+test("release metadata commits include GitNexus-updated AGENTS guide", () => {
+  const workflow = readFileSync(resolve(repoRoot, ".github/workflows/release-mcp.yml"), "utf8");
+  const prepareScript = readFileSync(resolve(repoRoot, "scripts/release/prepare-mcp-release.ts"), "utf8");
+
+  assert.match(workflow, /git diff --quiet -- CHANGELOG\.md repomix-output\.xml AGENTS\.md/);
+  assert.match(workflow, /git add CHANGELOG\.md repomix-output\.xml AGENTS\.md/);
+  assert.match(prepareScript, /AGENTS\.md/);
+});

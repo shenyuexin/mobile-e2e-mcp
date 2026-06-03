@@ -59,11 +59,11 @@ jobs:
           pnpm tsx scripts/release/sync-mcp-release-changelog.ts --tag "${GITHUB_REF_NAME}"
           npx repomix@latest --output repomix-output.xml --quiet --compress
           npx gitnexus analyze
-          if git diff --quiet -- CHANGELOG.md repomix-output.xml; then
-            echo "CHANGELOG.md and repomix-output.xml already up to date"
+          if git diff --quiet -- CHANGELOG.md repomix-output.xml AGENTS.md; then
+            echo "CHANGELOG.md, repomix-output.xml, and AGENTS.md already up to date"
             exit 0
           fi
-          git add CHANGELOG.md repomix-output.xml
+          git add CHANGELOG.md repomix-output.xml AGENTS.md
           git commit -m "docs(release): sync MCP notes and repomix for ${GITHUB_REF_NAME#mcp-server-v}"
           git push origin "${DEFAULT_BRANCH}"
 
