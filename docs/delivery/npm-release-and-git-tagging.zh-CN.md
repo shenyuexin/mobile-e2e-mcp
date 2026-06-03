@@ -51,6 +51,8 @@
 8. 发布到 npm（使用 `NPM_TOKEN`）
 9. 创建 GitHub Release
 
+发布打包使用 `@shenyuexin/mobile-e2e-mcp` 的 `bundle` 脚本作为最终路径。该脚本必须先构建所有被 MCP server 源码直接导入的 workspace 包，包括 `@mobile-e2e-mcp/explorer`，再执行 MCP server 的 TypeScript 编译与 tsup bundle；否则 fresh CI checkout 会因为缺少 workspace 包的 `dist/*.d.ts` 而在 npm publish 前失败。
+
 ### 3) Public Docs 漂移检查（非阻塞）
 
 原则：**不是每个 tag 都必须更新 README，但每个对外可见能力变更都必须有公共文档落点**。
