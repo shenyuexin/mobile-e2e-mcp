@@ -23298,6 +23298,64 @@ timeline logic that should not depend on a specific adapter implementation.
 }
 </file>
 
+<file path="packages/explorer/src/report/ascii.ts">
+import type { PageEntry } from '../types.js';
+import { derivePageLink } from './hierarchy.js';
+⋮----
+interface SamplingPageDetail {
+  screenTitle?: string;
+  totalChildren: number;
+  exploredChildren: number;
+  skippedChildren: number;
+  exploredLabels: string[];
+  skippedLabels: string[];
+}
+⋮----
+interface SampledSkippedChild {
+  kind: 'sampled-skipped';
+  label: string;
+}
+⋮----
+function isSampledSkippedChild(
+  node: PageEntry | SampledSkippedChild,
+): node is SampledSkippedChild
+⋮----
+/** Generate an ASCII tree representation of the explored page structure. */
+export function generateAsciiTree(
+  pages: PageEntry[],
+  samplingDetails: Record<string, SamplingPageDetail> = {},
+): string
+⋮----
+function walk(page: PageEntry, prefix: string, isLast: boolean): void
+⋮----
+function walkChild(
+    node: PageEntry | SampledSkippedChild,
+    prefix: string,
+    isLast: boolean,
+): void
+⋮----
+function getSkippedChildren(
+    screenId: string,
+    realChildren: PageEntry[],
+): SampledSkippedChild[]
+⋮----
+/** Detect whether a value looks like a 16-char hex hash. */
+function isHashLike(value: string | undefined): boolean
+⋮----
+/** Extract short hash (first 8 chars) for disambiguation. */
+function shortHash(value: string | undefined): string | undefined
+⋮----
+/** Map internal ruleFamily identifiers to human-readable labels. */
+function displayNameForRuleFamily(ruleFamily: string | undefined): string | undefined
+⋮----
+function formatPageLabel(
+  page: PageEntry,
+  samplingDetail?: SamplingPageDetail,
+): string
+⋮----
+// Alias inherits the original page's screenTitle via ...snapshot spread
+</file>
+
 <file path="packages/explorer/src/report/hierarchy.ts">
 import type { PageEntry } from '../types.js';
 ⋮----
@@ -25941,6 +25999,24 @@ function okResult<T>(data: T): ToolResult<T>
 function mockConfig(): ExplorerConfig
 ⋮----
 function flattenTree(node: UiHierarchy, result: UiHierarchy[] = []): UiHierarchy[]
+</file>
+
+<file path="packages/explorer/tests/report/ascii.test.ts">
+import { describe, it } from 'node:test';
+import assert from 'node:assert/strict';
+import type { PageEntry } from '../../src/types.js';
+import { generateAsciiTree } from '../../src/report/index.js';
+⋮----
+function makePage(
+  id: string,
+  screenId: string,
+  depth: number,
+  path: string[],
+  arrivedFrom: string | null = null,
+  viaElement: string | null = null,
+  screenTitle?: string,
+  extra?: Partial<PageEntry>,
+): PageEntry
 </file>
 
 <file path="packages/explorer/tests/report/mermaid.test.ts">
@@ -189220,64 +189296,6 @@ async function cleanupSessionAndLease(sessionId: string, platform: "android" | "
 function buildSession(sessionId: string, deviceId: string): Session
 </file>
 
-<file path="packages/explorer/src/report/ascii.ts">
-import type { PageEntry } from '../types.js';
-import { derivePageLink } from './hierarchy.js';
-⋮----
-interface SamplingPageDetail {
-  screenTitle?: string;
-  totalChildren: number;
-  exploredChildren: number;
-  skippedChildren: number;
-  exploredLabels: string[];
-  skippedLabels: string[];
-}
-⋮----
-interface SampledSkippedChild {
-  kind: 'sampled-skipped';
-  label: string;
-}
-⋮----
-function isSampledSkippedChild(
-  node: PageEntry | SampledSkippedChild,
-): node is SampledSkippedChild
-⋮----
-/** Generate an ASCII tree representation of the explored page structure. */
-export function generateAsciiTree(
-  pages: PageEntry[],
-  samplingDetails: Record<string, SamplingPageDetail> = {},
-): string
-⋮----
-function walk(page: PageEntry, prefix: string, isLast: boolean): void
-⋮----
-function walkChild(
-    node: PageEntry | SampledSkippedChild,
-    prefix: string,
-    isLast: boolean,
-): void
-⋮----
-function getSkippedChildren(
-    screenId: string,
-    realChildren: PageEntry[],
-): SampledSkippedChild[]
-⋮----
-/** Detect whether a value looks like a 16-char hex hash. */
-function isHashLike(value: string | undefined): boolean
-⋮----
-/** Extract short hash (first 8 chars) for disambiguation. */
-function shortHash(value: string | undefined): string | undefined
-⋮----
-/** Map internal ruleFamily identifiers to human-readable labels. */
-function displayNameForRuleFamily(ruleFamily: string | undefined): string | undefined
-⋮----
-function formatPageLabel(
-  page: PageEntry,
-  samplingDetail?: SamplingPageDetail,
-): string
-⋮----
-// Alias inherits the original page's screenTitle via ...snapshot spread
-</file>
-
 <file path="packages/explorer/src/rules/default-rules.ts">
 import type { SamplingRule, SkipElementRule, SkipPageRule } from "../types.js";
 import type { ExplorerRule } from "./rule-types.js";
@@ -189573,24 +189591,6 @@ const baseInput = () => (
  * Unwrap a ToolResult into either the data or an Error.
  */
 export function unwrapResult<T>(result: ToolResult<T>): T
-</file>
-
-<file path="packages/explorer/tests/report/ascii.test.ts">
-import { describe, it } from 'node:test';
-import assert from 'node:assert/strict';
-import type { PageEntry } from '../../src/types.js';
-import { generateAsciiTree } from '../../src/report/index.js';
-⋮----
-function makePage(
-  id: string,
-  screenId: string,
-  depth: number,
-  path: string[],
-  arrivedFrom: string | null = null,
-  viaElement: string | null = null,
-  screenTitle?: string,
-  extra?: Partial<PageEntry>,
-): PageEntry
 </file>
 
 <file path="packages/explorer/tests/rules/default-rules.test.ts">
@@ -194346,173 +194346,6 @@ import { execFile } from "node:child_process";
 import path from "node:path";
 import test from "node:test";
 import { promisify } from "node:util";
-</file>
-
-<file path="CHANGELOG.md">
-# Changelog
-
-All notable changes to this project will be documented in this file.
-
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
-and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-
-## [Unreleased]
-
-## [0.1.17] - 2026-06-03
-
-### Added
-- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
-- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
-
-### Changed
-- Refined operator documentation, governance guidance, and architecture references around the release.
-- Release scope includes 1 merged commit between mcp-server-v0.1.16 and the target tag.
-
-### Fixed
-- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
-
-## [0.1.15] - 2026-06-03
-
-### Added
-- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
-- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
-
-### Changed
-- Improved diagnostics, evidence capture, and performance analysis workflows for mobile automation runs.
-- Refined operator documentation, governance guidance, and architecture references around the release.
-- Release scope includes 103 merged commits between mcp-server-v0.1.14 and the target tag.
-
-### Fixed
-- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
-
-## [0.1.14] - 2026-05-04
-
-### Added
-- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
-- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
-
-### Changed
-- Improved diagnostics, evidence capture, and performance analysis workflows for mobile automation runs.
-- Refined operator documentation, governance guidance, and architecture references around the release.
-- Release scope includes 36 merged commits between mcp-server-v0.1.13 and the target tag.
-
-### Fixed
-- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
-
-## [0.1.13] - 2026-04-12
-
-### Added
-- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
-- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
-
-### Changed
-- Refined operator documentation, governance guidance, and architecture references around the release.
-- Release scope includes 15 merged commits between mcp-server-v0.1.12 and the target tag.
-
-### Fixed
-- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
-
-## [0.1.12] - 2026-04-12
-
-### Added
-- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
-- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
-- Improved bounded OCR and vision fallback support for cases where deterministic selectors are unavailable.
-
-### Changed
-- Improved diagnostics, evidence capture, and performance analysis workflows for mobile automation runs.
-- Refined operator documentation, governance guidance, and architecture references around the release.
-- Release scope includes 147 merged commits between mcp-server-v0.1.11 and the target tag.
-
-### Fixed
-- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
-
-## [0.1.11] - 2026-03-29
-
-### Added
-- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
-- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
-- Improved bounded OCR and vision fallback support for cases where deterministic selectors are unavailable.
-
-### Changed
-- Improved diagnostics, evidence capture, and performance analysis workflows for mobile automation runs.
-- Refined operator documentation, governance guidance, and architecture references around the release.
-- Release scope includes 48 merged commits between mcp-server-v0.1.9 and the target tag.
-
-### Fixed
-- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
-
-## [0.1.9] - 2026-03-26
-
-### Added
-- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
-- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
-- Improved bounded OCR and vision fallback support for cases where deterministic selectors are unavailable.
-
-### Changed
-- Refined operator documentation, governance guidance, and architecture references around the release.
-- Release scope includes 9 merged commits between mcp-server-v0.1.8 and the target tag.
-
-### Fixed
-- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
-
-## [0.1.8] - 2026-03-23
-
-### Added
-- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
-- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
-
-### Changed
-- Improved diagnostics, evidence capture, and performance analysis workflows for mobile automation runs.
-- Refined operator documentation, governance guidance, and architecture references around the release.
-- Release scope includes 19 merged commits between mcp-server-v0.1.7 and the target tag.
-
-### Fixed
-- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
-
-## [0.1.7] - 2026-03-21
-
-### Added
-- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
-- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
-- Improved bounded OCR and vision fallback support for cases where deterministic selectors are unavailable.
-
-### Changed
-- Improved diagnostics, evidence capture, and performance analysis workflows for mobile automation runs.
-- Refined operator documentation, governance guidance, and architecture references around the release.
-- Release scope includes 38 merged commits between mcp-server-v0.1.6 and the target tag.
-
-### Fixed
-- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
-
-## [0.1.6] - 2026-03-20
-
-### Added
-- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
-- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
-- Improved bounded OCR and vision fallback support for cases where deterministic selectors are unavailable.
-
-### Changed
-- Improved diagnostics, evidence capture, and performance analysis workflows for mobile automation runs.
-- Refined operator documentation, governance guidance, and architecture references around the release.
-- Release scope includes 39 merged commits between mcp-server-v0.1.5 and the target tag.
-
-### Fixed
-- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
-
-## [0.1.5] - 2026-03-20
-
-### Added
-- Introduced the first public AI-first mobile E2E MCP server with session lifecycle, app control, UI inspection, interaction, diagnostics, interruption handling, and failure-analysis tools.
-- Established deterministic-first execution adapters plus bounded OCR/vision fallback for Android, iOS, React Native, and Flutter automation workflows.
-- Published runnable sample flows, showcase demos, and real-device/simulator validation assets for login, recovery, and harness onboarding scenarios.
-
-### Changed
-- Reorganized the repository into a pnpm monorepo with explicit contracts, core orchestration, adapters, and MCP server package boundaries.
-- Added stdio/dev CLI entrypoints, package metadata, governance baselines, and release automation needed for public npm distribution.
-
-### Fixed
-- Hardened doctor checks, dry-run behavior, selector resolution, and session or lease stability during the initial release cycle.
 </file>
 
 <file path="CONTRIBUTING.md">
@@ -201989,6 +201822,186 @@ flows/samples/generated/*.yaml
 .gitnexus
 packages/core/coverage-data/
 .husky/
+</file>
+
+<file path="CHANGELOG.md">
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+## [0.1.18] - 2026-06-03
+
+### Added
+- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
+- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
+
+### Changed
+- Refined operator documentation, governance guidance, and architecture references around the release.
+- Release scope includes 1 merged commit between mcp-server-v0.1.17 and the target tag.
+
+### Fixed
+- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
+
+## [0.1.17] - 2026-06-03
+
+### Added
+- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
+- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
+
+### Changed
+- Refined operator documentation, governance guidance, and architecture references around the release.
+- Release scope includes 1 merged commit between mcp-server-v0.1.16 and the target tag.
+
+### Fixed
+- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
+
+## [0.1.15] - 2026-06-03
+
+### Added
+- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
+- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
+
+### Changed
+- Improved diagnostics, evidence capture, and performance analysis workflows for mobile automation runs.
+- Refined operator documentation, governance guidance, and architecture references around the release.
+- Release scope includes 103 merged commits between mcp-server-v0.1.14 and the target tag.
+
+### Fixed
+- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
+
+## [0.1.14] - 2026-05-04
+
+### Added
+- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
+- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
+
+### Changed
+- Improved diagnostics, evidence capture, and performance analysis workflows for mobile automation runs.
+- Refined operator documentation, governance guidance, and architecture references around the release.
+- Release scope includes 36 merged commits between mcp-server-v0.1.13 and the target tag.
+
+### Fixed
+- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
+
+## [0.1.13] - 2026-04-12
+
+### Added
+- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
+- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
+
+### Changed
+- Refined operator documentation, governance guidance, and architecture references around the release.
+- Release scope includes 15 merged commits between mcp-server-v0.1.12 and the target tag.
+
+### Fixed
+- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
+
+## [0.1.12] - 2026-04-12
+
+### Added
+- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
+- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
+- Improved bounded OCR and vision fallback support for cases where deterministic selectors are unavailable.
+
+### Changed
+- Improved diagnostics, evidence capture, and performance analysis workflows for mobile automation runs.
+- Refined operator documentation, governance guidance, and architecture references around the release.
+- Release scope includes 147 merged commits between mcp-server-v0.1.11 and the target tag.
+
+### Fixed
+- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
+
+## [0.1.11] - 2026-03-29
+
+### Added
+- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
+- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
+- Improved bounded OCR and vision fallback support for cases where deterministic selectors are unavailable.
+
+### Changed
+- Improved diagnostics, evidence capture, and performance analysis workflows for mobile automation runs.
+- Refined operator documentation, governance guidance, and architecture references around the release.
+- Release scope includes 48 merged commits between mcp-server-v0.1.9 and the target tag.
+
+### Fixed
+- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
+
+## [0.1.9] - 2026-03-26
+
+### Added
+- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
+- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
+- Improved bounded OCR and vision fallback support for cases where deterministic selectors are unavailable.
+
+### Changed
+- Refined operator documentation, governance guidance, and architecture references around the release.
+- Release scope includes 9 merged commits between mcp-server-v0.1.8 and the target tag.
+
+### Fixed
+- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
+
+## [0.1.8] - 2026-03-23
+
+### Added
+- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
+- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
+
+### Changed
+- Improved diagnostics, evidence capture, and performance analysis workflows for mobile automation runs.
+- Refined operator documentation, governance guidance, and architecture references around the release.
+- Release scope includes 19 merged commits between mcp-server-v0.1.7 and the target tag.
+
+### Fixed
+- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
+
+## [0.1.7] - 2026-03-21
+
+### Added
+- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
+- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
+- Improved bounded OCR and vision fallback support for cases where deterministic selectors are unavailable.
+
+### Changed
+- Improved diagnostics, evidence capture, and performance analysis workflows for mobile automation runs.
+- Refined operator documentation, governance guidance, and architecture references around the release.
+- Release scope includes 38 merged commits between mcp-server-v0.1.6 and the target tag.
+
+### Fixed
+- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
+
+## [0.1.6] - 2026-03-20
+
+### Added
+- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
+- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
+- Improved bounded OCR and vision fallback support for cases where deterministic selectors are unavailable.
+
+### Changed
+- Improved diagnostics, evidence capture, and performance analysis workflows for mobile automation runs.
+- Refined operator documentation, governance guidance, and architecture references around the release.
+- Release scope includes 39 merged commits between mcp-server-v0.1.5 and the target tag.
+
+### Fixed
+- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
+
+## [0.1.5] - 2026-03-20
+
+### Added
+- Introduced the first public AI-first mobile E2E MCP server with session lifecycle, app control, UI inspection, interaction, diagnostics, interruption handling, and failure-analysis tools.
+- Established deterministic-first execution adapters plus bounded OCR/vision fallback for Android, iOS, React Native, and Flutter automation workflows.
+- Published runnable sample flows, showcase demos, and real-device/simulator validation assets for login, recovery, and harness onboarding scenarios.
+
+### Changed
+- Reorganized the repository into a pnpm monorepo with explicit contracts, core orchestration, adapters, and MCP server package boundaries.
+- Added stdio/dev CLI entrypoints, package metadata, governance baselines, and release automation needed for public npm distribution.
+
+### Fixed
+- Hardened doctor checks, dry-run behavior, selector resolution, and session or lease stability during the initial release cycle.
 </file>
 
 <file path=".github/workflows/ci.yml">
