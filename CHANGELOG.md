@@ -7,6 +7,19 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [0.1.17] - 2026-06-03
+
+### Added
+- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
+- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
+
+### Changed
+- Refined operator documentation, governance guidance, and architecture references around the release.
+- Release scope includes 1 merged commit between mcp-server-v0.1.16 and the target tag.
+
+### Fixed
+- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
+
 ## [0.1.16] - 2026-06-03
 
 ### Added

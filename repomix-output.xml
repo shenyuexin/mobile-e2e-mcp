@@ -5327,199 +5327,6 @@ MCP Tool Call
   **缓解：** 调试 lane 默认只读 scope，禁止写动作复用同一通道。
 </file>
 
-<file path="docs/delivery/npm-release-and-git-tagging.zh-CN.md">
-# NPM 发版与 Git Tag 关联规范（@shenyuexin/mobile-e2e-mcp）
-
-## 目标
-
-确保每一次 NPM 发版都具备可追溯的 GitHub Tag、Release 与 CHANGELOG，实现：
-
-1. NPM 版本 ↔ Git Tag 一一对应
-2. 发版过程可审计、可回放
-3. 降低人工漏打 tag/错打 tag 风险
-4. 让 CHANGELOG 按 tag diff 自动补齐，减少手工维护
-5. 让 `repomix-output.xml` 随 release commit 一起刷新，保持 AI 入口快照与 tag 对齐
-
-## 统一约定
-
-- 包名：`@shenyuexin/mobile-e2e-mcp`
-- 包路径：`packages/mcp-server`
-- Tag 格式：`mcp-server-v<semver>`（示例：`mcp-server-v0.1.5`）
-- 发版入口：**仅通过 tag 触发 GitHub Actions 自动发布**
-
-> 不再建议本地直接 `pnpm publish` 作为正式发布路径。
-
-## 机制设计
-
-### 1) 元数据关联（npm 页面展示 GitHub）
-
-已在 `packages/mcp-server/package.json` 中声明：
-
-- `repository`
-- `homepage`
-- `bugs`
-
-这样 npm 页面会自动关联到 GitHub 仓库与 issue 地址。
-
-### 2) 自动化发布（Tag 驱动）
-
-工作流文件：`.github/workflows/release-mcp.yml`
-
-触发条件：
-
-- `push` 到 tag：`mcp-server-v*`
-
-执行流程：
-
-1. 安装依赖
-2. 校验 tag 与 `packages/mcp-server/package.json` 版本完全一致
-3. 根据“上一个 MCP tag -> 当前 tag”的 commit diff 自动生成/更新 `CHANGELOG.md` 中该版本节
-4. 再次校验 tag / package version / changelog 三者一致
-5. 将同步后的 `CHANGELOG.md` 回写到默认分支
-6. 同步生成最新 `repomix-output.xml` 并与 release 元数据一起回写默认分支
-7. 构建打包
-8. 发布到 npm（使用 `NPM_TOKEN`）
-9. 创建 GitHub Release
-
-### 3) Public Docs 漂移检查（非阻塞）
-
-原则：**不是每个 tag 都必须更新 README，但每个对外可见能力变更都必须有公共文档落点**。
-
-对于 AI / 用户调用方式相关变化，默认应优先检查 canonical invocation guide，而不是把相同说明复制到多篇文档中：
-
-- `docs/guides/ai-agent-invocation.zh-CN.md`（调用真相源）
-- `docs/guides/golden-path.md`（首跑前门）
-- `docs/guides/flow-generation.md`（录制 / 导出 / 回放专题）
-
-建议按三层执行：
-
-1. **PR 阶段（主关口）**
-   - 对外可见变化（能力边界、工具目录、命令入口、支持平台、发布流程）应在 PR 内同步文档。
-   - 若变化影响 AI / 用户调用方式，优先更新 `docs/guides/ai-agent-invocation.zh-CN.md`；专题变化再更新对应 topic guide。
-   - README / `docs/README.md` 更适合作为入口导航，不应承担完整调用流程的重复维护。
-2. **`release:mcp:prepare-tag` 阶段（二次确认）**
-    - 在发版前做一次“自上个 MCP tag 以来的对外变化”清单核对，确认是否存在 public docs 漂移。
-    - 如果命中了 tool surface / capability boundary 变化，但 canonical invocation guide / public docs 没有同步，本地 `release:mcp:check` 与 tag workflow 应直接失败，而不是仅 warning。
-3. **Tag workflow 阶段（兜底提醒）**
-    - 仍可保留 notice，但对 capability-governed release range 的 doc-sync 缺失不再放行 npm publish。
-
-建议触发条件（命中任一目录时，优先检查文档是否需要同步；这些是高概率触发器，不代表“命中就必须改文档”）：
-
-- `packages/mcp-server/src/server.ts`（工具暴露面）
-- `packages/mcp-server/src/tools/**`（工具行为与推荐调用路径）
-- `packages/contracts/**`（契约/Schema 变更）
-- `configs/profiles/**`、`configs/policies/**`（支持边界/治理策略）
-- `docs/guides/ai-agent-invocation.zh-CN.md`、`docs/guides/golden-path.md`、`docs/guides/flow-generation.md`（调用入口与专题指南）
-- `docs/architecture/**`（对外架构叙事变化）
-- `.github/workflows/release-mcp.yml`、`scripts/release/**`（发版自动化流程变化）
-- `packages/mcp-server/package.json` 中影响安装/发布/仓库关联的元数据字段
-
-常见可豁免场景：
-
-- 纯内部重构（无行为变化）
-- 测试/脚手架调整且不影响外部用法
-- 仅修复拼写、格式、注释
-
-> 实践建议：将“public docs / canonical invocation guide 是否需要更新”作为 release checklist 固定项，而不是把它设计成强制失败门禁。
-
-> Phase 03 更新：对于 capability-governed release range，这一项现在应视为强制失败门禁，而不是纯提示项。
-
-## 标准操作流程（推荐）
-
-### 一条命令完成准备 + 推送 tag
-
-```bash
-pnpm release:mcp:version 0.1.10
-# 或: pnpm release:mcp:prepare-tag patch
-# prepare-tag 仍支持 patch | minor | major
-```
-
-该脚本会自动执行：
-
-1. 检查工作区必须干净
-2. 更新 `@shenyuexin/mobile-e2e-mcp` 版本（不自动打默认 v tag）
-3. 根据“上一个 MCP tag -> 当前待发版版本”的 commit diff 自动生成/更新 `CHANGELOG.md`
-4. 生成最新 `repomix-output.xml`，让仓库级 AI 快照与本次待发布代码一致
-5. 校验 changelog / package version / tag 三者一致
-6. 运行 `pnpm build`、`pnpm typecheck`、`pnpm test:mcp-server`
-7. 提交版本变更（含 `CHANGELOG.md` 与 `repomix-output.xml`）
-8. 创建并推送规范 tag：`mcp-server-v<version>`
-9. 推送分支与 tag，触发 GitHub Actions 自动发包
-
-## 现在的推荐流程（你只需要关心 tag）
-
-### 方案 A：本地标准发版（推荐）
-
-```bash
-pnpm release:mcp:version 0.1.10
-```
-
-特点：
-
-- 显式指定目标版本号
-- 自动生成该版本 changelog
-- 自动提交并推 tag
-
-如果你只想按语义级别递增，也可以继续使用：
-
-```bash
-pnpm release:mcp:prepare-tag patch
-```
-
-但对日常操作建议统一心智模型为：
-
-> “更新版本到 0.x.x” = `pnpm release:mcp:version 0.x.x`
-
-不要再手工修改 `packages/mcp-server/package.json` 来发版；这不会触发完整 release 链路。
-
-### 方案 B：你只负责发 tag（机制补 changelog）
-
-如果你已经手动创建并推送了 `mcp-server-v<version>`：
-
-- GitHub Actions 会自动：
-  1. 按“上一个 tag -> 当前 tag”生成该版本 changelog
-  2. 把 `CHANGELOG.md` 与最新 `repomix-output.xml` 一起回写到默认分支
-  3. 再继续 npm publish
-
-也就是说，**以后不要求你手工先写 `CHANGELOG.md`，也不需要手工刷新 `repomix-output.xml`**。
-
-### 单独校验/同步发版元数据
-
-在需要时，也可以单独执行：
-
-```bash
-pnpm release:mcp:check
-pnpm release:mcp:sync-changelog -- --tag mcp-server-v0.1.5
-```
-
-它们分别会：
-
-1. `release:mcp:check`
-   - 校验 `packages/mcp-server/package.json` 版本存在
-   - 校验 `CHANGELOG.md` 中存在对应版本节
-   - 校验该版本节不是空的
-2. `release:mcp:sync-changelog`
-   - 根据 tag diff 自动生成/刷新该版本 changelog
-
-## 仓库管理员一次性配置
-
-在 GitHub 仓库 Secrets 中设置：
-
-- `NPM_TOKEN`：具备 publish 权限的 npm token
-
-## 回滚与应急
-
-若 tag 推送后 CI 发布失败：
-
-1. 修复代码后重新走一次版本升级（不能复用已发布版本号）
-2. 生成新版本与新 tag（例如 `0.1.5` 失败后发 `0.1.6`）
-
-若 npm 已发布但发现问题：
-
-1. 优先发布修复版本（patch）
-2. 避免依赖 `unpublish` 作为常规手段
-</file>
-
 <file path="docs/delivery/roadmap.md">
 # Delivery Roadmap
 
@@ -25133,6 +24940,56 @@ export function handleFailure(
 export function hasTimedOut(timeoutMs: number, startTime: number): boolean
 </file>
 
+<file path="packages/explorer/src/engine-horizontal-fallback.ts">
+/**
+ * Horizontal scroll fallback orchestration for the DFS engine.
+ *
+ * When vertical segments are exhausted on a frame, this module attempts
+ * a one-time bounded probe to discover horizontally scrollable content.
+ * If the probe succeeds, the frame's scrollState is switched to horizontal.
+ */
+⋮----
+import { resolveExplorerPlatformHooks } from "./explorer-platform.js";
+import { normalizeScrollState } from "./types.js";
+import {
+  detectHorizontalScrollables,
+  performBoundedProbe,
+  startHorizontalScrollState,
+} from "./scroll-segment.js";
+import type { ExplorerConfig, Frame, McpToolInterface, PageSnapshot, UiHierarchy } from "./types.js";
+⋮----
+// Track which frames have had horizontal probe attempted (once per frame)
+⋮----
+/**
+ * Check whether a horizontal probe has already been attempted for this frame.
+ */
+export function hasHorizontalProbeBeenAttempted(frame: Frame): boolean
+⋮----
+/**
+ * Mark that a horizontal probe has been attempted for this frame.
+ */
+export function markHorizontalProbeAttempted(frame: Frame): void
+⋮----
+/**
+ * Attempt to discover and switch to horizontal scroll exploration.
+ *
+ * Called by the engine when vertical segments are exhausted.
+ * Performs a bounded probe swipe and, if successful, transitions the frame
+ * to horizontal exploration via `startHorizontalScrollState`.
+ *
+ * @returns `true` if the frame was switched to horizontal exploration
+ */
+export async function attemptHorizontalDiscovery(
+  mcp: McpToolInterface,
+  frame: Frame,
+  config: ExplorerConfig,
+): Promise<boolean>
+⋮----
+// Need current uiTree to detect horizontal candidates
+⋮----
+// Build a minimal snapshot for startHorizontalScrollState
+</file>
+
 <file path="packages/explorer/src/exploration-sampler.ts">
 import type { ClickableTarget, Frame, SamplingRule, SkipElementRule, SkipPageRule } from "./types.js";
 ⋮----
@@ -25294,6 +25151,52 @@ function isAndroidExplorerPlatform(platform: ExplorerPlatform): boolean
 export async function returnToTargetAppFromForeignPage(
   deps: ReturnToTargetAppDeps,
 ): Promise<ReturnToTargetAppResult>
+</file>
+
+<file path="packages/explorer/src/index.ts">
+/**
+ * @mobile-e2e-mcp/explorer — DFS-based full app exploration engine.
+ *
+ * Public API for the explorer package.
+ */
+⋮----
+// Core types
+⋮----
+// MCP adapter
+⋮----
+// Element filtering and prioritization
+⋮----
+// Page registry and dedup
+⋮----
+// Circuit breaker
+⋮----
+// Snapshot and tap execution
+⋮----
+// Explorer platform hooks
+⋮----
+// Backtracking
+⋮----
+// State graph
+⋮----
+// DFS engine
+⋮----
+// Scroll-segment helpers
+⋮----
+// Scroll state normalization
+⋮----
+// Report
+⋮----
+// Config & CLI (25-03)
+⋮----
+// Config store
+⋮----
+// Interview
+⋮----
+// Auth pre-flight
+⋮----
+// Runner
+⋮----
+// CLI entry point
 </file>
 
 <file path="packages/explorer/src/interview.ts">
@@ -178673,6 +178576,201 @@ redaction:
 }
 </file>
 
+<file path="docs/delivery/npm-release-and-git-tagging.zh-CN.md">
+# NPM 发版与 Git Tag 关联规范（@shenyuexin/mobile-e2e-mcp）
+
+## 目标
+
+确保每一次 NPM 发版都具备可追溯的 GitHub Tag、Release 与 CHANGELOG，实现：
+
+1. NPM 版本 ↔ Git Tag 一一对应
+2. 发版过程可审计、可回放
+3. 降低人工漏打 tag/错打 tag 风险
+4. 让 CHANGELOG 按 tag diff 自动补齐，减少手工维护
+5. 让 `repomix-output.xml` 随 release commit 一起刷新，保持 AI 入口快照与 tag 对齐
+
+## 统一约定
+
+- 包名：`@shenyuexin/mobile-e2e-mcp`
+- 包路径：`packages/mcp-server`
+- Tag 格式：`mcp-server-v<semver>`（示例：`mcp-server-v0.1.5`）
+- 发版入口：**仅通过 tag 触发 GitHub Actions 自动发布**
+
+> 不再建议本地直接 `pnpm publish` 作为正式发布路径。
+
+## 机制设计
+
+### 1) 元数据关联（npm 页面展示 GitHub）
+
+已在 `packages/mcp-server/package.json` 中声明：
+
+- `repository`
+- `homepage`
+- `bugs`
+
+这样 npm 页面会自动关联到 GitHub 仓库与 issue 地址。
+
+### 2) 自动化发布（Tag 驱动）
+
+工作流文件：`.github/workflows/release-mcp.yml`
+
+触发条件：
+
+- `push` 到 tag：`mcp-server-v*`
+
+执行流程：
+
+1. 安装依赖
+2. 校验 tag 与 `packages/mcp-server/package.json` 版本完全一致
+3. 根据“上一个 MCP tag -> 当前 tag”的 commit diff 自动生成/更新 `CHANGELOG.md` 中该版本节
+4. 再次校验 tag / package version / changelog 三者一致
+5. 将同步后的 `CHANGELOG.md` 回写到默认分支
+6. 同步生成最新 `repomix-output.xml` 并与 release 元数据一起回写默认分支
+7. 构建打包
+8. 发布到 npm（使用 `NPM_TOKEN`）
+9. 创建 GitHub Release
+
+发布打包使用 `@shenyuexin/mobile-e2e-mcp` 的 `bundle` 脚本作为最终路径。该脚本必须先构建所有被 MCP server 源码直接导入的 workspace 包，包括 `@mobile-e2e-mcp/explorer`，再执行 MCP server 的 TypeScript 编译与 tsup bundle；否则 fresh CI checkout 会因为缺少 workspace 包的 `dist/*.d.ts` 而在 npm publish 前失败。
+
+### 3) Public Docs 漂移检查（非阻塞）
+
+原则：**不是每个 tag 都必须更新 README，但每个对外可见能力变更都必须有公共文档落点**。
+
+对于 AI / 用户调用方式相关变化，默认应优先检查 canonical invocation guide，而不是把相同说明复制到多篇文档中：
+
+- `docs/guides/ai-agent-invocation.zh-CN.md`（调用真相源）
+- `docs/guides/golden-path.md`（首跑前门）
+- `docs/guides/flow-generation.md`（录制 / 导出 / 回放专题）
+
+建议按三层执行：
+
+1. **PR 阶段（主关口）**
+   - 对外可见变化（能力边界、工具目录、命令入口、支持平台、发布流程）应在 PR 内同步文档。
+   - 若变化影响 AI / 用户调用方式，优先更新 `docs/guides/ai-agent-invocation.zh-CN.md`；专题变化再更新对应 topic guide。
+   - README / `docs/README.md` 更适合作为入口导航，不应承担完整调用流程的重复维护。
+2. **`release:mcp:prepare-tag` 阶段（二次确认）**
+    - 在发版前做一次“自上个 MCP tag 以来的对外变化”清单核对，确认是否存在 public docs 漂移。
+    - 如果命中了 tool surface / capability boundary 变化，但 canonical invocation guide / public docs 没有同步，本地 `release:mcp:check` 与 tag workflow 应直接失败，而不是仅 warning。
+3. **Tag workflow 阶段（兜底提醒）**
+    - 仍可保留 notice，但对 capability-governed release range 的 doc-sync 缺失不再放行 npm publish。
+
+建议触发条件（命中任一目录时，优先检查文档是否需要同步；这些是高概率触发器，不代表“命中就必须改文档”）：
+
+- `packages/mcp-server/src/server.ts`（工具暴露面）
+- `packages/mcp-server/src/tools/**`（工具行为与推荐调用路径）
+- `packages/contracts/**`（契约/Schema 变更）
+- `configs/profiles/**`、`configs/policies/**`（支持边界/治理策略）
+- `docs/guides/ai-agent-invocation.zh-CN.md`、`docs/guides/golden-path.md`、`docs/guides/flow-generation.md`（调用入口与专题指南）
+- `docs/architecture/**`（对外架构叙事变化）
+- `.github/workflows/release-mcp.yml`、`scripts/release/**`（发版自动化流程变化）
+- `packages/mcp-server/package.json` 中影响安装/发布/仓库关联的元数据字段
+
+常见可豁免场景：
+
+- 纯内部重构（无行为变化）
+- 测试/脚手架调整且不影响外部用法
+- 仅修复拼写、格式、注释
+
+> 实践建议：将“public docs / canonical invocation guide 是否需要更新”作为 release checklist 固定项，而不是把它设计成强制失败门禁。
+
+> Phase 03 更新：对于 capability-governed release range，这一项现在应视为强制失败门禁，而不是纯提示项。
+
+## 标准操作流程（推荐）
+
+### 一条命令完成准备 + 推送 tag
+
+```bash
+pnpm release:mcp:version 0.1.10
+# 或: pnpm release:mcp:prepare-tag patch
+# prepare-tag 仍支持 patch | minor | major
+```
+
+该脚本会自动执行：
+
+1. 检查工作区必须干净
+2. 更新 `@shenyuexin/mobile-e2e-mcp` 版本（不自动打默认 v tag）
+3. 根据“上一个 MCP tag -> 当前待发版版本”的 commit diff 自动生成/更新 `CHANGELOG.md`
+4. 生成最新 `repomix-output.xml`，让仓库级 AI 快照与本次待发布代码一致
+5. 校验 changelog / package version / tag 三者一致
+6. 运行 `pnpm build`、`pnpm typecheck`、`pnpm test:mcp-server`
+7. 提交版本变更（含 `CHANGELOG.md` 与 `repomix-output.xml`）
+8. 创建并推送规范 tag：`mcp-server-v<version>`
+9. 推送分支与 tag，触发 GitHub Actions 自动发包
+
+## 现在的推荐流程（你只需要关心 tag）
+
+### 方案 A：本地标准发版（推荐）
+
+```bash
+pnpm release:mcp:version 0.1.10
+```
+
+特点：
+
+- 显式指定目标版本号
+- 自动生成该版本 changelog
+- 自动提交并推 tag
+
+如果你只想按语义级别递增，也可以继续使用：
+
+```bash
+pnpm release:mcp:prepare-tag patch
+```
+
+但对日常操作建议统一心智模型为：
+
+> “更新版本到 0.x.x” = `pnpm release:mcp:version 0.x.x`
+
+不要再手工修改 `packages/mcp-server/package.json` 来发版；这不会触发完整 release 链路。
+
+### 方案 B：你只负责发 tag（机制补 changelog）
+
+如果你已经手动创建并推送了 `mcp-server-v<version>`：
+
+- GitHub Actions 会自动：
+  1. 按“上一个 tag -> 当前 tag”生成该版本 changelog
+  2. 把 `CHANGELOG.md` 与最新 `repomix-output.xml` 一起回写到默认分支
+  3. 再继续 npm publish
+
+也就是说，**以后不要求你手工先写 `CHANGELOG.md`，也不需要手工刷新 `repomix-output.xml`**。
+
+### 单独校验/同步发版元数据
+
+在需要时，也可以单独执行：
+
+```bash
+pnpm release:mcp:check
+pnpm release:mcp:sync-changelog -- --tag mcp-server-v0.1.5
+```
+
+它们分别会：
+
+1. `release:mcp:check`
+   - 校验 `packages/mcp-server/package.json` 版本存在
+   - 校验 `CHANGELOG.md` 中存在对应版本节
+   - 校验该版本节不是空的
+2. `release:mcp:sync-changelog`
+   - 根据 tag diff 自动生成/刷新该版本 changelog
+
+## 仓库管理员一次性配置
+
+在 GitHub 仓库 Secrets 中设置：
+
+- `NPM_TOKEN`：具备 publish 权限的 npm token
+
+## 回滚与应急
+
+若 tag 推送后 CI 发布失败：
+
+1. 修复代码后重新走一次版本升级（不能复用已发布版本号）
+2. 生成新版本与新 tag（例如 `0.1.5` 失败后发 `0.1.6`）
+
+若 npm 已发布但发现问题：
+
+1. 优先发布修复版本（patch）
+2. 避免依赖 `unpublish` 作为常规手段
+</file>
+
 <file path="docs/engineering/explorer-rule-registry.zh-CN.md">
 # Explorer Rule Registry 配置与报告指南
 
@@ -189293,100 +189391,35 @@ export function isCircuitOpen(state: CircuitBreakerState): boolean
 export function shouldSkipPage(state: CircuitBreakerState): boolean
 </file>
 
-<file path="packages/explorer/src/engine-horizontal-fallback.ts">
-/**
- * Horizontal scroll fallback orchestration for the DFS engine.
- *
- * When vertical segments are exhausted on a frame, this module attempts
- * a one-time bounded probe to discover horizontally scrollable content.
- * If the probe succeeds, the frame's scrollState is switched to horizontal.
- */
+<file path="packages/explorer/src/frame-reconciler.ts">
+import { hashUiStructure } from "./page-registry.js";
+import type { Frame, PageSnapshot } from "./types.js";
 ⋮----
-import { resolveExplorerPlatformHooks } from "./explorer-platform.js";
-import { normalizeScrollState } from "./types.js";
-import {
-  detectHorizontalScrollables,
-  performBoundedProbe,
-  startHorizontalScrollState,
-} from "./scroll-segment.js";
-import type { ExplorerConfig, Frame, McpToolInterface, PageSnapshot, UiHierarchy } from "./types.js";
+function normalizeNavText(value: string | undefined): string
 ⋮----
-// Track which frames have had horizontal probe attempted (once per frame)
+function normalizeTitleForMatch(value: string | undefined): string
 ⋮----
-/**
- * Check whether a horizontal probe has already been attempted for this frame.
- */
-export function hasHorizontalProbeBeenAttempted(frame: Frame): boolean
+function isLikelyBundleId(value: string): boolean
 ⋮----
-/**
- * Mark that a horizontal probe has been attempted for this frame.
- */
-export function markHorizontalProbeAttempted(frame: Frame): void
-⋮----
-/**
- * Attempt to discover and switch to horizontal scroll exploration.
- *
- * Called by the engine when vertical segments are exhausted.
- * Performs a bounded probe swipe and, if successful, transitions the frame
- * to horizontal exploration via `startHorizontalScrollState`.
- *
- * @returns `true` if the frame was switched to horizontal exploration
- */
-export async function attemptHorizontalDiscovery(
-  mcp: McpToolInterface,
+function shouldPreserveScrollStateOnReconcile(
   frame: Frame,
-  config: ExplorerConfig,
-): Promise<boolean>
+  snapshot: PageSnapshot,
+  targetAppId: string,
+): boolean
 ⋮----
-// Need current uiTree to detect horizontal candidates
+export function findAncestorFrameIndex(
+  stack: Frame[],
+  snapshot: Pick<PageSnapshot, "screenId" | "screenTitle" | "appId">,
+): number
 ⋮----
-// Build a minimal snapshot for startHorizontalScrollState
-</file>
-
-<file path="packages/explorer/src/index.ts">
-/**
- * @mobile-e2e-mcp/explorer — DFS-based full app exploration engine.
- *
- * Public API for the explorer package.
- */
+export function reconcileStackToSnapshot(
+  stack: Frame[],
+  snapshot: PageSnapshot,
+  targetAppId: string,
+  options?: { allowRootReset?: boolean },
+): Frame | undefined
 ⋮----
-// Core types
-⋮----
-// MCP adapter
-⋮----
-// Element filtering and prioritization
-⋮----
-// Page registry and dedup
-⋮----
-// Circuit breaker
-⋮----
-// Snapshot and tap execution
-⋮----
-// Explorer platform hooks
-⋮----
-// Backtracking
-⋮----
-// State graph
-⋮----
-// DFS engine
-⋮----
-// Scroll-segment helpers
-⋮----
-// Scroll state normalization
-⋮----
-// Report
-⋮----
-// Config & CLI (25-03)
-⋮----
-// Config store
-⋮----
-// Interview
-⋮----
-// Auth pre-flight
-⋮----
-// Runner
-⋮----
-// CLI entry point
+// Invalidate stale scroll state
 </file>
 
 <file path="packages/explorer/src/mcp-adapter.ts">
@@ -189519,6 +189552,1074 @@ const baseInput = () => (
 export function unwrapResult<T>(result: ToolResult<T>): T
 </file>
 
+<file path="packages/explorer/src/scroll-segment.ts">
+/**
+ * Scroll-segment helpers for progressive scroll-aware DFS.
+ *
+ * This module is a pure helper called by the engine; it does not push/pop
+ * frames or register state graph transitions.
+ */
+⋮----
+import type { ScrollOnlyContainerBounds } from "@mobile-e2e-mcp/contracts";
+import { findClickableElements, flattenTree, prioritizeElements } from "./element-prioritizer.js";
+import { buildRuleDecisionEntry } from "./engine-helpers.js";
+import { resolveExplorerPlatformHooks } from "./explorer-platform.js";
+import { evaluateElementRules } from "./rules/rule-evaluator.js";
+import { buildExplorerRuleRegistry } from "./rules/rule-registry.js";
+import type { ClickableTarget, ExplorerConfig, Frame, McpToolInterface, PageSnapshot, RuleDecisionEntry, UiHierarchy } from "./types.js";
+import { normalizeScrollState } from "./types.js";
+⋮----
+function getClickableTargetKey(target: ClickableTarget): string
+⋮----
+export interface SegmentDiscoveryResult {
+  success: boolean;
+  newElements?: ClickableTarget[];
+  isLastSegment?: boolean;
+  snapshot?: PageSnapshot;
+}
+⋮----
+/** Information about a detected horizontal scroll container. */
+export interface HorizontalContainerInfo {
+  node: UiHierarchy;
+  confidence: "high" | "medium" | "low";
+  platform: "android" | "ios";
+  type?: "page-snap";
+}
+⋮----
+/** Result of a bounded probe to validate horizontal scrollability. */
+export interface ProbeResult {
+  enabled: boolean;
+  disabledReason?: "fingerprint_changed" | "no_new_elements" | "scroll_failed" | "unsupported_platform";
+  confidence: "high" | "medium" | "low";
+  fingerprintBefore: string;
+  fingerprintAfter: string;
+  newElementCount: number;
+}
+⋮----
+function normalizeSegmentValue(value: string): string
+⋮----
+function isSideEffectAction(label: string): boolean
+⋮----
+function isNavigationControlAction(label: string): boolean
+⋮----
+function compareExplorationOrder(a: ClickableTarget, b: ClickableTarget): number
+⋮----
+function shouldSkipElement(
+  target: ClickableTarget,
+  frame: Frame,
+  snapshot: PageSnapshot,
+  config: ExplorerConfig,
+):
+⋮----
+// Ignore invalid user regex and fall through.
+⋮----
+function buildSegmentElements(snapshot: PageSnapshot, frame: Frame, config: ExplorerConfig):
+⋮----
+export function computePageFingerprint(snapshot: PageSnapshot): string
+⋮----
+function detectPageSnapStrategy(candidates: HorizontalContainerInfo[]): "page-snap" | "continuous-scroll"
+⋮----
+function parseContainerBoundsFromNode(node: UiHierarchy): ScrollOnlyContainerBounds | undefined
+⋮----
+function pickHorizontalContainerBounds(candidates: HorizontalContainerInfo[]): ScrollOnlyContainerBounds | undefined
+⋮----
+function buildScrollOnlyArgs(
+  direction: "up" | "down" | "left" | "right",
+  normalized: ReturnType<typeof normalizeScrollState>,
+):
+⋮----
+export function detectHorizontalScrollables(uiTree: UiHierarchy): HorizontalContainerInfo[]
+⋮----
+export async function performBoundedProbe(
+  mcp: McpToolInterface,
+  frame: Frame,
+  config: ExplorerConfig,
+  candidates: HorizontalContainerInfo[],
+): Promise<ProbeResult>
+⋮----
+export function startHorizontalScrollState(
+  frame: Frame,
+  snapshot: PageSnapshot,
+  config: ExplorerConfig,
+  probeResult: ProbeResult,
+): void
+⋮----
+function isIosExplorerPlatform(platform: ExplorerConfig["platform"]): boolean
+⋮----
+function isPageLikeForScrollFallback(snapshot: PageSnapshot): boolean
+⋮----
+function shouldArmIosGroupBackedScrollFallback(
+  config: ExplorerConfig,
+  snapshot: PageSnapshot,
+  flattenedNodes: UiHierarchy[],
+  visibleElements: number,
+): boolean
+⋮----
+function normalizeVisibleSignal(value: string): string
+⋮----
+function isMeaningfulVisibleSignal(value: string, snapshot: PageSnapshot): boolean
+⋮----
+function hasMoreMeaningfulVisibleSignalsThanQueuedElements(
+  snapshot: PageSnapshot,
+  visibleElements: number,
+): boolean
+⋮----
+export function initScrollState(
+  frame: Frame,
+  snapshot: PageSnapshot,
+  config: ExplorerConfig,
+): void
+⋮----
+// No vertical scrollable — try horizontal detection
+⋮----
+export function getCurrentSegmentElements(frame: Frame): ClickableTarget[]
+⋮----
+export async function discoverNextSegment(
+  mcp: McpToolInterface,
+  frame: Frame,
+  config: ExplorerConfig,
+): Promise<SegmentDiscoveryResult>
+⋮----
+export async function restoreSegment(
+  mcp: McpToolInterface,
+  frame: Frame,
+  config: ExplorerConfig,
+): Promise<boolean>
+⋮----
+// Reset to origin by scrolling in the restore direction N times
+⋮----
+// Then scroll forward segmentIndex times to reach the target
+⋮----
+// Vertical: scroll up N times (original behavior)
+</file>
+
+<file path="packages/explorer/src/types.ts">
+/**
+ * Core type definitions for the explorer engine.
+ *
+ * This is the SHARED contract for 25-02 (Report) and 25-03 (Config).
+ * Types must be stable and well-documented.
+ */
+⋮----
+import type { PageContext, ScrollOnlyContainerBounds } from "@mobile-e2e-mcp/contracts";
+import type { ExplorerRuleAction, ExplorerRuleCategory, ExplorerRuleConfig, ExplorerRuleSource, ExplorerRuleSupportLevel } from "./rules/rule-types.js";
+⋮----
+// ---------------------------------------------------------------------------
+// §3.1 Configuration Schema
+// ---------------------------------------------------------------------------
+⋮----
+/** Match criteria for a sampling rule. */
+export interface SamplingRuleMatch {
+	/** Full path prefix to match (e.g. ["General", "Fonts", "System Fonts"]). */
+	pathPrefix?: string[];
+	/** Screen title to match (exact). */
+	screenTitle?: string;
+	/** Screen ID to match (exact). */
+	screenId?: string;
+}
+⋮----
+/** Full path prefix to match (e.g. ["General", "Fonts", "System Fonts"]). */
+⋮----
+/** Screen title to match (exact). */
+⋮----
+/** Screen ID to match (exact). */
+⋮----
+/** Strategy for sampling high-fanout collection pages. */
+export type SamplingStrategy = "representative-child";
+⋮----
+/** A sampling rule for high-fanout repeated collection pages. */
+export interface SamplingRule {
+	/** How to match this rule against the current page. */
+	match: SamplingRuleMatch;
+	/** Explorer mode(s) this rule applies to. */
+	mode?: ExplorationMode;
+	/** Sampling strategy to use when matched. */
+	strategy: SamplingStrategy;
+	/** Max children to validate as representatives (default: 1). */
+	maxChildrenToValidate?: number;
+	/** Stop after the first successful child navigation. */
+	stopAfterFirstSuccessfulNavigation?: boolean;
+	/** Action labels to exclude (e.g. ["Download"]). */
+	excludeActions?: string[];
+}
+⋮----
+/** How to match this rule against the current page. */
+⋮----
+/** Explorer mode(s) this rule applies to. */
+⋮----
+/** Sampling strategy to use when matched. */
+⋮----
+/** Max children to validate as representatives (default: 1). */
+⋮----
+/** Stop after the first successful child navigation. */
+⋮----
+/** Action labels to exclude (e.g. ["Download"]). */
+⋮----
+export interface SkipPageRule {
+	match: SamplingRuleMatch;
+	reason?: string;
+}
+⋮----
+/** Match criteria for a skip-element rule. */
+export interface SkipElementRuleMatch {
+	/** Element label to match (case-insensitive substring match). */
+	elementLabel?: string;
+	/** Element label regex pattern to match. */
+	elementLabelPattern?: string;
+	/** Current page title where the element appears. */
+	screenTitle?: string;
+	/** Path prefix of parent elements leading to this element. */
+	pathPrefix?: string[];
+}
+⋮----
+/** Element label to match (case-insensitive substring match). */
+⋮----
+/** Element label regex pattern to match. */
+⋮----
+/** Current page title where the element appears. */
+⋮----
+/** Path prefix of parent elements leading to this element. */
+⋮----
+/** A rule to skip specific elements before tapping them. */
+export interface SkipElementRule {
+	/** How to match this rule against a candidate element. */
+	match: SkipElementRuleMatch;
+	/** Human-readable reason for skipping this element. */
+	reason?: string;
+}
+⋮----
+/** How to match this rule against a candidate element. */
+⋮----
+/** Human-readable reason for skipping this element. */
+⋮----
+/** Credentials for auto-login auth mode. */
+export interface TestCredentials {
+	/** Accessibility ID or selector for the username/identifier field. */
+	identifierField: string;
+	/** Accessibility ID or selector for the password field. */
+	passwordField: string;
+	/** Text or ID of the login/submit button. */
+	submitAction: string;
+	/** The identifier value (username/email). */
+	identifier: string;
+	/** Environment variable name for password (never stored in plaintext). */
+	passwordEnv: string;
+}
+⋮----
+/** Accessibility ID or selector for the username/identifier field. */
+⋮----
+/** Accessibility ID or selector for the password field. */
+⋮----
+/** Text or ID of the login/submit button. */
+⋮----
+/** The identifier value (username/email). */
+⋮----
+/** Environment variable name for password (never stored in plaintext). */
+⋮----
+/** Exploration mode determining how deeply the engine traverses. */
+export type ExplorationMode = "smoke" | "scoped" | "full";
+⋮----
+/** Scope filter for 'scoped' mode. */
+export interface ExplorationScope {
+	type: "screen-title" | "element-text" | "tab-index" | "module-name";
+	value: string | number;
+}
+⋮----
+/** Auth strategy for the exploration session. */
+export type AuthConfig =
+	| { type: "already-logged-in" }
+	| { type: "skip-auth" }
+	| { type: "handoff" }
+	| { type: "auto-login"; credentials: TestCredentials };
+⋮----
+/** How to handle element tap failures. */
+export type FailureStrategy = "retry-3" | "skip" | "handoff";
+⋮----
+/** How to handle elements that may cause destructive actions. */
+export type DestructiveActionPolicy = "skip" | "confirm" | "allow";
+/** How to handle stateful form-entry branches (create/add/manage/select address-like flows). */
+export type StatefulFormPolicy = "skip" | "confirm" | "allow";
+/** How to handle explicit create/add/new editor-entry actions. */
+export type EditorEntryPolicy = "skip" | "confirm" | "allow";
+⋮----
+/** Target platform for the exploration session. */
+export type ExplorerPlatform =
+	| "ios-simulator"
+	| "ios-device"
+	| "android-emulator"
+	| "android-device";
+⋮----
+/**
+ * Main configuration for the explorer engine.
+ * SPEC §3.1 — all fields from the config schema.
+ */
+export interface ExplorerConfig {
+	/** Exploration depth mode. */
+	mode: ExplorationMode;
+	/** Optional scope filter for 'scoped' mode. */
+	scope?: ExplorationScope;
+	/** Authentication strategy. */
+	auth: AuthConfig;
+	/** How to handle tap failures. */
+	failureStrategy: FailureStrategy;
+	/** Maximum depth to traverse (default: 8). */
+	maxDepth: number;
+	/** Maximum unique pages to visit (derived from timeout / avgPageTime). */
+	maxPages: number;
+	/** Total timeout in milliseconds. */
+	timeoutMs: number;
+	/** Run ID to diff against, or null for no comparison. */
+	compareWith: string | null;
+	/** Target platform. */
+	platform: ExplorerPlatform;
+	/** How to handle destructive elements (SPEC §4.4, R1-#1). */
+	destructiveActionPolicy: DestructiveActionPolicy;
+	/** How to handle stateful form-entry branches that are risky but not strictly destructive. */
+	statefulFormPolicy?: StatefulFormPolicy;
+	/** How to handle explicit Create/Add/New editor-entry actions. */
+	editorEntryPolicy?: EditorEntryPolicy;
+	/** Maximum successful side-effect/editor actions with the same label per page context. */
+	maxActionSuccessesPerContext?: number;
+	/** Bundle ID / package name of the target app. */
+	appId: string;
+	/** Base output directory for reports. */
+	reportDir: string;
+	/** Sampling rules for high-fanout collection pages (smoke mode). */
+	samplingRules?: SamplingRule[];
+	/** Maximum depth for external app exploration (default: 1).
+	 *
+	 * When an external link (e.g., "Learn more") opens another app like Safari,
+	 * this limits how deep the explorer goes in the external app.
+	 * Configurable so users can increase it later if needed.
+	 */
+	externalLinkMaxDepth?: number;
+	/** Owner packages to gate (skip DFS) when detected by pageContext.
+	 *
+	 * When the page context reports an ownerPackage in this list,
+	 * the page is treated as an external app surface and not expanded.
+	 */
+	blockedOwnerPackages?: string[];
+	skipPages?: SkipPageRule[];
+	/** Rules to skip specific elements before tapping them (pre-tap filter). */
+	skipElements?: SkipElementRule[];
+	/** Rule registry configuration for explainable traversal policy. */
+	rules?: ExplorerRuleConfig;
+}
+⋮----
+/** Exploration depth mode. */
+⋮----
+/** Optional scope filter for 'scoped' mode. */
+⋮----
+/** Authentication strategy. */
+⋮----
+/** How to handle tap failures. */
+⋮----
+/** Maximum depth to traverse (default: 8). */
+⋮----
+/** Maximum unique pages to visit (derived from timeout / avgPageTime). */
+⋮----
+/** Total timeout in milliseconds. */
+⋮----
+/** Run ID to diff against, or null for no comparison. */
+⋮----
+/** Target platform. */
+⋮----
+/** How to handle destructive elements (SPEC §4.4, R1-#1). */
+⋮----
+/** How to handle stateful form-entry branches that are risky but not strictly destructive. */
+⋮----
+/** How to handle explicit Create/Add/New editor-entry actions. */
+⋮----
+/** Maximum successful side-effect/editor actions with the same label per page context. */
+⋮----
+/** Bundle ID / package name of the target app. */
+⋮----
+/** Base output directory for reports. */
+⋮----
+/** Sampling rules for high-fanout collection pages (smoke mode). */
+⋮----
+/** Maximum depth for external app exploration (default: 1).
+	 *
+	 * When an external link (e.g., "Learn more") opens another app like Safari,
+	 * this limits how deep the explorer goes in the external app.
+	 * Configurable so users can increase it later if needed.
+	 */
+⋮----
+/** Owner packages to gate (skip DFS) when detected by pageContext.
+	 *
+	 * When the page context reports an ownerPackage in this list,
+	 * the page is treated as an external app surface and not expanded.
+	 */
+⋮----
+/** Rules to skip specific elements before tapping them (pre-tap filter). */
+⋮----
+/** Rule registry configuration for explainable traversal policy. */
+⋮----
+// ---------------------------------------------------------------------------
+// §4.2 Page Snapshot
+// ---------------------------------------------------------------------------
+⋮----
+/**
+ * UiHierarchy — raw output from inspect_ui MCP tool.
+ *
+ * Currently typed as a flexible shape because the exact structure from
+ * InspectUiNode may vary. The `children` property is a placeholder —
+ * actual child nesting depends on the MCP tool's tree serialization.
+ *
+ * After 25-00 spike: this matches InspectUiNode from contracts.
+ */
+export interface UiHierarchy {
+	index?: number;
+	depth?: number;
+	text?: string;
+	resourceId?: string;
+	className?: string;
+	packageName?: string;
+	contentDesc?: string;
+	clickable: boolean;
+	enabled: boolean;
+	scrollable: boolean;
+	bounds?: string | { x: number; y: number; width: number; height: number } | { left: number; top: number; right: number; bottom: number };
+	/** Child nodes in the UI tree. */
+	children?: UiHierarchy[];
+	/** iOS-specific: accessibility label. */
+	accessibilityLabel?: string;
+	/** iOS-specific: accessibility traits. */
+	accessibilityTraits?: string[];
+	/** iOS-specific: accessibility role. */
+	accessibilityRole?: string;
+	/** Visible text content in this node. */
+	visibleTexts?: string[];
+	/** Frame/bounds as a structured object. */
+	frame?: { x: number; y: number; width: number; height: number };
+	/** iOS AXUniqueId for stable targeting. */
+	AXUniqueId?: string;
+	/** iOS AXValue for toggle state (e.g., "0"/"1", "On"/"Off"). */
+	AXValue?: string;
+	/** Element type label (className alias for classification). */
+	elementType?: string;
+	/** Human-readable label (alias for contentDesc/text). */
+	label?: string;
+	/** Parent node reference (set during tree traversal for context lookups). */
+	parent?: UiHierarchy;
+	/** Any additional properties from the MCP tool. */
+	[key: string]: unknown;
+}
+⋮----
+/** Child nodes in the UI tree. */
+⋮----
+/** iOS-specific: accessibility label. */
+⋮----
+/** iOS-specific: accessibility traits. */
+⋮----
+/** iOS-specific: accessibility role. */
+⋮----
+/** Visible text content in this node. */
+⋮----
+/** Frame/bounds as a structured object. */
+⋮----
+/** iOS AXUniqueId for stable targeting. */
+⋮----
+/** iOS AXValue for toggle state (e.g., "0"/"1", "On"/"Off"). */
+⋮----
+/** Element type label (className alias for classification). */
+⋮----
+/** Human-readable label (alias for contentDesc/text). */
+⋮----
+/** Parent node reference (set during tree traversal for context lookups). */
+⋮----
+/** Any additional properties from the MCP tool. */
+⋮----
+/** Selector for targeting a UI element. */
+export interface ElementSelector {
+	/** Resource ID / AXUniqueId (most stable, works on both iOS and Android). */
+	resourceId?: string;
+	/** Content description / accessibilityLabel. */
+	contentDesc?: string;
+	/** Visible text content. */
+	text?: string;
+	/** Element type/class name. */
+	elementType?: string;
+	/** Fallback coordinate-based position. */
+	position?: { x: number; y: number };
+}
+⋮----
+/** Resource ID / AXUniqueId (most stable, works on both iOS and Android). */
+⋮----
+/** Content description / accessibilityLabel. */
+⋮----
+/** Visible text content. */
+⋮----
+/** Element type/class name. */
+⋮----
+/** Fallback coordinate-based position. */
+⋮----
+/** A UI element that can be tapped during exploration. */
+export interface ClickableTarget {
+	label: string;
+	selector: ElementSelector;
+	elementType: string;
+	priority?: number;
+	isExternalLink?: boolean;
+	isPseudoNavigation?: boolean;
+}
+⋮----
+/**
+ * A snapshot of the current screen state.
+ * SPEC §4.2 — captured after each navigation action.
+ */
+export interface PageSnapshot {
+	/** Unique screen identifier (from structural hash). */
+	screenId: string;
+	/** Human-readable screen title (if detectable). */
+	screenTitle?: string;
+	/** Route name (if available from the framework). */
+	routeName?: string;
+	/** Full UI hierarchy tree. */
+	uiTree: UiHierarchy;
+	/** Clickable elements on this page (filtered and prioritized). */
+	clickableElements: ClickableTarget[];
+	/** Path to the screenshot image file. */
+	screenshotPath: string;
+	/** ISO timestamp when the snapshot was captured. */
+	capturedAt: string;
+	/** Screen ID of the parent page (null for root). */
+	arrivedFrom: string | null;
+	/** Label of the element that led to this page (null for root). */
+	viaElement: string | null;
+	/** Depth in the exploration tree (0 = root). */
+	depth: number;
+	/** Time in milliseconds for the page to load/stabilize. */
+	loadTimeMs: number;
+	/** Stability score from wait_for_ui_stable (1.0 = fully stable). */
+	stabilityScore: number;
+	/** Bundle ID of the app that owns this screen (for app switching detection). */
+	appId?: string;
+	/** Harness-detected page context, if inspect_ui surfaced it. */
+	pageContext?: PageContext;
+	/** Whether this screen belongs to an external app (e.g., Safari opened from link). */
+	isExternalApp?: boolean;
+	/** Whether this page was reached but intentionally not expanded further. */
+	explorationStatus?: "expanded" | "reached-not-expanded";
+	/** Policy or rule that stopped further exploration. */
+	stoppedByPolicy?: string;
+	/** Rule family responsible for classification. */
+	ruleFamily?: string;
+	/** Recovery or exit method after intentional stop. */
+	recoveryMethod?: string;
+	/** Machine-readable rule decision that caused gating/skipping, if available. */
+	ruleDecision?: RuleDecisionEntry;
+	/** Machine-readable rule decisions for skipped/deferred child elements, if available. */
+	ruleDecisions?: RuleDecisionEntry[];
+}
+⋮----
+/** Unique screen identifier (from structural hash). */
+⋮----
+/** Human-readable screen title (if detectable). */
+⋮----
+/** Route name (if available from the framework). */
+⋮----
+/** Full UI hierarchy tree. */
+⋮----
+/** Clickable elements on this page (filtered and prioritized). */
+⋮----
+/** Path to the screenshot image file. */
+⋮----
+/** ISO timestamp when the snapshot was captured. */
+⋮----
+/** Screen ID of the parent page (null for root). */
+⋮----
+/** Label of the element that led to this page (null for root). */
+⋮----
+/** Depth in the exploration tree (0 = root). */
+⋮----
+/** Time in milliseconds for the page to load/stabilize. */
+⋮----
+/** Stability score from wait_for_ui_stable (1.0 = fully stable). */
+⋮----
+/** Bundle ID of the app that owns this screen (for app switching detection). */
+⋮----
+/** Harness-detected page context, if inspect_ui surfaced it. */
+⋮----
+/** Whether this screen belongs to an external app (e.g., Safari opened from link). */
+⋮----
+/** Whether this page was reached but intentionally not expanded further. */
+⋮----
+/** Policy or rule that stopped further exploration. */
+⋮----
+/** Rule family responsible for classification. */
+⋮----
+/** Recovery or exit method after intentional stop. */
+⋮----
+/** Machine-readable rule decision that caused gating/skipping, if available. */
+⋮----
+/** Machine-readable rule decisions for skipped/deferred child elements, if available. */
+⋮----
+export interface RuleDecisionEntry {
+	ruleId: string;
+	category: ExplorerRuleCategory;
+	action: ExplorerRuleAction;
+	reason: string;
+	source?: ExplorerRuleSource;
+	path: string[];
+	screenTitle?: string;
+	elementLabel?: string;
+	recoveryMethod?: string;
+	supportLevel?: ExplorerRuleSupportLevel;
+	caveat?: string;
+}
+⋮----
+// ---------------------------------------------------------------------------
+// Dedup types
+// ---------------------------------------------------------------------------
+⋮----
+/** Result of the dedup check against previously visited pages. */
+export interface DedupResult {
+	/** Whether this page has already been visited. */
+	alreadyVisited: boolean;
+	/** ID of the matching page (if already visited). */
+	matchedId?: string;
+	/** Confidence level of the match. */
+	confidence?: "text" | "structure" | "visual";
+	/** Warning message for near-matches or edge cases. */
+	warning?: string;
+}
+⋮----
+/** Whether this page has already been visited. */
+⋮----
+/** ID of the matching page (if already visited). */
+⋮----
+/** Confidence level of the match. */
+⋮----
+/** Warning message for near-matches or edge cases. */
+⋮----
+// ---------------------------------------------------------------------------
+// Engine types — per-element immediate exploration DFS (SPEC §4.1 v3.0)
+// ---------------------------------------------------------------------------
+⋮----
+/** Opaque state held in a frame for page-change validation. */
+export interface PageState {
+	/** Screen ID for page identity checks (text-based hash). */
+	screenId?: string;
+	/** Human-readable screen title for iOS back button targeting. */
+	screenTitle?: string;
+	/** Normalized page-context type for runtime logging. */
+	pageContextType?: string;
+	/** Structural hash of the UI tree (stable across dynamic text changes). */
+	structureHash?: string;
+}
+⋮----
+/** Screen ID for page identity checks (text-based hash). */
+⋮----
+/** Human-readable screen title for iOS back button targeting. */
+⋮----
+/** Normalized page-context type for runtime logging. */
+⋮----
+/** Structural hash of the UI tree (stable across dynamic text changes). */
+⋮----
+/**
+ * DFS stack frame with mutable element cursor.
+ *
+ * CRITICAL: Uses elementIndex as a mutable cursor (not pop+for loop).
+ * This ensures each element is explored on the correct page.
+ * SPEC §4.1, R2-A — fixes the sibling exploration bug.
+ */
+export interface Frame {
+	/** Opaque page state for validation. */
+	state: PageState;
+	/** Depth in the exploration tree. */
+	depth: number;
+	/** Path of element labels leading to this frame. */
+	path: string[];
+	/** Mutable cursor: index of the next element to explore. */
+	elementIndex: number;
+	/** Pre-computed clickable elements on this page (prioritized). */
+	elements: ClickableTarget[];
+	/** Parent page title — used as iOS back button text. */
+	parentTitle?: string;
+	/** Bundle ID of the app that owns this page (for app switching detection). */
+	appId?: string;
+	/** Whether this page belongs to an external app (skip back navigation). */
+	isExternalApp?: boolean;
+	/** Labels of elements known to be no-ops on this page (screenId unchanged). */
+	noOpElements?: Set<string>;
+	/** Scroll-aware exploration state for long scrollable pages. */
+	scrollState?: {
+		/** Whether this page is scrollable and scroll discovery is active. */
+		enabled: boolean;
+		/** Current segment cursor (0-based). */
+		segmentIndex: number;
+		/** All discovered segments; each segment is a viewport of clickable elements. */
+		segments: ClickableTarget[][];
+		/** Cumulative element dedup keys across all segments for this page. */
+		seenKeys: Set<string>;
+		/** Stable page identity for same-page detection after scroll. */
+		pageFingerprint: string;
+		/** Hard limit on segments to prevent infinite loops (default 10). */
+		maxSegments: number;
+		/** Current restore attempt count. */
+		restoreAttempts: number;
+		/** Hard limit on restore attempts per segment (default 3). */
+		maxRestoreAttempts: number;
+		/** Rule decisions observed while filtering scroll segment elements. */
+		ruleDecisions?: RuleDecisionEntry[];
+		/** Scroll axis orientation. Default: `"vertical"`. */
+		axis?: "vertical" | "horizontal";
+		/** Direction to advance scroll for next segment. Default: `"up"` (downward scroll). */
+		forwardDirection?: "up" | "left";
+		/** Direction to scroll back when restoring position. Default: `"up"`. */
+		restoreDirection?: "up" | "right";
+		/** Scroll strategy: continuous smooth scroll vs discrete page-snap. Default: `"continuous-scroll"`. */
+		strategy?: "continuous-scroll" | "page-snap";
+		/** Support maturity level for this scroll capability. Default: `"stable"`. */
+		supportLevel?: "stable" | "experimental";
+		/** Optional coordinate container for horizontal scroll gestures. */
+		containerBounds?: ScrollOnlyContainerBounds;
+	};
+}
+⋮----
+/** Opaque page state for validation. */
+⋮----
+/** Depth in the exploration tree. */
+⋮----
+/** Path of element labels leading to this frame. */
+⋮----
+/** Mutable cursor: index of the next element to explore. */
+⋮----
+/** Pre-computed clickable elements on this page (prioritized). */
+⋮----
+/** Parent page title — used as iOS back button text. */
+⋮----
+/** Bundle ID of the app that owns this page (for app switching detection). */
+⋮----
+/** Whether this page belongs to an external app (skip back navigation). */
+⋮----
+/** Labels of elements known to be no-ops on this page (screenId unchanged). */
+⋮----
+/** Scroll-aware exploration state for long scrollable pages. */
+⋮----
+/** Whether this page is scrollable and scroll discovery is active. */
+⋮----
+/** Current segment cursor (0-based). */
+⋮----
+/** All discovered segments; each segment is a viewport of clickable elements. */
+⋮----
+/** Cumulative element dedup keys across all segments for this page. */
+⋮----
+/** Stable page identity for same-page detection after scroll. */
+⋮----
+/** Hard limit on segments to prevent infinite loops (default 10). */
+⋮----
+/** Current restore attempt count. */
+⋮----
+/** Hard limit on restore attempts per segment (default 3). */
+⋮----
+/** Rule decisions observed while filtering scroll segment elements. */
+⋮----
+/** Scroll axis orientation. Default: `"vertical"`. */
+⋮----
+/** Direction to advance scroll for next segment. Default: `"up"` (downward scroll). */
+⋮----
+/** Direction to scroll back when restoring position. Default: `"up"`. */
+⋮----
+/** Scroll strategy: continuous smooth scroll vs discrete page-snap. Default: `"continuous-scroll"`. */
+⋮----
+/** Support maturity level for this scroll capability. Default: `"stable"`. */
+⋮----
+/** Optional coordinate container for horizontal scroll gestures. */
+⋮----
+/** Default values for optional scrollState fields. */
+⋮----
+/**
+ * Fill in default values for optional scrollState fields.
+ * Throws if called with undefined.
+ */
+export function normalizeScrollState(
+	ss: Frame["scrollState"],
+): NonNullable<Frame["scrollState"]>
+⋮----
+/** Registry of visited pages with dedup capability. */
+export interface PageRegistryContract {
+	/** Check if a snapshot matches a previously visited page. */
+	dedup(snapshot: PageSnapshot, path?: string[]): Promise<DedupResult>;
+	/** Register a new page in the registry. */
+	register(result: DedupResult, snapshot: PageSnapshot, path: string[]): void;
+	/** Get all registered page entries. */
+	getEntries(): PageEntry[];
+	/** Number of unique pages registered. */
+	count: number;
+}
+⋮----
+/** Check if a snapshot matches a previously visited page. */
+dedup(snapshot: PageSnapshot, path?: string[]): Promise<DedupResult>;
+/** Register a new page in the registry. */
+register(result: DedupResult, snapshot: PageSnapshot, path: string[]): void;
+/** Get all registered page entries. */
+getEntries(): PageEntry[];
+/** Number of unique pages registered. */
+⋮----
+/** Circuit breaker state for per-page failure tracking. */
+export interface CircuitBreakerState {
+	/** Number of consecutive pages with zero successful navigations. */
+	consecutiveFailedPages: number;
+	/** Failure count for the current page. */
+	currentPageFailures: number;
+	/** Configurable threshold (default 3 failures per page). */
+	threshold: number;
+}
+⋮----
+/** Number of consecutive pages with zero successful navigations. */
+⋮----
+/** Failure count for the current page. */
+⋮----
+/** Configurable threshold (default 3 failures per page). */
+⋮----
+// ---------------------------------------------------------------------------
+// Exploration result types
+// ---------------------------------------------------------------------------
+⋮----
+/** Failure entry logged when an element tap fails. */
+export interface FailureEntry {
+	/** Screen ID of the page where the failure occurred. */
+	pageScreenId: string;
+	/** Label of the element that failed. */
+	elementLabel: string;
+	/** Type of failure. */
+	failureType:
+		| "TAP_FAILED"
+		| "TIMEOUT"
+		| "CRASH"
+		| "BACKTRACK_MISMATCH"
+		| "INTERRUPTED";
+	/** Number of retry attempts. */
+	retryCount: number;
+	/** Error message. */
+	errorMessage: string;
+	/** Depth in the exploration tree. */
+	depth: number;
+	/** Path of element labels leading to this failure. */
+	path: string[];
+}
+⋮----
+/** Screen ID of the page where the failure occurred. */
+⋮----
+/** Label of the element that failed. */
+⋮----
+/** Type of failure. */
+⋮----
+/** Number of retry attempts. */
+⋮----
+/** Error message. */
+⋮----
+/** Depth in the exploration tree. */
+⋮----
+/** Path of element labels leading to this failure. */
+⋮----
+/** Transition lifecycle event type. */
+export type TransitionLifecycleEventType =
+	| "action_sent"
+	| "post_state_observed"
+	| "transition_committed"
+	| "transition_rejected";
+⋮----
+/** Transition lifecycle counters for observability. */
+export interface TransitionLifecycleSummary {
+	actionSent: number;
+	postStateObserved: number;
+	transitionCommitted: number;
+	transitionRejected: number;
+}
+⋮----
+export type TransitionKind =
+	| "forward"
+	| "back"
+	| "cancel"
+	| "home"
+	| "relaunch";
+⋮----
+export interface StateGraphSummary {
+	nodeCount: number;
+	edgeCount: number;
+	committedEdgeCount: number;
+	rejectedEdgeCount: number;
+}
+⋮----
+/** Complete result of an exploration session. */
+export interface ExplorationResult {
+	/** Registry of all visited pages. */
+	visited: PageRegistryContract;
+	/** Log of all failures. */
+	failed: FailureLogContract;
+	/** Whether the exploration was aborted early. */
+	aborted?: boolean;
+	/** Reason for abortion (if aborted). */
+	abortReason?: string;
+	/** Sampling metadata for high-fanout collection pages. */
+	sampling?: {
+		/** Pages where sampling was applied (screenId set). */
+		appliedPages: string[];
+		/** Total children skipped due to sampling. */
+		skippedChildren: number;
+		/** Per-page sampling details for report rendering. */
+		details?: Record<
+			string,
+			{
+				screenTitle?: string;
+				totalChildren: number;
+				exploredChildren: number;
+				skippedChildren: number;
+				exploredLabels: string[];
+				skippedLabels: string[];
+			}
+		>;
+	};
+	/** Transition lifecycle summary for auditing navigation progress. */
+	transitionLifecycle?: TransitionLifecycleSummary;
+	/** StateGraph summary metrics for this run. */
+	stateGraph?: StateGraphSummary;
+}
+⋮----
+/** Registry of all visited pages. */
+⋮----
+/** Log of all failures. */
+⋮----
+/** Whether the exploration was aborted early. */
+⋮----
+/** Reason for abortion (if aborted). */
+⋮----
+/** Sampling metadata for high-fanout collection pages. */
+⋮----
+/** Pages where sampling was applied (screenId set). */
+⋮----
+/** Total children skipped due to sampling. */
+⋮----
+/** Per-page sampling details for report rendering. */
+⋮----
+/** Transition lifecycle summary for auditing navigation progress. */
+⋮----
+/** StateGraph summary metrics for this run. */
+⋮----
+/** Failure log collection. */
+export interface FailureLogContract {
+	/** Record a new failure entry. */
+	record(entry: FailureEntry): void;
+	/** Get all failure entries. */
+	getEntries(): FailureEntry[];
+}
+⋮----
+/** Record a new failure entry. */
+record(entry: FailureEntry): void;
+/** Get all failure entries. */
+getEntries(): FailureEntry[];
+⋮----
+// ---------------------------------------------------------------------------
+// Report types
+// ---------------------------------------------------------------------------
+⋮----
+/** A page entry in the exploration report. */
+export interface PageEntry {
+	/** Unique page ID (sequential, e.g., "page-001"). */
+	id: string;
+	/** Screen identifier. */
+	screenId: string;
+	/** Human-readable screen title. */
+	screenTitle?: string;
+	/** Optional normalized page-context snapshot from the harness. */
+	pageContext?: PageContext;
+	/** Depth in the exploration tree. */
+	depth: number;
+	/** Path of element labels leading to this page. */
+	path: string[];
+	/** Screen ID of the parent page. */
+	arrivedFrom: string | null;
+	/** Label of the element that led to this page. */
+	viaElement: string | null;
+	/** Page load time in milliseconds. */
+	loadTimeMs: number;
+	/** Number of clickable elements found. */
+	clickableCount: number;
+	/** Whether this page had any failures. */
+	hasFailure: boolean;
+	/** The original snapshot (for report generation). */
+	snapshot?: PageSnapshot;
+	/** Whether this page was fully expanded or intentionally not expanded. */
+	explorationStatus?: "expanded" | "reached-not-expanded";
+	/** Policy or rule that stopped further exploration. */
+	stoppedByPolicy?: string;
+	/** Rule family responsible for classification. */
+	ruleFamily?: string;
+	/** Recovery or exit method after intentional stop. */
+	recoveryMethod?: string;
+	/** Machine-readable rule decision that caused gating/skipping, if available. */
+	ruleDecision?: RuleDecisionEntry;
+	/** Machine-readable rule decisions for skipped/deferred child elements, if available. */
+	ruleDecisions?: RuleDecisionEntry[];
+}
+⋮----
+/** Unique page ID (sequential, e.g., "page-001"). */
+⋮----
+/** Screen identifier. */
+⋮----
+/** Human-readable screen title. */
+⋮----
+/** Optional normalized page-context snapshot from the harness. */
+⋮----
+/** Depth in the exploration tree. */
+⋮----
+/** Path of element labels leading to this page. */
+⋮----
+/** Screen ID of the parent page. */
+⋮----
+/** Label of the element that led to this page. */
+⋮----
+/** Page load time in milliseconds. */
+⋮----
+/** Number of clickable elements found. */
+⋮----
+/** Whether this page had any failures. */
+⋮----
+/** The original snapshot (for report generation). */
+⋮----
+/** Whether this page was fully expanded or intentionally not expanded. */
+⋮----
+/** Policy or rule that stopped further exploration. */
+⋮----
+/** Rule family responsible for classification. */
+⋮----
+/** Recovery or exit method after intentional stop. */
+⋮----
+/** Machine-readable rule decision that caused gating/skipping, if available. */
+⋮----
+/** Machine-readable rule decisions for skipped/deferred child elements, if available. */
+⋮----
+/** Action to take on failure. */
+export type Action = "abort" | "retry" | "skip" | "handoff";
+⋮----
+// ---------------------------------------------------------------------------
+// Backtrack types
+// ---------------------------------------------------------------------------
+⋮----
+/** Result of a backtracking operation. */
+export interface BacktrackResult {
+	/** Whether the back navigation succeeded. */
+	success: boolean;
+	/** Screen ID after backtracking (for validation). */
+	screenId?: string;
+	/** Error message if backtracking failed. */
+	error?: string;
+}
+⋮----
+/** Whether the back navigation succeeded. */
+⋮----
+/** Screen ID after backtracking (for validation). */
+⋮----
+/** Error message if backtracking failed. */
+⋮----
+// ---------------------------------------------------------------------------
+// Re-export McpToolInterface for consumers that need it
+// ---------------------------------------------------------------------------
+</file>
+
 <file path="packages/explorer/tests/rules/default-rules.test.ts">
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
@@ -189626,6 +190727,47 @@ function makeUiTree(appId = "Settings"): UiHierarchy
 function makeSnapshot(title: string, screenId: string, appId = "Settings"): PageSnapshot
 ⋮----
 function makeScrollableRootFrame(): Frame
+</file>
+
+<file path="packages/explorer/tests/scroll-segment.test.ts">
+import assert from "node:assert/strict";
+import { describe, it } from "node:test";
+import type { ToolResult } from "@mobile-e2e-mcp/contracts";
+import { getElementKey } from "../src/element-prioritizer.js";
+import {
+  computePageFingerprint,
+  detectHorizontalScrollables,
+  discoverNextSegment,
+  getCurrentSegmentElements,
+  initScrollState,
+  performBoundedProbe,
+  restoreSegment,
+  startHorizontalScrollState,
+  type ProbeResult,
+} from "../src/scroll-segment.js";
+import type { ClickableTarget, ExplorerConfig, Frame, McpToolInterface, PageSnapshot, UiHierarchy } from "../src/types.js";
+import { normalizeScrollState } from "../src/types.js";
+import { parseUiTreeFromInspectData } from "../src/ui-tree-parser.js";
+⋮----
+function okResult<T>(data: T): ToolResult<T>
+⋮----
+function failedResult<T>(reasonCode = "ACTION_FAILED"): ToolResult<T>
+⋮----
+function makeButton(label: string, resourceId?: string): UiHierarchy
+⋮----
+function makeTarget(label: string, resourceId?: string): ClickableTarget
+⋮----
+function makeScrollablePage(title: string, buttons: string[], appId = "com.test.app"): UiHierarchy
+⋮----
+function makeNonScrollablePage(title: string, buttons: string[]): UiHierarchy
+⋮----
+function makeGroupedPage(title: string, buttons: string[], appId = "com.apple.Preferences"): UiHierarchy
+⋮----
+function createMockConfig(): ExplorerConfig
+⋮----
+function makeSnapshot(uiTree: UiHierarchy, title: string, appId: string): PageSnapshot
+⋮----
+function makeProbeFrame(fingerprint: string): Frame
 </file>
 
 <file path="packages/explorer/package.json">
@@ -190520,6 +191662,98 @@ async function launchSettingsAndVerifyForeground(server: ReturnType<typeof creat
 async function runMcpUiProbe(server: ReturnType<typeof createServer>): Promise<void>
 ⋮----
 async function terminateTargetApp(): Promise<void>
+⋮----
+async function main(): Promise<void>
+</file>
+
+<file path="scripts/explorer/test-explorer-ios-device-lib.ts">
+export type IosDeviceExplorerMode = "smoke" | "full";
+⋮----
+export interface IosDeviceExplorerScriptConfig {
+  mode: IosDeviceExplorerMode;
+  appId: string;
+  deviceId: string;
+  outputDir: string;
+  maxDepth: string;
+  timeoutMs: string;
+}
+⋮----
+type EnvLike = Record<string, string | undefined>;
+⋮----
+function readEnv(env: EnvLike, key: string): string | undefined
+⋮----
+export function parseIosDeviceExplorerScriptConfig(
+  argv: string[],
+  env: EnvLike = process.env,
+): IosDeviceExplorerScriptConfig
+⋮----
+export function buildIosDeviceExplorerCliArgs(config: IosDeviceExplorerScriptConfig): string[]
+⋮----
+export function renderIosDeviceExplorerHelp(): string
+</file>
+
+<file path="scripts/explorer/test-explorer-ios-device.test.ts">
+import assert from "node:assert/strict";
+import test from "node:test";
+⋮----
+import {
+  buildIosDeviceExplorerCliArgs,
+  parseIosDeviceExplorerScriptConfig,
+  renderIosDeviceExplorerHelp,
+} from "./test-explorer-ios-device-lib.ts";
+</file>
+
+<file path="scripts/explorer/test-explorer-ios-device.ts">
+/**
+ * Explorer harness for iOS physical devices, including connected iPad Settings.
+ *
+ * Run:
+ *   IOS_DEVICE_ID=<iPad-UDID> IOS_EXECUTION_BACKEND=wda \
+ *     pnpm exec tsx scripts/explorer/test-explorer-ios-device.ts [smoke|full]
+ *
+ * Required setup:
+ *   - iPad/iPhone connected over USB and trusted
+ *   - WebDriverAgent running on the device
+ *   - iproxy forwarding WDA: iproxy 8100 8100 --udid <iPad-UDID>
+ */
+⋮----
+import { execSync } from "node:child_process";
+import { createWriteStream, statSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+⋮----
+import type { DeviceInfo, ToolResult } from "@mobile-e2e-mcp/contracts";
+import { explore } from "../../packages/explorer/src/cli.js";
+import { prepareRunArtifacts } from "../../packages/explorer/src/run-artifacts.js";
+import { formatRunTimestamp } from "../../packages/explorer/src/report/summary.js";
+import { createServer } from "../../packages/mcp-server/src/index.js";
+import {
+  buildIosDeviceExplorerCliArgs,
+  parseIosDeviceExplorerScriptConfig,
+  renderIosDeviceExplorerHelp,
+} from "./test-explorer-ios-device-lib.ts";
+⋮----
+function ensureBuild(): void
+⋮----
+function formatLogArg(value: unknown): string
+⋮----
+function teeLog(level: "LOG" | "ERROR" | "WARN" | "INFO", args: unknown[]): void
+⋮----
+async function flushLogStream(): Promise<void>
+⋮----
+async function sleep(ms: number): Promise<void>
+⋮----
+async function assertWdaReady(): Promise<void>
+⋮----
+async function assertDeviceListed(server: ReturnType<typeof createServer>): Promise<void>
+⋮----
+function extractTextSamples(content: unknown): string[]
+⋮----
+const visit = (node: unknown): void =>
+⋮----
+function looksLikeSettingsHome(samples: string[]): boolean
+⋮----
+async function runMcpUiProbe(server: ReturnType<typeof createServer>): Promise<void>
 ⋮----
 async function main(): Promise<void>
 </file>
@@ -194296,172 +195530,6 @@ import { execFile } from "node:child_process";
 import path from "node:path";
 import test from "node:test";
 import { promisify } from "node:util";
-</file>
-
-<file path="CHANGELOG.md">
-# Changelog
-
-All notable changes to this project will be documented in this file.
-
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
-and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-
-## [Unreleased]
-
-## [0.1.16] - 2026-06-03
-
-### Added
-- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
-- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
-
-### Changed
-- Release scope includes 1 merged commit between mcp-server-v0.1.15 and the target tag.
-
-### Fixed
-- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
-
-## [0.1.15] - 2026-06-03
-
-### Added
-- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
-- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
-
-### Changed
-- Improved diagnostics, evidence capture, and performance analysis workflows for mobile automation runs.
-- Refined operator documentation, governance guidance, and architecture references around the release.
-- Release scope includes 103 merged commits between mcp-server-v0.1.14 and the target tag.
-
-### Fixed
-- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
-
-## [0.1.14] - 2026-05-04
-
-### Added
-- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
-- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
-
-### Changed
-- Improved diagnostics, evidence capture, and performance analysis workflows for mobile automation runs.
-- Refined operator documentation, governance guidance, and architecture references around the release.
-- Release scope includes 36 merged commits between mcp-server-v0.1.13 and the target tag.
-
-### Fixed
-- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
-
-## [0.1.13] - 2026-04-12
-
-### Added
-- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
-- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
-
-### Changed
-- Refined operator documentation, governance guidance, and architecture references around the release.
-- Release scope includes 15 merged commits between mcp-server-v0.1.12 and the target tag.
-
-### Fixed
-- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
-
-## [0.1.12] - 2026-04-12
-
-### Added
-- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
-- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
-- Improved bounded OCR and vision fallback support for cases where deterministic selectors are unavailable.
-
-### Changed
-- Improved diagnostics, evidence capture, and performance analysis workflows for mobile automation runs.
-- Refined operator documentation, governance guidance, and architecture references around the release.
-- Release scope includes 147 merged commits between mcp-server-v0.1.11 and the target tag.
-
-### Fixed
-- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
-
-## [0.1.11] - 2026-03-29
-
-### Added
-- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
-- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
-- Improved bounded OCR and vision fallback support for cases where deterministic selectors are unavailable.
-
-### Changed
-- Improved diagnostics, evidence capture, and performance analysis workflows for mobile automation runs.
-- Refined operator documentation, governance guidance, and architecture references around the release.
-- Release scope includes 48 merged commits between mcp-server-v0.1.9 and the target tag.
-
-### Fixed
-- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
-
-## [0.1.9] - 2026-03-26
-
-### Added
-- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
-- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
-- Improved bounded OCR and vision fallback support for cases where deterministic selectors are unavailable.
-
-### Changed
-- Refined operator documentation, governance guidance, and architecture references around the release.
-- Release scope includes 9 merged commits between mcp-server-v0.1.8 and the target tag.
-
-### Fixed
-- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
-
-## [0.1.8] - 2026-03-23
-
-### Added
-- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
-- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
-
-### Changed
-- Improved diagnostics, evidence capture, and performance analysis workflows for mobile automation runs.
-- Refined operator documentation, governance guidance, and architecture references around the release.
-- Release scope includes 19 merged commits between mcp-server-v0.1.7 and the target tag.
-
-### Fixed
-- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
-
-## [0.1.7] - 2026-03-21
-
-### Added
-- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
-- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
-- Improved bounded OCR and vision fallback support for cases where deterministic selectors are unavailable.
-
-### Changed
-- Improved diagnostics, evidence capture, and performance analysis workflows for mobile automation runs.
-- Refined operator documentation, governance guidance, and architecture references around the release.
-- Release scope includes 38 merged commits between mcp-server-v0.1.6 and the target tag.
-
-### Fixed
-- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
-
-## [0.1.6] - 2026-03-20
-
-### Added
-- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
-- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
-- Improved bounded OCR and vision fallback support for cases where deterministic selectors are unavailable.
-
-### Changed
-- Improved diagnostics, evidence capture, and performance analysis workflows for mobile automation runs.
-- Refined operator documentation, governance guidance, and architecture references around the release.
-- Release scope includes 39 merged commits between mcp-server-v0.1.5 and the target tag.
-
-### Fixed
-- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
-
-## [0.1.5] - 2026-03-20
-
-### Added
-- Introduced the first public AI-first mobile E2E MCP server with session lifecycle, app control, UI inspection, interaction, diagnostics, interruption handling, and failure-analysis tools.
-- Established deterministic-first execution adapters plus bounded OCR/vision fallback for Android, iOS, React Native, and Flutter automation workflows.
-- Published runnable sample flows, showcase demos, and real-device/simulator validation assets for login, recovery, and harness onboarding scenarios.
-
-### Changed
-- Reorganized the repository into a pnpm monorepo with explicit contracts, core orchestration, adapters, and MCP server package boundaries.
-- Added stdio/dev CLI entrypoints, package metadata, governance baselines, and release automation needed for public npm distribution.
-
-### Fixed
-- Hardened doctor checks, dry-run behavior, selector resolution, and session or lease stability during the initial release cycle.
 </file>
 
 <file path="CONTRIBUTING.md">
@@ -199020,1103 +200088,257 @@ async function writeJson(filePath: string, value: unknown): Promise<void>
 async function makeRepoRoot(): Promise<string>
 </file>
 
-<file path="packages/explorer/src/frame-reconciler.ts">
-import { hashUiStructure } from "./page-registry.js";
-import type { Frame, PageSnapshot } from "./types.js";
-⋮----
-function normalizeNavText(value: string | undefined): string
-⋮----
-function normalizeTitleForMatch(value: string | undefined): string
-⋮----
-function isLikelyBundleId(value: string): boolean
-⋮----
-function shouldPreserveScrollStateOnReconcile(
-  frame: Frame,
-  snapshot: PageSnapshot,
-  targetAppId: string,
-): boolean
-⋮----
-export function findAncestorFrameIndex(
-  stack: Frame[],
-  snapshot: Pick<PageSnapshot, "screenId" | "screenTitle" | "appId">,
-): number
-⋮----
-export function reconcileStackToSnapshot(
-  stack: Frame[],
-  snapshot: PageSnapshot,
-  targetAppId: string,
-  options?: { allowRootReset?: boolean },
-): Frame | undefined
-⋮----
-// Invalidate stale scroll state
-</file>
-
-<file path="packages/explorer/src/scroll-segment.ts">
+<file path="packages/explorer/src/engine.ts">
 /**
- * Scroll-segment helpers for progressive scroll-aware DFS.
+ * DFS Exploration Engine — per-element immediate exploration.
  *
- * This module is a pure helper called by the engine; it does not push/pop
- * frames or register state graph transitions.
- */
-⋮----
-import type { ScrollOnlyContainerBounds } from "@mobile-e2e-mcp/contracts";
-import { findClickableElements, flattenTree, prioritizeElements } from "./element-prioritizer.js";
-import { buildRuleDecisionEntry } from "./engine-helpers.js";
-import { resolveExplorerPlatformHooks } from "./explorer-platform.js";
-import { evaluateElementRules } from "./rules/rule-evaluator.js";
-import { buildExplorerRuleRegistry } from "./rules/rule-registry.js";
-import type { ClickableTarget, ExplorerConfig, Frame, McpToolInterface, PageSnapshot, RuleDecisionEntry, UiHierarchy } from "./types.js";
-import { normalizeScrollState } from "./types.js";
-⋮----
-function getClickableTargetKey(target: ClickableTarget): string
-⋮----
-export interface SegmentDiscoveryResult {
-  success: boolean;
-  newElements?: ClickableTarget[];
-  isLastSegment?: boolean;
-  snapshot?: PageSnapshot;
-}
-⋮----
-/** Information about a detected horizontal scroll container. */
-export interface HorizontalContainerInfo {
-  node: UiHierarchy;
-  confidence: "high" | "medium" | "low";
-  platform: "android" | "ios";
-  type?: "page-snap";
-}
-⋮----
-/** Result of a bounded probe to validate horizontal scrollability. */
-export interface ProbeResult {
-  enabled: boolean;
-  disabledReason?: "fingerprint_changed" | "no_new_elements" | "scroll_failed" | "unsupported_platform";
-  confidence: "high" | "medium" | "low";
-  fingerprintBefore: string;
-  fingerprintAfter: string;
-  newElementCount: number;
-}
-⋮----
-function normalizeSegmentValue(value: string): string
-⋮----
-function isSideEffectAction(label: string): boolean
-⋮----
-function isNavigationControlAction(label: string): boolean
-⋮----
-function compareExplorationOrder(a: ClickableTarget, b: ClickableTarget): number
-⋮----
-function shouldSkipElement(
-  target: ClickableTarget,
-  frame: Frame,
-  snapshot: PageSnapshot,
-  config: ExplorerConfig,
-):
-⋮----
-// Ignore invalid user regex and fall through.
-⋮----
-function buildSegmentElements(snapshot: PageSnapshot, frame: Frame, config: ExplorerConfig):
-⋮----
-export function computePageFingerprint(snapshot: PageSnapshot): string
-⋮----
-function detectPageSnapStrategy(candidates: HorizontalContainerInfo[]): "page-snap" | "continuous-scroll"
-⋮----
-function parseContainerBoundsFromNode(node: UiHierarchy): ScrollOnlyContainerBounds | undefined
-⋮----
-function pickHorizontalContainerBounds(candidates: HorizontalContainerInfo[]): ScrollOnlyContainerBounds | undefined
-⋮----
-function buildScrollOnlyArgs(
-  direction: "up" | "down" | "left" | "right",
-  normalized: ReturnType<typeof normalizeScrollState>,
-):
-⋮----
-export function detectHorizontalScrollables(uiTree: UiHierarchy): HorizontalContainerInfo[]
-⋮----
-export async function performBoundedProbe(
-  mcp: McpToolInterface,
-  frame: Frame,
-  config: ExplorerConfig,
-  candidates: HorizontalContainerInfo[],
-): Promise<ProbeResult>
-⋮----
-export function startHorizontalScrollState(
-  frame: Frame,
-  snapshot: PageSnapshot,
-  config: ExplorerConfig,
-  probeResult: ProbeResult,
-): void
-⋮----
-function isIosExplorerPlatform(platform: ExplorerConfig["platform"]): boolean
-⋮----
-function isPageLikeForScrollFallback(snapshot: PageSnapshot): boolean
-⋮----
-function shouldArmIosGroupBackedScrollFallback(
-  config: ExplorerConfig,
-  snapshot: PageSnapshot,
-  flattenedNodes: UiHierarchy[],
-  visibleElements: number,
-): boolean
-⋮----
-function normalizeVisibleSignal(value: string): string
-⋮----
-function isMeaningfulVisibleSignal(value: string, snapshot: PageSnapshot): boolean
-⋮----
-function hasMoreMeaningfulVisibleSignalsThanQueuedElements(
-  snapshot: PageSnapshot,
-  visibleElements: number,
-): boolean
-⋮----
-export function initScrollState(
-  frame: Frame,
-  snapshot: PageSnapshot,
-  config: ExplorerConfig,
-): void
-⋮----
-// No vertical scrollable — try horizontal detection
-⋮----
-export function getCurrentSegmentElements(frame: Frame): ClickableTarget[]
-⋮----
-export async function discoverNextSegment(
-  mcp: McpToolInterface,
-  frame: Frame,
-  config: ExplorerConfig,
-): Promise<SegmentDiscoveryResult>
-⋮----
-export async function restoreSegment(
-  mcp: McpToolInterface,
-  frame: Frame,
-  config: ExplorerConfig,
-): Promise<boolean>
-⋮----
-// Reset to origin by scrolling in the restore direction N times
-⋮----
-// Then scroll forward segmentIndex times to reach the target
-⋮----
-// Vertical: scroll up N times (original behavior)
-</file>
-
-<file path="packages/explorer/src/types.ts">
-/**
- * Core type definitions for the explorer engine.
+ * SPEC §4.1 v3.0 — CORRECTED iterative DFS with peek-based stack and elementIndex cursor.
+ * This fixes the sibling exploration bug where elements were tapped on wrong pages.
  *
- * This is the SHARED contract for 25-02 (Report) and 25-03 (Config).
- * Types must be stable and well-documented.
- */
-⋮----
-import type { PageContext, ScrollOnlyContainerBounds } from "@mobile-e2e-mcp/contracts";
-import type { ExplorerRuleAction, ExplorerRuleCategory, ExplorerRuleConfig, ExplorerRuleSource, ExplorerRuleSupportLevel } from "./rules/rule-types.js";
-⋮----
-// ---------------------------------------------------------------------------
-// §3.1 Configuration Schema
-// ---------------------------------------------------------------------------
-⋮----
-/** Match criteria for a sampling rule. */
-export interface SamplingRuleMatch {
-	/** Full path prefix to match (e.g. ["General", "Fonts", "System Fonts"]). */
-	pathPrefix?: string[];
-	/** Screen title to match (exact). */
-	screenTitle?: string;
-	/** Screen ID to match (exact). */
-	screenId?: string;
-}
-⋮----
-/** Full path prefix to match (e.g. ["General", "Fonts", "System Fonts"]). */
-⋮----
-/** Screen title to match (exact). */
-⋮----
-/** Screen ID to match (exact). */
-⋮----
-/** Strategy for sampling high-fanout collection pages. */
-export type SamplingStrategy = "representative-child";
-⋮----
-/** A sampling rule for high-fanout repeated collection pages. */
-export interface SamplingRule {
-	/** How to match this rule against the current page. */
-	match: SamplingRuleMatch;
-	/** Explorer mode(s) this rule applies to. */
-	mode?: ExplorationMode;
-	/** Sampling strategy to use when matched. */
-	strategy: SamplingStrategy;
-	/** Max children to validate as representatives (default: 1). */
-	maxChildrenToValidate?: number;
-	/** Stop after the first successful child navigation. */
-	stopAfterFirstSuccessfulNavigation?: boolean;
-	/** Action labels to exclude (e.g. ["Download"]). */
-	excludeActions?: string[];
-}
-⋮----
-/** How to match this rule against the current page. */
-⋮----
-/** Explorer mode(s) this rule applies to. */
-⋮----
-/** Sampling strategy to use when matched. */
-⋮----
-/** Max children to validate as representatives (default: 1). */
-⋮----
-/** Stop after the first successful child navigation. */
-⋮----
-/** Action labels to exclude (e.g. ["Download"]). */
-⋮----
-export interface SkipPageRule {
-	match: SamplingRuleMatch;
-	reason?: string;
-}
-⋮----
-/** Match criteria for a skip-element rule. */
-export interface SkipElementRuleMatch {
-	/** Element label to match (case-insensitive substring match). */
-	elementLabel?: string;
-	/** Element label regex pattern to match. */
-	elementLabelPattern?: string;
-	/** Current page title where the element appears. */
-	screenTitle?: string;
-	/** Path prefix of parent elements leading to this element. */
-	pathPrefix?: string[];
-}
-⋮----
-/** Element label to match (case-insensitive substring match). */
-⋮----
-/** Element label regex pattern to match. */
-⋮----
-/** Current page title where the element appears. */
-⋮----
-/** Path prefix of parent elements leading to this element. */
-⋮----
-/** A rule to skip specific elements before tapping them. */
-export interface SkipElementRule {
-	/** How to match this rule against a candidate element. */
-	match: SkipElementRuleMatch;
-	/** Human-readable reason for skipping this element. */
-	reason?: string;
-}
-⋮----
-/** How to match this rule against a candidate element. */
-⋮----
-/** Human-readable reason for skipping this element. */
-⋮----
-/** Credentials for auto-login auth mode. */
-export interface TestCredentials {
-	/** Accessibility ID or selector for the username/identifier field. */
-	identifierField: string;
-	/** Accessibility ID or selector for the password field. */
-	passwordField: string;
-	/** Text or ID of the login/submit button. */
-	submitAction: string;
-	/** The identifier value (username/email). */
-	identifier: string;
-	/** Environment variable name for password (never stored in plaintext). */
-	passwordEnv: string;
-}
-⋮----
-/** Accessibility ID or selector for the username/identifier field. */
-⋮----
-/** Accessibility ID or selector for the password field. */
-⋮----
-/** Text or ID of the login/submit button. */
-⋮----
-/** The identifier value (username/email). */
-⋮----
-/** Environment variable name for password (never stored in plaintext). */
-⋮----
-/** Exploration mode determining how deeply the engine traverses. */
-export type ExplorationMode = "smoke" | "scoped" | "full";
-⋮----
-/** Scope filter for 'scoped' mode. */
-export interface ExplorationScope {
-	type: "screen-title" | "element-text" | "tab-index" | "module-name";
-	value: string | number;
-}
-⋮----
-/** Auth strategy for the exploration session. */
-export type AuthConfig =
-	| { type: "already-logged-in" }
-	| { type: "skip-auth" }
-	| { type: "handoff" }
-	| { type: "auto-login"; credentials: TestCredentials };
-⋮----
-/** How to handle element tap failures. */
-export type FailureStrategy = "retry-3" | "skip" | "handoff";
-⋮----
-/** How to handle elements that may cause destructive actions. */
-export type DestructiveActionPolicy = "skip" | "confirm" | "allow";
-/** How to handle stateful form-entry branches (create/add/manage/select address-like flows). */
-export type StatefulFormPolicy = "skip" | "confirm" | "allow";
-/** How to handle explicit create/add/new editor-entry actions. */
-export type EditorEntryPolicy = "skip" | "confirm" | "allow";
-⋮----
-/** Target platform for the exploration session. */
-export type ExplorerPlatform =
-	| "ios-simulator"
-	| "ios-device"
-	| "android-emulator"
-	| "android-device";
-⋮----
-/**
- * Main configuration for the explorer engine.
- * SPEC §3.1 — all fields from the config schema.
- */
-export interface ExplorerConfig {
-	/** Exploration depth mode. */
-	mode: ExplorationMode;
-	/** Optional scope filter for 'scoped' mode. */
-	scope?: ExplorationScope;
-	/** Authentication strategy. */
-	auth: AuthConfig;
-	/** How to handle tap failures. */
-	failureStrategy: FailureStrategy;
-	/** Maximum depth to traverse (default: 8). */
-	maxDepth: number;
-	/** Maximum unique pages to visit (derived from timeout / avgPageTime). */
-	maxPages: number;
-	/** Total timeout in milliseconds. */
-	timeoutMs: number;
-	/** Run ID to diff against, or null for no comparison. */
-	compareWith: string | null;
-	/** Target platform. */
-	platform: ExplorerPlatform;
-	/** How to handle destructive elements (SPEC §4.4, R1-#1). */
-	destructiveActionPolicy: DestructiveActionPolicy;
-	/** How to handle stateful form-entry branches that are risky but not strictly destructive. */
-	statefulFormPolicy?: StatefulFormPolicy;
-	/** How to handle explicit Create/Add/New editor-entry actions. */
-	editorEntryPolicy?: EditorEntryPolicy;
-	/** Maximum successful side-effect/editor actions with the same label per page context. */
-	maxActionSuccessesPerContext?: number;
-	/** Bundle ID / package name of the target app. */
-	appId: string;
-	/** Base output directory for reports. */
-	reportDir: string;
-	/** Sampling rules for high-fanout collection pages (smoke mode). */
-	samplingRules?: SamplingRule[];
-	/** Maximum depth for external app exploration (default: 1).
-	 *
-	 * When an external link (e.g., "Learn more") opens another app like Safari,
-	 * this limits how deep the explorer goes in the external app.
-	 * Configurable so users can increase it later if needed.
-	 */
-	externalLinkMaxDepth?: number;
-	/** Owner packages to gate (skip DFS) when detected by pageContext.
-	 *
-	 * When the page context reports an ownerPackage in this list,
-	 * the page is treated as an external app surface and not expanded.
-	 */
-	blockedOwnerPackages?: string[];
-	skipPages?: SkipPageRule[];
-	/** Rules to skip specific elements before tapping them (pre-tap filter). */
-	skipElements?: SkipElementRule[];
-	/** Rule registry configuration for explainable traversal policy. */
-	rules?: ExplorerRuleConfig;
-}
-⋮----
-/** Exploration depth mode. */
-⋮----
-/** Optional scope filter for 'scoped' mode. */
-⋮----
-/** Authentication strategy. */
-⋮----
-/** How to handle tap failures. */
-⋮----
-/** Maximum depth to traverse (default: 8). */
-⋮----
-/** Maximum unique pages to visit (derived from timeout / avgPageTime). */
-⋮----
-/** Total timeout in milliseconds. */
-⋮----
-/** Run ID to diff against, or null for no comparison. */
-⋮----
-/** Target platform. */
-⋮----
-/** How to handle destructive elements (SPEC §4.4, R1-#1). */
-⋮----
-/** How to handle stateful form-entry branches that are risky but not strictly destructive. */
-⋮----
-/** How to handle explicit Create/Add/New editor-entry actions. */
-⋮----
-/** Maximum successful side-effect/editor actions with the same label per page context. */
-⋮----
-/** Bundle ID / package name of the target app. */
-⋮----
-/** Base output directory for reports. */
-⋮----
-/** Sampling rules for high-fanout collection pages (smoke mode). */
-⋮----
-/** Maximum depth for external app exploration (default: 1).
-	 *
-	 * When an external link (e.g., "Learn more") opens another app like Safari,
-	 * this limits how deep the explorer goes in the external app.
-	 * Configurable so users can increase it later if needed.
-	 */
-⋮----
-/** Owner packages to gate (skip DFS) when detected by pageContext.
-	 *
-	 * When the page context reports an ownerPackage in this list,
-	 * the page is treated as an external app surface and not expanded.
-	 */
-⋮----
-/** Rules to skip specific elements before tapping them (pre-tap filter). */
-⋮----
-/** Rule registry configuration for explainable traversal policy. */
-⋮----
-// ---------------------------------------------------------------------------
-// §4.2 Page Snapshot
-// ---------------------------------------------------------------------------
-⋮----
-/**
- * UiHierarchy — raw output from inspect_ui MCP tool.
+ * Key invariants:
+ * - PEEK (don't pop) the top frame to decide what to do
+ * - Advance elementIndex cursor BEFORE attempting a tap
+ * - After successful tap: push child frame, explore in NEXT iteration
+ * - Child frame backtracks when DONE (all elements explored)
+ * - Per-element immediate exploration: tap -> explore child -> backtrack -> next sibling
  *
- * Currently typed as a flexible shape because the exact structure from
- * InspectUiNode may vary. The `children` property is a placeholder —
- * actual child nesting depends on the MCP tool's tree serialization.
+ * R1-#2: Page-change validation after every tap to prevent infinite loops.
+ * R1-#4: Circuit breaker counts per-PAGE failures (not per-element).
+ * R2-E: System dialog detection with structural accessibilityRole check + keyword threshold >=3.
+ */
+⋮----
+import { createBacktracker } from "./backtrack.js";
+import {
+	createCircuitBreaker,
+	isCircuitOpen,
+	recordPageFailure,
+	recordPageSuccess,
+	resetCircuit,
+} from "./circuit-breaker.js";
+import { prioritizeElements } from "./element-prioritizer.js";
+import {
+	attemptCancelFirstRecovery,
+	buildRuleDecisionEntry,
+	decideExplorerPageAction,
+	FailureLog,
+	handleFailure,
+	isAndroidExplorerPlatform,
+	isEditorEntryAction,
+	isLowValueLeafAction,
+	markSnapshotAsGated,
+	pageTypeOf,
+	validateNavigation,
+} from "./engine-helpers.js";
+import {
+	compareFrameExplorationOrder,
+	elementIdentity,
+	isNavigationControlAction,
+	isSideEffectAction,
+	type SamplingState,
+	shouldGateExternalAppFrame,
+} from "./exploration-sampler.js";
+import { returnToTargetAppFromForeignPage } from "./foreign-app-return.js";
+import {
+	findAncestorFrameIndex,
+	reconcileStackToSnapshot,
+} from "./frame-reconciler.js";
+import {
+	formatPageContextDecisionLog,
+} from "./page-context-router.js";
+import { hashUiStructure, PageRegistry } from "./page-registry.js";
+import { generateReport } from "./report.js";
+import {
+	evaluateElementRules,
+	evaluatePageRules,
+	evaluateSamplingRules,
+} from "./rules/rule-evaluator.js";
+import {
+	buildExplorerRuleRegistry,
+} from "./rules/rule-registry.js";
+import {
+	discoverNextSegment,
+	getCurrentSegmentElements,
+	initScrollState,
+	restoreSegment,
+} from "./scroll-segment.js";
+import {
+	attemptHorizontalDiscovery,
+	hasHorizontalProbeBeenAttempted,
+	markHorizontalProbeAttempted,
+} from "./engine-horizontal-fallback.js";
+import { createSnapshotter, createTapExecutor } from "./snapshot.js";
+import { createStateGraph } from "./state-graph.js";
+import type {
+	ExplorationResult,
+	ExplorerConfig,
+	Frame,
+	McpToolInterface,
+	PageSnapshot,
+	PageState,
+	RuleDecisionEntry,
+	TransitionLifecycleSummary,
+	UiHierarchy,
+} from "./types.js";
+⋮----
+// ---------------------------------------------------------------------------
+// Main explore function
+// ---------------------------------------------------------------------------
+⋮----
+/**
+ * Run a full DFS exploration of the target app.
  *
- * After 25-00 spike: this matches InspectUiNode from contracts.
+ * @param config - Explorer configuration
+ * @param mcp - MCP tool interface for all device interactions
+ * @returns ExplorationResult with visited pages and failure log
  */
-export interface UiHierarchy {
-	index?: number;
-	depth?: number;
-	text?: string;
-	resourceId?: string;
-	className?: string;
-	packageName?: string;
-	contentDesc?: string;
-	clickable: boolean;
-	enabled: boolean;
-	scrollable: boolean;
-	bounds?: string | { x: number; y: number; width: number; height: number } | { left: number; top: number; right: number; bottom: number };
-	/** Child nodes in the UI tree. */
-	children?: UiHierarchy[];
-	/** iOS-specific: accessibility label. */
-	accessibilityLabel?: string;
-	/** iOS-specific: accessibility traits. */
-	accessibilityTraits?: string[];
-	/** iOS-specific: accessibility role. */
-	accessibilityRole?: string;
-	/** Visible text content in this node. */
-	visibleTexts?: string[];
-	/** Frame/bounds as a structured object. */
-	frame?: { x: number; y: number; width: number; height: number };
-	/** iOS AXUniqueId for stable targeting. */
-	AXUniqueId?: string;
-	/** iOS AXValue for toggle state (e.g., "0"/"1", "On"/"Off"). */
-	AXValue?: string;
-	/** Element type label (className alias for classification). */
-	elementType?: string;
-	/** Human-readable label (alias for contentDesc/text). */
-	label?: string;
-	/** Parent node reference (set during tree traversal for context lookups). */
-	parent?: UiHierarchy;
-	/** Any additional properties from the MCP tool. */
-	[key: string]: unknown;
-}
-⋮----
-/** Child nodes in the UI tree. */
-⋮----
-/** iOS-specific: accessibility label. */
-⋮----
-/** iOS-specific: accessibility traits. */
-⋮----
-/** iOS-specific: accessibility role. */
-⋮----
-/** Visible text content in this node. */
-⋮----
-/** Frame/bounds as a structured object. */
-⋮----
-/** iOS AXUniqueId for stable targeting. */
-⋮----
-/** iOS AXValue for toggle state (e.g., "0"/"1", "On"/"Off"). */
-⋮----
-/** Element type label (className alias for classification). */
-⋮----
-/** Human-readable label (alias for contentDesc/text). */
-⋮----
-/** Parent node reference (set during tree traversal for context lookups). */
-⋮----
-/** Any additional properties from the MCP tool. */
-⋮----
-/** Selector for targeting a UI element. */
-export interface ElementSelector {
-	/** Resource ID / AXUniqueId (most stable, works on both iOS and Android). */
-	resourceId?: string;
-	/** Content description / accessibilityLabel. */
-	contentDesc?: string;
-	/** Visible text content. */
-	text?: string;
-	/** Element type/class name. */
-	elementType?: string;
-	/** Fallback coordinate-based position. */
-	position?: { x: number; y: number };
-}
-⋮----
-/** Resource ID / AXUniqueId (most stable, works on both iOS and Android). */
-⋮----
-/** Content description / accessibilityLabel. */
-⋮----
-/** Visible text content. */
-⋮----
-/** Element type/class name. */
-⋮----
-/** Fallback coordinate-based position. */
-⋮----
-/** A UI element that can be tapped during exploration. */
-export interface ClickableTarget {
-	label: string;
-	selector: ElementSelector;
-	elementType: string;
-	priority?: number;
-	isExternalLink?: boolean;
-	isPseudoNavigation?: boolean;
-}
-⋮----
-/**
- * A snapshot of the current screen state.
- * SPEC §4.2 — captured after each navigation action.
- */
-export interface PageSnapshot {
-	/** Unique screen identifier (from structural hash). */
-	screenId: string;
-	/** Human-readable screen title (if detectable). */
-	screenTitle?: string;
-	/** Route name (if available from the framework). */
-	routeName?: string;
-	/** Full UI hierarchy tree. */
-	uiTree: UiHierarchy;
-	/** Clickable elements on this page (filtered and prioritized). */
-	clickableElements: ClickableTarget[];
-	/** Path to the screenshot image file. */
-	screenshotPath: string;
-	/** ISO timestamp when the snapshot was captured. */
-	capturedAt: string;
-	/** Screen ID of the parent page (null for root). */
-	arrivedFrom: string | null;
-	/** Label of the element that led to this page (null for root). */
-	viaElement: string | null;
-	/** Depth in the exploration tree (0 = root). */
-	depth: number;
-	/** Time in milliseconds for the page to load/stabilize. */
-	loadTimeMs: number;
-	/** Stability score from wait_for_ui_stable (1.0 = fully stable). */
-	stabilityScore: number;
-	/** Bundle ID of the app that owns this screen (for app switching detection). */
-	appId?: string;
-	/** Harness-detected page context, if inspect_ui surfaced it. */
-	pageContext?: PageContext;
-	/** Whether this screen belongs to an external app (e.g., Safari opened from link). */
-	isExternalApp?: boolean;
-	/** Whether this page was reached but intentionally not expanded further. */
-	explorationStatus?: "expanded" | "reached-not-expanded";
-	/** Policy or rule that stopped further exploration. */
-	stoppedByPolicy?: string;
-	/** Rule family responsible for classification. */
-	ruleFamily?: string;
-	/** Recovery or exit method after intentional stop. */
-	recoveryMethod?: string;
-	/** Machine-readable rule decision that caused gating/skipping, if available. */
-	ruleDecision?: RuleDecisionEntry;
-	/** Machine-readable rule decisions for skipped/deferred child elements, if available. */
-	ruleDecisions?: RuleDecisionEntry[];
-}
-⋮----
-/** Unique screen identifier (from structural hash). */
-⋮----
-/** Human-readable screen title (if detectable). */
-⋮----
-/** Route name (if available from the framework). */
-⋮----
-/** Full UI hierarchy tree. */
-⋮----
-/** Clickable elements on this page (filtered and prioritized). */
-⋮----
-/** Path to the screenshot image file. */
-⋮----
-/** ISO timestamp when the snapshot was captured. */
-⋮----
-/** Screen ID of the parent page (null for root). */
-⋮----
-/** Label of the element that led to this page (null for root). */
-⋮----
-/** Depth in the exploration tree (0 = root). */
-⋮----
-/** Time in milliseconds for the page to load/stabilize. */
-⋮----
-/** Stability score from wait_for_ui_stable (1.0 = fully stable). */
-⋮----
-/** Bundle ID of the app that owns this screen (for app switching detection). */
-⋮----
-/** Harness-detected page context, if inspect_ui surfaced it. */
-⋮----
-/** Whether this screen belongs to an external app (e.g., Safari opened from link). */
-⋮----
-/** Whether this page was reached but intentionally not expanded further. */
-⋮----
-/** Policy or rule that stopped further exploration. */
-⋮----
-/** Rule family responsible for classification. */
-⋮----
-/** Recovery or exit method after intentional stop. */
-⋮----
-/** Machine-readable rule decision that caused gating/skipping, if available. */
-⋮----
-/** Machine-readable rule decisions for skipped/deferred child elements, if available. */
-⋮----
-export interface RuleDecisionEntry {
-	ruleId: string;
-	category: ExplorerRuleCategory;
-	action: ExplorerRuleAction;
-	reason: string;
-	source?: ExplorerRuleSource;
-	path: string[];
-	screenTitle?: string;
-	elementLabel?: string;
-	recoveryMethod?: string;
-	supportLevel?: ExplorerRuleSupportLevel;
-	caveat?: string;
-}
-⋮----
-// ---------------------------------------------------------------------------
-// Dedup types
-// ---------------------------------------------------------------------------
-⋮----
-/** Result of the dedup check against previously visited pages. */
-export interface DedupResult {
-	/** Whether this page has already been visited. */
-	alreadyVisited: boolean;
-	/** ID of the matching page (if already visited). */
-	matchedId?: string;
-	/** Confidence level of the match. */
-	confidence?: "text" | "structure" | "visual";
-	/** Warning message for near-matches or edge cases. */
-	warning?: string;
-}
-⋮----
-/** Whether this page has already been visited. */
-⋮----
-/** ID of the matching page (if already visited). */
-⋮----
-/** Confidence level of the match. */
-⋮----
-/** Warning message for near-matches or edge cases. */
-⋮----
-// ---------------------------------------------------------------------------
-// Engine types — per-element immediate exploration DFS (SPEC §4.1 v3.0)
-// ---------------------------------------------------------------------------
-⋮----
-/** Opaque state held in a frame for page-change validation. */
-export interface PageState {
-	/** Screen ID for page identity checks (text-based hash). */
-	screenId?: string;
-	/** Human-readable screen title for iOS back button targeting. */
-	screenTitle?: string;
-	/** Normalized page-context type for runtime logging. */
-	pageContextType?: string;
-	/** Structural hash of the UI tree (stable across dynamic text changes). */
-	structureHash?: string;
-}
-⋮----
-/** Screen ID for page identity checks (text-based hash). */
-⋮----
-/** Human-readable screen title for iOS back button targeting. */
-⋮----
-/** Normalized page-context type for runtime logging. */
-⋮----
-/** Structural hash of the UI tree (stable across dynamic text changes). */
-⋮----
-/**
- * DFS stack frame with mutable element cursor.
- *
- * CRITICAL: Uses elementIndex as a mutable cursor (not pop+for loop).
- * This ensures each element is explored on the correct page.
- * SPEC §4.1, R2-A — fixes the sibling exploration bug.
- */
-export interface Frame {
-	/** Opaque page state for validation. */
-	state: PageState;
-	/** Depth in the exploration tree. */
-	depth: number;
-	/** Path of element labels leading to this frame. */
-	path: string[];
-	/** Mutable cursor: index of the next element to explore. */
-	elementIndex: number;
-	/** Pre-computed clickable elements on this page (prioritized). */
-	elements: ClickableTarget[];
-	/** Parent page title — used as iOS back button text. */
-	parentTitle?: string;
-	/** Bundle ID of the app that owns this page (for app switching detection). */
-	appId?: string;
-	/** Whether this page belongs to an external app (skip back navigation). */
-	isExternalApp?: boolean;
-	/** Labels of elements known to be no-ops on this page (screenId unchanged). */
-	noOpElements?: Set<string>;
-	/** Scroll-aware exploration state for long scrollable pages. */
-	scrollState?: {
-		/** Whether this page is scrollable and scroll discovery is active. */
-		enabled: boolean;
-		/** Current segment cursor (0-based). */
-		segmentIndex: number;
-		/** All discovered segments; each segment is a viewport of clickable elements. */
-		segments: ClickableTarget[][];
-		/** Cumulative element dedup keys across all segments for this page. */
-		seenKeys: Set<string>;
-		/** Stable page identity for same-page detection after scroll. */
-		pageFingerprint: string;
-		/** Hard limit on segments to prevent infinite loops (default 10). */
-		maxSegments: number;
-		/** Current restore attempt count. */
-		restoreAttempts: number;
-		/** Hard limit on restore attempts per segment (default 3). */
-		maxRestoreAttempts: number;
-		/** Rule decisions observed while filtering scroll segment elements. */
-		ruleDecisions?: RuleDecisionEntry[];
-		/** Scroll axis orientation. Default: `"vertical"`. */
-		axis?: "vertical" | "horizontal";
-		/** Direction to advance scroll for next segment. Default: `"up"` (downward scroll). */
-		forwardDirection?: "up" | "left";
-		/** Direction to scroll back when restoring position. Default: `"up"`. */
-		restoreDirection?: "up" | "right";
-		/** Scroll strategy: continuous smooth scroll vs discrete page-snap. Default: `"continuous-scroll"`. */
-		strategy?: "continuous-scroll" | "page-snap";
-		/** Support maturity level for this scroll capability. Default: `"stable"`. */
-		supportLevel?: "stable" | "experimental";
-		/** Optional coordinate container for horizontal scroll gestures. */
-		containerBounds?: ScrollOnlyContainerBounds;
-	};
-}
-⋮----
-/** Opaque page state for validation. */
-⋮----
-/** Depth in the exploration tree. */
-⋮----
-/** Path of element labels leading to this frame. */
-⋮----
-/** Mutable cursor: index of the next element to explore. */
-⋮----
-/** Pre-computed clickable elements on this page (prioritized). */
-⋮----
-/** Parent page title — used as iOS back button text. */
-⋮----
-/** Bundle ID of the app that owns this page (for app switching detection). */
-⋮----
-/** Whether this page belongs to an external app (skip back navigation). */
-⋮----
-/** Labels of elements known to be no-ops on this page (screenId unchanged). */
-⋮----
-/** Scroll-aware exploration state for long scrollable pages. */
-⋮----
-/** Whether this page is scrollable and scroll discovery is active. */
-⋮----
-/** Current segment cursor (0-based). */
-⋮----
-/** All discovered segments; each segment is a viewport of clickable elements. */
-⋮----
-/** Cumulative element dedup keys across all segments for this page. */
-⋮----
-/** Stable page identity for same-page detection after scroll. */
-⋮----
-/** Hard limit on segments to prevent infinite loops (default 10). */
-⋮----
-/** Current restore attempt count. */
-⋮----
-/** Hard limit on restore attempts per segment (default 3). */
-⋮----
-/** Rule decisions observed while filtering scroll segment elements. */
-⋮----
-/** Scroll axis orientation. Default: `"vertical"`. */
-⋮----
-/** Direction to advance scroll for next segment. Default: `"up"` (downward scroll). */
-⋮----
-/** Direction to scroll back when restoring position. Default: `"up"`. */
-⋮----
-/** Scroll strategy: continuous smooth scroll vs discrete page-snap. Default: `"continuous-scroll"`. */
-⋮----
-/** Support maturity level for this scroll capability. Default: `"stable"`. */
-⋮----
-/** Optional coordinate container for horizontal scroll gestures. */
-⋮----
-/** Default values for optional scrollState fields. */
-⋮----
-/**
- * Fill in default values for optional scrollState fields.
- * Throws if called with undefined.
- */
-export function normalizeScrollState(
-	ss: Frame["scrollState"],
-): NonNullable<Frame["scrollState"]>
-⋮----
-/** Registry of visited pages with dedup capability. */
-export interface PageRegistryContract {
-	/** Check if a snapshot matches a previously visited page. */
-	dedup(snapshot: PageSnapshot, path?: string[]): Promise<DedupResult>;
-	/** Register a new page in the registry. */
-	register(result: DedupResult, snapshot: PageSnapshot, path: string[]): void;
-	/** Get all registered page entries. */
-	getEntries(): PageEntry[];
-	/** Number of unique pages registered. */
-	count: number;
-}
-⋮----
-/** Check if a snapshot matches a previously visited page. */
-dedup(snapshot: PageSnapshot, path?: string[]): Promise<DedupResult>;
-/** Register a new page in the registry. */
-register(result: DedupResult, snapshot: PageSnapshot, path: string[]): void;
-/** Get all registered page entries. */
-getEntries(): PageEntry[];
-/** Number of unique pages registered. */
-⋮----
-/** Circuit breaker state for per-page failure tracking. */
-export interface CircuitBreakerState {
-	/** Number of consecutive pages with zero successful navigations. */
-	consecutiveFailedPages: number;
-	/** Failure count for the current page. */
-	currentPageFailures: number;
-	/** Configurable threshold (default 3 failures per page). */
-	threshold: number;
-}
-⋮----
-/** Number of consecutive pages with zero successful navigations. */
-⋮----
-/** Failure count for the current page. */
-⋮----
-/** Configurable threshold (default 3 failures per page). */
-⋮----
-// ---------------------------------------------------------------------------
-// Exploration result types
-// ---------------------------------------------------------------------------
-⋮----
-/** Failure entry logged when an element tap fails. */
-export interface FailureEntry {
-	/** Screen ID of the page where the failure occurred. */
-	pageScreenId: string;
-	/** Label of the element that failed. */
-	elementLabel: string;
-	/** Type of failure. */
-	failureType:
-		| "TAP_FAILED"
-		| "TIMEOUT"
-		| "CRASH"
-		| "BACKTRACK_MISMATCH"
-		| "INTERRUPTED";
-	/** Number of retry attempts. */
-	retryCount: number;
-	/** Error message. */
-	errorMessage: string;
-	/** Depth in the exploration tree. */
-	depth: number;
-	/** Path of element labels leading to this failure. */
-	path: string[];
-}
-⋮----
-/** Screen ID of the page where the failure occurred. */
-⋮----
-/** Label of the element that failed. */
-⋮----
-/** Type of failure. */
-⋮----
-/** Number of retry attempts. */
-⋮----
-/** Error message. */
-⋮----
-/** Depth in the exploration tree. */
-⋮----
-/** Path of element labels leading to this failure. */
-⋮----
-/** Transition lifecycle event type. */
-export type TransitionLifecycleEventType =
-	| "action_sent"
-	| "post_state_observed"
-	| "transition_committed"
-	| "transition_rejected";
-⋮----
-/** Transition lifecycle counters for observability. */
-export interface TransitionLifecycleSummary {
-	actionSent: number;
-	postStateObserved: number;
-	transitionCommitted: number;
-	transitionRejected: number;
-}
-⋮----
-export type TransitionKind =
-	| "forward"
-	| "back"
-	| "cancel"
-	| "home"
-	| "relaunch";
-⋮----
-export interface StateGraphSummary {
-	nodeCount: number;
-	edgeCount: number;
-	committedEdgeCount: number;
-	rejectedEdgeCount: number;
-}
-⋮----
-/** Complete result of an exploration session. */
-export interface ExplorationResult {
-	/** Registry of all visited pages. */
-	visited: PageRegistryContract;
-	/** Log of all failures. */
-	failed: FailureLogContract;
-	/** Whether the exploration was aborted early. */
-	aborted?: boolean;
-	/** Reason for abortion (if aborted). */
-	abortReason?: string;
-	/** Sampling metadata for high-fanout collection pages. */
-	sampling?: {
-		/** Pages where sampling was applied (screenId set). */
-		appliedPages: string[];
-		/** Total children skipped due to sampling. */
-		skippedChildren: number;
-		/** Per-page sampling details for report rendering. */
-		details?: Record<
-			string,
-			{
-				screenTitle?: string;
-				totalChildren: number;
-				exploredChildren: number;
-				skippedChildren: number;
-				exploredLabels: string[];
-				skippedLabels: string[];
-			}
-		>;
-	};
-	/** Transition lifecycle summary for auditing navigation progress. */
-	transitionLifecycle?: TransitionLifecycleSummary;
-	/** StateGraph summary metrics for this run. */
-	stateGraph?: StateGraphSummary;
-}
-⋮----
-/** Registry of all visited pages. */
-⋮----
-/** Log of all failures. */
-⋮----
-/** Whether the exploration was aborted early. */
-⋮----
-/** Reason for abortion (if aborted). */
-⋮----
-/** Sampling metadata for high-fanout collection pages. */
-⋮----
-/** Pages where sampling was applied (screenId set). */
-⋮----
-/** Total children skipped due to sampling. */
-⋮----
-/** Per-page sampling details for report rendering. */
-⋮----
-/** Transition lifecycle summary for auditing navigation progress. */
-⋮----
-/** StateGraph summary metrics for this run. */
-⋮----
-/** Failure log collection. */
-export interface FailureLogContract {
-	/** Record a new failure entry. */
-	record(entry: FailureEntry): void;
-	/** Get all failure entries. */
-	getEntries(): FailureEntry[];
-}
-⋮----
-/** Record a new failure entry. */
-record(entry: FailureEntry): void;
-/** Get all failure entries. */
-getEntries(): FailureEntry[];
-⋮----
-// ---------------------------------------------------------------------------
-// Report types
-// ---------------------------------------------------------------------------
-⋮----
-/** A page entry in the exploration report. */
-export interface PageEntry {
-	/** Unique page ID (sequential, e.g., "page-001"). */
-	id: string;
-	/** Screen identifier. */
-	screenId: string;
-	/** Human-readable screen title. */
-	screenTitle?: string;
-	/** Optional normalized page-context snapshot from the harness. */
-	pageContext?: PageContext;
-	/** Depth in the exploration tree. */
-	depth: number;
-	/** Path of element labels leading to this page. */
-	path: string[];
-	/** Screen ID of the parent page. */
-	arrivedFrom: string | null;
-	/** Label of the element that led to this page. */
-	viaElement: string | null;
-	/** Page load time in milliseconds. */
-	loadTimeMs: number;
-	/** Number of clickable elements found. */
-	clickableCount: number;
-	/** Whether this page had any failures. */
-	hasFailure: boolean;
-	/** The original snapshot (for report generation). */
-	snapshot?: PageSnapshot;
-	/** Whether this page was fully expanded or intentionally not expanded. */
-	explorationStatus?: "expanded" | "reached-not-expanded";
-	/** Policy or rule that stopped further exploration. */
-	stoppedByPolicy?: string;
-	/** Rule family responsible for classification. */
-	ruleFamily?: string;
-	/** Recovery or exit method after intentional stop. */
-	recoveryMethod?: string;
-	/** Machine-readable rule decision that caused gating/skipping, if available. */
-	ruleDecision?: RuleDecisionEntry;
-	/** Machine-readable rule decisions for skipped/deferred child elements, if available. */
-	ruleDecisions?: RuleDecisionEntry[];
-}
-⋮----
-/** Unique page ID (sequential, e.g., "page-001"). */
-⋮----
-/** Screen identifier. */
-⋮----
-/** Human-readable screen title. */
-⋮----
-/** Optional normalized page-context snapshot from the harness. */
-⋮----
-/** Depth in the exploration tree. */
-⋮----
-/** Path of element labels leading to this page. */
-⋮----
-/** Screen ID of the parent page. */
-⋮----
-/** Label of the element that led to this page. */
-⋮----
-/** Page load time in milliseconds. */
-⋮----
-/** Number of clickable elements found. */
-⋮----
-/** Whether this page had any failures. */
-⋮----
-/** The original snapshot (for report generation). */
-⋮----
-/** Whether this page was fully expanded or intentionally not expanded. */
-⋮----
-/** Policy or rule that stopped further exploration. */
-⋮----
-/** Rule family responsible for classification. */
-⋮----
-/** Recovery or exit method after intentional stop. */
-⋮----
-/** Machine-readable rule decision that caused gating/skipping, if available. */
-⋮----
-/** Machine-readable rule decisions for skipped/deferred child elements, if available. */
-⋮----
-/** Action to take on failure. */
-export type Action = "abort" | "retry" | "skip" | "handoff";
-⋮----
-// ---------------------------------------------------------------------------
-// Backtrack types
-// ---------------------------------------------------------------------------
-⋮----
-/** Result of a backtracking operation. */
-export interface BacktrackResult {
-	/** Whether the back navigation succeeded. */
-	success: boolean;
-	/** Screen ID after backtracking (for validation). */
-	screenId?: string;
-	/** Error message if backtracking failed. */
-	error?: string;
-}
-⋮----
-/** Whether the back navigation succeeded. */
-⋮----
-/** Screen ID after backtracking (for validation). */
-⋮----
-/** Error message if backtracking failed. */
-⋮----
-// ---------------------------------------------------------------------------
-// Re-export McpToolInterface for consumers that need it
-// ---------------------------------------------------------------------------
+export async function explore(
+	config: ExplorerConfig,
+	mcp: McpToolInterface,
+): Promise<ExplorationResult>
+⋮----
+// CORRECTED: peek-based stack with elementIndex cursor (SPEC §4.1 v3.0, R2-A)
+⋮----
+// --- Sampling state (high-fanout collection pages) ---
+⋮----
+const actionBudgetKey = (frame: Frame, label: string): string
+const isBudgetedAction = (label: string): boolean
+const hasActionBudget = (frame: Frame, label: string): boolean =>
+const recordActionBudgetSuccess = (frame: Frame, label: string): void =>
+⋮----
+// --- App launch ---
+⋮----
+// Initial snapshot
+⋮----
+// Print all clickable element labels
+⋮----
+// Record the target app identity for app switching detection.
+// iOS uses AXLabel (display name like "Settings"), Android uses bundle ID.
+// This comparison works universally because we compare the extracted identity
+// from the UI tree, not the config.appId (which may differ in format).
+⋮----
+// Track current app identity — updated on each navigation.
+// App switch handling only triggers when this value changes.
+⋮----
+const captureAndReconcileVisiblePage = async (options?: {
+		allowRootReset?: boolean;
+}): Promise<Frame | undefined> =>
+⋮----
+// Set app identity for the home frame
+⋮----
+stack[0].isExternalApp = false; // Home page is always the target app
+// Initialize scroll state on the root frame
+⋮----
+const areFramesExhausted = (frames: Frame[]): boolean
+const getRemainingRunBudgetMs = (): number
+const isRunTimedOut = (): boolean
+const getBoundedTimeoutMs = (requestedMs: number): number
+⋮----
+// --- DFS main loop ---
+⋮----
+const frame = stack[stack.length - 1]; // PEEK (don't pop)
+⋮----
+// Step 0: ensure frame-state is aligned with the currently visible page
+// before attempting the next tap. If still mismatched after one bounded
+// recovery attempt, do not advance cursor.
+⋮----
+// Step 1: Snapshot (only on first visit, elementIndex === 0)
+// Skip for depth=0 home page — already snapshotted before the loop
+// UNLESS the root frame was reset (e.g., after recovery) and has no elements
+⋮----
+recordPageSuccess(circuitBreaker); // reset per-page counter for new page
+⋮----
+// --- Sampling check: high-fanout collection pages (smoke mode) ---
+⋮----
+// Filter out side-effect actions and explicitly excluded patterns
+⋮----
+// Initialize scroll state after frame.elements is set
+⋮----
+// Navigate back to parent frame. If parent is also a foreign app but within
+// externalLinkMaxDepth, we stay in the foreign app chain. If parent is the
+// target app or a foreign app beyond the limit, returnToTargetAppFromForeignPage
+// will handle the full return.
+⋮----
+// Parent is within externalLinkMaxDepth — navigate back to it
+⋮----
+// Parent is target app or beyond limit — return to target app
+⋮----
+// Step 2: Visit next unexplored element
+⋮----
+// Current segment exhausted — try scroll discovery before popping
+⋮----
+// Vertical exhausted — try horizontal fallback ONCE
+⋮----
+// No more segments of any axis — fall through to pop
+⋮----
+// All elements explored — pop and backtrack
+⋮----
+// Check if this page had any successful navigations
+// If not, increment consecutive failed pages
+// (tracked via circuit breaker state)
+⋮----
+// Handle return from external app pages (can't use navigate_back across apps)
+⋮----
+// Normal in-app backtrack
+⋮----
+// Skip elements known to be no-ops (screenId unchanged on previous attempt)
+⋮----
+// Restore scroll segment visibility before tapping (if needed)
+⋮----
+frame.elementIndex++; // advance cursor (even if this one fails)
+⋮----
+// Retry loop for this element
+⋮----
+// action === 'skip'
+⋮----
+// For external links, wait for app switch then detect it
+⋮----
+// Capture snapshot to detect app switching
+⋮----
+// Check if app actually switched by comparing with CURRENT app identity
+⋮----
+currentAppId = targetAppId; // ← Correct: back to target app
+⋮----
+// Mark as external app if we're not in target app
+⋮----
+// Only mark metadata when we actually switched to an external app
+⋮----
+// Record this external link visit in the report
+⋮----
+// Do NOT push child frame for external app.
+// Just continue from the current frame — it will pop naturally.
+⋮----
+// Log remaining elements
+⋮----
+// Normal in-app navigation
+⋮----
+// Validate navigation (R1-#2, R3-G)
+⋮----
+// Check for app switching via appId change — only when the page actually navigated.
+// This prevents false positives when stale currentAppId differs from the current page.
+⋮----
+currentAppId = nextStateSnapshot.appId ?? currentAppId; // Update current app identity
+⋮----
+// Record this as a page-level failure for circuit breaker tracking
+⋮----
+// Track no-op elements to skip them on future visits to this frame
+⋮----
+continue; // element didn't lead anywhere — try next sibling
+⋮----
+// Check for app switching (US-002) — mark as external if not in target app
+⋮----
+// Determine child depth: foreign app pages use normal DFS depth progression
+// (they are gated as reached-not-expanded in the snapshot phase)
+⋮----
+// Push child frame for immediate exploration in next iteration
+⋮----
+// For external app pages, after exploration we'll use launchApp to return
+// (handled in the backtrack step below via isExternalApp flag)
+// Don't backtrack here — the child will handle return when it's done.
+⋮----
+// If element failed, continue the while loop to try next sibling.
+// No backtrack needed — we're still on the parent page (failed tap didn't navigate).
+⋮----
+// --- Generate report ---
 </file>
 
 <file path="packages/explorer/tests/integration/pipeline.test.ts">
@@ -200248,47 +200470,6 @@ function withDefaultMcp(
 ): McpToolInterface
 ⋮----
 const currentUi = () =>
-</file>
-
-<file path="packages/explorer/tests/scroll-segment.test.ts">
-import assert from "node:assert/strict";
-import { describe, it } from "node:test";
-import type { ToolResult } from "@mobile-e2e-mcp/contracts";
-import { getElementKey } from "../src/element-prioritizer.js";
-import {
-  computePageFingerprint,
-  detectHorizontalScrollables,
-  discoverNextSegment,
-  getCurrentSegmentElements,
-  initScrollState,
-  performBoundedProbe,
-  restoreSegment,
-  startHorizontalScrollState,
-  type ProbeResult,
-} from "../src/scroll-segment.js";
-import type { ClickableTarget, ExplorerConfig, Frame, McpToolInterface, PageSnapshot, UiHierarchy } from "../src/types.js";
-import { normalizeScrollState } from "../src/types.js";
-import { parseUiTreeFromInspectData } from "../src/ui-tree-parser.js";
-⋮----
-function okResult<T>(data: T): ToolResult<T>
-⋮----
-function failedResult<T>(reasonCode = "ACTION_FAILED"): ToolResult<T>
-⋮----
-function makeButton(label: string, resourceId?: string): UiHierarchy
-⋮----
-function makeTarget(label: string, resourceId?: string): ClickableTarget
-⋮----
-function makeScrollablePage(title: string, buttons: string[], appId = "com.test.app"): UiHierarchy
-⋮----
-function makeNonScrollablePage(title: string, buttons: string[]): UiHierarchy
-⋮----
-function makeGroupedPage(title: string, buttons: string[], appId = "com.apple.Preferences"): UiHierarchy
-⋮----
-function createMockConfig(): ExplorerConfig
-⋮----
-function makeSnapshot(uiTree: UiHierarchy, title: string, appId: string): PageSnapshot
-⋮----
-function makeProbeFrame(fingerprint: string): Frame
 </file>
 
 <file path="packages/mcp-server/src/server.ts">
@@ -200621,65 +200802,6 @@ async invoke<TName extends MobileE2EMcpToolName>(
 ): Promise<ToolResult<ToolOutputData<TName>>>
 </file>
 
-<file path="packages/mcp-server/package.json">
-{
-  "name": "@shenyuexin/mobile-e2e-mcp",
-  "private": false,
-  "version": "0.1.16",
-  "description": "AI-first Mobile E2E MCP server for Android/iOS/React Native/Flutter",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/shenyuexin/mobile-e2e.git",
-    "directory": "packages/mcp-server"
-  },
-  "homepage": "https://github.com/shenyuexin/mobile-e2e/tree/main/packages/mcp-server#readme",
-  "bugs": {
-    "url": "https://github.com/shenyuexin/mobile-e2e/issues"
-  },
-  "type": "module",
-  "main": "./bundle/index.cjs",
-  "types": "./dist/index.d.ts",
-  "bin": {
-    "mobile-e2e-mcp": "./bundle/bin-stdio.cjs"
-  },
-  "files": [
-    "bundle",
-    "dist"
-  ],
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "default": "./bundle/index.cjs"
-    }
-  },
-  "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.17.5"
-  },
-  "devDependencies": {
-    "@mobile-e2e-mcp/adapter-maestro": "workspace:*",
-    "@mobile-e2e-mcp/adapter-vision": "workspace:*",
-    "@mobile-e2e-mcp/contracts": "workspace:*",
-    "@mobile-e2e-mcp/core": "workspace:*",
-    "@mobile-e2e-mcp/explorer": "workspace:*",
-    "tsup": "^8.5.0"
-  },
-  "scripts": {
-    "build": "pnpm --filter @mobile-e2e-mcp/contracts build && pnpm --filter @mobile-e2e-mcp/core build && pnpm --filter @mobile-e2e-mcp/adapter-vision build && pnpm --filter @mobile-e2e-mcp/adapter-maestro build && pnpm --filter @mobile-e2e-mcp/explorer build && tsc -p tsconfig.json",
-    "bundle": "pnpm run build && tsup --config tsup.config.ts",
-    "test": "tsx --test test/*.test.ts",
-    "test:coverage": "bash ../../scripts/coverage.sh src",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
-    "dev": "tsx src/dev-cli.ts",
-    "stdio": "tsx src/mcp-stdio-server.ts",
-    "stdio:minimal": "tsx src/stdio-server.ts",
-    "release:publish": "pnpm run bundle && pnpm publish --access public",
-    "release:publish:ci": "pnpm run bundle && pnpm publish --access public --no-git-checks",
-    "release:publish:dry-run": "pnpm run bundle && pnpm publish --access public --dry-run --no-git-checks",
-    "release:patch": "pnpm version patch && pnpm run release:publish"
-  }
-}
-</file>
-
 <file path="scripts/dev/tool-probe-report-contract.test.ts">
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
@@ -200707,98 +200829,6 @@ import { fileURLToPath } from "node:url";
 import { validateAndroidExplorerEvidence } from "./android-evidence-validator.ts";
 ⋮----
 function repoRootFromTest(): string
-</file>
-
-<file path="scripts/explorer/test-explorer-ios-device-lib.ts">
-export type IosDeviceExplorerMode = "smoke" | "full";
-⋮----
-export interface IosDeviceExplorerScriptConfig {
-  mode: IosDeviceExplorerMode;
-  appId: string;
-  deviceId: string;
-  outputDir: string;
-  maxDepth: string;
-  timeoutMs: string;
-}
-⋮----
-type EnvLike = Record<string, string | undefined>;
-⋮----
-function readEnv(env: EnvLike, key: string): string | undefined
-⋮----
-export function parseIosDeviceExplorerScriptConfig(
-  argv: string[],
-  env: EnvLike = process.env,
-): IosDeviceExplorerScriptConfig
-⋮----
-export function buildIosDeviceExplorerCliArgs(config: IosDeviceExplorerScriptConfig): string[]
-⋮----
-export function renderIosDeviceExplorerHelp(): string
-</file>
-
-<file path="scripts/explorer/test-explorer-ios-device.test.ts">
-import assert from "node:assert/strict";
-import test from "node:test";
-⋮----
-import {
-  buildIosDeviceExplorerCliArgs,
-  parseIosDeviceExplorerScriptConfig,
-  renderIosDeviceExplorerHelp,
-} from "./test-explorer-ios-device-lib.ts";
-</file>
-
-<file path="scripts/explorer/test-explorer-ios-device.ts">
-/**
- * Explorer harness for iOS physical devices, including connected iPad Settings.
- *
- * Run:
- *   IOS_DEVICE_ID=<iPad-UDID> IOS_EXECUTION_BACKEND=wda \
- *     pnpm exec tsx scripts/explorer/test-explorer-ios-device.ts [smoke|full]
- *
- * Required setup:
- *   - iPad/iPhone connected over USB and trusted
- *   - WebDriverAgent running on the device
- *   - iproxy forwarding WDA: iproxy 8100 8100 --udid <iPad-UDID>
- */
-⋮----
-import { execSync } from "node:child_process";
-import { createWriteStream, statSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
-⋮----
-import type { DeviceInfo, ToolResult } from "@mobile-e2e-mcp/contracts";
-import { explore } from "../../packages/explorer/src/cli.js";
-import { prepareRunArtifacts } from "../../packages/explorer/src/run-artifacts.js";
-import { formatRunTimestamp } from "../../packages/explorer/src/report/summary.js";
-import { createServer } from "../../packages/mcp-server/src/index.js";
-import {
-  buildIosDeviceExplorerCliArgs,
-  parseIosDeviceExplorerScriptConfig,
-  renderIosDeviceExplorerHelp,
-} from "./test-explorer-ios-device-lib.ts";
-⋮----
-function ensureBuild(): void
-⋮----
-function formatLogArg(value: unknown): string
-⋮----
-function teeLog(level: "LOG" | "ERROR" | "WARN" | "INFO", args: unknown[]): void
-⋮----
-async function flushLogStream(): Promise<void>
-⋮----
-async function sleep(ms: number): Promise<void>
-⋮----
-async function assertWdaReady(): Promise<void>
-⋮----
-async function assertDeviceListed(server: ReturnType<typeof createServer>): Promise<void>
-⋮----
-function extractTextSamples(content: unknown): string[]
-⋮----
-const visit = (node: unknown): void =>
-⋮----
-function looksLikeSettingsHome(samples: string[]): boolean
-⋮----
-async function runMcpUiProbe(server: ReturnType<typeof createServer>): Promise<void>
-⋮----
-async function main(): Promise<void>
 </file>
 
 <file path="scripts/explorer/test-explorer.ts">
@@ -201997,6 +202027,185 @@ flows/samples/generated/*.yaml
 .gitnexus
 packages/core/coverage-data/
 .husky/
+</file>
+
+<file path="CHANGELOG.md">
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+## [0.1.17] - 2026-06-03
+
+### Added
+- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
+- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
+
+### Changed
+- Refined operator documentation, governance guidance, and architecture references around the release.
+- Release scope includes 1 merged commit between mcp-server-v0.1.16 and the target tag.
+
+### Fixed
+- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
+
+## [0.1.16] - 2026-06-03
+
+### Added
+- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
+- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
+
+### Changed
+- Release scope includes 1 merged commit between mcp-server-v0.1.15 and the target tag.
+
+### Fixed
+- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
+
+## [0.1.15] - 2026-06-03
+
+### Added
+- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
+- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
+
+### Changed
+- Improved diagnostics, evidence capture, and performance analysis workflows for mobile automation runs.
+- Refined operator documentation, governance guidance, and architecture references around the release.
+- Release scope includes 103 merged commits between mcp-server-v0.1.14 and the target tag.
+
+### Fixed
+- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
+
+## [0.1.14] - 2026-05-04
+
+### Added
+- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
+- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
+
+### Changed
+- Improved diagnostics, evidence capture, and performance analysis workflows for mobile automation runs.
+- Refined operator documentation, governance guidance, and architecture references around the release.
+- Release scope includes 36 merged commits between mcp-server-v0.1.13 and the target tag.
+
+### Fixed
+- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
+
+## [0.1.13] - 2026-04-12
+
+### Added
+- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
+- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
+
+### Changed
+- Refined operator documentation, governance guidance, and architecture references around the release.
+- Release scope includes 15 merged commits between mcp-server-v0.1.12 and the target tag.
+
+### Fixed
+- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
+
+## [0.1.12] - 2026-04-12
+
+### Added
+- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
+- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
+- Improved bounded OCR and vision fallback support for cases where deterministic selectors are unavailable.
+
+### Changed
+- Improved diagnostics, evidence capture, and performance analysis workflows for mobile automation runs.
+- Refined operator documentation, governance guidance, and architecture references around the release.
+- Release scope includes 147 merged commits between mcp-server-v0.1.11 and the target tag.
+
+### Fixed
+- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
+
+## [0.1.11] - 2026-03-29
+
+### Added
+- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
+- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
+- Improved bounded OCR and vision fallback support for cases where deterministic selectors are unavailable.
+
+### Changed
+- Improved diagnostics, evidence capture, and performance analysis workflows for mobile automation runs.
+- Refined operator documentation, governance guidance, and architecture references around the release.
+- Release scope includes 48 merged commits between mcp-server-v0.1.9 and the target tag.
+
+### Fixed
+- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
+
+## [0.1.9] - 2026-03-26
+
+### Added
+- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
+- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
+- Improved bounded OCR and vision fallback support for cases where deterministic selectors are unavailable.
+
+### Changed
+- Refined operator documentation, governance guidance, and architecture references around the release.
+- Release scope includes 9 merged commits between mcp-server-v0.1.8 and the target tag.
+
+### Fixed
+- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
+
+## [0.1.8] - 2026-03-23
+
+### Added
+- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
+- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
+
+### Changed
+- Improved diagnostics, evidence capture, and performance analysis workflows for mobile automation runs.
+- Refined operator documentation, governance guidance, and architecture references around the release.
+- Release scope includes 19 merged commits between mcp-server-v0.1.7 and the target tag.
+
+### Fixed
+- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
+
+## [0.1.7] - 2026-03-21
+
+### Added
+- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
+- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
+- Improved bounded OCR and vision fallback support for cases where deterministic selectors are unavailable.
+
+### Changed
+- Improved diagnostics, evidence capture, and performance analysis workflows for mobile automation runs.
+- Refined operator documentation, governance guidance, and architecture references around the release.
+- Release scope includes 38 merged commits between mcp-server-v0.1.6 and the target tag.
+
+### Fixed
+- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
+
+## [0.1.6] - 2026-03-20
+
+### Added
+- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
+- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
+- Improved bounded OCR and vision fallback support for cases where deterministic selectors are unavailable.
+
+### Changed
+- Improved diagnostics, evidence capture, and performance analysis workflows for mobile automation runs.
+- Refined operator documentation, governance guidance, and architecture references around the release.
+- Release scope includes 39 merged commits between mcp-server-v0.1.5 and the target tag.
+
+### Fixed
+- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
+
+## [0.1.5] - 2026-03-20
+
+### Added
+- Introduced the first public AI-first mobile E2E MCP server with session lifecycle, app control, UI inspection, interaction, diagnostics, interruption handling, and failure-analysis tools.
+- Established deterministic-first execution adapters plus bounded OCR/vision fallback for Android, iOS, React Native, and Flutter automation workflows.
+- Published runnable sample flows, showcase demos, and real-device/simulator validation assets for login, recovery, and harness onboarding scenarios.
+
+### Changed
+- Reorganized the repository into a pnpm monorepo with explicit contracts, core orchestration, adapters, and MCP server package boundaries.
+- Added stdio/dev CLI entrypoints, package metadata, governance baselines, and release automation needed for public npm distribution.
+
+### Fixed
+- Hardened doctor checks, dry-run behavior, selector resolution, and session or lease stability during the initial release cycle.
 </file>
 
 <file path=".github/workflows/ci.yml">
@@ -203872,259 +204081,6 @@ function summarizeRuleDecisionReasons(
 ): Array<
 </file>
 
-<file path="packages/explorer/src/engine.ts">
-/**
- * DFS Exploration Engine — per-element immediate exploration.
- *
- * SPEC §4.1 v3.0 — CORRECTED iterative DFS with peek-based stack and elementIndex cursor.
- * This fixes the sibling exploration bug where elements were tapped on wrong pages.
- *
- * Key invariants:
- * - PEEK (don't pop) the top frame to decide what to do
- * - Advance elementIndex cursor BEFORE attempting a tap
- * - After successful tap: push child frame, explore in NEXT iteration
- * - Child frame backtracks when DONE (all elements explored)
- * - Per-element immediate exploration: tap -> explore child -> backtrack -> next sibling
- *
- * R1-#2: Page-change validation after every tap to prevent infinite loops.
- * R1-#4: Circuit breaker counts per-PAGE failures (not per-element).
- * R2-E: System dialog detection with structural accessibilityRole check + keyword threshold >=3.
- */
-⋮----
-import { createBacktracker } from "./backtrack.js";
-import {
-	createCircuitBreaker,
-	isCircuitOpen,
-	recordPageFailure,
-	recordPageSuccess,
-	resetCircuit,
-} from "./circuit-breaker.js";
-import { prioritizeElements } from "./element-prioritizer.js";
-import {
-	attemptCancelFirstRecovery,
-	buildRuleDecisionEntry,
-	decideExplorerPageAction,
-	FailureLog,
-	handleFailure,
-	isAndroidExplorerPlatform,
-	isEditorEntryAction,
-	isLowValueLeafAction,
-	markSnapshotAsGated,
-	pageTypeOf,
-	validateNavigation,
-} from "./engine-helpers.js";
-import {
-	compareFrameExplorationOrder,
-	elementIdentity,
-	isNavigationControlAction,
-	isSideEffectAction,
-	type SamplingState,
-	shouldGateExternalAppFrame,
-} from "./exploration-sampler.js";
-import { returnToTargetAppFromForeignPage } from "./foreign-app-return.js";
-import {
-	findAncestorFrameIndex,
-	reconcileStackToSnapshot,
-} from "./frame-reconciler.js";
-import {
-	formatPageContextDecisionLog,
-} from "./page-context-router.js";
-import { hashUiStructure, PageRegistry } from "./page-registry.js";
-import { generateReport } from "./report.js";
-import {
-	evaluateElementRules,
-	evaluatePageRules,
-	evaluateSamplingRules,
-} from "./rules/rule-evaluator.js";
-import {
-	buildExplorerRuleRegistry,
-} from "./rules/rule-registry.js";
-import {
-	discoverNextSegment,
-	getCurrentSegmentElements,
-	initScrollState,
-	restoreSegment,
-} from "./scroll-segment.js";
-import {
-	attemptHorizontalDiscovery,
-	hasHorizontalProbeBeenAttempted,
-	markHorizontalProbeAttempted,
-} from "./engine-horizontal-fallback.js";
-import { createSnapshotter, createTapExecutor } from "./snapshot.js";
-import { createStateGraph } from "./state-graph.js";
-import type {
-	ExplorationResult,
-	ExplorerConfig,
-	Frame,
-	McpToolInterface,
-	PageSnapshot,
-	PageState,
-	RuleDecisionEntry,
-	TransitionLifecycleSummary,
-	UiHierarchy,
-} from "./types.js";
-⋮----
-// ---------------------------------------------------------------------------
-// Main explore function
-// ---------------------------------------------------------------------------
-⋮----
-/**
- * Run a full DFS exploration of the target app.
- *
- * @param config - Explorer configuration
- * @param mcp - MCP tool interface for all device interactions
- * @returns ExplorationResult with visited pages and failure log
- */
-export async function explore(
-	config: ExplorerConfig,
-	mcp: McpToolInterface,
-): Promise<ExplorationResult>
-⋮----
-// CORRECTED: peek-based stack with elementIndex cursor (SPEC §4.1 v3.0, R2-A)
-⋮----
-// --- Sampling state (high-fanout collection pages) ---
-⋮----
-const actionBudgetKey = (frame: Frame, label: string): string
-const isBudgetedAction = (label: string): boolean
-const hasActionBudget = (frame: Frame, label: string): boolean =>
-const recordActionBudgetSuccess = (frame: Frame, label: string): void =>
-⋮----
-// --- App launch ---
-⋮----
-// Initial snapshot
-⋮----
-// Print all clickable element labels
-⋮----
-// Record the target app identity for app switching detection.
-// iOS uses AXLabel (display name like "Settings"), Android uses bundle ID.
-// This comparison works universally because we compare the extracted identity
-// from the UI tree, not the config.appId (which may differ in format).
-⋮----
-// Track current app identity — updated on each navigation.
-// App switch handling only triggers when this value changes.
-⋮----
-const captureAndReconcileVisiblePage = async (options?: {
-		allowRootReset?: boolean;
-}): Promise<Frame | undefined> =>
-⋮----
-// Set app identity for the home frame
-⋮----
-stack[0].isExternalApp = false; // Home page is always the target app
-// Initialize scroll state on the root frame
-⋮----
-const areFramesExhausted = (frames: Frame[]): boolean
-const getRemainingRunBudgetMs = (): number
-const isRunTimedOut = (): boolean
-const getBoundedTimeoutMs = (requestedMs: number): number
-⋮----
-// --- DFS main loop ---
-⋮----
-const frame = stack[stack.length - 1]; // PEEK (don't pop)
-⋮----
-// Step 0: ensure frame-state is aligned with the currently visible page
-// before attempting the next tap. If still mismatched after one bounded
-// recovery attempt, do not advance cursor.
-⋮----
-// Step 1: Snapshot (only on first visit, elementIndex === 0)
-// Skip for depth=0 home page — already snapshotted before the loop
-// UNLESS the root frame was reset (e.g., after recovery) and has no elements
-⋮----
-recordPageSuccess(circuitBreaker); // reset per-page counter for new page
-⋮----
-// --- Sampling check: high-fanout collection pages (smoke mode) ---
-⋮----
-// Filter out side-effect actions and explicitly excluded patterns
-⋮----
-// Initialize scroll state after frame.elements is set
-⋮----
-// Navigate back to parent frame. If parent is also a foreign app but within
-// externalLinkMaxDepth, we stay in the foreign app chain. If parent is the
-// target app or a foreign app beyond the limit, returnToTargetAppFromForeignPage
-// will handle the full return.
-⋮----
-// Parent is within externalLinkMaxDepth — navigate back to it
-⋮----
-// Parent is target app or beyond limit — return to target app
-⋮----
-// Step 2: Visit next unexplored element
-⋮----
-// Current segment exhausted — try scroll discovery before popping
-⋮----
-// Vertical exhausted — try horizontal fallback ONCE
-⋮----
-// No more segments of any axis — fall through to pop
-⋮----
-// All elements explored — pop and backtrack
-⋮----
-// Check if this page had any successful navigations
-// If not, increment consecutive failed pages
-// (tracked via circuit breaker state)
-⋮----
-// Handle return from external app pages (can't use navigate_back across apps)
-⋮----
-// Normal in-app backtrack
-⋮----
-// Skip elements known to be no-ops (screenId unchanged on previous attempt)
-⋮----
-// Restore scroll segment visibility before tapping (if needed)
-⋮----
-frame.elementIndex++; // advance cursor (even if this one fails)
-⋮----
-// Retry loop for this element
-⋮----
-// action === 'skip'
-⋮----
-// For external links, wait for app switch then detect it
-⋮----
-// Capture snapshot to detect app switching
-⋮----
-// Check if app actually switched by comparing with CURRENT app identity
-⋮----
-currentAppId = targetAppId; // ← Correct: back to target app
-⋮----
-// Mark as external app if we're not in target app
-⋮----
-// Only mark metadata when we actually switched to an external app
-⋮----
-// Record this external link visit in the report
-⋮----
-// Do NOT push child frame for external app.
-// Just continue from the current frame — it will pop naturally.
-⋮----
-// Log remaining elements
-⋮----
-// Normal in-app navigation
-⋮----
-// Validate navigation (R1-#2, R3-G)
-⋮----
-// Check for app switching via appId change — only when the page actually navigated.
-// This prevents false positives when stale currentAppId differs from the current page.
-⋮----
-currentAppId = nextStateSnapshot.appId ?? currentAppId; // Update current app identity
-⋮----
-// Record this as a page-level failure for circuit breaker tracking
-⋮----
-// Track no-op elements to skip them on future visits to this frame
-⋮----
-continue; // element didn't lead anywhere — try next sibling
-⋮----
-// Check for app switching (US-002) — mark as external if not in target app
-⋮----
-// Determine child depth: foreign app pages use normal DFS depth progression
-// (they are gated as reached-not-expanded in the snapshot phase)
-⋮----
-// Push child frame for immediate exploration in next iteration
-⋮----
-// For external app pages, after exploration we'll use launchApp to return
-// (handled in the backtrack step below via isExternalApp flag)
-// Don't backtrack here — the child will handle return when it's done.
-⋮----
-// If element failed, continue the while loop to try next sibling.
-// No backtrack needed — we're still on the parent page (failed tap didn't navigate).
-⋮----
-// --- Generate report ---
-</file>
-
 <file path="packages/explorer/tests/report/markdown.test.ts">
 /**
  * Tests for Markdown report template rendering.
@@ -204173,6 +204129,65 @@ async function cleanupRecordSessionArtifacts(recordSessionId: string): Promise<v
 // AXe CLI format: ["axe", "tap", "-x", "12", "-y", "34", "--udid", "..."]
 ⋮----
 // AXe CLI format: ["axe", "type", "hello", "--udid", "..."]
+</file>
+
+<file path="packages/mcp-server/package.json">
+{
+  "name": "@shenyuexin/mobile-e2e-mcp",
+  "private": false,
+  "version": "0.1.17",
+  "description": "AI-first Mobile E2E MCP server for Android/iOS/React Native/Flutter",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shenyuexin/mobile-e2e.git",
+    "directory": "packages/mcp-server"
+  },
+  "homepage": "https://github.com/shenyuexin/mobile-e2e/tree/main/packages/mcp-server#readme",
+  "bugs": {
+    "url": "https://github.com/shenyuexin/mobile-e2e/issues"
+  },
+  "type": "module",
+  "main": "./bundle/index.cjs",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "mobile-e2e-mcp": "./bundle/bin-stdio.cjs"
+  },
+  "files": [
+    "bundle",
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./bundle/index.cjs"
+    }
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.17.5"
+  },
+  "devDependencies": {
+    "@mobile-e2e-mcp/adapter-maestro": "workspace:*",
+    "@mobile-e2e-mcp/adapter-vision": "workspace:*",
+    "@mobile-e2e-mcp/contracts": "workspace:*",
+    "@mobile-e2e-mcp/core": "workspace:*",
+    "@mobile-e2e-mcp/explorer": "workspace:*",
+    "tsup": "^8.5.0"
+  },
+  "scripts": {
+    "build": "pnpm --filter @mobile-e2e-mcp/contracts build && pnpm --filter @mobile-e2e-mcp/core build && pnpm --filter @mobile-e2e-mcp/adapter-vision build && pnpm --filter @mobile-e2e-mcp/adapter-maestro build && pnpm --filter @mobile-e2e-mcp/explorer build && tsc -p tsconfig.json",
+    "bundle": "pnpm run build && tsup --config tsup.config.ts",
+    "test": "tsx --test test/*.test.ts",
+    "test:coverage": "bash ../../scripts/coverage.sh src",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "dev": "tsx src/dev-cli.ts",
+    "stdio": "tsx src/mcp-stdio-server.ts",
+    "stdio:minimal": "tsx src/stdio-server.ts",
+    "release:publish": "pnpm run bundle && pnpm publish --access public",
+    "release:publish:ci": "pnpm run bundle && pnpm publish --access public --no-git-checks",
+    "release:publish:dry-run": "pnpm run bundle && pnpm publish --access public --dry-run --no-git-checks",
+    "release:patch": "pnpm version patch && pnpm run release:publish"
+  }
+}
 </file>
 
 <file path="scripts/dev/ios-simulator-tool-probe.ts">
@@ -210426,7 +210441,7 @@ Quick reference:
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **mobile-e2e-mcp** (6113 symbols, 13972 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **mobile-e2e-mcp** (6114 symbols, 13973 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 
