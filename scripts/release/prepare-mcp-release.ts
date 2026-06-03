@@ -57,7 +57,7 @@ runWithOutput(`pnpm tsx scripts/release/validate-mcp-release.ts --version ${vers
 runWithOutput(`npx repomix@latest --output ${repomixOutputPath} --quiet --compress`);
 runWithOutput('npx gitnexus analyze');
 
-runWithOutput('pnpm build');
+runWithOutput(`pnpm --filter ${pkgName} run bundle`);
 runWithOutput('pnpm typecheck');
 runWithOutput('pnpm test:mcp-server');
 

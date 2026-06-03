@@ -40,7 +40,7 @@
     "tsup": "^8.5.0"
   },
   "scripts": {
-    "build": "pnpm --filter @mobile-e2e-mcp/contracts build && pnpm --filter @mobile-e2e-mcp/core build && pnpm --filter @mobile-e2e-mcp/adapter-vision build && pnpm --filter @mobile-e2e-mcp/adapter-maestro build && tsc -p tsconfig.json",
+    "build": "pnpm --filter @mobile-e2e-mcp/contracts build && pnpm --filter @mobile-e2e-mcp/core build && pnpm --filter @mobile-e2e-mcp/adapter-vision build && pnpm --filter @mobile-e2e-mcp/adapter-maestro build && pnpm --filter @mobile-e2e-mcp/explorer build && tsc -p tsconfig.json",
     "bundle": "pnpm run build && tsup --config tsup.config.ts",
     "test": "tsx --test test/*.test.ts",
     "test:coverage": "bash ../../scripts/coverage.sh src",
