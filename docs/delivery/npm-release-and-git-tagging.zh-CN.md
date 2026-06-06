@@ -86,6 +86,9 @@
 - `.github/workflows/release-mcp.yml`、`scripts/release/**`（发版自动化流程变化）
 - `packages/mcp-server/package.json` 中影响安装/发布/仓库关联的元数据字段
 
+> npm Trusted Publishing / OIDC 发布会校验包元数据与 GitHub 发布来源。`packages/mcp-server/package.json` 的
+> `repository.url` 必须精确指向当前发布仓库 `shenyuexin/mobile-e2e-mcp`，不要保留旧仓库 URL。
+
 常见可豁免场景：
 
 - 纯内部重构（无行为变化）

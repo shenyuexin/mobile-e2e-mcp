@@ -5,12 +5,12 @@
   "description": "AI-first Mobile E2E MCP server for Android/iOS/React Native/Flutter",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/shenyuexin/mobile-e2e.git",
+    "url": "git+https://github.com/shenyuexin/mobile-e2e-mcp.git",
     "directory": "packages/mcp-server"
   },
-  "homepage": "https://github.com/shenyuexin/mobile-e2e/tree/main/packages/mcp-server#readme",
+  "homepage": "https://github.com/shenyuexin/mobile-e2e-mcp/tree/main/packages/mcp-server#readme",
   "bugs": {
-    "url": "https://github.com/shenyuexin/mobile-e2e/issues"
+    "url": "https://github.com/shenyuexin/mobile-e2e-mcp/issues"
   },
   "type": "module",
   "main": "./bundle/index.cjs",
