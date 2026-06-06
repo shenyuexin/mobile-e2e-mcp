@@ -19298,6 +19298,104 @@ private func handleTapButton() {
 </plist>
 </file>
 
+<file path="packages/adapter-maestro/runner/OwnedRunnerUITests/OwnedRunnerUITests.swift">
+private struct OwnedRunnerResult: Codable {
+let commandId: String
+let status: String
+let reasonCode: String
+let durationMs: Int
+let data: [String: String]
+let artifacts: [String]
+let message: String?
+⋮----
+private struct OwnedRunnerHierarchyNode: Codable {
+let type: String
+let identifier: String?
+let AXLabel: String?
+let title: String?
+let AXValue: String?
+let frame: OwnedRunnerFrame
+let enabled: Bool
+let custom_actions: [String]
+let children: [OwnedRunnerHierarchyNode]
+⋮----
+private let defaultHierarchyMaxNodes = 500
+private let hardHierarchyMaxNodes = 1000
+private let defaultHierarchyMaxDepth = 8
+private let hardHierarchyMaxDepth = 12
+⋮----
+private struct OwnedRunnerFrame: Codable {
+let x: Double
+let y: Double
+let width: Double
+let height: Double
+⋮----
+private func currentCommandId() -> String {
+⋮----
+private func emitOwnedRunnerResult(_ result: OwnedRunnerResult) {
+let encoder = JSONEncoder()
+⋮----
+private func elementTypeName(_ type: XCUIElement.ElementType) -> String {
+⋮----
+private func isDefaultActionElement(_ element: XCUIElement) -> Bool {
+⋮----
+private func boundedEnvironmentInt(_ key: String, defaultValue: Int, minimum: Int, maximum: Int) -> Int {
+⋮----
+private func buildHierarchyNode(_ element: XCUIElement, depth: Int, maxDepth: Int, remainingNodes: inout Int) -> OwnedRunnerHierarchyNode {
+⋮----
+let frame = element.frame
+let childElements = depth < maxDepth && remainingNodes > 0
+⋮----
+var children: [OwnedRunnerHierarchyNode] = []
+⋮----
+let value = element.value.map { String(describing: $0) }
+⋮----
+private func hierarchyJson(for targetApp: XCUIApplication) throws -> String {
+var remainingNodes = boundedEnvironmentInt(
+⋮----
+let maxDepth = boundedEnvironmentInt(
+⋮----
+let root = buildHierarchyNode(targetApp, depth: 0, maxDepth: maxDepth, remainingNodes: &remainingNodes)
+⋮----
+let data = try encoder.encode(root)
+⋮----
+final class OwnedRunnerUITests: XCTestCase {
+private let app = XCUIApplication()
+⋮----
+private func launchTargetApplicationIfNeeded() -> XCUIApplication? {
+⋮----
+let targetApp = XCUIApplication(bundleIdentifier: targetBundleId)
+⋮----
+private func editableCandidates(in targetApp: XCUIApplication) -> [XCUIElement] {
+let textFields = targetApp.textFields.allElementsBoundByIndex
+let secureTextFields = targetApp.secureTextFields.allElementsBoundByIndex
+let textViews = targetApp.textViews.allElementsBoundByIndex
+⋮----
+private func hasVisibleKeyboard(in targetApp: XCUIApplication) -> Bool {
+⋮----
+private func bestEditableElement(in targetApp: XCUIApplication) -> XCUIElement? {
+let candidates = editableCandidates(in: targetApp).filter { $0.exists && $0.isEnabled }
+⋮----
+override func setUpWithError() throws {
+⋮----
+func testOwnedRunnerExecutesActionFromEnvironment() throws {
+⋮----
+let flowPath = ProcessInfo.processInfo.environment["IOS_OWNED_RUNNER_FLOW_PATH"]
+⋮----
+let actionType = ProcessInfo.processInfo.environment["IOS_OWNED_RUNNER_ACTION_TYPE"]
+⋮----
+let anchor = targetApp.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0))
+let coordinate = anchor.withOffset(CGVector(dx: x, dy: y))
+⋮----
+let tapTarget = app.buttons["owned_runner_tap_target"]
+⋮----
+let input = app.textFields["owned_runner_input"]
+⋮----
+let targetApp = launchTargetApplicationIfNeeded() ?? app
+⋮----
+let json = try hierarchyJson(for: targetApp)
+</file>
+
 <file path="packages/adapter-maestro/runner/project.yml">
 name: ios-owned-runner
 options:
@@ -19339,6 +19437,61 @@ schemes:
     test:
       targets:
         - OwnedRunnerUITests
+</file>
+
+<file path="packages/adapter-maestro/runner/README.md">
+# iOS Owned Runner (Repository-owned scaffold)
+
+This directory contains the repository-owned iOS XCTest runner scaffold used for physical-device action execution and experimental hierarchy capture.
+
+## Purpose
+
+- Keep iOS physical runner startup/control under `mobile-e2e-mcp` ownership.
+- Reduce dependence on external runner apps as the primary lane.
+- Make startup failures (`preflight`, `code74`, `dtxproxy`) observable and attributable.
+
+## Structure
+
+- `project.yml` — XcodeGen spec for generating local Xcode project files.
+- `OwnedRunnerApp/` — minimal host app.
+- `OwnedRunnerUITests/` — XCTest target (tap/type/hierarchy execution entrypoint scaffold).
+
+## Build notes
+
+1. Generate project (XcodeGen):
+   - `xcodegen generate --spec packages/adapter-maestro/runner/project.yml`
+2. Build-for-testing to produce `.xctestrun` artifacts.
+3. Run through script:
+   - `scripts/dev/run-ios-owned-physical-runner.sh execute-flow`
+
+Current scaffold is intentionally minimal; runtime flow parsing and command dispatch will be implemented in follow-up slices.
+
+## Runtime action protocol (MVP)
+
+The adapter injects these environment variables when invoking the owned runner:
+
+- `IOS_OWNED_RUNNER_FLOW_PATH` (original generated flow artifact path)
+- `IOS_OWNED_RUNNER_ACTION_TYPE` (`tap` or `type_text`)
+- `IOS_OWNED_RUNNER_TARGET_BUNDLE_ID` (optional target AUT bundle id)
+- `IOS_OWNED_RUNNER_ACTION_X` / `IOS_OWNED_RUNNER_ACTION_Y` (for `tap`)
+- `IOS_OWNED_RUNNER_ACTION_TEXT` (for `type_text`)
+
+Current UITest scaffold consumes the protocol and executes deterministic in-app actions to prove end-to-end command wiring.
+For `tap`, when `IOS_OWNED_RUNNER_TARGET_BUNDLE_ID` is provided, the UITest lane attempts coordinate tap on the target app.
+For `type_text`, when `IOS_OWNED_RUNNER_TARGET_BUNDLE_ID` is provided, the UITest lane tries first editable field/text-view in target app and types the payload.
+
+## Capability status
+
+| Capability | Owned runner status | Notes |
+|---|---|---|
+| tap coordinate | experimental MVP | XCTest coordinate tap through target app activation. |
+| type text | experimental MVP | First editable element fallback; target resolution is not complete. |
+| UI source/query | experimental opt-in | `IOS_EXECUTION_BACKEND=owned-runner` can emit a bounded XCTest accessibility tree; WDA remains the default physical backend. |
+| screenshot evidence | planned P0 | Required for Explorer reports and failure attribution; screenshot routing is unchanged in the current action-only slice. |
+| app lifecycle | planned P1 | Launch/activate exists narrowly; terminate/state/open URL still needed. |
+| alerts/interruption | planned P1 | Must be policy-gated before use in Explorer traversal. |
+
+The runner now emits structured stdout lines prefixed with `MOBILE_E2E_OWNED_RUNNER_RESULT=` for supported tap/type outcomes. Adapter-side execution treats this structured result as the action outcome source of truth when the owned runner path is explicitly required.
 </file>
 
 <file path="packages/adapter-maestro/src/constants/capability-groups.ts">
@@ -21009,6 +21162,29 @@ export async function resumeInterruptedActionWithMaestro(
 ): Promise<ToolResult<ResumeInterruptedActionData>>
 </file>
 
+<file path="packages/adapter-maestro/src/ios-backend-owned-runner.ts">
+import type {
+	BackendProbeResult,
+	IosExecutionBackend,
+} from "./ios-backend-types.js";
+⋮----
+export class OwnedRunnerPhysicalBackend implements IosExecutionBackend
+⋮----
+async probeAvailability(_repoRoot: string): Promise<BackendProbeResult>
+⋮----
+buildTapCommand(deviceId: string, x: number, y: number): string[]
+⋮----
+buildTypeTextCommand(deviceId: string, text: string): string[]
+⋮----
+buildSwipeCommand(deviceId: string): string[]
+⋮----
+buildHierarchyCaptureCommand(deviceId: string): string[]
+⋮----
+buildScreenshotCommand(_deviceId: string, _outputPath: string): string[]
+⋮----
+buildFailureSuggestion(action: string, _deviceId: string): string
+</file>
+
 <file path="packages/adapter-maestro/src/ios-backend-wda.ts">
 import type {
 	BackendProbeResult,
@@ -21113,6 +21289,68 @@ async executeWdaRequest(
 transformWdaSource(wdaElement: WdaElement): TransformedElement
 ⋮----
 buildFailureSuggestion(action: string, _deviceId: string): string
+</file>
+
+<file path="packages/adapter-maestro/src/ios-owned-runner-protocol.ts">
+import type { ReasonCode } from "@mobile-e2e-mcp/contracts";
+import { REASON_CODES } from "@mobile-e2e-mcp/contracts";
+⋮----
+export type OwnedRunnerCommand =
+	| {
+			commandId: string;
+			sessionId: string;
+			action: "tap";
+			targetAppId?: string;
+			point: { x: number; y: number };
+	  }
+	| {
+			commandId: string;
+			sessionId: string;
+			action: "type_text";
+			targetAppId?: string;
+			text: string;
+	  }
+	| {
+			commandId: string;
+			sessionId: string;
+			action: "hierarchy";
+			targetAppId?: string;
+	  };
+⋮----
+export interface OwnedRunnerResult {
+	commandId: string;
+	status: "success" | "partial" | "failed";
+	reasonCode: ReasonCode;
+	durationMs: number;
+	data: Record<string, unknown>;
+	artifacts: string[];
+	message?: string;
+}
+⋮----
+function isKnownReasonCode(value: unknown): value is ReasonCode
+⋮----
+function buildInvalidOwnedRunnerResult(params: {
+	commandId?: string;
+	message: string;
+}): OwnedRunnerResult
+⋮----
+export function buildOwnedRunnerCommandEnv(
+	command: OwnedRunnerCommand,
+): Record<string, string>
+⋮----
+export function buildLegacyOwnedRunnerActionEnv(
+	command: OwnedRunnerCommand,
+): Record<string, string>
+⋮----
+function isOwnedRunnerResult(value: unknown): value is OwnedRunnerResult
+⋮----
+export function parseOwnedRunnerResultLine(
+	line: string,
+): OwnedRunnerResult | null
+⋮----
+export function parseOwnedRunnerResultFromStdout(
+	stdout: string,
+): OwnedRunnerResult | null
 </file>
 
 <file path="packages/adapter-maestro/src/js-debug.ts">
@@ -22767,6 +23005,118 @@ export function resolveTraceProcessorPath(): string | undefined
 export function buildOcrHostSupportSummary(): OcrHostSupportSummary
 </file>
 
+<file path="packages/adapter-maestro/src/ui-action-tools-ios-physical.ts">
+import { ACTION_TYPES } from "@mobile-e2e-mcp/contracts";
+/**
+ * iOS physical action execution helpers for UI action tools.
+ *
+ * Extracted from ui-action-tools.ts to keep the main facade under control.
+ * Handles local_manual_runner / maestro_cli backend selection, startup failure
+ * classification, fallback execution, and evidence persistence.
+ */
+⋮----
+import { mkdir, writeFile } from "node:fs/promises";
+import path from "node:path";
+import type { ReasonCode } from "@mobile-e2e-mcp/contracts";
+import { REASON_CODES } from "@mobile-e2e-mcp/contracts";
+import { evidencePaths } from "./artifact-paths.js";
+import {
+	buildLegacyOwnedRunnerActionEnv,
+	buildOwnedRunnerCommandEnv,
+	type OwnedRunnerCommand,
+	type OwnedRunnerResult,
+	parseOwnedRunnerResultFromStdout,
+} from "./ios-owned-runner-protocol.js";
+import {
+	buildFailureReason,
+	executeRunnerWithTestHooks,
+} from "./runtime-shared.js";
+import type { IosPhysicalActionBackend } from "./ui-runtime-ios.js";
+import {
+	buildIosPhysicalActionExecutionPlan,
+	buildIosPhysicalMaestroCommand,
+} from "./ui-runtime-ios.js";
+⋮----
+function normalizeAppId(value?: string): string | undefined
+⋮----
+function resolveOwnedRunnerTargetBundleId(params: {
+	flowContent: string;
+	targetAppId?: string;
+}): string | undefined
+⋮----
+function parseOwnedRunnerPoint(flowContent: string):
+⋮----
+function parseOwnedRunnerText(flowContent: string): string
+⋮----
+function buildOwnedRunnerCommand(params: {
+	sessionId: string;
+	actionType: "tap" | "type_text";
+	flowContent: string;
+	targetAppId?: string;
+}): OwnedRunnerCommand
+⋮----
+export function buildIosPhysicalActionFlowPaths(
+	repoRoot: string,
+	sessionId: string,
+	actionType: "tap" | "type_text",
+):
+⋮----
+export function buildIosPhysicalExecutionEvidencePaths(
+	repoRoot: string,
+	sessionId: string,
+	actionType: "tap" | "type_text",
+):
+⋮----
+export function classifyIosPhysicalStartupFailure(params: {
+	stderr: string;
+	exitCode: number | null;
+}):
+⋮----
+export function buildIosPhysicalFailureSuggestions(params: {
+	reasonCode: ReasonCode;
+	startupPhase: string;
+	backend: IosPhysicalActionBackend;
+	summaryLine: string;
+}): string[]
+⋮----
+export function buildOwnedRunnerActionEnv(params: {
+	actionType: "tap" | "type_text";
+	flowContent: string;
+	targetAppId?: string;
+}): Record<string, string>
+⋮----
+function buildOwnedRunnerResultSuggestion(
+	result: OwnedRunnerResult | null,
+): string[]
+⋮----
+export async function persistIosPhysicalExecutionEvidence(params: {
+	repoRoot: string;
+	sessionId: string;
+	actionType: "tap" | "type_text";
+	attemptedBackend: IosPhysicalActionBackend;
+	executedBackend: IosPhysicalActionBackend;
+	fallbackUsed: boolean;
+	primaryFailurePhase?: string;
+	primaryFailureSummary?: string;
+	startupPhase: string;
+	summaryLine: string;
+	reasonCode: ReasonCode;
+	command: string[];
+	exitCode: number | null;
+}): Promise<string>
+⋮----
+export async function executeIosPhysicalAction(params: {
+	repoRoot: string;
+	deviceId: string;
+	sessionId: string;
+	actionType: "tap" | "type_text";
+	flowContent: string;
+	targetAppId?: string;
+	forcedBackend?: IosPhysicalActionBackend;
+	requireStructuredOwnedRunnerResult?: boolean;
+}): Promise<
+</file>
+
 <file path="packages/adapter-maestro/src/ui-inspect-tool.ts">
 import type {
 	InspectUiData,
@@ -22928,6 +23278,474 @@ import type { UiRuntimePlatformHooks } from "./ui-runtime-platform.js";
 import { buildAndroidUiDumpCommands } from "./ui-runtime.js";
 ⋮----
 export function createAndroidUiRuntimeHooks(): UiRuntimePlatformHooks
+</file>
+
+<file path="packages/adapter-maestro/src/ui-runtime-ios.ts">
+import type { InspectUiNode } from "@mobile-e2e-mcp/contracts";
+import { ACTION_TYPES, REASON_CODES } from "@mobile-e2e-mcp/contracts";
+import { getIosBackendRouter } from "./ios-backend-router.js";
+import { buildFailureReason } from "./runtime-shared.js";
+import {
+	buildIosNativeLocatorCandidate,
+	extractIosEditableNodeValue,
+	isIosEditableNode,
+	parseIosInspectNodes,
+	parseUiBounds,
+} from "./ui-model.js";
+import { executeUiActionCommand } from "./ui-runtime.js";
+import type {
+	UiResolvedPointVerificationParams,
+	UiResolvedPointVerificationResult,
+	UiRuntimePlatformHooks,
+	UiRuntimeProbeAction,
+	UiTypedPostconditionVerificationParams,
+} from "./ui-runtime-platform.js";
+⋮----
+/**
+ * Find the deepest node whose bounds contain the given point.
+ * Returns the most specific (smallest area) node at that location.
+ */
+function findNodeAtPoint(
+	nodes: InspectUiNode[],
+	point: { x: number; y: number },
+): InspectUiNode | undefined
+⋮----
+// Return the smallest node (most specific) that contains the point
+⋮----
+function escapeYamlDoubleQuoted(value: string): string
+⋮----
+export function buildIosPhysicalTapFlowYaml(x: number, y: number): string
+⋮----
+export function buildIosPhysicalTypeTextFlowYaml(text: string): string
+⋮----
+export function buildIosPhysicalMaestroCommand(
+	deviceId: string,
+	flowPath: string,
+): string[]
+⋮----
+export type IosPhysicalActionBackend = "maestro_cli" | "local_manual_runner";
+⋮----
+export interface IosPhysicalActionExecutionPlan {
+	backend: IosPhysicalActionBackend;
+	command: string[];
+	envPatch: Record<string, string>;
+}
+⋮----
+export function resolveIosPhysicalActionBackend(
+	env: NodeJS.ProcessEnv = process.env,
+): IosPhysicalActionBackend
+⋮----
+export function buildIosPhysicalActionExecutionPlan(
+	deviceId: string,
+	flowPath: string,
+	env: NodeJS.ProcessEnv = process.env,
+): IosPhysicalActionExecutionPlan
+⋮----
+function buildProbeSuggestion(action: UiRuntimeProbeAction): string
+⋮----
+export function isIosSimulatorOnlyIdbActionError(stderr: string): boolean
+⋮----
+export async function verifyResolvedIosPointWithHooks(
+	params: UiResolvedPointVerificationParams & {
+		executeDescribePointCommand?: typeof executeUiActionCommand;
+	},
+): Promise<UiResolvedPointVerificationResult>
+⋮----
+// If the tap succeeded (exitCode 0) but the node doesn't match, the screen likely
+// changed due to navigation. Report it as not verified so the caller can decide
+// based on full state comparison rather than silently masking the mismatch.
+⋮----
+export async function verifyTypedIosPostconditionWithHooks(
+	params: UiTypedPostconditionVerificationParams & {
+		executeDescribePointCommand?: typeof executeUiActionCommand;
+	},
+): Promise<UiResolvedPointVerificationResult>
+⋮----
+// Bug fix: Use findNodeAtPoint instead of nodes[0] to get the actual element at the resolved coordinates.
+// The first node is always the Application root, which has no editable value.
+⋮----
+export function createIosUiRuntimeHooks(): UiRuntimePlatformHooks
+</file>
+
+<file path="packages/adapter-maestro/src/ui-runtime.ts">
+import { mkdir, writeFile } from "node:fs/promises";
+import path from "node:path";
+import { setTimeout as delay } from "node:timers/promises";
+import type {
+	InspectUiNode,
+	InspectUiSummary,
+	QueryUiInput,
+	QueryUiMatch,
+	QueryUiSelector,
+	ReasonCode,
+	UiTargetResolution,
+	WaitForUiMode,
+} from "@mobile-e2e-mcp/contracts";
+import { ACTION_TYPES, REASON_CODES } from "@mobile-e2e-mcp/contracts";
+import { evidencePaths } from "./artifact-paths.js";
+import { getIosBackendRouter } from "./ios-backend-router.js";
+import type { WdaRealDeviceBackend } from "./ios-backend-wda.js";
+import { transformWdaElement } from "./ios-backend-wda.js";
+import {
+	buildLegacyOwnedRunnerActionEnv,
+	buildOwnedRunnerCommandEnv,
+	parseOwnedRunnerResultFromStdout,
+} from "./ios-owned-runner-protocol.js";
+import {
+	buildFailureReason,
+	type CommandExecution,
+	executeRunner,
+	executeRunnerWithTestHooks,
+} from "./runtime-shared.js";
+import {
+	resolveIdbCliPath,
+	resolveIdbCompanionPath,
+} from "./toolchain-runtime.js";
+import {
+	buildInspectUiSummary,
+	buildNonExecutedUiTargetResolution,
+	buildUiTargetResolution,
+	isWaitConditionMet,
+	parseAndroidUiHierarchyNodes,
+	parseIosInspectNodes,
+	queryUiNodes,
+	shouldAbortWaitForUiAfterReadFailure,
+} from "./ui-model.js";
+⋮----
+type WdaElementInput = Parameters<typeof transformWdaElement>[0];
+⋮----
+function readWdaResponseValue(data: unknown): unknown
+⋮----
+export interface AndroidUiSnapshot {
+	command: string[];
+	readCommand: string[];
+	relativeOutputPath: string;
+	absoluteOutputPath: string;
+	readExecution: CommandExecution;
+	nodes: InspectUiNode[];
+	summary?: InspectUiSummary;
+	queryResult: { totalMatches: number; matches: QueryUiMatch[] };
+}
+⋮----
+export interface AndroidUiSnapshotFailure {
+	reasonCode: ReasonCode;
+	exitCode: number | null;
+	outputPath: string;
+	command: string[];
+	message: string;
+}
+⋮----
+export interface IosUiSnapshot {
+	command: string[];
+	relativeOutputPath: string;
+	absoluteOutputPath: string;
+	execution: CommandExecution;
+	nodes: InspectUiNode[];
+	summary?: InspectUiSummary;
+	queryResult: { totalMatches: number; matches: QueryUiMatch[] };
+}
+⋮----
+export interface IosUiSnapshotFailure {
+	reasonCode: ReasonCode;
+	exitCode: number | null;
+	outputPath: string;
+	command: string[];
+	message: string;
+}
+⋮----
+export function isDegenerateIosSnapshot(nodes: InspectUiNode[]): boolean
+⋮----
+export interface UiActionExecutionResult {
+	command: string[];
+	execution?: CommandExecution;
+	probeExecution?: CommandExecution;
+}
+⋮----
+export interface UiRuntimeSnapshot {
+	command: string[];
+	relativeOutputPath: string;
+	absoluteOutputPath: string;
+	exitCode: number | null;
+	stdout: string;
+	stderr: string;
+	nodes: InspectUiNode[];
+	summary?: InspectUiSummary;
+	queryResult: { totalMatches: number; matches: QueryUiMatch[] };
+}
+⋮----
+export interface UiWaitPollingState {
+	outputPath: string;
+	command: string[];
+	exitCode: number | null;
+	result: {
+		query: QueryUiSelector;
+		totalMatches: number;
+		matches: QueryUiMatch[];
+	};
+	absoluteOutputPath?: string;
+	content?: string;
+	summary?: InspectUiSummary;
+}
+⋮----
+export type UiWaitPollingOutcome =
+	| {
+			outcome: "matched";
+			polls: number;
+			state: UiWaitPollingState;
+	  }
+	| {
+			outcome: "timeout";
+			polls: number;
+			state: UiWaitPollingState;
+	  }
+	| {
+			outcome: "failure";
+			polls: number;
+			reasonCode: ReasonCode;
+			message: string;
+			state: UiWaitPollingState;
+	  };
+⋮----
+export interface UiScrollResolutionState {
+	outputPath: string;
+	commandHistory: string[][];
+	exitCode: number | null;
+	result: {
+		query: QueryUiSelector;
+		totalMatches: number;
+		matches: QueryUiMatch[];
+	};
+	resolution: UiTargetResolution;
+	swipesPerformed: number;
+	attempts: number;
+	absoluteOutputPath?: string;
+	content?: string;
+	summary?: InspectUiSummary;
+}
+⋮----
+export type UiScrollResolutionOutcome =
+	| {
+			outcome: "resolved";
+			state: UiScrollResolutionState;
+	  }
+	| {
+			outcome: "stopped";
+			state: UiScrollResolutionState;
+	  }
+	| {
+			outcome: "max_swipes";
+			state: UiScrollResolutionState;
+	  }
+	| {
+			outcome: "failure";
+			reasonCode: ReasonCode;
+			message: string;
+			state: UiScrollResolutionState;
+	  };
+⋮----
+interface RunUiWaitPollingLoopOptions {
+	query: QueryUiSelector;
+	waitUntil: WaitForUiMode;
+	timeoutMs: number;
+	intervalMs: number;
+	defaultOutputPath: string;
+	previewCommand: string[];
+	captureSnapshot: () => Promise<
+		UiRuntimeSnapshot | AndroidUiSnapshotFailure | IosUiSnapshotFailure
+	>;
+	buildRetryableSnapshotFailure?: (snapshot: UiRuntimeSnapshot) =>
+		| {
+				reasonCode: ReasonCode;
+				message: string;
+		  }
+		| undefined;
+	buildCaptureFailureAbortMessage?: (
+		consecutiveFailures: number,
+		failure: AndroidUiSnapshotFailure | IosUiSnapshotFailure,
+	) => string;
+	maxConsecutiveRetryableFailures?: number;
+	now?: () => number;
+	delayMs?: (ms: number) => Promise<void>;
+}
+⋮----
+interface RunUiScrollResolveLoopOptions {
+	query: QueryUiSelector;
+	maxSwipes: number;
+	defaultOutputPath: string;
+	captureSnapshot: () => Promise<
+		UiRuntimeSnapshot | AndroidUiSnapshotFailure | IosUiSnapshotFailure
+	>;
+	buildSwipeCommand: (nodes: InspectUiNode[]) => string[];
+	executeSwipeCommand: (command: string[]) => Promise<CommandExecution>;
+	scrollFailureMessage: string;
+	buildRetryableSnapshotFailure?: (snapshot: UiRuntimeSnapshot) =>
+		| {
+				reasonCode: ReasonCode;
+				message: string;
+		  }
+		| undefined;
+}
+⋮----
+function buildEmptyQueryResult(query: QueryUiSelector):
+⋮----
+function normalizeAndroidUiSnapshot(
+	snapshot: AndroidUiSnapshot,
+): UiRuntimeSnapshot
+⋮----
+function normalizeIosUiSnapshot(snapshot: IosUiSnapshot): UiRuntimeSnapshot
+⋮----
+function isUiRuntimeSnapshotFailure(
+	value: UiRuntimeSnapshot | AndroidUiSnapshotFailure | IosUiSnapshotFailure,
+): value is AndroidUiSnapshotFailure | IosUiSnapshotFailure
+⋮----
+function buildWaitPollingStateFromSnapshot(
+	query: QueryUiSelector,
+	snapshot: UiRuntimeSnapshot,
+): UiWaitPollingState
+⋮----
+function buildWaitPollingFailureStateFromSnapshot(
+	query: QueryUiSelector,
+	snapshot: UiRuntimeSnapshot,
+): UiWaitPollingState
+⋮----
+function buildWaitPollingStateFromFailure(
+	query: QueryUiSelector,
+	failure: AndroidUiSnapshotFailure | IosUiSnapshotFailure,
+): UiWaitPollingState
+⋮----
+function buildDefaultWaitPollingState(
+	query: QueryUiSelector,
+	outputPath: string,
+	previewCommand: string[],
+): UiWaitPollingState
+⋮----
+function buildScrollResolutionStateFromSnapshot(
+	query: QueryUiSelector,
+	snapshot: UiRuntimeSnapshot,
+	commandHistory: string[][],
+	swipesPerformed: number,
+): UiScrollResolutionState
+⋮----
+function buildEmptyScrollResolutionState(
+	query: QueryUiSelector,
+	outputPath: string,
+	commandHistory: string[][],
+	swipesPerformed: number,
+	exitCode: number | null,
+): UiScrollResolutionState
+⋮----
+function shouldContinueScrollResolution(
+	status: UiTargetResolution["status"],
+): boolean
+⋮----
+export function buildIdbCommand(baseArgs: string[]): string[]
+⋮----
+export async function probeIdbAvailability(
+	repoRoot: string,
+): Promise<CommandExecution | undefined>
+⋮----
+export async function executeUiActionCommand(options: {
+	repoRoot: string;
+	command: string[];
+	requiresProbe: boolean;
+	probeRuntimeAvailability?: (
+		repoRoot: string,
+)
+⋮----
+// Handle WDA internal commands (__wda_http__) that bypass shell execution.
+// These are internal HTTP requests to WebDriverAgent on physical devices.
+⋮----
+// Security: WDA must always be local. Reject user-controlled URLs to prevent SSRF.
+⋮----
+// WDA /source returns raw XCUIElementType format that must be transformed
+// to the parseIosInspectNodes-compatible format (AXLabel, frame, etc.).
+// Uses the canonical transformWdaElement from ios-backend-wda.ts.
+⋮----
+export function buildAndroidUiDumpCommands(deviceId: string):
+⋮----
+export function buildIosUiDescribeCommand(deviceId: string): string[]
+⋮----
+export function buildIosUiDescribePointCommand(
+	deviceId: string,
+	x: number,
+	y: number,
+): string[]
+⋮----
+export function buildIosSwipeCommand(
+	deviceId: string,
+	swipe: {
+		start: { x: number; y: number };
+		end: { x: number; y: number };
+		durationMs: number;
+	},
+): string[]
+⋮----
+export function isAndroidUiSnapshotFailure(
+	value: AndroidUiSnapshot | AndroidUiSnapshotFailure,
+): value is AndroidUiSnapshotFailure
+⋮----
+export function isIosUiSnapshotFailure(
+	value: IosUiSnapshot | IosUiSnapshotFailure,
+): value is IosUiSnapshotFailure
+⋮----
+export async function captureAndroidUiSnapshot(
+	repoRoot: string,
+	deviceId: string,
+	sessionId: string,
+	runnerProfile: string,
+	outputPath: string | undefined,
+	query: QueryUiInput,
+): Promise<AndroidUiSnapshot | AndroidUiSnapshotFailure>
+⋮----
+// Some OEM devices (e.g., vivo) may kill the uiautomator dump process (exit 137 / SIGKILL)
+// even though the dump file was written successfully. Attempt a read to verify the dump
+// actually completed before declaring failure.
+⋮----
+export async function captureIosUiSnapshot(
+	repoRoot: string,
+	deviceId: string,
+	sessionId: string,
+	runnerProfile: string,
+	outputPath: string | undefined,
+	query: QueryUiInput,
+): Promise<IosUiSnapshot | IosUiSnapshotFailure>
+⋮----
+// Fallback to idb for backward compatibility
+⋮----
+// simctl/devicectl/maestro don't support hierarchy capture directly
+⋮----
+export async function captureAndroidUiRuntimeSnapshot(
+	repoRoot: string,
+	deviceId: string,
+	sessionId: string,
+	runnerProfile: string,
+	outputPath: string | undefined,
+	query: QueryUiInput,
+): Promise<UiRuntimeSnapshot | AndroidUiSnapshotFailure>
+⋮----
+export async function captureIosUiRuntimeSnapshot(
+	repoRoot: string,
+	deviceId: string,
+	sessionId: string,
+	runnerProfile: string,
+	outputPath: string | undefined,
+	query: QueryUiInput,
+): Promise<UiRuntimeSnapshot | IosUiSnapshotFailure>
+⋮----
+export async function runUiWaitPollingLoop(
+	options: RunUiWaitPollingLoopOptions,
+): Promise<UiWaitPollingOutcome>
+⋮----
+export async function runUiScrollResolveLoop(
+	options: RunUiScrollResolveLoopOptions,
+): Promise<UiScrollResolutionOutcome>
+⋮----
+// 达到最大滑动次数后，再等待一段时间让 View 层级完全更新，
+// 然后做最终确认 capture。
+⋮----
+// 滑动命令返回后，惯性滚动（fling）还在进行中。
+// 等待动画完全停止、View 层级更新后再 capture 下一次 UI 快照。
+// Android RecyclerView/ListView 的惯性滚动 + 视图回收需要较长时间。
 </file>
 
 <file path="packages/adapter-maestro/src/ui-stability.ts">
@@ -23411,6 +24229,12 @@ import test from "node:test";
 import { decideInterruptionResolution } from "../src/interruption-resolver.ts";
 </file>
 
+<file path="packages/adapter-maestro/test/ios-backend-owned-runner.test.ts">
+import assert from "node:assert/strict";
+import { describe, it } from "node:test";
+import { OwnedRunnerPhysicalBackend } from "../src/ios-backend-owned-runner.js";
+</file>
+
 <file path="packages/adapter-maestro/test/ios-backend-simctl.test.ts">
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -23424,6 +24248,19 @@ import test from "node:test";
 import { WdaRealDeviceBackend } from "../src/ios-backend-wda.js";
 ⋮----
 type WdaSourceInput = Parameters<typeof backend.transformWdaSource>[0];
+</file>
+
+<file path="packages/adapter-maestro/test/ios-owned-runner-protocol.test.ts">
+import assert from "node:assert/strict";
+import { describe, it } from "node:test";
+⋮----
+import {
+	buildLegacyOwnedRunnerActionEnv,
+	buildOwnedRunnerCommandEnv,
+	OWNED_RUNNER_RESULT_PREFIX,
+	parseOwnedRunnerResultFromStdout,
+	parseOwnedRunnerResultLine,
+} from "../src/ios-owned-runner-protocol.js";
 </file>
 
 <file path="packages/adapter-maestro/test/js-debug.test.ts">
@@ -23653,10 +24490,82 @@ pageIdentity: { treeHash: "def789", visibleElementCount: 12 }, // unlikely but p
 assert.equal(hasStateChanged(preState, postState), true); // different appPhase + blockingSignals!
 </file>
 
+<file path="packages/adapter-maestro/test/ui-action-tools-ios-physical.test.ts">
+import assert from "node:assert/strict";
+import test from "node:test";
+import { REASON_CODES } from "@mobile-e2e-mcp/contracts";
+import { OWNED_RUNNER_RESULT_PREFIX } from "../src/ios-owned-runner-protocol.js";
+import {
+	resetExecuteRunnerForTesting,
+	setExecuteRunnerForTesting,
+} from "../src/runtime-shared.js";
+import { executeIosPhysicalAction } from "../src/ui-action-tools-ios-physical.js";
+</file>
+
 <file path="packages/adapter-maestro/test/ui-runtime-android.test.ts">
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createAndroidUiRuntimeHooks } from "../src/ui-runtime-android.ts";
+</file>
+
+<file path="packages/adapter-maestro/test/ui-runtime-ios-owned-runner.test.ts">
+import assert from "node:assert/strict";
+import test from "node:test";
+import { OWNED_RUNNER_RESULT_PREFIX } from "../src/ios-owned-runner-protocol.js";
+import {
+	resetExecuteRunnerForTesting,
+	setExecuteRunnerForTesting,
+} from "../src/runtime-shared.js";
+import { uiRuntimeInternals } from "../src/ui-runtime.js";
+</file>
+
+<file path="packages/adapter-maestro/test/ui-runtime.test.ts">
+import assert from "node:assert/strict";
+import { afterEach, test } from "node:test";
+import type { QueryUiMatch } from "@mobile-e2e-mcp/contracts";
+import { REASON_CODES } from "@mobile-e2e-mcp/contracts";
+import { OWNED_RUNNER_RESULT_PREFIX } from "../src/ios-owned-runner-protocol.js";
+import {
+	type CommandExecutionOptions,
+	resetExecuteRunnerForTesting,
+	setExecuteRunnerForTesting,
+} from "../src/runtime-shared.ts";
+import {
+	captureIosUiSnapshot,
+	type UiRuntimeSnapshot,
+	uiRuntimeInternals,
+} from "../src/ui-runtime.ts";
+⋮----
+function buildSnapshot(
+	overrides: Partial<{
+		command: string[];
+		relativeOutputPath: string;
+		absoluteOutputPath: string;
+		exitCode: number | null;
+		stdout: string;
+		stderr: string;
+		queryResult: { totalMatches: number; matches: QueryUiMatch[] };
+	}> = {},
+): UiRuntimeSnapshot
+⋮----
+// --- captureIosUiSnapshot backend routing tests ---
+⋮----
+// Should fail because neither axe nor WDA is available for a nonexistent device
+⋮----
+// --- executeUiActionCommand __wda_http__ execution tests ---
+⋮----
+// The __wda_http__ path should transform WDA raw format to parseIosInspectNodes-compatible format
+// We can't test actual WDA HTTP calls without a running WDA server, but we can verify
+// the command structure is correct and the transform logic exists.
+⋮----
+// Without a real WDA server, this will fail with a connection error.
+// The important thing is that it attempted a fetch() call, not a shell execution.
+⋮----
+// The execution will fail with connection error, but that's expected
+⋮----
+// Similar: without real WDA, we verify the command is recognized
+⋮----
+// Should not throw, should have stderr with error message
 </file>
 
 <file path="packages/adapter-maestro/test/ui-stability.test.ts">
@@ -27028,6 +27937,64 @@ function flattenUiTree(root: UiHierarchy): UiHierarchy[]
 function normalizeTitle(title: string): string
 </file>
 
+<file path="packages/explorer/src/circuit-breaker.ts">
+/**
+ * Circuit Breaker — per-page failure tracking.
+ *
+ * SPEC §4.1, R1-#4: Circuit breaker counts per-PAGE failures (not per-element).
+ * This prevents infinite loops when entire pages become unreachable.
+ *
+ * State machine: closed (normal) -> open (threshold exceeded) -> half-open (recovery attempt)
+ */
+⋮----
+import type { CircuitBreakerState } from "./types.js";
+⋮----
+/** Default failure threshold before circuit opens. */
+⋮----
+/**
+ * Create a circuit breaker with the given configuration.
+ *
+ * @param threshold - Number of consecutive page failures before opening the circuit.
+ *                    Default: 3 failures per page.
+ */
+export function createCircuitBreaker(
+  threshold: number = DEFAULT_THRESHOLD,
+): CircuitBreakerState
+⋮----
+/**
+ * Record successful traversal progress on the current page.
+ *
+ * Same-frame state changes and gated/visited page handling are valid progress
+ * even when they do not push a new child frame. Reset both counters so those
+ * intentional progress events break the global consecutive-failure streak.
+ */
+export function recordPageSuccess(state: CircuitBreakerState): void
+⋮----
+/**
+ * Record a failure on the current page.
+ * Returns true if the circuit should OPEN (threshold exceeded).
+ */
+export function recordPageFailure(state: CircuitBreakerState): boolean
+⋮----
+return true; // Circuit opens — all elements on this page failed
+⋮----
+/**
+ * Reset the circuit after a successful page navigation.
+ * Called when we successfully navigate to a new page after failures.
+ */
+export function resetCircuit(state: CircuitBreakerState): void
+⋮----
+/**
+ * Check if the circuit is OPEN (should abort exploration).
+ */
+export function isCircuitOpen(state: CircuitBreakerState): boolean
+⋮----
+/**
+ * Check if the current page should be skipped (all elements failed).
+ */
+export function shouldSkipPage(state: CircuitBreakerState): boolean
+</file>
+
 <file path="packages/explorer/src/cli.ts">
 /**
  * CLI entry point for the explorer.
@@ -28839,6 +29806,61 @@ const mockResult = (status: "success" | "failed"): ToolResult<unknown> => (
 // ---------------------------------------------------------------------------
 ⋮----
 // We need to compute the expected hash — import it
+</file>
+
+<file path="packages/explorer/tests/circuit-breaker.test.ts">
+/**
+ * Unit tests for circuit-breaker state transitions.
+ *
+ * Tests: closed -> open threshold, success reset, skip-page detection.
+ */
+⋮----
+import assert from "node:assert/strict";
+import { describe, it } from "node:test";
+import {
+  createCircuitBreaker,
+  isCircuitOpen,
+  recordPageFailure,
+  recordPageSuccess,
+  resetCircuit,
+  shouldSkipPage,
+} from "../src/circuit-breaker.js";
+⋮----
+// ---------------------------------------------------------------------------
+// createCircuitBreaker tests
+// ---------------------------------------------------------------------------
+⋮----
+// ---------------------------------------------------------------------------
+// recordPageFailure tests
+// ---------------------------------------------------------------------------
+⋮----
+assert.equal(recordPageFailure(cb), false); // 1
+assert.equal(recordPageFailure(cb), false); // 2
+assert.equal(recordPageFailure(cb), true);  // 3 = threshold
+⋮----
+// ---------------------------------------------------------------------------
+// recordPageSuccess tests
+// ---------------------------------------------------------------------------
+⋮----
+// ---------------------------------------------------------------------------
+// resetCircuit tests
+// ---------------------------------------------------------------------------
+⋮----
+// ---------------------------------------------------------------------------
+// isCircuitOpen tests
+// ---------------------------------------------------------------------------
+⋮----
+assert.equal(isCircuitOpen(cb), false); // 5 < 6
+⋮----
+assert.equal(isCircuitOpen(cb), true); // 6 >= 6
+⋮----
+assert.equal(isCircuitOpen(cb), false); // 5 < 6
+⋮----
+// ---------------------------------------------------------------------------
+// shouldSkipPage tests
+// ---------------------------------------------------------------------------
+⋮----
+recordPageSuccess(cb); // resets currentPageFailures
 </file>
 
 <file path="packages/explorer/tests/cli.test.ts">
@@ -189411,159 +190433,6 @@ Then use `shortClassName(el.className)` in all set-membership checks.
 5. **Setup Android device** — Connect device, enable USB debugging
 </file>
 
-<file path="packages/adapter-maestro/runner/OwnedRunnerUITests/OwnedRunnerUITests.swift">
-private struct OwnedRunnerResult: Codable {
-let commandId: String
-let status: String
-let reasonCode: String
-let durationMs: Int
-let data: [String: String]
-let artifacts: [String]
-let message: String?
-⋮----
-private struct OwnedRunnerHierarchyNode: Codable {
-let type: String
-let identifier: String?
-let AXLabel: String?
-let title: String?
-let AXValue: String?
-let frame: OwnedRunnerFrame
-let enabled: Bool
-let custom_actions: [String]
-let children: [OwnedRunnerHierarchyNode]
-⋮----
-private let defaultHierarchyMaxNodes = 500
-private let hardHierarchyMaxNodes = 1000
-private let defaultHierarchyMaxDepth = 8
-private let hardHierarchyMaxDepth = 12
-⋮----
-private struct OwnedRunnerFrame: Codable {
-let x: Double
-let y: Double
-let width: Double
-let height: Double
-⋮----
-private func currentCommandId() -> String {
-⋮----
-private func emitOwnedRunnerResult(_ result: OwnedRunnerResult) {
-let encoder = JSONEncoder()
-⋮----
-private func elementTypeName(_ type: XCUIElement.ElementType) -> String {
-⋮----
-private func isDefaultActionElement(_ element: XCUIElement) -> Bool {
-⋮----
-private func boundedEnvironmentInt(_ key: String, defaultValue: Int, minimum: Int, maximum: Int) -> Int {
-⋮----
-private func buildHierarchyNode(_ element: XCUIElement, depth: Int, maxDepth: Int, remainingNodes: inout Int) -> OwnedRunnerHierarchyNode {
-⋮----
-let frame = element.frame
-let childElements = depth < maxDepth && remainingNodes > 0
-⋮----
-var children: [OwnedRunnerHierarchyNode] = []
-⋮----
-let value = element.value.map { String(describing: $0) }
-⋮----
-private func hierarchyJson(for targetApp: XCUIApplication) throws -> String {
-var remainingNodes = boundedEnvironmentInt(
-⋮----
-let maxDepth = boundedEnvironmentInt(
-⋮----
-let root = buildHierarchyNode(targetApp, depth: 0, maxDepth: maxDepth, remainingNodes: &remainingNodes)
-⋮----
-let data = try encoder.encode(root)
-⋮----
-final class OwnedRunnerUITests: XCTestCase {
-private let app = XCUIApplication()
-⋮----
-private func launchTargetApplicationIfNeeded() -> XCUIApplication? {
-⋮----
-let targetApp = XCUIApplication(bundleIdentifier: targetBundleId)
-⋮----
-private func editableCandidates(in targetApp: XCUIApplication) -> [XCUIElement] {
-let textFields = targetApp.textFields.allElementsBoundByIndex
-let secureTextFields = targetApp.secureTextFields.allElementsBoundByIndex
-let textViews = targetApp.textViews.allElementsBoundByIndex
-⋮----
-private func hasVisibleKeyboard(in targetApp: XCUIApplication) -> Bool {
-⋮----
-private func bestEditableElement(in targetApp: XCUIApplication) -> XCUIElement? {
-let candidates = editableCandidates(in: targetApp).filter { $0.exists && $0.isEnabled }
-⋮----
-override func setUpWithError() throws {
-⋮----
-func testOwnedRunnerExecutesActionFromEnvironment() throws {
-⋮----
-let flowPath = ProcessInfo.processInfo.environment["IOS_OWNED_RUNNER_FLOW_PATH"]
-⋮----
-let actionType = ProcessInfo.processInfo.environment["IOS_OWNED_RUNNER_ACTION_TYPE"]
-⋮----
-let anchor = targetApp.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0))
-let coordinate = anchor.withOffset(CGVector(dx: x, dy: y))
-⋮----
-let tapTarget = app.buttons["owned_runner_tap_target"]
-⋮----
-let input = app.textFields["owned_runner_input"]
-⋮----
-let targetApp = launchTargetApplicationIfNeeded() ?? app
-⋮----
-let json = try hierarchyJson(for: targetApp)
-</file>
-
-<file path="packages/adapter-maestro/runner/README.md">
-# iOS Owned Runner (Repository-owned scaffold)
-
-This directory contains the repository-owned iOS XCTest runner scaffold used for physical-device action execution and experimental hierarchy capture.
-
-## Purpose
-
-- Keep iOS physical runner startup/control under `mobile-e2e-mcp` ownership.
-- Reduce dependence on external runner apps as the primary lane.
-- Make startup failures (`preflight`, `code74`, `dtxproxy`) observable and attributable.
-
-## Structure
-
-- `project.yml` — XcodeGen spec for generating local Xcode project files.
-- `OwnedRunnerApp/` — minimal host app.
-- `OwnedRunnerUITests/` — XCTest target (tap/type/hierarchy execution entrypoint scaffold).
-
-## Build notes
-
-1. Generate project (XcodeGen):
-   - `xcodegen generate --spec packages/adapter-maestro/runner/project.yml`
-2. Build-for-testing to produce `.xctestrun` artifacts.
-3. Run through script:
-   - `scripts/dev/run-ios-owned-physical-runner.sh execute-flow`
-
-Current scaffold is intentionally minimal; runtime flow parsing and command dispatch will be implemented in follow-up slices.
-
-## Runtime action protocol (MVP)
-
-The adapter injects these environment variables when invoking the owned runner:
-
-- `IOS_OWNED_RUNNER_FLOW_PATH` (original generated flow artifact path)
-- `IOS_OWNED_RUNNER_ACTION_TYPE` (`tap` or `type_text`)
-- `IOS_OWNED_RUNNER_TARGET_BUNDLE_ID` (optional target AUT bundle id)
-- `IOS_OWNED_RUNNER_ACTION_X` / `IOS_OWNED_RUNNER_ACTION_Y` (for `tap`)
-- `IOS_OWNED_RUNNER_ACTION_TEXT` (for `type_text`)
-
-Current UITest scaffold consumes the protocol and executes deterministic in-app actions to prove end-to-end command wiring.
-For `tap`, when `IOS_OWNED_RUNNER_TARGET_BUNDLE_ID` is provided, the UITest lane attempts coordinate tap on the target app.
-For `type_text`, when `IOS_OWNED_RUNNER_TARGET_BUNDLE_ID` is provided, the UITest lane tries first editable field/text-view in target app and types the payload.
-
-## Capability status
-
-| Capability | Owned runner status | Notes |
-|---|---|---|
-| tap coordinate | experimental MVP | XCTest coordinate tap through target app activation. |
-| type text | experimental MVP | First editable element fallback; target resolution is not complete. |
-| UI source/query | experimental opt-in | `IOS_EXECUTION_BACKEND=owned-runner` can emit a bounded XCTest accessibility tree; WDA remains the default physical backend. |
-| screenshot evidence | planned P0 | Required for Explorer reports and failure attribution; screenshot routing is unchanged in the current action-only slice. |
-| app lifecycle | planned P1 | Launch/activate exists narrowly; terminate/state/open URL still needed. |
-| alerts/interruption | planned P1 | Must be policy-gated before use in Explorer traversal. |
-
-The runner now emits structured stdout lines prefixed with `MOBILE_E2E_OWNED_RUNNER_RESULT=` for supported tap/type outcomes. Adapter-side execution treats this structured result as the action outcome source of truth when the owned runner path is explicitly required.
-</file>
-
 <file path="packages/adapter-maestro/src/device-runtime.ts">
 import { existsSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
@@ -190087,27 +190956,93 @@ private buildMaestroTestCommand(deviceId: string, flowYaml: string): string[]
 // We include the YAML as the last argument for the command builder contract.
 </file>
 
-<file path="packages/adapter-maestro/src/ios-backend-owned-runner.ts">
+<file path="packages/adapter-maestro/src/ios-backend-router.ts">
+import { isIosPhysicalDeviceId } from "./device-runtime.js";
+import { AxeSimulatorBackend } from "./ios-backend-axe.js";
+import { DevicectlPhysicalBackend } from "./ios-backend-devicectl.js";
+import { OwnedRunnerPhysicalBackend } from "./ios-backend-owned-runner.js";
+import { SimctlSimulatorBackend } from "./ios-backend-simctl.js";
 import type {
 	BackendProbeResult,
+	BackendProbeSummary,
 	IosExecutionBackend,
 } from "./ios-backend-types.js";
+import { WdaRealDeviceBackend } from "./ios-backend-wda.js";
+import { executeRunnerWithTestHooks } from "./runtime-shared.js";
 ⋮----
-export class OwnedRunnerPhysicalBackend implements IosExecutionBackend
+// -- Test hooks --
 ⋮----
-async probeAvailability(_repoRoot: string): Promise<BackendProbeResult>
+/** Override the backend returned by selectBackend() for testing. */
+export function setBackendForTesting(backend: IosExecutionBackend): void
 ⋮----
-buildTapCommand(deviceId: string, x: number, y: number): string[]
+/** Clear the test override so production routing is restored. */
+export function resetForTesting(): void
 ⋮----
-buildTypeTextCommand(deviceId: string, text: string): string[]
+// -- Router class --
 ⋮----
-buildSwipeCommand(deviceId: string): string[]
+type BackendId =
+	| "simctl"
+	| "devicectl"
+	| "maestro"
+	| "idb"
+	| "axe"
+	| "wda"
+	| "owned-runner";
 ⋮----
-buildHierarchyCaptureCommand(deviceId: string): string[]
+function isValidBackendId(value: string): value is BackendId
 ⋮----
-buildScreenshotCommand(_deviceId: string, _outputPath: string): string[]
+export class IosBackendRouter
 ⋮----
-buildFailureSuggestion(action: string, _deviceId: string): string
+/**
+	 * Select the appropriate iOS execution backend for the given device.
+	 *
+	 * Priority:
+	 * 1. Test override (setBackendForTesting)
+	 * 2. Explicit IOS_EXECUTION_BACKEND environment variable
+	 * 3. Auto-detect by device type (physical UDID -> wda, simulator UDID -> axe)
+	 */
+selectBackend(
+		deviceId: string,
+		env: NodeJS.ProcessEnv = process.env,
+): IosExecutionBackend
+⋮----
+// Test override
+⋮----
+// 1. Explicit environment variable override
+⋮----
+// Deprecated but acknowledged
+⋮----
+// 2. Auto-detect by device type
+⋮----
+/**
+	 * Probe all candidate backends and return a summary.
+	 * Used for doctor checks and fallback-chain diagnostics.
+	 */
+async probeAllBackends(repoRoot: string): Promise<BackendProbeSummary>
+⋮----
+// -- Private helpers --
+⋮----
+private resolveBackendById(
+		backendId: BackendId,
+		_deviceId: string,
+): IosExecutionBackend
+⋮----
+private async probeDevicectlAvailability(
+		repoRoot: string,
+): Promise<BackendProbeResult>
+⋮----
+private async probeMaestroAvailability(
+		repoRoot: string,
+): Promise<BackendProbeResult>
+⋮----
+private async probeWdaAvailability(
+		repoRoot: string,
+): Promise<BackendProbeResult>
+⋮----
+// -- Factory function --
+⋮----
+/** Get the shared IosBackendRouter singleton. */
+export function getIosBackendRouter(): IosBackendRouter
 </file>
 
 <file path="packages/adapter-maestro/src/ios-backend-simctl.ts">
@@ -190136,66 +191071,112 @@ buildScreenshotCommand(deviceId: string, outputPath: string): string[]
 buildFailureSuggestion(action: string, _deviceId: string): string
 </file>
 
-<file path="packages/adapter-maestro/src/ios-owned-runner-protocol.ts">
-import type { ReasonCode } from "@mobile-e2e-mcp/contracts";
-import { REASON_CODES } from "@mobile-e2e-mcp/contracts";
+<file path="packages/adapter-maestro/src/ios-backend-types.ts">
+// ios-backend-types.ts - iOS backend interface definitions
+// No runtime dependencies - pure types only
 ⋮----
-export type OwnedRunnerCommand =
-	| {
-			commandId: string;
-			sessionId: string;
-			action: "tap";
-			targetAppId?: string;
-			point: { x: number; y: number };
-	  }
-	| {
-			commandId: string;
-			sessionId: string;
-			action: "type_text";
-			targetAppId?: string;
-			text: string;
-	  }
-	| {
-			commandId: string;
-			sessionId: string;
-			action: "hierarchy";
-			targetAppId?: string;
-	  };
-⋮----
-export interface OwnedRunnerResult {
-	commandId: string;
-	status: "success" | "partial" | "failed";
-	reasonCode: ReasonCode;
-	durationMs: number;
-	data: Record<string, unknown>;
-	artifacts: string[];
-	message?: string;
+/** Result of probing whether a specific iOS backend CLI is available and functional. */
+export interface BackendProbeResult {
+  available: boolean;
+  /** Version string when available, e.g. "15.0" for Xcode version. */
+  version?: string;
+  /** Human-readable error when probing fails. */
+  error?: string;
 }
 ⋮----
-function isKnownReasonCode(value: unknown): value is ReasonCode
+/** Version string when available, e.g. "15.0" for Xcode version. */
 ⋮----
-function buildInvalidOwnedRunnerResult(params: {
-	commandId?: string;
-	message: string;
-}): OwnedRunnerResult
+/** Human-readable error when probing fails. */
 ⋮----
-export function buildOwnedRunnerCommandEnv(
-	command: OwnedRunnerCommand,
-): Record<string, string>
+/**
+ * Core abstraction for an iOS execution backend.
+ *
+ * Implementations provide command builders that return `string[]` arrays.
+ * Execution is delegated to the ui-tools layer via `executeUiActionCommand`.
+ * This separation keeps probing, command construction, and execution concerns distinct.
+ */
+export interface IosExecutionBackend {
+  /** Canonical backend identifier used for routing and logging. */
+  readonly backendId: "wda" | "axe" | "simctl" | "devicectl" | "maestro" | "idb" | "owned-runner";
+  /** Human-readable backend name, e.g. "Xcode simctl", "Apple devicectl". */
+  readonly backendName: string;
+
+  /** Probe whether this backend's CLI is installed and functional. */
+  probeAvailability(repoRoot: string): Promise<BackendProbeResult>;
+
+  // -- Command builders (return string[], do NOT execute) --
+
+  /** Build a tap command for the given device and coordinates. */
+  buildTapCommand(deviceId: string, x: number, y: number): string[];
+  /** Build a type-text command for the given device and text content. */
+  buildTypeTextCommand(deviceId: string, text: string): string[];
+  /** Build a swipe command with start/end coordinates and duration. */
+  buildSwipeCommand(
+    deviceId: string,
+    swipe: { start: { x: number; y: number }; end: { x: number; y: number }; durationMs: number; delta?: number; preDelaySec?: number; postDelaySec?: number },
+  ): string[];
+  /** Build a hierarchy capture command that returns JSON/XML hierarchy data. */
+  buildHierarchyCaptureCommand(deviceId: string): string[];
+  /**
+   * Build a point-scoped hierarchy/describe command when supported by backend.
+   * Used for resolved-point verification to avoid relying on full-tree ordering.
+   */
+  buildDescribePointCommand?: (deviceId: string, x: number, y: number) => string[];
+  /** Build a screenshot command writing output to the given path. */
+  buildScreenshotCommand(deviceId: string, outputPath: string): string[];
+
+  /** Per-action support level indicating how well each action is supported. */
+  readonly supportLevel: Record<"tap" | "typeText" | "swipe" | "hierarchy" | "screenshot", "full" | "partial" | "none">;
+
+  /** Return a human-readable suggestion for diagnosing a failed action. */
+  buildFailureSuggestion(action: string, deviceId: string): string;
+}
 ⋮----
-export function buildLegacyOwnedRunnerActionEnv(
-	command: OwnedRunnerCommand,
-): Record<string, string>
+/** Canonical backend identifier used for routing and logging. */
 ⋮----
-function isOwnedRunnerResult(value: unknown): value is OwnedRunnerResult
+/** Human-readable backend name, e.g. "Xcode simctl", "Apple devicectl". */
 ⋮----
-export function parseOwnedRunnerResultLine(
-	line: string,
-): OwnedRunnerResult | null
+/** Probe whether this backend's CLI is installed and functional. */
+probeAvailability(repoRoot: string): Promise<BackendProbeResult>;
 ⋮----
-export function parseOwnedRunnerResultFromStdout(
-	stdout: string,
-): OwnedRunnerResult | null
+// -- Command builders (return string[], do NOT execute) --
+⋮----
+/** Build a tap command for the given device and coordinates. */
+buildTapCommand(deviceId: string, x: number, y: number): string[];
+/** Build a type-text command for the given device and text content. */
+buildTypeTextCommand(deviceId: string, text: string): string[];
+/** Build a swipe command with start/end coordinates and duration. */
+buildSwipeCommand(
+    deviceId: string,
+    swipe: { start: { x: number; y: number }; end: { x: number; y: number }; durationMs: number; delta?: number; preDelaySec?: number; postDelaySec?: number },
+  ): string[];
+/** Build a hierarchy capture command that returns JSON/XML hierarchy data. */
+buildHierarchyCaptureCommand(deviceId: string): string[];
+/**
+   * Build a point-scoped hierarchy/describe command when supported by backend.
+   * Used for resolved-point verification to avoid relying on full-tree ordering.
+   */
+⋮----
+/** Build a screenshot command writing output to the given path. */
+buildScreenshotCommand(deviceId: string, outputPath: string): string[];
+⋮----
+/** Per-action support level indicating how well each action is supported. */
+⋮----
+/** Return a human-readable suggestion for diagnosing a failed action. */
+buildFailureSuggestion(action: string, deviceId: string): string;
+⋮----
+/** Summary of probe results across all candidate iOS backends. */
+export interface BackendProbeSummary {
+  wda: BackendProbeResult;
+  axe: BackendProbeResult;
+  simctl: BackendProbeResult;
+  devicectl: BackendProbeResult;
+  maestro: BackendProbeResult;
+  /** Deprecated backend; only present when explicitly requested. */
+  idb?: BackendProbeResult;
+}
+⋮----
+/** Deprecated backend; only present when explicitly requested. */
 </file>
 
 <file path="packages/adapter-maestro/src/network-failure-diagnosis.ts">
@@ -190525,116 +191506,140 @@ export async function scrollOnlyWithMaestroTool(
 // Android RecyclerView fling can take 1-2 seconds after touch release
 </file>
 
-<file path="packages/adapter-maestro/src/ui-action-tools-ios-physical.ts">
-import { ACTION_TYPES } from "@mobile-e2e-mcp/contracts";
-/**
- * iOS physical action execution helpers for UI action tools.
- *
- * Extracted from ui-action-tools.ts to keep the main facade under control.
- * Handles local_manual_runner / maestro_cli backend selection, startup failure
- * classification, fallback execution, and evidence persistence.
- */
-⋮----
-import { mkdir, writeFile } from "node:fs/promises";
-import path from "node:path";
-import type { ReasonCode } from "@mobile-e2e-mcp/contracts";
-import { REASON_CODES } from "@mobile-e2e-mcp/contracts";
+<file path="packages/adapter-maestro/src/ui-action-tools.ts">
+import type {
+	ReasonCode,
+	ScrollAndResolveUiTargetData,
+	ScrollAndTapElementData,
+	ScrollAndTapElementInput,
+	TapData,
+	TapElementData,
+	TapElementInput,
+	TapInput,
+	ToolResult,
+	TypeIntoElementData,
+	TypeIntoElementInput,
+	TypeTextData,
+	TypeTextInput,
+	UiOrchestrationStepResult,
+} from "@mobile-e2e-mcp/contracts";
+import { ACTION_TYPES, REASON_CODES } from "@mobile-e2e-mcp/contracts";
+import { CLI_COMMANDS } from "./constants/cli-commands.js";
 import { evidencePaths } from "./artifact-paths.js";
+import { isIosPhysicalDeviceId } from "./device-runtime.js";
 import {
-	buildLegacyOwnedRunnerActionEnv,
-	buildOwnedRunnerCommandEnv,
-	type OwnedRunnerCommand,
-	type OwnedRunnerResult,
-	parseOwnedRunnerResultFromStdout,
-} from "./ios-owned-runner-protocol.js";
+	buildDefaultDeviceId,
+	DEFAULT_HARNESS_CONFIG_PATH,
+	DEFAULT_RUNNER_PROFILE,
+	loadHarnessSelection,
+	resolveRepoPath,
+} from "./harness-config.js";
 import {
 	buildFailureReason,
 	executeRunnerWithTestHooks,
 } from "./runtime-shared.js";
-import type { IosPhysicalActionBackend } from "./ui-runtime-ios.js";
+import { scrollAndResolveUiTargetWithMaestroTool } from "./ui-action-scroll.js";
+// Extracted modules (Phase 19: keep facade under 1500 lines)
+import {
+	buildIosPhysicalActionFlowPaths,
+	buildIosPhysicalFailureSuggestions,
+	classifyIosPhysicalStartupFailure,
+	executeIosPhysicalAction,
+} from "./ui-action-tools-ios-physical.js";
+import { resolveUiTargetWithMaestroTool } from "./ui-inspection-tools.js";
+import {
+	buildNonExecutedUiTargetResolution,
+	reasonCodeForResolutionStatus,
+} from "./ui-model.js";
+import { executeUiActionCommand } from "./ui-runtime.js";
 import {
 	buildIosPhysicalActionExecutionPlan,
-	buildIosPhysicalMaestroCommand,
+	buildIosPhysicalTapFlowYaml,
+	buildIosPhysicalTypeTextFlowYaml,
+	isIosSimulatorOnlyIdbActionError,
+	resolveIosPhysicalActionBackend,
+	verifyResolvedIosPointWithHooks,
 } from "./ui-runtime-ios.js";
+import { resolveUiRuntimePlatformHooks } from "./ui-runtime-platform.js";
+import {
+	buildMissingPlatformSuggestion,
+	buildUiQuery,
+	buildUnknownUiDumpOutputPath,
+} from "./ui-tool-shared.js";
+import {
+	buildResolutionNextSuggestions,
+	DEFAULT_SCROLL_DURATION_MS,
+	DEFAULT_SCROLL_MAX_SWIPES,
+	normalizeScrollDirection,
+} from "./ui-tool-utils.js";
 ⋮----
-function normalizeAppId(value?: string): string | undefined
+function isOkReasonCode(reasonCode: ReasonCode): boolean
 ⋮----
-function resolveOwnedRunnerTargetBundleId(params: {
-	flowContent: string;
-	targetAppId?: string;
-}): string | undefined
+type AndroidKeyboardVisibility = "visible" | "hidden" | "unknown";
 ⋮----
-function parseOwnedRunnerPoint(flowContent: string):
+interface AndroidKeyboardStateClassification {
+	visibility: AndroidKeyboardVisibility;
+	reason: string;
+}
 ⋮----
-function parseOwnedRunnerText(flowContent: string): string
-⋮----
-function buildOwnedRunnerCommand(params: {
-	sessionId: string;
-	actionType: "tap" | "type_text";
-	flowContent: string;
-	targetAppId?: string;
-}): OwnedRunnerCommand
-⋮----
-export function buildIosPhysicalActionFlowPaths(
-	repoRoot: string,
-	sessionId: string,
-	actionType: "tap" | "type_text",
-):
-⋮----
-export function buildIosPhysicalExecutionEvidencePaths(
-	repoRoot: string,
-	sessionId: string,
-	actionType: "tap" | "type_text",
-):
-⋮----
-export function classifyIosPhysicalStartupFailure(params: {
-	stderr: string;
-	exitCode: number | null;
-}):
-⋮----
-export function buildIosPhysicalFailureSuggestions(params: {
-	reasonCode: ReasonCode;
-	startupPhase: string;
-	backend: IosPhysicalActionBackend;
-	summaryLine: string;
-}): string[]
-⋮----
-export function buildOwnedRunnerActionEnv(params: {
-	actionType: "tap" | "type_text";
-	flowContent: string;
-	targetAppId?: string;
-}): Record<string, string>
-⋮----
-function buildOwnedRunnerResultSuggestion(
-	result: OwnedRunnerResult | null,
-): string[]
-⋮----
-export async function persistIosPhysicalExecutionEvidence(params: {
-	repoRoot: string;
-	sessionId: string;
-	actionType: "tap" | "type_text";
-	attemptedBackend: IosPhysicalActionBackend;
-	executedBackend: IosPhysicalActionBackend;
-	fallbackUsed: boolean;
-	primaryFailurePhase?: string;
-	primaryFailureSummary?: string;
-	startupPhase: string;
-	summaryLine: string;
-	reasonCode: ReasonCode;
+interface AndroidKeyboardStateProbe extends AndroidKeyboardStateClassification {
+	checked: boolean;
+	platform: "android";
 	command: string[];
 	exitCode: number | null;
-}): Promise<string>
+}
 ⋮----
-export async function executeIosPhysicalAction(params: {
+function buildAndroidKeyboardStateCommand(deviceId: string): string[]
+⋮----
+function classifyAndroidKeyboardState(
+	inputMethodDump: string,
+): AndroidKeyboardStateClassification
+⋮----
+async function probeAndroidKeyboardState(params: {
 	repoRoot: string;
 	deviceId: string;
-	sessionId: string;
-	actionType: "tap" | "type_text";
-	flowContent: string;
-	targetAppId?: string;
-	forcedBackend?: IosPhysicalActionBackend;
-	requireStructuredOwnedRunnerResult?: boolean;
-}): Promise<
+}): Promise<AndroidKeyboardStateProbe>
+⋮----
+async function settleBeforeAndroidKeyboardRecheck(): Promise<void>
+⋮----
+function toTypeIntoKeyboardState(
+	beforeFocus?: AndroidKeyboardStateProbe,
+	afterFocus?: AndroidKeyboardStateProbe,
+): TypeIntoElementData["keyboardState"] | undefined
+⋮----
+async function tapResolvedTarget(
+	input: ScrollAndTapElementInput,
+	resolveResult: ToolResult<ScrollAndResolveUiTargetData>,
+	overrides?: {
+		verifyResolvedIosPoint?: typeof verifyResolvedIosPointWithHooks;
+	},
+): Promise<ToolResult<TapElementData>>
+⋮----
+// iOS physical action helpers extracted to ui-action-tools-ios-physical.ts (Phase 19)
+// Re-exported for testability:
+⋮----
+export async function tapWithMaestroTool(
+	input: TapInput,
+): Promise<ToolResult<TapData>>
+⋮----
+export async function typeTextWithMaestroTool(
+	input: TypeTextInput,
+): Promise<ToolResult<TypeTextData>>
+⋮----
+export async function tapElementWithMaestroTool(
+	input: TapElementInput,
+): Promise<ToolResult<TapElementData>>
+⋮----
+export async function typeIntoElementWithMaestroTool(
+	input: TypeIntoElementInput,
+): Promise<ToolResult<TypeIntoElementData>>
+⋮----
+// scrollAndResolveUiTargetWithMaestroTool extracted to ui-action-scroll.ts (Phase 19)
+// Re-exported for backward compatibility:
+⋮----
+export async function scrollAndTapElementWithMaestroTool(
+	input: ScrollAndTapElementInput,
+): Promise<ToolResult<ScrollAndTapElementData>>
 </file>
 
 <file path="packages/adapter-maestro/src/ui-model.ts">
@@ -190784,93 +191789,6 @@ export function buildScrollOnlySwipeCoordinates(
 // Default mode: use repo-owned default anchors per direction
 </file>
 
-<file path="packages/adapter-maestro/src/ui-runtime-ios.ts">
-import type { InspectUiNode } from "@mobile-e2e-mcp/contracts";
-import { ACTION_TYPES, REASON_CODES } from "@mobile-e2e-mcp/contracts";
-import { getIosBackendRouter } from "./ios-backend-router.js";
-import { buildFailureReason } from "./runtime-shared.js";
-import {
-	buildIosNativeLocatorCandidate,
-	extractIosEditableNodeValue,
-	isIosEditableNode,
-	parseIosInspectNodes,
-	parseUiBounds,
-} from "./ui-model.js";
-import { executeUiActionCommand } from "./ui-runtime.js";
-import type {
-	UiResolvedPointVerificationParams,
-	UiResolvedPointVerificationResult,
-	UiRuntimePlatformHooks,
-	UiRuntimeProbeAction,
-	UiTypedPostconditionVerificationParams,
-} from "./ui-runtime-platform.js";
-⋮----
-/**
- * Find the deepest node whose bounds contain the given point.
- * Returns the most specific (smallest area) node at that location.
- */
-function findNodeAtPoint(
-	nodes: InspectUiNode[],
-	point: { x: number; y: number },
-): InspectUiNode | undefined
-⋮----
-// Return the smallest node (most specific) that contains the point
-⋮----
-function escapeYamlDoubleQuoted(value: string): string
-⋮----
-export function buildIosPhysicalTapFlowYaml(x: number, y: number): string
-⋮----
-export function buildIosPhysicalTypeTextFlowYaml(text: string): string
-⋮----
-export function buildIosPhysicalMaestroCommand(
-	deviceId: string,
-	flowPath: string,
-): string[]
-⋮----
-export type IosPhysicalActionBackend = "maestro_cli" | "local_manual_runner";
-⋮----
-export interface IosPhysicalActionExecutionPlan {
-	backend: IosPhysicalActionBackend;
-	command: string[];
-	envPatch: Record<string, string>;
-}
-⋮----
-export function resolveIosPhysicalActionBackend(
-	env: NodeJS.ProcessEnv = process.env,
-): IosPhysicalActionBackend
-⋮----
-export function buildIosPhysicalActionExecutionPlan(
-	deviceId: string,
-	flowPath: string,
-	env: NodeJS.ProcessEnv = process.env,
-): IosPhysicalActionExecutionPlan
-⋮----
-function buildProbeSuggestion(action: UiRuntimeProbeAction): string
-⋮----
-export function isIosSimulatorOnlyIdbActionError(stderr: string): boolean
-⋮----
-export async function verifyResolvedIosPointWithHooks(
-	params: UiResolvedPointVerificationParams & {
-		executeDescribePointCommand?: typeof executeUiActionCommand;
-	},
-): Promise<UiResolvedPointVerificationResult>
-⋮----
-// If the tap succeeded (exitCode 0) but the node doesn't match, the screen likely
-// changed due to navigation. Report it as not verified so the caller can decide
-// based on full state comparison rather than silently masking the mismatch.
-⋮----
-export async function verifyTypedIosPostconditionWithHooks(
-	params: UiTypedPostconditionVerificationParams & {
-		executeDescribePointCommand?: typeof executeUiActionCommand;
-	},
-): Promise<UiResolvedPointVerificationResult>
-⋮----
-// Bug fix: Use findNodeAtPoint instead of nodes[0] to get the actual element at the resolved coordinates.
-// The first node is always the Application root, which has no editable value.
-⋮----
-export function createIosUiRuntimeHooks(): UiRuntimePlatformHooks
-</file>
-
 <file path="packages/adapter-maestro/src/ui-runtime-platform.ts">
 import { ACTION_TYPES } from "@mobile-e2e-mcp/contracts";
 import type { InspectUiNode, Platform, QueryUiSelector, ReasonCode, UiPoint } from "@mobile-e2e-mcp/contracts";
@@ -190921,387 +191839,6 @@ export interface UiRuntimePlatformHooks {
 }
 ⋮----
 export function resolveUiRuntimePlatformHooks(platform: Platform): UiRuntimePlatformHooks
-</file>
-
-<file path="packages/adapter-maestro/src/ui-runtime.ts">
-import { mkdir, writeFile } from "node:fs/promises";
-import path from "node:path";
-import { setTimeout as delay } from "node:timers/promises";
-import type {
-	InspectUiNode,
-	InspectUiSummary,
-	QueryUiInput,
-	QueryUiMatch,
-	QueryUiSelector,
-	ReasonCode,
-	UiTargetResolution,
-	WaitForUiMode,
-} from "@mobile-e2e-mcp/contracts";
-import { ACTION_TYPES, REASON_CODES } from "@mobile-e2e-mcp/contracts";
-import { evidencePaths } from "./artifact-paths.js";
-import { getIosBackendRouter } from "./ios-backend-router.js";
-import type { WdaRealDeviceBackend } from "./ios-backend-wda.js";
-import { transformWdaElement } from "./ios-backend-wda.js";
-import {
-	buildLegacyOwnedRunnerActionEnv,
-	buildOwnedRunnerCommandEnv,
-	parseOwnedRunnerResultFromStdout,
-} from "./ios-owned-runner-protocol.js";
-import {
-	buildFailureReason,
-	type CommandExecution,
-	executeRunner,
-	executeRunnerWithTestHooks,
-} from "./runtime-shared.js";
-import {
-	resolveIdbCliPath,
-	resolveIdbCompanionPath,
-} from "./toolchain-runtime.js";
-import {
-	buildInspectUiSummary,
-	buildNonExecutedUiTargetResolution,
-	buildUiTargetResolution,
-	isWaitConditionMet,
-	parseAndroidUiHierarchyNodes,
-	parseIosInspectNodes,
-	queryUiNodes,
-	shouldAbortWaitForUiAfterReadFailure,
-} from "./ui-model.js";
-⋮----
-type WdaElementInput = Parameters<typeof transformWdaElement>[0];
-⋮----
-function readWdaResponseValue(data: unknown): unknown
-⋮----
-export interface AndroidUiSnapshot {
-	command: string[];
-	readCommand: string[];
-	relativeOutputPath: string;
-	absoluteOutputPath: string;
-	readExecution: CommandExecution;
-	nodes: InspectUiNode[];
-	summary?: InspectUiSummary;
-	queryResult: { totalMatches: number; matches: QueryUiMatch[] };
-}
-⋮----
-export interface AndroidUiSnapshotFailure {
-	reasonCode: ReasonCode;
-	exitCode: number | null;
-	outputPath: string;
-	command: string[];
-	message: string;
-}
-⋮----
-export interface IosUiSnapshot {
-	command: string[];
-	relativeOutputPath: string;
-	absoluteOutputPath: string;
-	execution: CommandExecution;
-	nodes: InspectUiNode[];
-	summary?: InspectUiSummary;
-	queryResult: { totalMatches: number; matches: QueryUiMatch[] };
-}
-⋮----
-export interface IosUiSnapshotFailure {
-	reasonCode: ReasonCode;
-	exitCode: number | null;
-	outputPath: string;
-	command: string[];
-	message: string;
-}
-⋮----
-export function isDegenerateIosSnapshot(nodes: InspectUiNode[]): boolean
-⋮----
-export interface UiActionExecutionResult {
-	command: string[];
-	execution?: CommandExecution;
-	probeExecution?: CommandExecution;
-}
-⋮----
-export interface UiRuntimeSnapshot {
-	command: string[];
-	relativeOutputPath: string;
-	absoluteOutputPath: string;
-	exitCode: number | null;
-	stdout: string;
-	stderr: string;
-	nodes: InspectUiNode[];
-	summary?: InspectUiSummary;
-	queryResult: { totalMatches: number; matches: QueryUiMatch[] };
-}
-⋮----
-export interface UiWaitPollingState {
-	outputPath: string;
-	command: string[];
-	exitCode: number | null;
-	result: {
-		query: QueryUiSelector;
-		totalMatches: number;
-		matches: QueryUiMatch[];
-	};
-	absoluteOutputPath?: string;
-	content?: string;
-	summary?: InspectUiSummary;
-}
-⋮----
-export type UiWaitPollingOutcome =
-	| {
-			outcome: "matched";
-			polls: number;
-			state: UiWaitPollingState;
-	  }
-	| {
-			outcome: "timeout";
-			polls: number;
-			state: UiWaitPollingState;
-	  }
-	| {
-			outcome: "failure";
-			polls: number;
-			reasonCode: ReasonCode;
-			message: string;
-			state: UiWaitPollingState;
-	  };
-⋮----
-export interface UiScrollResolutionState {
-	outputPath: string;
-	commandHistory: string[][];
-	exitCode: number | null;
-	result: {
-		query: QueryUiSelector;
-		totalMatches: number;
-		matches: QueryUiMatch[];
-	};
-	resolution: UiTargetResolution;
-	swipesPerformed: number;
-	attempts: number;
-	absoluteOutputPath?: string;
-	content?: string;
-	summary?: InspectUiSummary;
-}
-⋮----
-export type UiScrollResolutionOutcome =
-	| {
-			outcome: "resolved";
-			state: UiScrollResolutionState;
-	  }
-	| {
-			outcome: "stopped";
-			state: UiScrollResolutionState;
-	  }
-	| {
-			outcome: "max_swipes";
-			state: UiScrollResolutionState;
-	  }
-	| {
-			outcome: "failure";
-			reasonCode: ReasonCode;
-			message: string;
-			state: UiScrollResolutionState;
-	  };
-⋮----
-interface RunUiWaitPollingLoopOptions {
-	query: QueryUiSelector;
-	waitUntil: WaitForUiMode;
-	timeoutMs: number;
-	intervalMs: number;
-	defaultOutputPath: string;
-	previewCommand: string[];
-	captureSnapshot: () => Promise<
-		UiRuntimeSnapshot | AndroidUiSnapshotFailure | IosUiSnapshotFailure
-	>;
-	buildRetryableSnapshotFailure?: (snapshot: UiRuntimeSnapshot) =>
-		| {
-				reasonCode: ReasonCode;
-				message: string;
-		  }
-		| undefined;
-	buildCaptureFailureAbortMessage?: (
-		consecutiveFailures: number,
-		failure: AndroidUiSnapshotFailure | IosUiSnapshotFailure,
-	) => string;
-	maxConsecutiveRetryableFailures?: number;
-	now?: () => number;
-	delayMs?: (ms: number) => Promise<void>;
-}
-⋮----
-interface RunUiScrollResolveLoopOptions {
-	query: QueryUiSelector;
-	maxSwipes: number;
-	defaultOutputPath: string;
-	captureSnapshot: () => Promise<
-		UiRuntimeSnapshot | AndroidUiSnapshotFailure | IosUiSnapshotFailure
-	>;
-	buildSwipeCommand: (nodes: InspectUiNode[]) => string[];
-	executeSwipeCommand: (command: string[]) => Promise<CommandExecution>;
-	scrollFailureMessage: string;
-	buildRetryableSnapshotFailure?: (snapshot: UiRuntimeSnapshot) =>
-		| {
-				reasonCode: ReasonCode;
-				message: string;
-		  }
-		| undefined;
-}
-⋮----
-function buildEmptyQueryResult(query: QueryUiSelector):
-⋮----
-function normalizeAndroidUiSnapshot(
-	snapshot: AndroidUiSnapshot,
-): UiRuntimeSnapshot
-⋮----
-function normalizeIosUiSnapshot(snapshot: IosUiSnapshot): UiRuntimeSnapshot
-⋮----
-function isUiRuntimeSnapshotFailure(
-	value: UiRuntimeSnapshot | AndroidUiSnapshotFailure | IosUiSnapshotFailure,
-): value is AndroidUiSnapshotFailure | IosUiSnapshotFailure
-⋮----
-function buildWaitPollingStateFromSnapshot(
-	query: QueryUiSelector,
-	snapshot: UiRuntimeSnapshot,
-): UiWaitPollingState
-⋮----
-function buildWaitPollingFailureStateFromSnapshot(
-	query: QueryUiSelector,
-	snapshot: UiRuntimeSnapshot,
-): UiWaitPollingState
-⋮----
-function buildWaitPollingStateFromFailure(
-	query: QueryUiSelector,
-	failure: AndroidUiSnapshotFailure | IosUiSnapshotFailure,
-): UiWaitPollingState
-⋮----
-function buildDefaultWaitPollingState(
-	query: QueryUiSelector,
-	outputPath: string,
-	previewCommand: string[],
-): UiWaitPollingState
-⋮----
-function buildScrollResolutionStateFromSnapshot(
-	query: QueryUiSelector,
-	snapshot: UiRuntimeSnapshot,
-	commandHistory: string[][],
-	swipesPerformed: number,
-): UiScrollResolutionState
-⋮----
-function buildEmptyScrollResolutionState(
-	query: QueryUiSelector,
-	outputPath: string,
-	commandHistory: string[][],
-	swipesPerformed: number,
-	exitCode: number | null,
-): UiScrollResolutionState
-⋮----
-function shouldContinueScrollResolution(
-	status: UiTargetResolution["status"],
-): boolean
-⋮----
-export function buildIdbCommand(baseArgs: string[]): string[]
-⋮----
-export async function probeIdbAvailability(
-	repoRoot: string,
-): Promise<CommandExecution | undefined>
-⋮----
-export async function executeUiActionCommand(options: {
-	repoRoot: string;
-	command: string[];
-	requiresProbe: boolean;
-	probeRuntimeAvailability?: (
-		repoRoot: string,
-)
-⋮----
-// Handle WDA internal commands (__wda_http__) that bypass shell execution.
-// These are internal HTTP requests to WebDriverAgent on physical devices.
-⋮----
-// Security: WDA must always be local. Reject user-controlled URLs to prevent SSRF.
-⋮----
-// WDA /source returns raw XCUIElementType format that must be transformed
-// to the parseIosInspectNodes-compatible format (AXLabel, frame, etc.).
-// Uses the canonical transformWdaElement from ios-backend-wda.ts.
-⋮----
-export function buildAndroidUiDumpCommands(deviceId: string):
-⋮----
-export function buildIosUiDescribeCommand(deviceId: string): string[]
-⋮----
-export function buildIosUiDescribePointCommand(
-	deviceId: string,
-	x: number,
-	y: number,
-): string[]
-⋮----
-export function buildIosSwipeCommand(
-	deviceId: string,
-	swipe: {
-		start: { x: number; y: number };
-		end: { x: number; y: number };
-		durationMs: number;
-	},
-): string[]
-⋮----
-export function isAndroidUiSnapshotFailure(
-	value: AndroidUiSnapshot | AndroidUiSnapshotFailure,
-): value is AndroidUiSnapshotFailure
-⋮----
-export function isIosUiSnapshotFailure(
-	value: IosUiSnapshot | IosUiSnapshotFailure,
-): value is IosUiSnapshotFailure
-⋮----
-export async function captureAndroidUiSnapshot(
-	repoRoot: string,
-	deviceId: string,
-	sessionId: string,
-	runnerProfile: string,
-	outputPath: string | undefined,
-	query: QueryUiInput,
-): Promise<AndroidUiSnapshot | AndroidUiSnapshotFailure>
-⋮----
-// Some OEM devices (e.g., vivo) may kill the uiautomator dump process (exit 137 / SIGKILL)
-// even though the dump file was written successfully. Attempt a read to verify the dump
-// actually completed before declaring failure.
-⋮----
-export async function captureIosUiSnapshot(
-	repoRoot: string,
-	deviceId: string,
-	sessionId: string,
-	runnerProfile: string,
-	outputPath: string | undefined,
-	query: QueryUiInput,
-): Promise<IosUiSnapshot | IosUiSnapshotFailure>
-⋮----
-// Fallback to idb for backward compatibility
-⋮----
-// simctl/devicectl/maestro don't support hierarchy capture directly
-⋮----
-export async function captureAndroidUiRuntimeSnapshot(
-	repoRoot: string,
-	deviceId: string,
-	sessionId: string,
-	runnerProfile: string,
-	outputPath: string | undefined,
-	query: QueryUiInput,
-): Promise<UiRuntimeSnapshot | AndroidUiSnapshotFailure>
-⋮----
-export async function captureIosUiRuntimeSnapshot(
-	repoRoot: string,
-	deviceId: string,
-	sessionId: string,
-	runnerProfile: string,
-	outputPath: string | undefined,
-	query: QueryUiInput,
-): Promise<UiRuntimeSnapshot | IosUiSnapshotFailure>
-⋮----
-export async function runUiWaitPollingLoop(
-	options: RunUiWaitPollingLoopOptions,
-): Promise<UiWaitPollingOutcome>
-⋮----
-export async function runUiScrollResolveLoop(
-	options: RunUiScrollResolveLoopOptions,
-): Promise<UiScrollResolutionOutcome>
-⋮----
-// 达到最大滑动次数后，再等待一段时间让 View 层级完全更新，
-// 然后做最终确认 capture。
-⋮----
-// 滑动命令返回后，惯性滚动（fling）还在进行中。
-// 等待动画完全停止、View 层级更新后再 capture 下一次 UI 快照。
-// Android RecyclerView/ListView 的惯性滚动 + 视图回收需要较长时间。
 </file>
 
 <file path="packages/adapter-maestro/test/action-outcome-startup.test.ts">
@@ -191377,23 +191914,20 @@ import { AxeSimulatorBackend } from "../src/ios-backend-axe.js";
 import { setExecuteRunnerForTesting, resetExecuteRunnerForTesting } from "../src/runtime-shared.js";
 </file>
 
-<file path="packages/adapter-maestro/test/ios-backend-owned-runner.test.ts">
+<file path="packages/adapter-maestro/test/ios-backend-router.test.ts">
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
-import { OwnedRunnerPhysicalBackend } from "../src/ios-backend-owned-runner.js";
-</file>
-
-<file path="packages/adapter-maestro/test/ios-owned-runner-protocol.test.ts">
-import assert from "node:assert/strict";
-import { describe, it } from "node:test";
-⋮----
+import test from "node:test";
 import {
-	buildLegacyOwnedRunnerActionEnv,
-	buildOwnedRunnerCommandEnv,
-	OWNED_RUNNER_RESULT_PREFIX,
-	parseOwnedRunnerResultFromStdout,
-	parseOwnedRunnerResultLine,
-} from "../src/ios-owned-runner-protocol.js";
+	IosBackendRouter,
+	resetForTesting,
+	setBackendForTesting,
+} from "../src/ios-backend-router.js";
+import type { IosExecutionBackend } from "../src/ios-backend-types.js";
+import { resetExecuteRunnerForTesting, setExecuteRunnerForTesting } from "../src/runtime-shared.js";
+⋮----
+// Simulator UDIDs are proper UUIDs with hex chars only (0-9, A-F)
+⋮----
+// Physical device UDIDs are not UUIDs - they're hex strings like "00008110-001234567890001E"
 </file>
 
 <file path="packages/adapter-maestro/test/navigate-back.test.ts">
@@ -191496,16 +192030,50 @@ import test from "node:test";
 import { executeRunner } from "../src/runtime-shared.ts";
 </file>
 
-<file path="packages/adapter-maestro/test/ui-action-tools-ios-physical.test.ts">
+<file path="packages/adapter-maestro/test/ui-action-tools.test.ts">
 import assert from "node:assert/strict";
 import test from "node:test";
-import { REASON_CODES } from "@mobile-e2e-mcp/contracts";
+import {
+	REASON_CODES,
+	type ScrollAndResolveUiTargetData,
+	type ToolResult,
+} from "@mobile-e2e-mcp/contracts";
 import { OWNED_RUNNER_RESULT_PREFIX } from "../src/ios-owned-runner-protocol.js";
 import {
 	resetExecuteRunnerForTesting,
 	setExecuteRunnerForTesting,
 } from "../src/runtime-shared.js";
-import { executeIosPhysicalAction } from "../src/ui-action-tools-ios-physical.js";
+import {
+	tapWithMaestroTool,
+	typeTextWithMaestroTool,
+	uiActionToolInternals,
+} from "../src/ui-action-tools.ts";
+import {
+	buildIosPhysicalExecutionEvidencePaths,
+	buildOwnedRunnerActionEnv,
+} from "../src/ui-action-tools-ios-physical.ts";
+import {
+	buildIosPhysicalActionExecutionPlan,
+	isIosSimulatorOnlyIdbActionError,
+	verifyTypedIosPostconditionWithHooks,
+} from "../src/ui-runtime-ios.ts";
+⋮----
+// Regression: verifyResolvedIosPoint must use findNodeAtPoint, not nodes[0].
+// When the hierarchy has Application root at index 0 and the target Button as a child,
+// the old code would compare the root (no identifier, no text) against the expected
+// button and always return noMatch.
+⋮----
+// Hierarchy: Application root at [0], Button child at [1]
+⋮----
+// Regression test: verifyTypedIosPostconditionWithHooks must use findNodeAtPoint,
+// not nodes[0]. When the hierarchy has Application root at index 0 and the target
+// TextField as a child, the old code would read the root's value (undefined) and
+// always fail the typed value check.
+⋮----
+// Hierarchy: Application root at [0], TextField child at [1]
+⋮----
+// The old bug would return verified=false with reasonCode=actionTypeFailed
+// because nodes[0] (Application root) has no value, so observedValue=undefined.
 </file>
 
 <file path="packages/adapter-maestro/test/ui-model.test.ts">
@@ -191615,66 +192183,6 @@ frame: { x: 0, y: 0, width: 430, height: 932 }, // rect → frame
 type: "Button", // XCUIElementTypeButton → Button
 ⋮----
 // Should parse root + child = 2 nodes
-</file>
-
-<file path="packages/adapter-maestro/test/ui-runtime-ios-owned-runner.test.ts">
-import assert from "node:assert/strict";
-import test from "node:test";
-import { OWNED_RUNNER_RESULT_PREFIX } from "../src/ios-owned-runner-protocol.js";
-import {
-	resetExecuteRunnerForTesting,
-	setExecuteRunnerForTesting,
-} from "../src/runtime-shared.js";
-import { uiRuntimeInternals } from "../src/ui-runtime.js";
-</file>
-
-<file path="packages/adapter-maestro/test/ui-runtime.test.ts">
-import assert from "node:assert/strict";
-import { afterEach, test } from "node:test";
-import type { QueryUiMatch } from "@mobile-e2e-mcp/contracts";
-import { REASON_CODES } from "@mobile-e2e-mcp/contracts";
-import { OWNED_RUNNER_RESULT_PREFIX } from "../src/ios-owned-runner-protocol.js";
-import {
-	type CommandExecutionOptions,
-	resetExecuteRunnerForTesting,
-	setExecuteRunnerForTesting,
-} from "../src/runtime-shared.ts";
-import {
-	captureIosUiSnapshot,
-	type UiRuntimeSnapshot,
-	uiRuntimeInternals,
-} from "../src/ui-runtime.ts";
-⋮----
-function buildSnapshot(
-	overrides: Partial<{
-		command: string[];
-		relativeOutputPath: string;
-		absoluteOutputPath: string;
-		exitCode: number | null;
-		stdout: string;
-		stderr: string;
-		queryResult: { totalMatches: number; matches: QueryUiMatch[] };
-	}> = {},
-): UiRuntimeSnapshot
-⋮----
-// --- captureIosUiSnapshot backend routing tests ---
-⋮----
-// Should fail because neither axe nor WDA is available for a nonexistent device
-⋮----
-// --- executeUiActionCommand __wda_http__ execution tests ---
-⋮----
-// The __wda_http__ path should transform WDA raw format to parseIosInspectNodes-compatible format
-// We can't test actual WDA HTTP calls without a running WDA server, but we can verify
-// the command structure is correct and the transform logic exists.
-⋮----
-// Without a real WDA server, this will fail with a connection error.
-// The important thing is that it attempted a fetch() call, not a shell execution.
-⋮----
-// The execution will fail with connection error, but that's expected
-⋮----
-// Similar: without real WDA, we verify the command is recognized
-⋮----
-// Should not throw, should have stderr with error message
 </file>
 
 <file path="packages/adapter-maestro/package.json">
@@ -191920,64 +192428,6 @@ export function projectDefaultSamplingRules(): SamplingRule[]
 export function projectDefaultSkipPages(): SkipPageRule[]
 ⋮----
 export function projectDefaultSkipElements(): SkipElementRule[]
-</file>
-
-<file path="packages/explorer/src/circuit-breaker.ts">
-/**
- * Circuit Breaker — per-page failure tracking.
- *
- * SPEC §4.1, R1-#4: Circuit breaker counts per-PAGE failures (not per-element).
- * This prevents infinite loops when entire pages become unreachable.
- *
- * State machine: closed (normal) -> open (threshold exceeded) -> half-open (recovery attempt)
- */
-⋮----
-import type { CircuitBreakerState } from "./types.js";
-⋮----
-/** Default failure threshold before circuit opens. */
-⋮----
-/**
- * Create a circuit breaker with the given configuration.
- *
- * @param threshold - Number of consecutive page failures before opening the circuit.
- *                    Default: 3 failures per page.
- */
-export function createCircuitBreaker(
-  threshold: number = DEFAULT_THRESHOLD,
-): CircuitBreakerState
-⋮----
-/**
- * Record successful traversal progress on the current page.
- *
- * Same-frame state changes and gated/visited page handling are valid progress
- * even when they do not push a new child frame. Reset both counters so those
- * intentional progress events break the global consecutive-failure streak.
- */
-export function recordPageSuccess(state: CircuitBreakerState): void
-⋮----
-/**
- * Record a failure on the current page.
- * Returns true if the circuit should OPEN (threshold exceeded).
- */
-export function recordPageFailure(state: CircuitBreakerState): boolean
-⋮----
-return true; // Circuit opens — all elements on this page failed
-⋮----
-/**
- * Reset the circuit after a successful page navigation.
- * Called when we successfully navigate to a new page after failures.
- */
-export function resetCircuit(state: CircuitBreakerState): void
-⋮----
-/**
- * Check if the circuit is OPEN (should abort exploration).
- */
-export function isCircuitOpen(state: CircuitBreakerState): boolean
-⋮----
-/**
- * Check if the current page should be skipped (all elements failed).
- */
-export function shouldSkipPage(state: CircuitBreakerState): boolean
 </file>
 
 <file path="packages/explorer/src/engine.ts">
@@ -193469,61 +193919,6 @@ function snapshot(overrides: Partial<PageSnapshot> =
 function element(label: string): ClickableTarget
 ⋮----
 function registry(config: Partial<ExplorerConfig> =
-</file>
-
-<file path="packages/explorer/tests/circuit-breaker.test.ts">
-/**
- * Unit tests for circuit-breaker state transitions.
- *
- * Tests: closed -> open threshold, success reset, skip-page detection.
- */
-⋮----
-import assert from "node:assert/strict";
-import { describe, it } from "node:test";
-import {
-  createCircuitBreaker,
-  isCircuitOpen,
-  recordPageFailure,
-  recordPageSuccess,
-  resetCircuit,
-  shouldSkipPage,
-} from "../src/circuit-breaker.js";
-⋮----
-// ---------------------------------------------------------------------------
-// createCircuitBreaker tests
-// ---------------------------------------------------------------------------
-⋮----
-// ---------------------------------------------------------------------------
-// recordPageFailure tests
-// ---------------------------------------------------------------------------
-⋮----
-assert.equal(recordPageFailure(cb), false); // 1
-assert.equal(recordPageFailure(cb), false); // 2
-assert.equal(recordPageFailure(cb), true);  // 3 = threshold
-⋮----
-// ---------------------------------------------------------------------------
-// recordPageSuccess tests
-// ---------------------------------------------------------------------------
-⋮----
-// ---------------------------------------------------------------------------
-// resetCircuit tests
-// ---------------------------------------------------------------------------
-⋮----
-// ---------------------------------------------------------------------------
-// isCircuitOpen tests
-// ---------------------------------------------------------------------------
-⋮----
-assert.equal(isCircuitOpen(cb), false); // 5 < 6
-⋮----
-assert.equal(isCircuitOpen(cb), true); // 6 >= 6
-⋮----
-assert.equal(isCircuitOpen(cb), false); // 5 < 6
-⋮----
-// ---------------------------------------------------------------------------
-// shouldSkipPage tests
-// ---------------------------------------------------------------------------
-⋮----
-recordPageSuccess(cb); // resets currentPageFailures
 </file>
 
 <file path="packages/explorer/tests/engine.test.ts">
@@ -198284,201 +198679,6 @@ If not committed:
 ```
 </file>
 
-<file path="docs/delivery/npm-release-and-git-tagging.zh-CN.md">
-# NPM 发版与 Git Tag 关联规范（@shenyuexin/mobile-e2e-mcp）
-
-## 目标
-
-确保每一次 NPM 发版都具备可追溯的 GitHub Tag、Release 与 CHANGELOG，实现：
-
-1. NPM 版本 ↔ Git Tag 一一对应
-2. 发版过程可审计、可回放
-3. 降低人工漏打 tag/错打 tag 风险
-4. 让 CHANGELOG 按 tag diff 自动补齐，减少手工维护
-5. 让 `repomix-output.xml` 随 release commit 一起刷新，保持 AI 入口快照与 tag 对齐
-
-## 统一约定
-
-- 包名：`@shenyuexin/mobile-e2e-mcp`
-- 包路径：`packages/mcp-server`
-- Tag 格式：`mcp-server-v<semver>`（示例：`mcp-server-v0.1.5`）
-- 发版入口：**仅通过 tag 触发 GitHub Actions 自动发布**
-
-> 不再建议本地直接 `pnpm publish` 作为正式发布路径。
-
-## 机制设计
-
-### 1) 元数据关联（npm 页面展示 GitHub）
-
-已在 `packages/mcp-server/package.json` 中声明：
-
-- `repository`
-- `homepage`
-- `bugs`
-
-这样 npm 页面会自动关联到 GitHub 仓库与 issue 地址。
-
-### 2) 自动化发布（Tag 驱动）
-
-工作流文件：`.github/workflows/release-mcp.yml`
-
-触发条件：
-
-- `push` 到 tag：`mcp-server-v*`
-
-执行流程：
-
-1. 安装依赖
-2. 校验 tag 与 `packages/mcp-server/package.json` 版本完全一致
-3. 根据“上一个 MCP tag -> 当前 tag”的 commit diff 自动生成/更新 `CHANGELOG.md` 中该版本节
-4. 再次校验 tag / package version / changelog 三者一致
-5. 将同步后的 `CHANGELOG.md` 回写到默认分支
-6. 同步生成最新 `repomix-output.xml`，并将 GitNexus 刷新可能更新的 `AGENTS.md` 与 release 元数据一起回写默认分支
-7. 构建打包
-8. 发布到 npm（使用 `NPM_TOKEN`）
-9. 创建 GitHub Release
-
-发布打包使用 `@shenyuexin/mobile-e2e-mcp` 的 `bundle` 脚本作为最终路径。该脚本必须先构建所有被 MCP server 源码直接导入的 workspace 包，包括 `@mobile-e2e-mcp/explorer`，再执行 MCP server 的 TypeScript 编译与 tsup bundle；否则 fresh CI checkout 会因为缺少 workspace 包的 `dist/*.d.ts` 而在 npm publish 前失败。
-
-### 3) Public Docs 漂移检查（非阻塞）
-
-原则：**不是每个 tag 都必须更新 README，但每个对外可见能力变更都必须有公共文档落点**。
-
-对于 AI / 用户调用方式相关变化，默认应优先检查 canonical invocation guide，而不是把相同说明复制到多篇文档中：
-
-- `docs/guides/ai-agent-invocation.zh-CN.md`（调用真相源）
-- `docs/guides/golden-path.md`（首跑前门）
-- `docs/guides/flow-generation.md`（录制 / 导出 / 回放专题）
-
-建议按三层执行：
-
-1. **PR 阶段（主关口）**
-   - 对外可见变化（能力边界、工具目录、命令入口、支持平台、发布流程）应在 PR 内同步文档。
-   - 若变化影响 AI / 用户调用方式，优先更新 `docs/guides/ai-agent-invocation.zh-CN.md`；专题变化再更新对应 topic guide。
-   - README / `docs/README.md` 更适合作为入口导航，不应承担完整调用流程的重复维护。
-2. **`release:mcp:prepare-tag` 阶段（二次确认）**
-    - 在发版前做一次“自上个 MCP tag 以来的对外变化”清单核对，确认是否存在 public docs 漂移。
-    - 如果命中了 tool surface / capability boundary 变化，但 canonical invocation guide / public docs 没有同步，本地 `release:mcp:check` 与 tag workflow 应直接失败，而不是仅 warning。
-3. **Tag workflow 阶段（兜底提醒）**
-    - 仍可保留 notice，但对 capability-governed release range 的 doc-sync 缺失不再放行 npm publish。
-
-建议触发条件（命中任一目录时，优先检查文档是否需要同步；这些是高概率触发器，不代表“命中就必须改文档”）：
-
-- `packages/mcp-server/src/server.ts`（工具暴露面）
-- `packages/mcp-server/src/tools/**`（工具行为与推荐调用路径）
-- `packages/contracts/**`（契约/Schema 变更）
-- `configs/profiles/**`、`configs/policies/**`（支持边界/治理策略）
-- `docs/guides/ai-agent-invocation.zh-CN.md`、`docs/guides/golden-path.md`、`docs/guides/flow-generation.md`（调用入口与专题指南）
-- `docs/architecture/**`（对外架构叙事变化）
-- `.github/workflows/release-mcp.yml`、`scripts/release/**`（发版自动化流程变化）
-- `packages/mcp-server/package.json` 中影响安装/发布/仓库关联的元数据字段
-
-常见可豁免场景：
-
-- 纯内部重构（无行为变化）
-- 测试/脚手架调整且不影响外部用法
-- 仅修复拼写、格式、注释
-
-> 实践建议：将“public docs / canonical invocation guide 是否需要更新”作为 release checklist 固定项，而不是把它设计成强制失败门禁。
-
-> Phase 03 更新：对于 capability-governed release range，这一项现在应视为强制失败门禁，而不是纯提示项。
-
-## 标准操作流程（推荐）
-
-### 一条命令完成准备 + 推送 tag
-
-```bash
-pnpm release:mcp:version 0.1.10
-# 或: pnpm release:mcp:prepare-tag patch
-# prepare-tag 仍支持 patch | minor | major
-```
-
-该脚本会自动执行：
-
-1. 检查工作区必须干净
-2. 更新 `@shenyuexin/mobile-e2e-mcp` 版本（不自动打默认 v tag）
-3. 根据“上一个 MCP tag -> 当前待发版版本”的 commit diff 自动生成/更新 `CHANGELOG.md`
-4. 生成最新 `repomix-output.xml`，让仓库级 AI 快照与本次待发布代码一致
-5. 校验 changelog / package version / tag 三者一致
-6. 运行 `pnpm build`、`pnpm typecheck`、`pnpm test:mcp-server`
-7. 提交版本变更（含 `CHANGELOG.md` 与 `repomix-output.xml`）
-8. 创建并推送规范 tag：`mcp-server-v<version>`
-9. 推送分支与 tag，触发 GitHub Actions 自动发包
-
-## 现在的推荐流程（你只需要关心 tag）
-
-### 方案 A：本地标准发版（推荐）
-
-```bash
-pnpm release:mcp:version 0.1.10
-```
-
-特点：
-
-- 显式指定目标版本号
-- 自动生成该版本 changelog
-- 自动提交并推 tag
-
-如果你只想按语义级别递增，也可以继续使用：
-
-```bash
-pnpm release:mcp:prepare-tag patch
-```
-
-但对日常操作建议统一心智模型为：
-
-> “更新版本到 0.x.x” = `pnpm release:mcp:version 0.x.x`
-
-不要再手工修改 `packages/mcp-server/package.json` 来发版；这不会触发完整 release 链路。
-
-### 方案 B：你只负责发 tag（机制补 changelog）
-
-如果你已经手动创建并推送了 `mcp-server-v<version>`：
-
-- GitHub Actions 会自动：
-  1. 按“上一个 tag -> 当前 tag”生成该版本 changelog
-  2. 把 `CHANGELOG.md` 与最新 `repomix-output.xml` 一起回写到默认分支
-  3. 再继续 npm publish
-
-也就是说，**以后不要求你手工先写 `CHANGELOG.md`，也不需要手工刷新 `repomix-output.xml`**。
-
-### 单独校验/同步发版元数据
-
-在需要时，也可以单独执行：
-
-```bash
-pnpm release:mcp:check
-pnpm release:mcp:sync-changelog -- --tag mcp-server-v0.1.5
-```
-
-它们分别会：
-
-1. `release:mcp:check`
-   - 校验 `packages/mcp-server/package.json` 版本存在
-   - 校验 `CHANGELOG.md` 中存在对应版本节
-   - 校验该版本节不是空的
-2. `release:mcp:sync-changelog`
-   - 根据 tag diff 自动生成/刷新该版本 changelog
-
-## 仓库管理员一次性配置
-
-在 GitHub 仓库 Secrets 中设置：
-
-- `NPM_TOKEN`：具备 publish 权限的 npm token
-
-## 回滚与应急
-
-若 tag 推送后 CI 发布失败：
-
-1. 修复代码后重新走一次版本升级（不能复用已发布版本号）
-2. 生成新版本与新 tag（例如 `0.1.5` 失败后发 `0.1.6`）
-
-若 npm 已发布但发现问题：
-
-1. 优先发布修复版本（patch）
-2. 避免依赖 `unpublish` 作为常规手段
-</file>
-
 <file path="docs/engineering/output-directory-layout.md">
 # Output Directory Layout
 
@@ -200841,203 +201041,6 @@ export async function runDoctor(
 ): Promise<ToolResult<
 </file>
 
-<file path="packages/adapter-maestro/src/ios-backend-router.ts">
-import { isIosPhysicalDeviceId } from "./device-runtime.js";
-import { AxeSimulatorBackend } from "./ios-backend-axe.js";
-import { DevicectlPhysicalBackend } from "./ios-backend-devicectl.js";
-import { OwnedRunnerPhysicalBackend } from "./ios-backend-owned-runner.js";
-import { SimctlSimulatorBackend } from "./ios-backend-simctl.js";
-import type {
-	BackendProbeResult,
-	BackendProbeSummary,
-	IosExecutionBackend,
-} from "./ios-backend-types.js";
-import { WdaRealDeviceBackend } from "./ios-backend-wda.js";
-import { executeRunnerWithTestHooks } from "./runtime-shared.js";
-⋮----
-// -- Test hooks --
-⋮----
-/** Override the backend returned by selectBackend() for testing. */
-export function setBackendForTesting(backend: IosExecutionBackend): void
-⋮----
-/** Clear the test override so production routing is restored. */
-export function resetForTesting(): void
-⋮----
-// -- Router class --
-⋮----
-type BackendId =
-	| "simctl"
-	| "devicectl"
-	| "maestro"
-	| "idb"
-	| "axe"
-	| "wda"
-	| "owned-runner";
-⋮----
-function isValidBackendId(value: string): value is BackendId
-⋮----
-export class IosBackendRouter
-⋮----
-/**
-	 * Select the appropriate iOS execution backend for the given device.
-	 *
-	 * Priority:
-	 * 1. Test override (setBackendForTesting)
-	 * 2. Explicit IOS_EXECUTION_BACKEND environment variable
-	 * 3. Auto-detect by device type (physical UDID -> wda, simulator UDID -> axe)
-	 */
-selectBackend(
-		deviceId: string,
-		env: NodeJS.ProcessEnv = process.env,
-): IosExecutionBackend
-⋮----
-// Test override
-⋮----
-// 1. Explicit environment variable override
-⋮----
-// Deprecated but acknowledged
-⋮----
-// 2. Auto-detect by device type
-⋮----
-/**
-	 * Probe all candidate backends and return a summary.
-	 * Used for doctor checks and fallback-chain diagnostics.
-	 */
-async probeAllBackends(repoRoot: string): Promise<BackendProbeSummary>
-⋮----
-// -- Private helpers --
-⋮----
-private resolveBackendById(
-		backendId: BackendId,
-		_deviceId: string,
-): IosExecutionBackend
-⋮----
-private async probeDevicectlAvailability(
-		repoRoot: string,
-): Promise<BackendProbeResult>
-⋮----
-private async probeMaestroAvailability(
-		repoRoot: string,
-): Promise<BackendProbeResult>
-⋮----
-private async probeWdaAvailability(
-		repoRoot: string,
-): Promise<BackendProbeResult>
-⋮----
-// -- Factory function --
-⋮----
-/** Get the shared IosBackendRouter singleton. */
-export function getIosBackendRouter(): IosBackendRouter
-</file>
-
-<file path="packages/adapter-maestro/src/ios-backend-types.ts">
-// ios-backend-types.ts - iOS backend interface definitions
-// No runtime dependencies - pure types only
-⋮----
-/** Result of probing whether a specific iOS backend CLI is available and functional. */
-export interface BackendProbeResult {
-  available: boolean;
-  /** Version string when available, e.g. "15.0" for Xcode version. */
-  version?: string;
-  /** Human-readable error when probing fails. */
-  error?: string;
-}
-⋮----
-/** Version string when available, e.g. "15.0" for Xcode version. */
-⋮----
-/** Human-readable error when probing fails. */
-⋮----
-/**
- * Core abstraction for an iOS execution backend.
- *
- * Implementations provide command builders that return `string[]` arrays.
- * Execution is delegated to the ui-tools layer via `executeUiActionCommand`.
- * This separation keeps probing, command construction, and execution concerns distinct.
- */
-export interface IosExecutionBackend {
-  /** Canonical backend identifier used for routing and logging. */
-  readonly backendId: "wda" | "axe" | "simctl" | "devicectl" | "maestro" | "idb" | "owned-runner";
-  /** Human-readable backend name, e.g. "Xcode simctl", "Apple devicectl". */
-  readonly backendName: string;
-
-  /** Probe whether this backend's CLI is installed and functional. */
-  probeAvailability(repoRoot: string): Promise<BackendProbeResult>;
-
-  // -- Command builders (return string[], do NOT execute) --
-
-  /** Build a tap command for the given device and coordinates. */
-  buildTapCommand(deviceId: string, x: number, y: number): string[];
-  /** Build a type-text command for the given device and text content. */
-  buildTypeTextCommand(deviceId: string, text: string): string[];
-  /** Build a swipe command with start/end coordinates and duration. */
-  buildSwipeCommand(
-    deviceId: string,
-    swipe: { start: { x: number; y: number }; end: { x: number; y: number }; durationMs: number; delta?: number; preDelaySec?: number; postDelaySec?: number },
-  ): string[];
-  /** Build a hierarchy capture command that returns JSON/XML hierarchy data. */
-  buildHierarchyCaptureCommand(deviceId: string): string[];
-  /**
-   * Build a point-scoped hierarchy/describe command when supported by backend.
-   * Used for resolved-point verification to avoid relying on full-tree ordering.
-   */
-  buildDescribePointCommand?: (deviceId: string, x: number, y: number) => string[];
-  /** Build a screenshot command writing output to the given path. */
-  buildScreenshotCommand(deviceId: string, outputPath: string): string[];
-
-  /** Per-action support level indicating how well each action is supported. */
-  readonly supportLevel: Record<"tap" | "typeText" | "swipe" | "hierarchy" | "screenshot", "full" | "partial" | "none">;
-
-  /** Return a human-readable suggestion for diagnosing a failed action. */
-  buildFailureSuggestion(action: string, deviceId: string): string;
-}
-⋮----
-/** Canonical backend identifier used for routing and logging. */
-⋮----
-/** Human-readable backend name, e.g. "Xcode simctl", "Apple devicectl". */
-⋮----
-/** Probe whether this backend's CLI is installed and functional. */
-probeAvailability(repoRoot: string): Promise<BackendProbeResult>;
-⋮----
-// -- Command builders (return string[], do NOT execute) --
-⋮----
-/** Build a tap command for the given device and coordinates. */
-buildTapCommand(deviceId: string, x: number, y: number): string[];
-/** Build a type-text command for the given device and text content. */
-buildTypeTextCommand(deviceId: string, text: string): string[];
-/** Build a swipe command with start/end coordinates and duration. */
-buildSwipeCommand(
-    deviceId: string,
-    swipe: { start: { x: number; y: number }; end: { x: number; y: number }; durationMs: number; delta?: number; preDelaySec?: number; postDelaySec?: number },
-  ): string[];
-/** Build a hierarchy capture command that returns JSON/XML hierarchy data. */
-buildHierarchyCaptureCommand(deviceId: string): string[];
-/**
-   * Build a point-scoped hierarchy/describe command when supported by backend.
-   * Used for resolved-point verification to avoid relying on full-tree ordering.
-   */
-⋮----
-/** Build a screenshot command writing output to the given path. */
-buildScreenshotCommand(deviceId: string, outputPath: string): string[];
-⋮----
-/** Per-action support level indicating how well each action is supported. */
-⋮----
-/** Return a human-readable suggestion for diagnosing a failed action. */
-buildFailureSuggestion(action: string, deviceId: string): string;
-⋮----
-/** Summary of probe results across all candidate iOS backends. */
-export interface BackendProbeSummary {
-  wda: BackendProbeResult;
-  axe: BackendProbeResult;
-  simctl: BackendProbeResult;
-  devicectl: BackendProbeResult;
-  maestro: BackendProbeResult;
-  /** Deprecated backend; only present when explicitly requested. */
-  idb?: BackendProbeResult;
-}
-⋮----
-/** Deprecated backend; only present when explicitly requested. */
-</file>
-
 <file path="packages/adapter-maestro/src/network-policy-inspection.ts">
 import { readFile } from "node:fs/promises";
 import { inflateRawSync } from "node:zlib";
@@ -201167,158 +201170,6 @@ function buildLimitations(input: InspectNetworkPolicyInput): string[]
 export async function inspectNetworkPolicyWithMaestro(input: InspectNetworkPolicyInput): Promise<ToolResult<InspectNetworkPolicyData>>
 </file>
 
-<file path="packages/adapter-maestro/src/ui-action-tools.ts">
-import type {
-	ReasonCode,
-	ScrollAndResolveUiTargetData,
-	ScrollAndTapElementData,
-	ScrollAndTapElementInput,
-	TapData,
-	TapElementData,
-	TapElementInput,
-	TapInput,
-	ToolResult,
-	TypeIntoElementData,
-	TypeIntoElementInput,
-	TypeTextData,
-	TypeTextInput,
-	UiOrchestrationStepResult,
-} from "@mobile-e2e-mcp/contracts";
-import { ACTION_TYPES, REASON_CODES } from "@mobile-e2e-mcp/contracts";
-import { CLI_COMMANDS } from "./constants/cli-commands.js";
-import { evidencePaths } from "./artifact-paths.js";
-import { isIosPhysicalDeviceId } from "./device-runtime.js";
-import {
-	buildDefaultDeviceId,
-	DEFAULT_HARNESS_CONFIG_PATH,
-	DEFAULT_RUNNER_PROFILE,
-	loadHarnessSelection,
-	resolveRepoPath,
-} from "./harness-config.js";
-import {
-	buildFailureReason,
-	executeRunnerWithTestHooks,
-} from "./runtime-shared.js";
-import { scrollAndResolveUiTargetWithMaestroTool } from "./ui-action-scroll.js";
-// Extracted modules (Phase 19: keep facade under 1500 lines)
-import {
-	buildIosPhysicalActionFlowPaths,
-	buildIosPhysicalFailureSuggestions,
-	classifyIosPhysicalStartupFailure,
-	executeIosPhysicalAction,
-} from "./ui-action-tools-ios-physical.js";
-import { resolveUiTargetWithMaestroTool } from "./ui-inspection-tools.js";
-import {
-	buildNonExecutedUiTargetResolution,
-	reasonCodeForResolutionStatus,
-} from "./ui-model.js";
-import { executeUiActionCommand } from "./ui-runtime.js";
-import {
-	buildIosPhysicalActionExecutionPlan,
-	buildIosPhysicalTapFlowYaml,
-	buildIosPhysicalTypeTextFlowYaml,
-	isIosSimulatorOnlyIdbActionError,
-	resolveIosPhysicalActionBackend,
-	verifyResolvedIosPointWithHooks,
-} from "./ui-runtime-ios.js";
-import { resolveUiRuntimePlatformHooks } from "./ui-runtime-platform.js";
-import {
-	buildMissingPlatformSuggestion,
-	buildUiQuery,
-	buildUnknownUiDumpOutputPath,
-} from "./ui-tool-shared.js";
-import {
-	buildResolutionNextSuggestions,
-	DEFAULT_SCROLL_DURATION_MS,
-	DEFAULT_SCROLL_MAX_SWIPES,
-	normalizeScrollDirection,
-} from "./ui-tool-utils.js";
-⋮----
-function isOkReasonCode(reasonCode: ReasonCode): boolean
-⋮----
-type AndroidKeyboardVisibility = "visible" | "hidden" | "unknown";
-⋮----
-interface AndroidKeyboardStateClassification {
-	visibility: AndroidKeyboardVisibility;
-	reason: string;
-}
-⋮----
-interface AndroidKeyboardStateProbe extends AndroidKeyboardStateClassification {
-	checked: boolean;
-	platform: "android";
-	command: string[];
-	exitCode: number | null;
-}
-⋮----
-function buildAndroidKeyboardStateCommand(deviceId: string): string[]
-⋮----
-function classifyAndroidKeyboardState(
-	inputMethodDump: string,
-): AndroidKeyboardStateClassification
-⋮----
-async function probeAndroidKeyboardState(params: {
-	repoRoot: string;
-	deviceId: string;
-}): Promise<AndroidKeyboardStateProbe>
-⋮----
-async function settleBeforeAndroidKeyboardRecheck(): Promise<void>
-⋮----
-function toTypeIntoKeyboardState(
-	beforeFocus?: AndroidKeyboardStateProbe,
-	afterFocus?: AndroidKeyboardStateProbe,
-): TypeIntoElementData["keyboardState"] | undefined
-⋮----
-async function tapResolvedTarget(
-	input: ScrollAndTapElementInput,
-	resolveResult: ToolResult<ScrollAndResolveUiTargetData>,
-	overrides?: {
-		verifyResolvedIosPoint?: typeof verifyResolvedIosPointWithHooks;
-	},
-): Promise<ToolResult<TapElementData>>
-⋮----
-// iOS physical action helpers extracted to ui-action-tools-ios-physical.ts (Phase 19)
-// Re-exported for testability:
-⋮----
-export async function tapWithMaestroTool(
-	input: TapInput,
-): Promise<ToolResult<TapData>>
-⋮----
-export async function typeTextWithMaestroTool(
-	input: TypeTextInput,
-): Promise<ToolResult<TypeTextData>>
-⋮----
-export async function tapElementWithMaestroTool(
-	input: TapElementInput,
-): Promise<ToolResult<TapElementData>>
-⋮----
-export async function typeIntoElementWithMaestroTool(
-	input: TypeIntoElementInput,
-): Promise<ToolResult<TypeIntoElementData>>
-⋮----
-// scrollAndResolveUiTargetWithMaestroTool extracted to ui-action-scroll.ts (Phase 19)
-// Re-exported for backward compatibility:
-⋮----
-export async function scrollAndTapElementWithMaestroTool(
-	input: ScrollAndTapElementInput,
-): Promise<ToolResult<ScrollAndTapElementData>>
-</file>
-
-<file path="packages/adapter-maestro/test/ios-backend-router.test.ts">
-import assert from "node:assert/strict";
-import test from "node:test";
-import {
-	IosBackendRouter,
-	resetForTesting,
-	setBackendForTesting,
-} from "../src/ios-backend-router.js";
-import type { IosExecutionBackend } from "../src/ios-backend-types.js";
-import { resetExecuteRunnerForTesting, setExecuteRunnerForTesting } from "../src/runtime-shared.js";
-⋮----
-// Simulator UDIDs are proper UUIDs with hex chars only (0-9, A-F)
-⋮----
-// Physical device UDIDs are not UUIDs - they're hex strings like "00008110-001234567890001E"
-</file>
-
 <file path="packages/adapter-maestro/test/network-policy-inspection.test.ts">
 import assert from "node:assert/strict";
 import { Buffer } from "node:buffer";
@@ -201335,52 +201186,6 @@ function writeUInt16(value: number): Buffer
 function writeUInt32(value: number): Buffer
 ⋮----
 function createStoredZip(entries: Record<string, string>): Buffer
-</file>
-
-<file path="packages/adapter-maestro/test/ui-action-tools.test.ts">
-import assert from "node:assert/strict";
-import test from "node:test";
-import {
-	REASON_CODES,
-	type ScrollAndResolveUiTargetData,
-	type ToolResult,
-} from "@mobile-e2e-mcp/contracts";
-import { OWNED_RUNNER_RESULT_PREFIX } from "../src/ios-owned-runner-protocol.js";
-import {
-	resetExecuteRunnerForTesting,
-	setExecuteRunnerForTesting,
-} from "../src/runtime-shared.js";
-import {
-	tapWithMaestroTool,
-	typeTextWithMaestroTool,
-	uiActionToolInternals,
-} from "../src/ui-action-tools.ts";
-import {
-	buildIosPhysicalExecutionEvidencePaths,
-	buildOwnedRunnerActionEnv,
-} from "../src/ui-action-tools-ios-physical.ts";
-import {
-	buildIosPhysicalActionExecutionPlan,
-	isIosSimulatorOnlyIdbActionError,
-	verifyTypedIosPostconditionWithHooks,
-} from "../src/ui-runtime-ios.ts";
-⋮----
-// Regression: verifyResolvedIosPoint must use findNodeAtPoint, not nodes[0].
-// When the hierarchy has Application root at index 0 and the target Button as a child,
-// the old code would compare the root (no identifier, no text) against the expected
-// button and always return noMatch.
-⋮----
-// Hierarchy: Application root at [0], Button child at [1]
-⋮----
-// Regression test: verifyTypedIosPostconditionWithHooks must use findNodeAtPoint,
-// not nodes[0]. When the hierarchy has Application root at index 0 and the target
-// TextField as a child, the old code would read the root's value (undefined) and
-// always fail the typed value check.
-⋮----
-// Hierarchy: Application root at [0], TextField child at [1]
-⋮----
-// The old bug would return verified=false with reasonCode=actionTypeFailed
-// because nodes[0] (Application root) has no value, so observedValue=undefined.
 </file>
 
 <file path="packages/contracts/src/constants/tool-names.ts">
@@ -203641,6 +203446,204 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 </file>
 
+<file path="docs/delivery/npm-release-and-git-tagging.zh-CN.md">
+# NPM 发版与 Git Tag 关联规范（@shenyuexin/mobile-e2e-mcp）
+
+## 目标
+
+确保每一次 NPM 发版都具备可追溯的 GitHub Tag、Release 与 CHANGELOG，实现：
+
+1. NPM 版本 ↔ Git Tag 一一对应
+2. 发版过程可审计、可回放
+3. 降低人工漏打 tag/错打 tag 风险
+4. 让 CHANGELOG 按 tag diff 自动补齐，减少手工维护
+5. 让 `repomix-output.xml` 随 release commit 一起刷新，保持 AI 入口快照与 tag 对齐
+
+## 统一约定
+
+- 包名：`@shenyuexin/mobile-e2e-mcp`
+- 包路径：`packages/mcp-server`
+- Tag 格式：`mcp-server-v<semver>`（示例：`mcp-server-v0.1.5`）
+- 发版入口：**仅通过 tag 触发 GitHub Actions 自动发布**
+
+> 不再建议本地直接 `pnpm publish` 作为正式发布路径。
+
+## 机制设计
+
+### 1) 元数据关联（npm 页面展示 GitHub）
+
+已在 `packages/mcp-server/package.json` 中声明：
+
+- `repository`
+- `homepage`
+- `bugs`
+
+这样 npm 页面会自动关联到 GitHub 仓库与 issue 地址。
+
+### 2) 自动化发布（Tag 驱动）
+
+工作流文件：`.github/workflows/release-mcp.yml`
+
+触发条件：
+
+- `push` 到 tag：`mcp-server-v*`
+
+执行流程：
+
+1. 安装依赖
+2. 校验 tag 与 `packages/mcp-server/package.json` 版本完全一致
+3. 根据“上一个 MCP tag -> 当前 tag”的 commit diff 自动生成/更新 `CHANGELOG.md` 中该版本节
+4. 再次校验 tag / package version / changelog 三者一致
+5. 将同步后的 `CHANGELOG.md` 回写到默认分支
+6. 同步生成最新 `repomix-output.xml`，并将 GitNexus 刷新可能更新的 `AGENTS.md` 与 release 元数据一起回写默认分支
+7. 构建打包
+8. 发布到 npm（使用 `NPM_TOKEN`）
+9. 创建 GitHub Release
+
+发布打包使用 `@shenyuexin/mobile-e2e-mcp` 的 `bundle` 脚本作为最终路径。该脚本必须先构建所有被 MCP server 源码直接导入的 workspace 包，包括 `@mobile-e2e-mcp/explorer`，再执行 MCP server 的 TypeScript 编译与 tsup bundle；否则 fresh CI checkout 会因为缺少 workspace 包的 `dist/*.d.ts` 而在 npm publish 前失败。
+
+### 3) Public Docs 漂移检查（非阻塞）
+
+原则：**不是每个 tag 都必须更新 README，但每个对外可见能力变更都必须有公共文档落点**。
+
+对于 AI / 用户调用方式相关变化，默认应优先检查 canonical invocation guide，而不是把相同说明复制到多篇文档中：
+
+- `docs/guides/ai-agent-invocation.zh-CN.md`（调用真相源）
+- `docs/guides/golden-path.md`（首跑前门）
+- `docs/guides/flow-generation.md`（录制 / 导出 / 回放专题）
+
+建议按三层执行：
+
+1. **PR 阶段（主关口）**
+   - 对外可见变化（能力边界、工具目录、命令入口、支持平台、发布流程）应在 PR 内同步文档。
+   - 若变化影响 AI / 用户调用方式，优先更新 `docs/guides/ai-agent-invocation.zh-CN.md`；专题变化再更新对应 topic guide。
+   - README / `docs/README.md` 更适合作为入口导航，不应承担完整调用流程的重复维护。
+2. **`release:mcp:prepare-tag` 阶段（二次确认）**
+    - 在发版前做一次“自上个 MCP tag 以来的对外变化”清单核对，确认是否存在 public docs 漂移。
+    - 如果命中了 tool surface / capability boundary 变化，但 canonical invocation guide / public docs 没有同步，本地 `release:mcp:check` 与 tag workflow 应直接失败，而不是仅 warning。
+3. **Tag workflow 阶段（兜底提醒）**
+    - 仍可保留 notice，但对 capability-governed release range 的 doc-sync 缺失不再放行 npm publish。
+
+建议触发条件（命中任一目录时，优先检查文档是否需要同步；这些是高概率触发器，不代表“命中就必须改文档”）：
+
+- `packages/mcp-server/src/server.ts`（工具暴露面）
+- `packages/mcp-server/src/tools/**`（工具行为与推荐调用路径）
+- `packages/contracts/**`（契约/Schema 变更）
+- `configs/profiles/**`、`configs/policies/**`（支持边界/治理策略）
+- `docs/guides/ai-agent-invocation.zh-CN.md`、`docs/guides/golden-path.md`、`docs/guides/flow-generation.md`（调用入口与专题指南）
+- `docs/architecture/**`（对外架构叙事变化）
+- `.github/workflows/release-mcp.yml`、`scripts/release/**`（发版自动化流程变化）
+- `packages/mcp-server/package.json` 中影响安装/发布/仓库关联的元数据字段
+
+> npm Trusted Publishing / OIDC 发布会校验包元数据与 GitHub 发布来源。`packages/mcp-server/package.json` 的
+> `repository.url` 必须精确指向当前发布仓库 `shenyuexin/mobile-e2e-mcp`，不要保留旧仓库 URL。
+
+常见可豁免场景：
+
+- 纯内部重构（无行为变化）
+- 测试/脚手架调整且不影响外部用法
+- 仅修复拼写、格式、注释
+
+> 实践建议：将“public docs / canonical invocation guide 是否需要更新”作为 release checklist 固定项，而不是把它设计成强制失败门禁。
+
+> Phase 03 更新：对于 capability-governed release range，这一项现在应视为强制失败门禁，而不是纯提示项。
+
+## 标准操作流程（推荐）
+
+### 一条命令完成准备 + 推送 tag
+
+```bash
+pnpm release:mcp:version 0.1.10
+# 或: pnpm release:mcp:prepare-tag patch
+# prepare-tag 仍支持 patch | minor | major
+```
+
+该脚本会自动执行：
+
+1. 检查工作区必须干净
+2. 更新 `@shenyuexin/mobile-e2e-mcp` 版本（不自动打默认 v tag）
+3. 根据“上一个 MCP tag -> 当前待发版版本”的 commit diff 自动生成/更新 `CHANGELOG.md`
+4. 生成最新 `repomix-output.xml`，让仓库级 AI 快照与本次待发布代码一致
+5. 校验 changelog / package version / tag 三者一致
+6. 运行 `pnpm build`、`pnpm typecheck`、`pnpm test:mcp-server`
+7. 提交版本变更（含 `CHANGELOG.md` 与 `repomix-output.xml`）
+8. 创建并推送规范 tag：`mcp-server-v<version>`
+9. 推送分支与 tag，触发 GitHub Actions 自动发包
+
+## 现在的推荐流程（你只需要关心 tag）
+
+### 方案 A：本地标准发版（推荐）
+
+```bash
+pnpm release:mcp:version 0.1.10
+```
+
+特点：
+
+- 显式指定目标版本号
+- 自动生成该版本 changelog
+- 自动提交并推 tag
+
+如果你只想按语义级别递增，也可以继续使用：
+
+```bash
+pnpm release:mcp:prepare-tag patch
+```
+
+但对日常操作建议统一心智模型为：
+
+> “更新版本到 0.x.x” = `pnpm release:mcp:version 0.x.x`
+
+不要再手工修改 `packages/mcp-server/package.json` 来发版；这不会触发完整 release 链路。
+
+### 方案 B：你只负责发 tag（机制补 changelog）
+
+如果你已经手动创建并推送了 `mcp-server-v<version>`：
+
+- GitHub Actions 会自动：
+  1. 按“上一个 tag -> 当前 tag”生成该版本 changelog
+  2. 把 `CHANGELOG.md` 与最新 `repomix-output.xml` 一起回写到默认分支
+  3. 再继续 npm publish
+
+也就是说，**以后不要求你手工先写 `CHANGELOG.md`，也不需要手工刷新 `repomix-output.xml`**。
+
+### 单独校验/同步发版元数据
+
+在需要时，也可以单独执行：
+
+```bash
+pnpm release:mcp:check
+pnpm release:mcp:sync-changelog -- --tag mcp-server-v0.1.5
+```
+
+它们分别会：
+
+1. `release:mcp:check`
+   - 校验 `packages/mcp-server/package.json` 版本存在
+   - 校验 `CHANGELOG.md` 中存在对应版本节
+   - 校验该版本节不是空的
+2. `release:mcp:sync-changelog`
+   - 根据 tag diff 自动生成/刷新该版本 changelog
+
+## 仓库管理员一次性配置
+
+在 GitHub 仓库 Secrets 中设置：
+
+- `NPM_TOKEN`：具备 publish 权限的 npm token
+
+## 回滚与应急
+
+若 tag 推送后 CI 发布失败：
+
+1. 修复代码后重新走一次版本升级（不能复用已发布版本号）
+2. 生成新版本与新 tag（例如 `0.1.5` 失败后发 `0.1.6`）
+
+若 npm 已发布但发现问题：
+
+1. 优先发布修复版本（patch）
+2. 避免依赖 `unpublish` 作为常规手段
+</file>
+
 <file path="docs/showcase/evidence/governed-control-brief/brief.json">
 {
   "schema": "governed-control-brief/v1",
@@ -204694,198 +204697,6 @@ function hasSignal(card: EvidenceCard, signal: string): boolean
 function hasCommand(brief: GovernedEvidenceBrief, command: string): boolean
 ⋮----
 export async function validateGovernedEvidenceBrief(): Promise<void>
-</file>
-
-<file path="CHANGELOG.md">
-# Changelog
-
-All notable changes to this project will be documented in this file.
-
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
-and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-
-## [Unreleased]
-
-## [0.1.18] - 2026-06-03
-
-### Added
-- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
-- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
-
-### Changed
-- Refined operator documentation, governance guidance, and architecture references around the release.
-- Release scope includes 1 merged commit between mcp-server-v0.1.17 and the target tag.
-
-### Fixed
-- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
-
-## [0.1.17] - 2026-06-03
-
-### Added
-- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
-- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
-
-### Changed
-- Refined operator documentation, governance guidance, and architecture references around the release.
-- Release scope includes 1 merged commit between mcp-server-v0.1.16 and the target tag.
-
-### Fixed
-- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
-
-## [0.1.16] - 2026-06-03
-
-### Added
-- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
-- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
-
-### Changed
-- Release scope includes 1 merged commit between mcp-server-v0.1.15 and the target tag.
-
-### Fixed
-- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
-
-## [0.1.15] - 2026-06-03
-
-### Added
-- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
-- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
-
-### Changed
-- Improved diagnostics, evidence capture, and performance analysis workflows for mobile automation runs.
-- Refined operator documentation, governance guidance, and architecture references around the release.
-- Release scope includes 103 merged commits between mcp-server-v0.1.14 and the target tag.
-
-### Fixed
-- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
-
-## [0.1.14] - 2026-05-04
-
-### Added
-- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
-- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
-
-### Changed
-- Improved diagnostics, evidence capture, and performance analysis workflows for mobile automation runs.
-- Refined operator documentation, governance guidance, and architecture references around the release.
-- Release scope includes 36 merged commits between mcp-server-v0.1.13 and the target tag.
-
-### Fixed
-- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
-
-## [0.1.13] - 2026-04-12
-
-### Added
-- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
-- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
-
-### Changed
-- Refined operator documentation, governance guidance, and architecture references around the release.
-- Release scope includes 15 merged commits between mcp-server-v0.1.12 and the target tag.
-
-### Fixed
-- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
-
-## [0.1.12] - 2026-04-12
-
-### Added
-- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
-- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
-- Improved bounded OCR and vision fallback support for cases where deterministic selectors are unavailable.
-
-### Changed
-- Improved diagnostics, evidence capture, and performance analysis workflows for mobile automation runs.
-- Refined operator documentation, governance guidance, and architecture references around the release.
-- Release scope includes 147 merged commits between mcp-server-v0.1.11 and the target tag.
-
-### Fixed
-- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
-
-## [0.1.11] - 2026-03-29
-
-### Added
-- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
-- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
-- Improved bounded OCR and vision fallback support for cases where deterministic selectors are unavailable.
-
-### Changed
-- Improved diagnostics, evidence capture, and performance analysis workflows for mobile automation runs.
-- Refined operator documentation, governance guidance, and architecture references around the release.
-- Release scope includes 48 merged commits between mcp-server-v0.1.9 and the target tag.
-
-### Fixed
-- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
-
-## [0.1.9] - 2026-03-26
-
-### Added
-- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
-- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
-- Improved bounded OCR and vision fallback support for cases where deterministic selectors are unavailable.
-
-### Changed
-- Refined operator documentation, governance guidance, and architecture references around the release.
-- Release scope includes 9 merged commits between mcp-server-v0.1.8 and the target tag.
-
-### Fixed
-- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
-
-## [0.1.8] - 2026-03-23
-
-### Added
-- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
-- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
-
-### Changed
-- Improved diagnostics, evidence capture, and performance analysis workflows for mobile automation runs.
-- Refined operator documentation, governance guidance, and architecture references around the release.
-- Release scope includes 19 merged commits between mcp-server-v0.1.7 and the target tag.
-
-### Fixed
-- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
-
-## [0.1.7] - 2026-03-21
-
-### Added
-- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
-- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
-- Improved bounded OCR and vision fallback support for cases where deterministic selectors are unavailable.
-
-### Changed
-- Improved diagnostics, evidence capture, and performance analysis workflows for mobile automation runs.
-- Refined operator documentation, governance guidance, and architecture references around the release.
-- Release scope includes 38 merged commits between mcp-server-v0.1.6 and the target tag.
-
-### Fixed
-- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
-
-## [0.1.6] - 2026-03-20
-
-### Added
-- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
-- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
-- Improved bounded OCR and vision fallback support for cases where deterministic selectors are unavailable.
-
-### Changed
-- Improved diagnostics, evidence capture, and performance analysis workflows for mobile automation runs.
-- Refined operator documentation, governance guidance, and architecture references around the release.
-- Release scope includes 39 merged commits between mcp-server-v0.1.5 and the target tag.
-
-### Fixed
-- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
-
-## [0.1.5] - 2026-03-20
-
-### Added
-- Introduced the first public AI-first mobile E2E MCP server with session lifecycle, app control, UI inspection, interaction, diagnostics, interruption handling, and failure-analysis tools.
-- Established deterministic-first execution adapters plus bounded OCR/vision fallback for Android, iOS, React Native, and Flutter automation workflows.
-- Published runnable sample flows, showcase demos, and real-device/simulator validation assets for login, recovery, and harness onboarding scenarios.
-
-### Changed
-- Reorganized the repository into a pnpm monorepo with explicit contracts, core orchestration, adapters, and MCP server package boundaries.
-- Added stdio/dev CLI entrypoints, package metadata, governance baselines, and release automation needed for public npm distribution.
-
-### Fixed
-- Hardened doctor checks, dry-run behavior, selector resolution, and session or lease stability during the initial release cycle.
 </file>
 
 <file path="docs/showcase/governed-agent-mobile-control-live.md">
@@ -206264,65 +206075,6 @@ async function cleanupRecordSessionArtifacts(recordSessionId: string): Promise<v
 // Conditional tools do not have promotion gates — they are platform-dependent, not blocked.
 </file>
 
-<file path="packages/mcp-server/package.json">
-{
-  "name": "@shenyuexin/mobile-e2e-mcp",
-  "private": false,
-  "version": "0.1.18",
-  "description": "AI-first Mobile E2E MCP server for Android/iOS/React Native/Flutter",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/shenyuexin/mobile-e2e.git",
-    "directory": "packages/mcp-server"
-  },
-  "homepage": "https://github.com/shenyuexin/mobile-e2e/tree/main/packages/mcp-server#readme",
-  "bugs": {
-    "url": "https://github.com/shenyuexin/mobile-e2e/issues"
-  },
-  "type": "module",
-  "main": "./bundle/index.cjs",
-  "types": "./dist/index.d.ts",
-  "bin": {
-    "mobile-e2e-mcp": "./bundle/bin-stdio.cjs"
-  },
-  "files": [
-    "bundle",
-    "dist"
-  ],
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "default": "./bundle/index.cjs"
-    }
-  },
-  "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.17.5"
-  },
-  "devDependencies": {
-    "@mobile-e2e-mcp/adapter-maestro": "workspace:*",
-    "@mobile-e2e-mcp/adapter-vision": "workspace:*",
-    "@mobile-e2e-mcp/contracts": "workspace:*",
-    "@mobile-e2e-mcp/core": "workspace:*",
-    "@mobile-e2e-mcp/explorer": "workspace:*",
-    "tsup": "^8.5.0"
-  },
-  "scripts": {
-    "build": "pnpm --filter @mobile-e2e-mcp/contracts build && pnpm --filter @mobile-e2e-mcp/core build && pnpm --filter @mobile-e2e-mcp/adapter-vision build && pnpm --filter @mobile-e2e-mcp/adapter-maestro build && pnpm --filter @mobile-e2e-mcp/explorer build && tsc -p tsconfig.json",
-    "bundle": "pnpm run build && tsup --config tsup.config.ts",
-    "test": "tsx --test test/*.test.ts",
-    "test:coverage": "bash ../../scripts/coverage.sh src",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
-    "dev": "tsx src/dev-cli.ts",
-    "stdio": "tsx src/mcp-stdio-server.ts",
-    "stdio:minimal": "tsx src/stdio-server.ts",
-    "release:publish": "pnpm run bundle && pnpm publish --access public",
-    "release:publish:ci": "pnpm run bundle && pnpm publish --access public --no-git-checks",
-    "release:publish:dry-run": "pnpm run bundle && pnpm publish --access public --dry-run --no-git-checks",
-    "release:patch": "pnpm version patch && pnpm run release:publish"
-  }
-}
-</file>
-
 <file path="scripts/showcase/react-native-one-command.ts">
 import assert from "node:assert/strict";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
@@ -206596,6 +206348,209 @@ export async function writeReactNativeReadiness(check: boolean): Promise<ReactNa
 async function main(): Promise<void>
 ⋮----
 function isCliEntrypoint(): boolean
+</file>
+
+<file path="CHANGELOG.md">
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+## [0.1.19] - 2026-06-06
+
+### Added
+- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
+
+### Changed
+- Release scope includes 1 merged commit between mcp-server-v0.1.18 and the target tag.
+
+### Fixed
+- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
+
+## [0.1.18] - 2026-06-03
+
+### Added
+- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
+- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
+
+### Changed
+- Refined operator documentation, governance guidance, and architecture references around the release.
+- Release scope includes 1 merged commit between mcp-server-v0.1.17 and the target tag.
+
+### Fixed
+- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
+
+## [0.1.17] - 2026-06-03
+
+### Added
+- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
+- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
+
+### Changed
+- Refined operator documentation, governance guidance, and architecture references around the release.
+- Release scope includes 1 merged commit between mcp-server-v0.1.16 and the target tag.
+
+### Fixed
+- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
+
+## [0.1.16] - 2026-06-03
+
+### Added
+- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
+- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
+
+### Changed
+- Release scope includes 1 merged commit between mcp-server-v0.1.15 and the target tag.
+
+### Fixed
+- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
+
+## [0.1.15] - 2026-06-03
+
+### Added
+- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
+- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
+
+### Changed
+- Improved diagnostics, evidence capture, and performance analysis workflows for mobile automation runs.
+- Refined operator documentation, governance guidance, and architecture references around the release.
+- Release scope includes 103 merged commits between mcp-server-v0.1.14 and the target tag.
+
+### Fixed
+- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
+
+## [0.1.14] - 2026-05-04
+
+### Added
+- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
+- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
+
+### Changed
+- Improved diagnostics, evidence capture, and performance analysis workflows for mobile automation runs.
+- Refined operator documentation, governance guidance, and architecture references around the release.
+- Release scope includes 36 merged commits between mcp-server-v0.1.13 and the target tag.
+
+### Fixed
+- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
+
+## [0.1.13] - 2026-04-12
+
+### Added
+- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
+- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
+
+### Changed
+- Refined operator documentation, governance guidance, and architecture references around the release.
+- Release scope includes 15 merged commits between mcp-server-v0.1.12 and the target tag.
+
+### Fixed
+- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
+
+## [0.1.12] - 2026-04-12
+
+### Added
+- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
+- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
+- Improved bounded OCR and vision fallback support for cases where deterministic selectors are unavailable.
+
+### Changed
+- Improved diagnostics, evidence capture, and performance analysis workflows for mobile automation runs.
+- Refined operator documentation, governance guidance, and architecture references around the release.
+- Release scope includes 147 merged commits between mcp-server-v0.1.11 and the target tag.
+
+### Fixed
+- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
+
+## [0.1.11] - 2026-03-29
+
+### Added
+- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
+- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
+- Improved bounded OCR and vision fallback support for cases where deterministic selectors are unavailable.
+
+### Changed
+- Improved diagnostics, evidence capture, and performance analysis workflows for mobile automation runs.
+- Refined operator documentation, governance guidance, and architecture references around the release.
+- Release scope includes 48 merged commits between mcp-server-v0.1.9 and the target tag.
+
+### Fixed
+- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
+
+## [0.1.9] - 2026-03-26
+
+### Added
+- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
+- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
+- Improved bounded OCR and vision fallback support for cases where deterministic selectors are unavailable.
+
+### Changed
+- Refined operator documentation, governance guidance, and architecture references around the release.
+- Release scope includes 9 merged commits between mcp-server-v0.1.8 and the target tag.
+
+### Fixed
+- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
+
+## [0.1.8] - 2026-03-23
+
+### Added
+- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
+- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
+
+### Changed
+- Improved diagnostics, evidence capture, and performance analysis workflows for mobile automation runs.
+- Refined operator documentation, governance guidance, and architecture references around the release.
+- Release scope includes 19 merged commits between mcp-server-v0.1.7 and the target tag.
+
+### Fixed
+- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
+
+## [0.1.7] - 2026-03-21
+
+### Added
+- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
+- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
+- Improved bounded OCR and vision fallback support for cases where deterministic selectors are unavailable.
+
+### Changed
+- Improved diagnostics, evidence capture, and performance analysis workflows for mobile automation runs.
+- Refined operator documentation, governance guidance, and architecture references around the release.
+- Release scope includes 38 merged commits between mcp-server-v0.1.6 and the target tag.
+
+### Fixed
+- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
+
+## [0.1.6] - 2026-03-20
+
+### Added
+- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
+- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
+- Improved bounded OCR and vision fallback support for cases where deterministic selectors are unavailable.
+
+### Changed
+- Improved diagnostics, evidence capture, and performance analysis workflows for mobile automation runs.
+- Refined operator documentation, governance guidance, and architecture references around the release.
+- Release scope includes 39 merged commits between mcp-server-v0.1.5 and the target tag.
+
+### Fixed
+- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
+
+## [0.1.5] - 2026-03-20
+
+### Added
+- Introduced the first public AI-first mobile E2E MCP server with session lifecycle, app control, UI inspection, interaction, diagnostics, interruption handling, and failure-analysis tools.
+- Established deterministic-first execution adapters plus bounded OCR/vision fallback for Android, iOS, React Native, and Flutter automation workflows.
+- Published runnable sample flows, showcase demos, and real-device/simulator validation assets for login, recovery, and harness onboarding scenarios.
+
+### Changed
+- Reorganized the repository into a pnpm monorepo with explicit contracts, core orchestration, adapters, and MCP server package boundaries.
+- Added stdio/dev CLI entrypoints, package metadata, governance baselines, and release automation needed for public npm distribution.
+
+### Fixed
+- Hardened doctor checks, dry-run behavior, selector resolution, and session or lease stability during the initial release cycle.
 </file>
 
 <file path=".planning/phases/37-governed-control-live-evidence/37-01-SUMMARY.md">
@@ -210333,6 +210288,65 @@ export interface WaitForUiStableData {
 }
 </file>
 
+<file path="packages/mcp-server/package.json">
+{
+  "name": "@shenyuexin/mobile-e2e-mcp",
+  "private": false,
+  "version": "0.1.19",
+  "description": "AI-first Mobile E2E MCP server for Android/iOS/React Native/Flutter",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shenyuexin/mobile-e2e-mcp.git",
+    "directory": "packages/mcp-server"
+  },
+  "homepage": "https://github.com/shenyuexin/mobile-e2e-mcp/tree/main/packages/mcp-server#readme",
+  "bugs": {
+    "url": "https://github.com/shenyuexin/mobile-e2e-mcp/issues"
+  },
+  "type": "module",
+  "main": "./bundle/index.cjs",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "mobile-e2e-mcp": "./bundle/bin-stdio.cjs"
+  },
+  "files": [
+    "bundle",
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./bundle/index.cjs"
+    }
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.17.5"
+  },
+  "devDependencies": {
+    "@mobile-e2e-mcp/adapter-maestro": "workspace:*",
+    "@mobile-e2e-mcp/adapter-vision": "workspace:*",
+    "@mobile-e2e-mcp/contracts": "workspace:*",
+    "@mobile-e2e-mcp/core": "workspace:*",
+    "@mobile-e2e-mcp/explorer": "workspace:*",
+    "tsup": "^8.5.0"
+  },
+  "scripts": {
+    "build": "pnpm --filter @mobile-e2e-mcp/contracts build && pnpm --filter @mobile-e2e-mcp/core build && pnpm --filter @mobile-e2e-mcp/adapter-vision build && pnpm --filter @mobile-e2e-mcp/adapter-maestro build && pnpm --filter @mobile-e2e-mcp/explorer build && tsc -p tsconfig.json",
+    "bundle": "pnpm run build && tsup --config tsup.config.ts",
+    "test": "tsx --test test/*.test.ts",
+    "test:coverage": "bash ../../scripts/coverage.sh src",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "dev": "tsx src/dev-cli.ts",
+    "stdio": "tsx src/mcp-stdio-server.ts",
+    "stdio:minimal": "tsx src/stdio-server.ts",
+    "release:publish": "pnpm run bundle && pnpm publish --access public",
+    "release:publish:ci": "pnpm run bundle && pnpm publish --access public --no-git-checks",
+    "release:publish:dry-run": "pnpm run bundle && pnpm publish --access public --dry-run --no-git-checks",
+    "release:patch": "pnpm version patch && pnpm run release:publish"
+  }
+}
+</file>
+
 <file path="AGENTS.md">
 # AGENTS Guide for `mobile-e2e-mcp`
 
@@ -210454,7 +210468,7 @@ Quick reference:
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **mobile-e2e-mcp** (6116 symbols, 13973 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **mobile-e2e-mcp** (6119 symbols, 13973 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 

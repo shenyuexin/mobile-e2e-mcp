@@ -7,6 +7,17 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [0.1.19] - 2026-06-06
+
+### Added
+- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
+
+### Changed
+- Release scope includes 1 merged commit between mcp-server-v0.1.18 and the target tag.
+
+### Fixed
+- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
+
 ## [0.1.18] - 2026-06-03
 
 ### Added
