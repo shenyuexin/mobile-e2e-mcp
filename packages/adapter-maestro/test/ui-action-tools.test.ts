@@ -521,6 +521,128 @@ test("verifyResolvedIosPoint accepts exact semantic fallback when query-backed l
 	assert.equal(verification.reasonCode, REASON_CODES.ok);
 });
 
+test("verifyResolvedIosPoint succeeds when identifier-bearing Button contains smaller anonymous StaticText at center", async () => {
+	const verification = await uiActionToolInternals.verifyResolvedIosPoint({
+		repoRoot: process.cwd(),
+		deviceId: "ios-sim-1",
+		resolvedNode: {
+			resourceId: "library.createManage.entry",
+			className: "Button",
+			text: "New",
+			contentDesc: "New",
+			clickable: true,
+			enabled: true,
+			scrollable: false,
+			bounds: "[100,100][180,150]",
+		},
+		resolvedQuery: { resourceId: "library.createManage.entry" },
+		resolvedPoint: { x: 140, y: 125 },
+		runtimeHooks: {
+			platform: "ios",
+			requiresProbe: true,
+			probeFailureReasonCode: REASON_CODES.configurationError,
+			buildTapCommand: () => ["tap"],
+			buildDescribePointCommand: () => ["describe-point", "140", "125"],
+			buildTypeTextCommand: () => ["type"],
+			buildSwipeCommand: () => ["swipe"],
+			buildHierarchyCapturePreviewCommand: () => ["describe-all"],
+			probeUnavailableSuggestion: () => "probe unavailable",
+			tapDryRunSuggestion: "tap dry",
+			tapFailureSuggestion: "tap failed",
+			typeTextDryRunSuggestion: "type dry",
+			typeTextFailureSuggestion: "type failed",
+		},
+		executeDescribePointCommand: async () => ({
+			command: ["describe-point", "140", "125"],
+			probeExecution: { exitCode: 0, stdout: "ok", stderr: "" },
+			execution: {
+				exitCode: 0,
+				stdout: JSON.stringify([
+					{
+						AXUniqueId: "library.createManage.entry",
+						type: "Button",
+						AXLabel: "New",
+						frame: { x: 100, y: 100, width: 80, height: 50 },
+						children: [
+							{
+								AXUniqueId: null,
+								type: "StaticText",
+								AXLabel: "New",
+								frame: { x: 125, y: 115, width: 30, height: 20 },
+							},
+						],
+					},
+				]),
+				stderr: "",
+			},
+		}),
+	});
+
+	assert.equal(verification.verified, true);
+	assert.equal(verification.reasonCode, REASON_CODES.ok);
+});
+
+test("verifyResolvedIosPoint still fails when smaller covering node carries a different identifier", async () => {
+	const verification = await uiActionToolInternals.verifyResolvedIosPoint({
+		repoRoot: process.cwd(),
+		deviceId: "ios-sim-1",
+		resolvedNode: {
+			resourceId: "library.createManage.entry",
+			className: "Button",
+			text: "New",
+			contentDesc: "New",
+			clickable: true,
+			enabled: true,
+			scrollable: false,
+			bounds: "[100,100][180,150]",
+		},
+		resolvedQuery: { resourceId: "library.createManage.entry" },
+		resolvedPoint: { x: 140, y: 125 },
+		runtimeHooks: {
+			platform: "ios",
+			requiresProbe: true,
+			probeFailureReasonCode: REASON_CODES.configurationError,
+			buildTapCommand: () => ["tap"],
+			buildDescribePointCommand: () => ["describe-point", "140", "125"],
+			buildTypeTextCommand: () => ["type"],
+			buildSwipeCommand: () => ["swipe"],
+			buildHierarchyCapturePreviewCommand: () => ["describe-all"],
+			probeUnavailableSuggestion: () => "probe unavailable",
+			tapDryRunSuggestion: "tap dry",
+			tapFailureSuggestion: "tap failed",
+			typeTextDryRunSuggestion: "type dry",
+			typeTextFailureSuggestion: "type failed",
+		},
+		executeDescribePointCommand: async () => ({
+			command: ["describe-point", "140", "125"],
+			probeExecution: { exitCode: 0, stdout: "ok", stderr: "" },
+			execution: {
+				exitCode: 0,
+				stdout: JSON.stringify([
+					{
+						AXUniqueId: "library.createManage.entry",
+						type: "Button",
+						AXLabel: "New",
+						frame: { x: 100, y: 100, width: 80, height: 50 },
+						children: [
+							{
+								AXUniqueId: "blocking.overlay.badge",
+								type: "Button",
+								AXLabel: "Overlay",
+								frame: { x: 120, y: 110, width: 40, height: 30 },
+							},
+						],
+					},
+				]),
+				stderr: "",
+			},
+		}),
+	});
+
+	assert.equal(verification.verified, false);
+	assert.equal(verification.reasonCode, REASON_CODES.noMatch);
+});
+
 test("verifyTypedIosPostconditionWithHooks accepts updated text field value", async () => {
 	const verification = await verifyTypedIosPostconditionWithHooks({
 		repoRoot: process.cwd(),

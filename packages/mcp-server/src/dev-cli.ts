@@ -72,6 +72,8 @@ export function parseCliArgs(argv: string[]): CliOptions {
   let exploreOutput: string | undefined;
   let exploreCompare: string | undefined;
   let exploreMaxDepth: number | undefined;
+  let explorePlatform: string | undefined;
+  let exploreLaunchEnv: Record<string, string> | undefined;
   let durationMs: number | undefined;
   let resetStrategy: ResetAppStateStrategy | undefined;
   let bitrateMbps: number | undefined;
@@ -136,6 +138,12 @@ export function parseCliArgs(argv: string[]): CliOptions {
     const arg = argv[index];
     const nextValue = argv[index + 1];
     if (arg === "--platform" && (nextValue === "android" || nextValue === "ios")) { platform = nextValue; platformProvided = true; index += 1; }
+    else if (arg === "--platform" && nextValue && ["ios-simulator", "ios-device", "android-emulator", "android-device"].includes(nextValue)) {
+      explorePlatform = nextValue;
+      platform = nextValue.startsWith("ios") ? "ios" : "android";
+      platformProvided = true;
+      index += 1;
+    }
     else if (arg === "--capture-js-console-logs") { captureJsConsoleLogs = true; }
     else if (arg === "--capture-js-network-events") { captureJsNetworkEvents = true; }
     else if (arg === "--compare-against-baseline") { compareAgainstBaseline = true; }
@@ -245,6 +253,15 @@ export function parseCliArgs(argv: string[]): CliOptions {
     else if (arg === "--output" && nextValue && explore) { exploreOutput = nextValue; index += 1; }
     else if (arg === "--compare" && nextValue && explore) { exploreCompare = nextValue; index += 1; }
     else if (arg === "--max-depth" && nextValue && explore) { const parsed = Number(nextValue); if (Number.isFinite(parsed) && parsed > 0) exploreMaxDepth = Math.floor(parsed); index += 1; }
+    else if (arg === "--launch-env" && nextValue && explore) {
+      const eqIdx = nextValue.indexOf("=");
+      if (eqIdx > 0) {
+        const key = nextValue.slice(0, eqIdx);
+        const val = nextValue.slice(eqIdx + 1);
+        exploreLaunchEnv = { ...(exploreLaunchEnv ?? {}), [key]: val };
+      }
+      index += 1;
+    }
   }
 
   return {
@@ -363,6 +380,8 @@ export function parseCliArgs(argv: string[]): CliOptions {
     exploreOutput,
     exploreCompare,
     exploreMaxDepth,
+    explorePlatform,
+    exploreLaunchEnv,
   };
 }
 

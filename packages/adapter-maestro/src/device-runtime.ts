@@ -154,8 +154,27 @@ export function buildLaunchCommandWithRuntime(platform: Platform, params: {
   deviceId: string;
   appId: string;
   launchUrl?: string;
+  launchArgs?: string[];
+  terminateRunning?: boolean;
+  hasLaunchEnv?: boolean;
 }): string[] {
   return resolveDeviceRuntimePlatformHooks(platform).buildLaunchCommand(params);
+}
+
+export function buildLaunchProcessEnvWithRuntime(platform: Platform, params: {
+  deviceId: string;
+  launchEnv?: Record<string, string>;
+  baseEnv?: NodeJS.ProcessEnv;
+}): {
+  env: NodeJS.ProcessEnv;
+  appliedKeys: string[];
+  ignoredReason?: string;
+} {
+  const hook = resolveDeviceRuntimePlatformHooks(platform).buildLaunchProcessEnv;
+  if (!hook) {
+    return { env: { ...(params.baseEnv ?? process.env) }, appliedKeys: [] };
+  }
+  return hook(params);
 }
 
 export function buildInstallCommandWithRuntime(platform: Platform, params: {
@@ -631,15 +650,70 @@ export async function takeScreenshotWithRuntime(input: ScreenshotInput): Promise
   }
 
   const execution = await executeRunner(command, repoRoot, process.env);
+  if (execution.exitCode === 0) {
+    return {
+      status: "success",
+      reasonCode: REASON_CODES.ok,
+      sessionId: input.sessionId,
+      durationMs: Date.now() - startTime,
+      attempts: 1,
+      artifacts: [toRelativePath(repoRoot, absoluteOutputPath)],
+      data: { dryRun: false, runnerProfile, outputPath: relativeOutputPath, command, exitCode: 0, evidence: [buildExecutionEvidence("screenshot", relativeOutputPath, hooks.screenshotSupportLevel, "Captured iOS screenshot artifact.")] },
+      nextSuggestions: [],
+    };
+  }
+
+  const fallbackCommand = hooks.buildScreenshotFallbackCommand?.(deviceId, absoluteOutputPath);
+  if (fallbackCommand) {
+    const fallbackExecution = await executeRunner(fallbackCommand, repoRoot, process.env);
+    if (fallbackExecution.exitCode === 0) {
+      return {
+        status: "success",
+        reasonCode: REASON_CODES.ok,
+        sessionId: input.sessionId,
+        durationMs: Date.now() - startTime,
+        attempts: 2,
+        artifacts: [toRelativePath(repoRoot, absoluteOutputPath)],
+        data: {
+          dryRun: false,
+          runnerProfile,
+          outputPath: relativeOutputPath,
+          command: fallbackCommand,
+          exitCode: 0,
+          evidence: [
+            buildExecutionEvidence(
+              "screenshot",
+              relativeOutputPath,
+              hooks.screenshotSupportLevel,
+              "Captured iOS screenshot artifact via axe fallback after simctl screenshot failure.",
+            ),
+          ],
+        },
+        nextSuggestions: [],
+      };
+    }
+    const combinedStderr = [execution.stderr, fallbackExecution.stderr].filter(Boolean).join("\n");
+    return {
+      status: "failed",
+      reasonCode: buildFailureReason(combinedStderr, fallbackExecution.exitCode ?? execution.exitCode),
+      sessionId: input.sessionId,
+      durationMs: Date.now() - startTime,
+      attempts: 2,
+      artifacts: [],
+      data: { dryRun: false, runnerProfile, outputPath: relativeOutputPath, command: fallbackCommand, exitCode: fallbackExecution.exitCode },
+      nextSuggestions: [hooks.screenshotFailureSuggestion],
+    };
+  }
+
   return {
-    status: execution.exitCode === 0 ? "success" : "failed",
-    reasonCode: execution.exitCode === 0 ? REASON_CODES.ok : buildFailureReason(execution.stderr, execution.exitCode),
+    status: "failed",
+    reasonCode: buildFailureReason(execution.stderr, execution.exitCode),
     sessionId: input.sessionId,
     durationMs: Date.now() - startTime,
     attempts: 1,
-    artifacts: execution.exitCode === 0 ? [toRelativePath(repoRoot, absoluteOutputPath)] : [],
-    data: { dryRun: false, runnerProfile, outputPath: relativeOutputPath, command, exitCode: execution.exitCode, evidence: execution.exitCode === 0 ? [buildExecutionEvidence("screenshot", relativeOutputPath, hooks.screenshotSupportLevel, "Captured iOS screenshot artifact.")] : undefined },
-    nextSuggestions: execution.exitCode === 0 ? [] : [hooks.screenshotFailureSuggestion],
+    artifacts: [],
+    data: { dryRun: false, runnerProfile, outputPath: relativeOutputPath, command, exitCode: execution.exitCode },
+    nextSuggestions: [hooks.screenshotFailureSuggestion],
   };
 }
 

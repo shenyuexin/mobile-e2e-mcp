@@ -73,7 +73,7 @@ test("selectAndroidReplayBackend returns owned-adb for flow with only supported 
     flowContent,
     deviceId: "emulator-5554",
     userId: undefined,
-    repoRoot: "/Users/linan/Documents/mobile-e2e-mcp",
+    repoRoot: resolveRepoPath(),
   });
   assert.equal(result.backend, "owned-adb");
   assert.equal(result.helperAppsRequired, false);
@@ -96,7 +96,7 @@ test("selectAndroidReplayBackend returns maestro for flow with unsupported comma
     flowContent,
     deviceId: "emulator-5554",
     userId: undefined,
-    repoRoot: "/Users/linan/Documents/mobile-e2e-mcp",
+    repoRoot: resolveRepoPath(),
   });
   assert.equal(result.backend, "maestro");
 });
@@ -126,7 +126,7 @@ test("selectAndroidReplayBackend returns owned-adb for flow with newly supported
     flowContent,
     deviceId: "emulator-5554",
     userId: undefined,
-    repoRoot: "/Users/linan/Documents/mobile-e2e-mcp",
+    repoRoot: resolveRepoPath(),
   });
   assert.equal(result.backend, "owned-adb");
   assert.equal(result.helperAppsRequired, false);

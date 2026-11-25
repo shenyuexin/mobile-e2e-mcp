@@ -48,7 +48,10 @@ function buildMissingHarnessConfigError(harnessConfigPath: string): Error {
 }
 
 export function buildDefaultDeviceId(platform: Platform): string {
-  return platform === "android" ? DEFAULT_ANDROID_DEVICE_ID : DEFAULT_IOS_SIMULATOR_UDID;
+  if (platform === "ios") {
+    return process.env.M2E_DEVICE_ID?.trim() || process.env.MCP_IOS_UDID?.trim() || DEFAULT_IOS_SIMULATOR_UDID;
+  }
+  return process.env.M2E_DEVICE_ID?.trim() || DEFAULT_ANDROID_DEVICE_ID;
 }
 
 export function buildDefaultAppId(platform: Platform): string {
@@ -131,6 +134,18 @@ export async function loadHarnessSelection(
   harnessConfigPath: string,
 ): Promise<HarnessSelection> {
   ensureRunnerProfilePlatform(platform, runnerProfile);
+  const absoluteConfigPath = path.resolve(repoRoot, harnessConfigPath);
+  if (harnessConfigPath === DEFAULT_HARNESS_CONFIG_PATH && !existsSync(absoluteConfigPath)) {
+    return {
+      runnerProfile,
+      runnerScript: "",
+      deviceId: undefined,
+      appId: buildDefaultAppId(platform),
+      sampleName: runnerProfile,
+      runCountDefault: 1,
+      configuredFlows: [DEFAULT_FLOWS[platform]],
+    };
+  }
   const parsedConfig = await parseHarnessConfig(repoRoot, harnessConfigPath);
   const platformDefaults = loadPlatformDefaults(parsedConfig, platform, harnessConfigPath);
 
@@ -193,8 +208,25 @@ export async function loadHarnessSelection(
   };
 }
 
+function resolveDefaultModuleDir(): string {
+  if (typeof import.meta !== "undefined" && typeof import.meta.url === "string" && import.meta.url.length > 0) {
+    return path.dirname(fileURLToPath(import.meta.url));
+  }
+  if (typeof __dirname === "string" && __dirname.length > 0) {
+    return __dirname;
+  }
+  return process.cwd();
+}
+
 export function resolveRepoPath(startPath?: string): string {
-  let currentPath = startPath ?? path.dirname(fileURLToPath(import.meta.url));
+  if (!startPath) {
+    const workDir = process.env.M2E_WORK_DIR?.trim() || process.env.MCP_EVIDENCE_DIR?.trim();
+    if (workDir) {
+      return path.resolve(workDir);
+    }
+  }
+
+  let currentPath = startPath ?? resolveDefaultModuleDir();
 
   while (true) {
     const hasRepoMarkers = [
@@ -209,7 +241,7 @@ export function resolveRepoPath(startPath?: string): string {
 
     const parentPath = path.dirname(currentPath);
     if (parentPath === currentPath) {
-      throw new Error("Unable to resolve repository root from adapter-maestro.");
+      return process.cwd();
     }
     currentPath = parentPath;
   }

@@ -146,6 +146,10 @@ export interface ExplorerConfig {
 	maxActionSuccessesPerContext?: number;
 	/** Bundle ID / package name of the target app. */
 	appId: string;
+	/** Optional target device/simulator UDID override. */
+	deviceId?: string;
+	/** Optional process environment variables injected at app launch (never persisted). */
+	launchEnv?: Record<string, string>;
 	/** Base output directory for reports. */
 	reportDir: string;
 	/** Sampling rules for high-fanout collection pages (smoke mode). */

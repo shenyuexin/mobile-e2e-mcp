@@ -30,8 +30,18 @@ export async function executeExplore(
   if (options.appId) {
     exploreArgs.push("--app-id", options.appId);
   }
-  if (options.platform) {
-    exploreArgs.push("--platform", options.platform);
+  const resolvedExplorePlatform = options.explorePlatform
+    ?? (options.platform === "ios" ? "ios-simulator" : options.platform === "android" ? "android-emulator" : undefined);
+  if (resolvedExplorePlatform) {
+    exploreArgs.push("--platform", resolvedExplorePlatform);
+  }
+  if (options.deviceId) {
+    exploreArgs.push("--device-id", options.deviceId);
+  }
+  if (options.exploreLaunchEnv) {
+    for (const [key, value] of Object.entries(options.exploreLaunchEnv)) {
+      exploreArgs.push("--launch-env", `${key}=${value}`);
+    }
   }
   if (options.exploreNoPrompt) {
     exploreArgs.push("--no-prompt");

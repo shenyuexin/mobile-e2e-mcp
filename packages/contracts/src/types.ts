@@ -1610,12 +1610,26 @@ export interface InstallAppData {
   installCommand: string[];
   exitCode: number | null;
 }
-export interface LaunchAppInput { sessionId: string; platform?: Platform; runnerProfile?: RunnerProfile; harnessConfigPath?: string; deviceId?: string; appId?: string; launchUrl?: string; dryRun?: boolean; }
+export interface LaunchAppInput {
+  sessionId: string;
+  platform?: Platform;
+  runnerProfile?: RunnerProfile;
+  harnessConfigPath?: string;
+  deviceId?: string;
+  appId?: string;
+  launchUrl?: string;
+  launchEnv?: Record<string, string>;
+  launchArgs?: string[];
+  terminateRunning?: boolean;
+  dryRun?: boolean;
+}
 export interface LaunchAppData {
   dryRun: boolean;
   runnerProfile: RunnerProfile;
   appId: string;
   launchUrl?: string;
+  launchEnvKeys?: string[];
+  launchArgs?: string[];
   launchCommand: string[];
   exitCode: number | null;
 }
