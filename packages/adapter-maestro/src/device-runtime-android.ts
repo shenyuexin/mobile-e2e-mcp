@@ -82,6 +82,17 @@ export function createAndroidDeviceRuntimeHooks(): DeviceRuntimePlatformHooks {
       }
       return [CLI_COMMANDS.adb, "-s", deviceId, "shell", "monkey", "-p", appId, "-c", "android.intent.category.LAUNCHER", "1"];
     },
+    buildLaunchProcessEnv: ({ launchEnv, baseEnv }) => {
+      const env: NodeJS.ProcessEnv = { ...(baseEnv ?? process.env) };
+      if (launchEnv && Object.keys(launchEnv).length > 0) {
+        return {
+          env,
+          appliedKeys: [],
+          ignoredReason: "launchEnv injection is currently supported on iOS (SIMCTL_CHILD_/DEVICECTL_CHILD_) only; Android monkey/am launches ignore launchEnv.",
+        };
+      }
+      return { env, appliedKeys: [] };
+    },
     buildInstallCommand: ({ deviceId, artifactPath }) => [CLI_COMMANDS.adb, "-s", deviceId, "install", "-r", artifactPath],
     buildResetPlan: ({ strategy, deviceId, appId, artifactPath }) => {
       if (strategy === "clear_data") {

@@ -3,21 +3,26 @@ import type {
   InstallAppInput,
   LaunchAppData,
   LaunchAppInput,
+  Platform,
   ResetAppStateData,
   ResetAppStateInput,
   ResetAppStateStrategy,
+  RunnerProfile,
   ToolResult,
 } from "@mobile-e2e-mcp/contracts";
 import { REASON_CODES } from "@mobile-e2e-mcp/contracts";
 import { existsSync } from "node:fs";
 import {
   buildDefaultDeviceId,
+  DEFAULT_ANDROID_APP_ID,
   DEFAULT_HARNESS_CONFIG_PATH,
+  DEFAULT_IOS_APP_ID,
   DEFAULT_RUNNER_PROFILE,
   loadHarnessSelection,
   resolveRepoPath,
 } from "./harness-config.js";
 import {
+  buildLaunchProcessEnvWithRuntime,
   buildResetPlanWithRuntime,
   buildInstallCommandWithRuntime,
   buildLaunchCommandWithRuntime,
@@ -25,6 +30,31 @@ import {
   resolveInstallArtifactPath,
 } from "./device-runtime.js";
 import { buildFailureReason, executeRunner } from "./runtime-shared.js";
+
+const DEFAULT_NATIVE_PROFILE_BY_PLATFORM: Record<Platform, RunnerProfile> = {
+  android: "native_android",
+  ios: "native_ios",
+};
+
+const POSIX_ENV_KEY_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/;
+
+function validateLaunchEnv(launchEnv: unknown): string | undefined {
+  if (launchEnv === undefined) {
+    return undefined;
+  }
+  if (typeof launchEnv !== "object" || launchEnv === null || Array.isArray(launchEnv)) {
+    return "launchEnv must be a plain object mapping environment variable names to string values.";
+  }
+  for (const [key, value] of Object.entries(launchEnv)) {
+    if (!POSIX_ENV_KEY_PATTERN.test(key)) {
+      return `Invalid launchEnv key "${key}". Keys must match /^[A-Za-z_][A-Za-z0-9_]*$/.`;
+    }
+    if (typeof value !== "string") {
+      return `Invalid launchEnv value for "${key}". All environment variable values must be strings.`;
+    }
+  }
+  return undefined;
+}
 
 export async function launchAppWithRuntime(input: LaunchAppInput): Promise<ToolResult<LaunchAppData>> {
   const startTime = Date.now();
@@ -40,20 +70,69 @@ export async function launchAppWithRuntime(input: LaunchAppInput): Promise<ToolR
       nextSuggestions: ["Provide platform explicitly, or call launch_app with an active sessionId so MCP can resolve platform from session context."],
     };
   }
+  const launchEnvError = validateLaunchEnv(input.launchEnv);
+  if (launchEnvError) {
+    return {
+      status: "failed",
+      reasonCode: REASON_CODES.configurationError,
+      sessionId: input.sessionId,
+      durationMs: Date.now() - startTime,
+      attempts: 1,
+      artifacts: [],
+      data: {
+        dryRun: Boolean(input.dryRun),
+        runnerProfile: input.runnerProfile ?? DEFAULT_RUNNER_PROFILE,
+        appId: input.appId ?? "",
+        launchUrl: input.launchUrl,
+        launchCommand: [],
+        exitCode: null,
+      },
+      nextSuggestions: [
+        launchEnvError,
+        "Provide launchEnv as a map of valid POSIX environment variable names (/^[A-Za-z_][A-Za-z0-9_]*$/) to string values.",
+      ],
+    };
+  }
   const repoRoot = resolveRepoPath();
   const platform = input.platform;
-  const runnerProfile = input.runnerProfile ?? DEFAULT_RUNNER_PROFILE;
+  const shouldInferNativeProfile =
+    !input.runnerProfile &&
+    !input.launchUrl &&
+    Boolean(input.appId) &&
+    input.appId !== DEFAULT_IOS_APP_ID &&
+    input.appId !== DEFAULT_ANDROID_APP_ID;
+  const runnerProfile = input.runnerProfile
+    ?? (shouldInferNativeProfile ? DEFAULT_NATIVE_PROFILE_BY_PLATFORM[platform] : DEFAULT_RUNNER_PROFILE);
   const selection = await loadHarnessSelection(repoRoot, platform, runnerProfile, input.harnessConfigPath ?? DEFAULT_HARNESS_CONFIG_PATH);
   const deviceId = input.deviceId ?? selection.deviceId ?? buildDefaultDeviceId(platform);
   const appId = input.appId ?? selection.appId;
   const launchUrl = input.launchUrl ?? selection.launchUrl;
+  const launchArgs = input.launchArgs?.filter((arg) => arg.length > 0);
+  const launchEnvKeys = input.launchEnv ? Object.keys(input.launchEnv).sort() : [];
+  const hasLaunchEnv = launchEnvKeys.length > 0;
 
   const launchCommand = buildLaunchCommandWithRuntime(platform, {
     runnerProfile,
     deviceId,
     appId,
     launchUrl,
+    launchArgs,
+    terminateRunning: input.terminateRunning,
+    hasLaunchEnv,
   });
+  const launchEnvPlan = buildLaunchProcessEnvWithRuntime(platform, {
+    deviceId,
+    launchEnv: input.launchEnv,
+    baseEnv: process.env,
+  });
+  const launchDataBase: Omit<LaunchAppData, "dryRun" | "exitCode"> = {
+    runnerProfile,
+    appId,
+    launchUrl,
+    launchEnvKeys: launchEnvPlan.appliedKeys.length > 0 ? launchEnvPlan.appliedKeys : undefined,
+    launchArgs: launchArgs && launchArgs.length > 0 ? launchArgs : undefined,
+    launchCommand,
+  };
 
   if (runnerProfile === "phase1" && !launchUrl) {
     return {
@@ -63,7 +142,7 @@ export async function launchAppWithRuntime(input: LaunchAppInput): Promise<ToolR
       durationMs: Date.now() - startTime,
       attempts: 1,
       artifacts: [],
-      data: { dryRun: Boolean(input.dryRun), runnerProfile, appId, launchCommand, exitCode: null },
+      data: { ...launchDataBase, dryRun: Boolean(input.dryRun), exitCode: null },
       nextSuggestions: ["Provide launchUrl or ensure the harness config includes a phase1 launch_url before calling launch_app."],
     };
   }
@@ -76,12 +155,15 @@ export async function launchAppWithRuntime(input: LaunchAppInput): Promise<ToolR
       durationMs: Date.now() - startTime,
       attempts: 1,
       artifacts: [],
-      data: { dryRun: true, runnerProfile, appId, launchUrl, launchCommand, exitCode: 0 },
-      nextSuggestions: ["Run launch_app without dryRun to perform the actual launch."],
+      data: { ...launchDataBase, dryRun: true, exitCode: 0 },
+      nextSuggestions: [
+        "Run launch_app without dryRun to perform the actual launch.",
+        ...(launchEnvPlan.ignoredReason ? [launchEnvPlan.ignoredReason] : []),
+      ],
     };
   }
 
-  const execution = await executeRunner(launchCommand, repoRoot, process.env);
+  const execution = await executeRunner(launchCommand, repoRoot, launchEnvPlan.env);
   return {
     status: execution.exitCode === 0 ? "success" : "failed",
     reasonCode: execution.exitCode === 0 ? REASON_CODES.ok : buildFailureReason(execution.stderr, execution.exitCode),
@@ -89,8 +171,11 @@ export async function launchAppWithRuntime(input: LaunchAppInput): Promise<ToolR
     durationMs: Date.now() - startTime,
     attempts: 1,
     artifacts: [],
-    data: { dryRun: false, runnerProfile, appId, launchUrl, launchCommand, exitCode: execution.exitCode },
-    nextSuggestions: execution.exitCode === 0 ? [] : ["Check device/simulator state and launchUrl/appId values before retrying launch_app."],
+    data: { ...launchDataBase, dryRun: false, exitCode: execution.exitCode },
+    nextSuggestions: [
+      ...(execution.exitCode === 0 ? [] : ["Check device/simulator state and launchUrl/appId values before retrying launch_app."]),
+      ...(launchEnvPlan.ignoredReason ? [launchEnvPlan.ignoredReason] : []),
+    ],
   };
 }
 

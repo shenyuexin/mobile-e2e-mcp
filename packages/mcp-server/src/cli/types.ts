@@ -67,6 +67,10 @@ export interface CliOptions {
   exploreCompare?: string;
   /** Explore subcommand: maximum exploration depth. */
   exploreMaxDepth?: number;
+  /** Explore subcommand: full explorer platform (ios-simulator, ios-device, android-emulator, android-device). */
+  explorePlatform?: string;
+  /** Explore subcommand: launch environment variables passed to app launch. */
+  exploreLaunchEnv?: Record<string, string>;
   durationMs?: number;
   resetStrategy?: ResetAppStateStrategy;
   bitrateMbps?: number;

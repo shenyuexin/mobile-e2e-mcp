@@ -49,6 +49,25 @@ export interface RunnerInput {
   auth?: AuthConfig;
   configPath?: string;
   skipInterview?: boolean;
+  deviceId?: string;
+  launchEnv?: Record<string, string>;
+}
+
+function parseLaunchEnvFromProcessEnv(): Record<string, string> | undefined {
+  const raw = process.env.M2E_LAUNCH_ENV_JSON?.trim();
+  if (!raw) return undefined;
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+      return undefined;
+    }
+    const entries = Object.entries(parsed).filter(
+      (entry): entry is [string, string] => typeof entry[1] === "string",
+    );
+    return entries.length > 0 ? Object.fromEntries(entries) : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 /** Result returned by the runner. */
@@ -94,7 +113,13 @@ export async function runExplore(
   const sessionId = `explorer-${Date.now()}`;
   const platform = toMcpPlatform(config.platform ?? "ios-simulator");
   const runnerProfile = toRunnerProfile(config.platform ?? "ios-simulator");
-  const deviceId = process.env.M2E_DEVICE_ID; // optional, simulator UDID or empty
+  const deviceId = input.deviceId ?? config.deviceId ?? process.env.M2E_DEVICE_ID?.trim() ?? process.env.MCP_IOS_UDID?.trim() ?? undefined;
+  const mergedLaunchEnv = {
+    ...(parseLaunchEnvFromProcessEnv() ?? {}),
+    ...(config.launchEnv ?? {}),
+    ...(input.launchEnv ?? {}),
+  };
+  const launchEnv = Object.keys(mergedLaunchEnv).length > 0 ? mergedLaunchEnv : undefined;
 
   const sessionCtx: SessionContext = {
     sessionId,
@@ -110,7 +135,7 @@ export async function runExplore(
   const mcp = createMcpAdapter(server, sessionCtx);
   try {
     const authResult = await checkAuth(
-      { auth: config.auth, appId: config.appId, platform: config.platform },
+      { auth: config.auth, appId: config.appId, platform: config.platform, launchEnv },
       mcp,
     );
     if (!authResult.success) {
@@ -153,7 +178,13 @@ export async function runExplore(
 
   // --- Stage 6: Cleanup ---
   console.log("[RUNNER] Stage 6/6: Cleanup...");
-  // In Phase 1, cleanup is minimal. Future: terminate app, save final config.
+  if (config.platform.startsWith("ios") && launchEnv && Object.keys(launchEnv).length > 0) {
+    try {
+      await mcp.terminateApp?.({ appId: config.appId });
+    } catch {
+      // Best-effort cleanup for isolated UITesting launches
+    }
+  }
 
   const durationMs = Date.now() - startTime;
   const visitedCount = explorationResult.visited.count;

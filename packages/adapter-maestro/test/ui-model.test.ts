@@ -246,7 +246,8 @@ test("parseIosInspectNodes supports structured query and target resolution from 
   assert.equal(nodes.length, 5);
   assert.equal(result.totalMatches, 1);
   assert.equal(result.matches[0]?.node.resourceId, "signin_button");
-  assert.equal(resolution.status, "off_screen");
+  assert.equal(resolution.status, "resolved");
+  assert.deepEqual(resolution.resolvedPoint, { x: 113, y: 164 });
 });
 
 test("parseIosInspectNodes detects ambiguous iOS selector matches", async () => {
@@ -397,7 +398,41 @@ test("buildIosNativeLocatorCandidate prefers identifier over text-only selector 
 test("isIosEditableNode recognizes text-capable iOS controls", () => {
   assert.equal(isIosEditableNode({ className: "TextField", clickable: true, enabled: true, scrollable: false }), true);
   assert.equal(isIosEditableNode({ className: "SecureTextField", clickable: true, enabled: true, scrollable: false }), true);
+  assert.equal(isIosEditableNode({ className: "SearchField", clickable: true, enabled: true, scrollable: false }), true);
+  assert.equal(isIosEditableNode({ className: "TextView", clickable: true, enabled: true, scrollable: false }), true);
+  assert.equal(isIosEditableNode({ className: "TextArea", clickable: true, enabled: true, scrollable: false }), true);
   assert.equal(isIosEditableNode({ className: "Button", clickable: true, enabled: true, scrollable: false }), false);
+});
+
+test("queryUiNodes uses rotated depth=1 landscape Group bounds when Application stays portrait", () => {
+  const nodes = parseIosInspectNodes(JSON.stringify([
+    {
+      type: "Application",
+      AXLabel: "LinkNotes",
+      frame: { x: 0, y: 0, width: 669, height: 951 },
+      children: [
+        {
+          type: "Group",
+          frame: { x: 0, y: 0, width: 951, height: 669 },
+          children: [
+            {
+              type: "Button",
+              AXUniqueId: "companion.sync.banner.enable",
+              AXLabel: "Enable",
+              enabled: true,
+              frame: { x: 739, y: 12, width: 60, height: 44 },
+            },
+          ],
+        },
+      ],
+    },
+  ]));
+
+  const query = normalizeQueryUiSelector({ resourceId: "companion.sync.banner.enable" });
+  const result = queryUiNodes(nodes, query);
+  assert.equal(result.totalMatches, 1);
+  assert.equal(result.matches[0]?.isOffScreen, false);
+  assert.equal(result.matches[0]?.viewportOverlapPercent, 1);
 });
 
 test("extractIosEditableNodeValue reads observable value but hides secure field content", () => {
@@ -1556,6 +1591,35 @@ test("detectViewportBounds prefers the primary scrollable container", () => {
 
   assert.equal(viewport.top, 200);
   assert.equal(viewport.bottom, 1800);
+});
+
+test("queryUiNodes uses screen/Application bounds so iPad split-view toolbar and right-pane buttons are not marked off-screen", () => {
+  const nodes = [
+    { className: "Application", contentDesc: "LinkNotes", clickable: false, enabled: true, scrollable: false, depth: 0, bounds: "[0,0][1032,1376]" },
+    { className: "ScrollArea", clickable: false, enabled: true, scrollable: true, depth: 3, bounds: "[0,128.5][310,1259.5]" },
+    { resourceId: "library.createManage.entry", className: "Button", text: "Add to Library", clickable: true, enabled: true, scrollable: false, depth: 7, bounds: "[250,84][294,128]" },
+    { resourceId: "reader.rightPane.button", className: "Button", text: "Explain", clickable: true, enabled: true, scrollable: false, depth: 6, bounds: "[600,300][700,344]" },
+    { resourceId: "sidebar.offscreen.row", className: "Button", text: "Hidden Row", clickable: true, enabled: true, scrollable: false, depth: 6, bounds: "[20,1500][200,1544]" },
+  ];
+
+  const topBarQuery = normalizeQueryUiSelector({ resourceId: "library.createManage.entry" });
+  const topBarResult = queryUiNodes(nodes, topBarQuery);
+  assert.equal(topBarResult.totalMatches, 1);
+  assert.equal(topBarResult.matches[0]?.isOffScreen, false);
+  assert.equal(topBarResult.matches[0]?.viewportOverlapPercent, 1);
+  assert.equal(buildUiTargetResolution(topBarQuery, { query: topBarQuery, ...topBarResult }, "full").status, "resolved");
+
+  const rightPaneQuery = normalizeQueryUiSelector({ resourceId: "reader.rightPane.button" });
+  const rightPaneResult = queryUiNodes(nodes, rightPaneQuery);
+  assert.equal(rightPaneResult.totalMatches, 1);
+  assert.equal(rightPaneResult.matches[0]?.isOffScreen, false);
+  assert.equal(buildUiTargetResolution(rightPaneQuery, { query: rightPaneQuery, ...rightPaneResult }, "full").status, "resolved");
+
+  const offscreenQuery = normalizeQueryUiSelector({ resourceId: "sidebar.offscreen.row" });
+  const offscreenResult = queryUiNodes(nodes, offscreenQuery);
+  assert.equal(offscreenResult.totalMatches, 1);
+  assert.equal(offscreenResult.matches[0]?.isOffScreen, true);
+  assert.equal(buildUiTargetResolution(offscreenQuery, { query: offscreenQuery, ...offscreenResult }, "full").status, "off_screen");
 });
 
 test("calculateViewportOverlap reports partially visible candidates", () => {

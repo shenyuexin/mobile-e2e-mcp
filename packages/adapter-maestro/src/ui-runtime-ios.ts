@@ -19,38 +19,52 @@ import type {
 } from "./ui-runtime-platform.js";
 
 /**
- * Find the deepest node whose bounds contain the given point.
- * Returns the most specific (smallest area) node at that location.
+ * Find all nodes whose bounds contain the given point, ordered from
+ * smallest area (deepest/most specific child) to largest area (parent container).
  */
-function findNodeAtPoint(
+function findNodesAtPoint(
 	nodes: InspectUiNode[],
 	point: { x: number; y: number },
-): InspectUiNode | undefined {
-	const matchingNodes = nodes.filter((node) => {
-		if (!node.bounds) return false;
+): InspectUiNode[] {
+	const matchingWithArea: Array<{ node: InspectUiNode; area: number }> = [];
+	for (const node of nodes) {
+		if (!node.bounds) continue;
 		const bounds = parseUiBounds(node.bounds);
-		if (!bounds) return false;
-		return (
+		if (!bounds) continue;
+		if (
 			point.x >= bounds.left &&
 			point.x <= bounds.right &&
 			point.y >= bounds.top &&
 			point.y <= bounds.bottom
-		);
-	});
-
-	// Return the smallest node (most specific) that contains the point
-	let smallest: InspectUiNode | undefined;
-	let smallestArea = Infinity;
-	for (const node of matchingNodes) {
-		const bounds = node.bounds ? parseUiBounds(node.bounds) : undefined;
-		if (!bounds) continue;
-		const area = bounds.width * bounds.height;
-		if (area < smallestArea) {
-			smallest = node;
-			smallestArea = area;
+		) {
+			matchingWithArea.push({
+				node,
+				area: bounds.width * bounds.height,
+			});
 		}
 	}
-	return smallest;
+	matchingWithArea.sort((a, b) => a.area - b.area);
+	return matchingWithArea.map((entry) => entry.node);
+}
+
+function findNodeAtPoint(
+	nodes: InspectUiNode[],
+	point: { x: number; y: number },
+): InspectUiNode | undefined {
+	return findNodesAtPoint(nodes, point)[0];
+}
+
+function matchesExpectedIosLocator(
+	candidate: ReturnType<typeof buildIosNativeLocatorCandidate>,
+	expected: NonNullable<ReturnType<typeof buildIosNativeLocatorCandidate>>,
+): boolean {
+	return (
+		candidate?.kind === expected.kind &&
+		candidate.value === expected.value &&
+		candidate.text === expected.text &&
+		candidate.contentDesc === expected.contentDesc &&
+		candidate.className === expected.className
+	);
 }
 
 function escapeYamlDoubleQuoted(value: string): string {
@@ -193,17 +207,35 @@ export async function verifyResolvedIosPointWithHooks(
 	}
 
 	const allNodes = parseIosInspectNodes(actionResult.execution.stdout);
-	const nodeAtPoint = findNodeAtPoint(allNodes, params.resolvedPoint);
-	const candidate = nodeAtPoint
-		? buildIosNativeLocatorCandidate(nodeAtPoint, params.resolvedQuery)
-		: buildIosNativeLocatorCandidate(allNodes[0], params.resolvedQuery);
-
-	const verified =
-		candidate?.kind === expected.kind &&
-		candidate.value === expected.value &&
-		candidate.text === expected.text &&
-		candidate.contentDesc === expected.contentDesc &&
-		candidate.className === expected.className;
+	const nodesAtPoint = findNodesAtPoint(allNodes, params.resolvedPoint);
+	let verified = false;
+	if (nodesAtPoint.length > 0) {
+		for (const node of nodesAtPoint) {
+			const candidate = buildIosNativeLocatorCandidate(
+				node,
+				params.resolvedQuery,
+			);
+			if (matchesExpectedIosLocator(candidate, expected)) {
+				verified = true;
+				break;
+			}
+			// Occlusion safety guard: if a smaller node covering the target point
+			// owns a different explicit identifier, stop walking up to ancestors.
+			if (
+				expected.kind === "identifier" &&
+				node.resourceId &&
+				node.resourceId !== expected.value
+			) {
+				break;
+			}
+		}
+	} else {
+		const fallbackCandidate = buildIosNativeLocatorCandidate(
+			allNodes[0],
+			params.resolvedQuery,
+		);
+		verified = matchesExpectedIosLocator(fallbackCandidate, expected);
+	}
 
 	// If the tap succeeded (exitCode 0) but the node doesn't match, the screen likely
 	// changed due to navigation. Report it as not verified so the caller can decide

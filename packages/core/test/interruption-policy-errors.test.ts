@@ -1,9 +1,10 @@
 import assert from "node:assert/strict";
-import { mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { loadAccessPolicyConfig, requiredPolicyScopesForTool, isToolAllowedByProfile } from "../src/policy-engine.ts";
+import { loadAccessPolicyConfig, loadInterruptionPolicyConfig, requiredPolicyScopesForTool, isToolAllowedByProfile } from "../src/policy-engine.ts";
 import type { AccessProfile } from "../src/policy-engine.ts";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
@@ -23,6 +24,33 @@ test("loadAccessPolicyConfig throws for missing file", async () => {
     () => loadAccessPolicyConfig(repoRoot, "configs/policies/non-existent-profiles.yaml"),
     /ENOENT/,
   );
+});
+
+test("loadAccessPolicyConfig falls back to built-in profiles when default config is absent in external workspace", async () => {
+  const emptyDir = await mkdtemp(path.join(os.tmpdir(), "core-policy-fallback-"));
+  try {
+    const config = await loadAccessPolicyConfig(emptyDir);
+    assert.ok(config.profiles["sample-harness-default"]);
+    assert.ok(config.profiles["interactive"]);
+    assert.ok(config.profiles["read-only"]);
+    assert.ok(config.profiles["full-control"]);
+    assert.equal(config.profiles["interactive"].allow.includes("tap"), true);
+    assert.equal(config.profiles["read-only"].deny.includes("tap"), true);
+  } finally {
+    await rm(emptyDir, { recursive: true, force: true });
+  }
+});
+
+test("loadInterruptionPolicyConfig falls back to empty built-in rules when default config is absent in external workspace", async () => {
+  const emptyDir = await mkdtemp(path.join(os.tmpdir(), "core-interruption-fallback-"));
+  try {
+    const config = await loadInterruptionPolicyConfig(emptyDir, "ios");
+    assert.equal(config.platform, "ios");
+    assert.equal(config.version, "builtin-fallback");
+    assert.deepEqual(config.rules, []);
+  } finally {
+    await rm(emptyDir, { recursive: true, force: true });
+  }
 });
 
 test("loadAccessPolicyConfig throws for invalid YAML content", async () => {
