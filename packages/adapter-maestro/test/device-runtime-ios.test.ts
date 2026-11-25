@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
-import { chmod, mkdtemp, writeFile } from "node:fs/promises";
+import { chmod, mkdtemp, readFile, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { isIosPhysicalDeviceId } from "../src/device-runtime.ts";
+import { isIosPhysicalDeviceId, takeScreenshotWithRuntime } from "../src/device-runtime.ts";
 import {
   buildIosLogLevelPredicate,
   extractIosSimulatorProcessId,
@@ -354,5 +354,119 @@ exit 1
     assert.equal(pid, "4242");
   } finally {
     fakeXcrun.restore();
+  }
+});
+
+test("createIosDeviceRuntimeHooks adds --terminate-running-process and launchArgs when requested on simulator", () => {
+  const hooks = createIosDeviceRuntimeHooks();
+  const command = hooks.buildLaunchCommand({
+    runnerProfile: "native_ios",
+    deviceId: "7FAAF425-69B6-49B6-8CC4-297FA9DAEA88",
+    appId: "com.timeone.linknotes",
+    hasLaunchEnv: true,
+    launchArgs: ["-AppleLanguages", "(en)"],
+  });
+
+  assert.deepEqual(command, [
+    "xcrun",
+    "simctl",
+    "launch",
+    "--terminate-running-process",
+    "7FAAF425-69B6-49B6-8CC4-297FA9DAEA88",
+    "com.timeone.linknotes",
+    "-AppleLanguages",
+    "(en)",
+  ]);
+});
+
+test("createIosDeviceRuntimeHooks buildLaunchProcessEnv prefixes SIMCTL_CHILD_ for simulators and DEVICECTL_CHILD_ for physical devices", () => {
+  const hooks = createIosDeviceRuntimeHooks();
+  assert.ok(hooks.buildLaunchProcessEnv);
+
+  const simPlan = hooks.buildLaunchProcessEnv({
+    deviceId: "7FAAF425-69B6-49B6-8CC4-297FA9DAEA88",
+    launchEnv: { LINKNOTES_UI_TESTING: "1", LINKNOTES_DEBUG_PORT: "8199" },
+    baseEnv: { PATH: "/usr/bin" },
+  });
+  assert.deepEqual(simPlan.appliedKeys, ["LINKNOTES_DEBUG_PORT", "LINKNOTES_UI_TESTING"]);
+  assert.equal(simPlan.env.SIMCTL_CHILD_LINKNOTES_UI_TESTING, "1");
+  assert.equal(simPlan.env.SIMCTL_CHILD_LINKNOTES_DEBUG_PORT, "8199");
+  assert.equal(simPlan.env.DEVICECTL_CHILD_LINKNOTES_UI_TESTING, undefined);
+
+  const physicalPlan = hooks.buildLaunchProcessEnv({
+    deviceId: "00008101-000D482C1E78001E",
+    launchEnv: { LINKNOTES_UI_TESTING: "1" },
+    baseEnv: { PATH: "/usr/bin" },
+  });
+  assert.deepEqual(physicalPlan.appliedKeys, ["LINKNOTES_UI_TESTING"]);
+  assert.equal(physicalPlan.env.DEVICECTL_CHILD_LINKNOTES_UI_TESTING, "1");
+  assert.equal(physicalPlan.env.SIMCTL_CHILD_LINKNOTES_UI_TESTING, undefined);
+});
+
+test("createIosDeviceRuntimeHooks provides axe screenshot fallback for simulators only", () => {
+  const hooks = createIosDeviceRuntimeHooks();
+  assert.deepEqual(
+    hooks.buildScreenshotFallbackCommand?.("7FAAF425-69B6-49B6-8CC4-297FA9DAEA88", "/tmp/duo.png"),
+    ["axe", "screenshot", "--udid", "7FAAF425-69B6-49B6-8CC4-297FA9DAEA88", "--output", "/tmp/duo.png"],
+  );
+  assert.equal(
+    hooks.buildScreenshotFallbackCommand?.("00008101-000D482C1E78001E", "/tmp/phone.png"),
+    undefined,
+  );
+});
+
+test("takeScreenshotWithRuntime falls back to axe screenshot when simctl io screenshot exits 22 on multi-display simulator", async () => {
+  const binDir = await mkdtemp(path.join(tmpdir(), "mobile-e2e-duo-shot-"));
+  const workDir = await mkdtemp(path.join(tmpdir(), "mobile-e2e-duo-out-"));
+  const xcrunPath = path.join(binDir, "xcrun");
+  const axePath = path.join(binDir, "axe");
+  await writeFile(
+    xcrunPath,
+    `#!/bin/sh
+echo "Cannot choose between 2 displays. Specify one with --display: --display=3 / --display=1" >&2
+exit 22
+`,
+    "utf8",
+  );
+  await writeFile(
+    axePath,
+    `#!/bin/sh
+out=""
+while [ $# -gt 0 ]; do
+  if [ "$1" = "--output" ]; then
+    out="$2"
+    shift 2
+    continue
+  fi
+  shift
+done
+printf "PNG_FALLBACK" > "$out"
+exit 0
+`,
+    "utf8",
+  );
+  await chmod(xcrunPath, 0o755);
+  await chmod(axePath, 0o755);
+
+  const originalPath = process.env.PATH;
+  process.env.PATH = `${binDir}${path.delimiter}${originalPath ?? ""}`;
+  const outPath = path.join(workDir, "screenshots/duo.png");
+  try {
+    const result = await takeScreenshotWithRuntime({
+      sessionId: "duo-test",
+      platform: "ios",
+      deviceId: "7FAAF425-69B6-49B6-8CC4-297FA9DAEA88",
+      outputPath: outPath,
+    });
+    assert.equal(result.status, "success");
+    assert.equal(result.attempts, 2);
+    assert.equal(result.data.command[0], "axe");
+    assert.equal(result.data.outputPath, outPath);
+    const info = await stat(outPath);
+    assert.ok(info.size > 0);
+    const body = await readFile(outPath, "utf8");
+    assert.equal(body, "PNG_FALLBACK");
+  } finally {
+    process.env.PATH = originalPath;
   }
 });

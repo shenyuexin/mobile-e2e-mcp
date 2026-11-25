@@ -433,9 +433,10 @@ async function tryIdevicecrashreport(repoRoot: string, deviceId: string, appId?:
 export function createIosDeviceRuntimeHooks(): DeviceRuntimePlatformHooks {
   return {
     platform: "ios",
-    buildLaunchCommand: ({ runnerProfile, deviceId, appId, launchUrl }) => (
-      isIosPhysicalDeviceId(deviceId)
-        ? [
+    buildLaunchCommand: ({ runnerProfile, deviceId, appId, launchUrl, launchArgs, terminateRunning, hasLaunchEnv }) => {
+      const args = launchArgs ?? [];
+      if (isIosPhysicalDeviceId(deviceId)) {
+        return [
           "xcrun",
           "devicectl",
           "device",
@@ -446,11 +447,34 @@ export function createIosDeviceRuntimeHooks(): DeviceRuntimePlatformHooks {
           ...(runnerProfile === "phase1" && launchUrl ? ["--payload-url", launchUrl] : []),
           ...(runnerProfile === "phase1" ? [] : ["--terminate-existing"]),
           appId,
-        ]
-        : runnerProfile === "phase1"
-          ? ["xcrun", "simctl", "openurl", deviceId, launchUrl ?? ""]
-          : ["xcrun", "simctl", "launch", deviceId, appId]
-    ),
+          ...args,
+        ];
+      }
+      if (runnerProfile === "phase1") {
+        return ["xcrun", "simctl", "openurl", deviceId, launchUrl ?? ""];
+      }
+      return [
+        "xcrun",
+        "simctl",
+        "launch",
+        ...(terminateRunning || hasLaunchEnv ? ["--terminate-running-process"] : []),
+        deviceId,
+        appId,
+        ...args,
+      ];
+    },
+    buildLaunchProcessEnv: ({ deviceId, launchEnv, baseEnv }) => {
+      const mergedEnv: NodeJS.ProcessEnv = { ...(baseEnv ?? process.env) };
+      if (!launchEnv) {
+        return { env: mergedEnv, appliedKeys: [] };
+      }
+      const prefix = isIosPhysicalDeviceId(deviceId) ? "DEVICECTL_CHILD_" : "SIMCTL_CHILD_";
+      const appliedKeys = Object.keys(launchEnv).sort();
+      for (const key of appliedKeys) {
+        mergedEnv[`${prefix}${key}`] = launchEnv[key];
+      }
+      return { env: mergedEnv, appliedKeys };
+    },
     buildInstallCommand: ({ deviceId, artifactPath }) => (
       isIosPhysicalDeviceId(deviceId)
         ? [
@@ -497,6 +521,10 @@ export function createIosDeviceRuntimeHooks(): DeviceRuntimePlatformHooks {
     },
     buildTerminateCommand: (deviceId, appId) => ["xcrun", "simctl", "terminate", deviceId, appId],
     buildScreenshotCommand: (deviceId, absoluteOutputPath) => ["xcrun", "simctl", "io", deviceId, "screenshot", absoluteOutputPath],
+    buildScreenshotFallbackCommand: (deviceId, absoluteOutputPath) =>
+      isIosPhysicalDeviceId(deviceId)
+        ? undefined
+        : ["axe", "screenshot", "--udid", deviceId, "--output", absoluteOutputPath],
     screenshotUsesStdoutCapture: false,
     screenshotSupportLevel: "full",
     screenshotDryRunSuggestion: "Run take_screenshot without dryRun to capture an actual screenshot.",

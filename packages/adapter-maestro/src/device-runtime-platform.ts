@@ -59,7 +59,19 @@ export interface DeviceRuntimePlatformHooks {
     deviceId: string;
     appId: string;
     launchUrl?: string;
+    launchArgs?: string[];
+    terminateRunning?: boolean;
+    hasLaunchEnv?: boolean;
   }) => string[];
+  buildLaunchProcessEnv?: (params: {
+    deviceId: string;
+    launchEnv?: Record<string, string>;
+    baseEnv?: NodeJS.ProcessEnv;
+  }) => {
+    env: NodeJS.ProcessEnv;
+    appliedKeys: string[];
+    ignoredReason?: string;
+  };
   buildInstallCommand: (params: {
     deviceId: string;
     artifactPath: string;
@@ -77,6 +89,7 @@ export interface DeviceRuntimePlatformHooks {
   };
   buildTerminateCommand: (deviceId: string, appId: string) => string[];
   buildScreenshotCommand: (deviceId: string, absoluteOutputPath: string) => string[];
+  buildScreenshotFallbackCommand?: (deviceId: string, absoluteOutputPath: string) => string[] | undefined;
   screenshotUsesStdoutCapture: boolean;
   screenshotSupportLevel: "full" | "partial";
   screenshotDryRunSuggestion: string;

@@ -157,6 +157,29 @@ test("parseCliArgs captures reset_app_state flags", () => {
   assert.equal(options.dryRun, true);
 });
 
+test("parseCliArgs captures explore platform, deviceId, and launchEnv flags", () => {
+  const options = parseCliArgs([
+    "explore",
+    "--platform", "ios-simulator",
+    "--device-id", "UDID-1",
+    "--app-id", "com.timeone.linknotes",
+    "--launch-env", "LINKNOTES_UI_TESTING=1",
+    "--launch-env", "LINKNOTES_DEBUG_PORT=8199",
+    "--no-prompt",
+  ]);
+
+  assert.equal(options.explore, true);
+  assert.equal(options.explorePlatform, "ios-simulator");
+  assert.equal(options.platform, "ios");
+  assert.equal(options.deviceId, "UDID-1");
+  assert.equal(options.appId, "com.timeone.linknotes");
+  assert.deepEqual(options.exploreLaunchEnv, {
+    LINKNOTES_UI_TESTING: "1",
+    LINKNOTES_DEBUG_PORT: "8199",
+  });
+  assert.equal(options.exploreNoPrompt, true);
+});
+
 test("parseCliArgs captures recover_to_known_state flags", () => {
   const options = parseCliArgs([
     "--recover-to-known-state",

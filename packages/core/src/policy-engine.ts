@@ -49,6 +49,40 @@ export interface NetworkRetryPolicyDecision {
 const DEFAULT_ACCESS_POLICY_PATH = "configs/policies/access-profiles.yaml";
 const DEFAULT_INTERRUPTION_POLICY_DIR = "configs/policies/interruption";
 
+const BUILTIN_ACCESS_POLICY_PROFILES: Record<string, AccessProfile> = {
+  "sample-harness-default": {
+    allow: ["inspect", "screenshot", "logs", "performance", "tap", "type", "swipe", "install", "uninstall", "clear-data", "interrupt"],
+    deny: [],
+  },
+  "read-only": {
+    allow: ["inspect", "screenshot", "logs", "performance", "interrupt"],
+    deny: ["tap", "type", "install", "uninstall", "interrupt-high-risk"],
+  },
+  interactive: {
+    allow: ["inspect", "screenshot", "logs", "performance", "tap", "type", "swipe", "interrupt"],
+    deny: ["uninstall", "interrupt-high-risk"],
+  },
+  "full-control": {
+    allow: ["inspect", "screenshot", "logs", "performance", "tap", "type", "swipe", "install", "uninstall", "clear-data", "interrupt", "interrupt-high-risk"],
+    deny: [],
+  },
+};
+
+function cloneBuiltinAccessPolicyConfig(): AccessPolicyConfig {
+  return {
+    profiles: Object.fromEntries(
+      Object.entries(BUILTIN_ACCESS_POLICY_PROFILES).map(([name, profile]) => [
+        name,
+        { allow: [...profile.allow], deny: [...profile.deny] },
+      ]),
+    ),
+  };
+}
+
+function isEnoentError(error: unknown): boolean {
+  return error instanceof Error && "code" in error && (error as NodeJS.ErrnoException).code === "ENOENT";
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
@@ -132,12 +166,22 @@ function parseInterruptionRule(value: unknown, platform: Platform): Interruption
   };
 }
 
-export async function loadAccessPolicyConfig(repoRoot: string, policyPath = DEFAULT_ACCESS_POLICY_PATH): Promise<AccessPolicyConfig> {
-  const absolutePath = path.resolve(repoRoot, policyPath);
-  const content = await readFile(absolutePath, "utf8");
+export async function loadAccessPolicyConfig(repoRoot: string, policyPath?: string): Promise<AccessPolicyConfig> {
+  const isDefaultPath = policyPath === undefined;
+  const resolvedPolicyPath = policyPath ?? DEFAULT_ACCESS_POLICY_PATH;
+  const absolutePath = path.resolve(repoRoot, resolvedPolicyPath);
+  let content: string;
+  try {
+    content = await readFile(absolutePath, "utf8");
+  } catch (error: unknown) {
+    if (isDefaultPath && isEnoentError(error)) {
+      return cloneBuiltinAccessPolicyConfig();
+    }
+    throw error;
+  }
   const parsed: unknown = parse(content);
   if (!isRecord(parsed) || !isRecord(parsed.profiles)) {
-    throw new Error(`Invalid access policy config: ${policyPath}`);
+    throw new Error(`Invalid access policy config: ${resolvedPolicyPath}`);
   }
 
   const profiles = Object.fromEntries(
@@ -155,13 +199,30 @@ export async function loadAccessProfile(repoRoot: string, profileName: string, p
 export async function loadInterruptionPolicyConfig(
   repoRoot: string,
   platform: Platform,
-  policyPath = path.posix.join(DEFAULT_INTERRUPTION_POLICY_DIR, `${platform}.yaml`),
+  policyPath?: string,
 ): Promise<InterruptionPolicyConfig> {
-  const absolutePath = path.resolve(repoRoot, policyPath);
-  const content = await readFile(absolutePath, "utf8");
+  const isDefaultPath = policyPath === undefined;
+  const resolvedPolicyPath = policyPath ?? path.posix.join(DEFAULT_INTERRUPTION_POLICY_DIR, `${platform}.yaml`);
+  const absolutePath = path.resolve(repoRoot, resolvedPolicyPath);
+  let content: string;
+  try {
+    content = await readFile(absolutePath, "utf8");
+  } catch (error: unknown) {
+    if (isDefaultPath && isEnoentError(error)) {
+      return {
+        platform,
+        version: "builtin-fallback",
+        rules: [],
+        notes: [
+          `Built-in empty interruption policy fallback (no ${resolvedPolicyPath} under workspace root).`,
+        ],
+      };
+    }
+    throw error;
+  }
   const parsed: unknown = parse(content);
   if (!isRecord(parsed)) {
-    throw new Error(`Invalid interruption policy config: ${policyPath}`);
+    throw new Error(`Invalid interruption policy config: ${resolvedPolicyPath}`);
   }
 
   const rulesSource = Array.isArray(parsed.rules) ? parsed.rules : [];

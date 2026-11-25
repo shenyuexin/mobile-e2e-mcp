@@ -49,7 +49,7 @@ function looksLikeSettingsHome(texts: string[]): boolean {
  * Run auth pre-flight checks.
  */
 export async function checkAuth(
-  config: Pick<ExplorerConfig, "auth" | "appId" | "platform">,
+  config: Pick<ExplorerConfig, "auth" | "appId" | "platform" | "launchEnv">,
   mcp: McpToolInterface,
 ): Promise<{ success: boolean; reason?: string }> {
   const auth = config.auth;
@@ -59,14 +59,29 @@ export async function checkAuth(
   }
 
   if (process.env.EXPLORER_SKIP_PREFLIGHT_LAUNCH !== "1") {
-    try {
-      await mcp.resetAppState({ appId: config.appId });
-      await new Promise(r => setTimeout(r, 3000));
-    } catch {
-      // Non-fatal
+    const isIos = config.platform.startsWith("ios");
+    if (isIos) {
+      // Never call resetAppState on iOS simulators: resetAppState runs `simctl uninstall`,
+      // which removes the app under test. Terminate + relaunch instead.
+      try {
+        await mcp.terminateApp?.({ appId: config.appId });
+      } catch {
+        // Non-fatal if app was not running
+      }
+    } else {
+      try {
+        await mcp.resetAppState({ appId: config.appId });
+        await new Promise(r => setTimeout(r, 3000));
+      } catch {
+        // Non-fatal
+      }
     }
 
-    const launchResult = await mcp.launchApp({ appId: config.appId });
+    const launchResult = await mcp.launchApp({
+      appId: config.appId,
+      ...(config.launchEnv ? { launchEnv: config.launchEnv } : {}),
+      ...(isIos ? { terminateRunning: true } : {}),
+    });
     if (launchResult.status !== "success" && launchResult.status !== "partial") {
       return {
         success: false,

@@ -29,6 +29,8 @@ interface ExploreFlags {
   help: boolean;
   failureStrategy?: FailureStrategy;
   destructiveActionPolicy?: DestructiveActionPolicy;
+  deviceId?: string;
+  launchEnv?: Record<string, string>;
 }
 
 const VALID_MODES: ExplorationMode[] = ["smoke", "scoped", "full"];
@@ -44,6 +46,8 @@ Options:
   --mode <mode>             Exploration mode: smoke, scoped (default), full
   --app-id <id>             Application Bundle ID / Package Name
   --platform <platform>     Target platform: ios-simulator, ios-device, android-emulator, android-device
+  --device-id <udid>        Target device or simulator UDID
+  --launch-env <KEY=VAL>    Inject app launch env var (repeatable, iOS SIMCTL_CHILD_*)
   --max-depth <n>           Maximum exploration depth (default: mode-based: 5/8/∞)
   --timeout-ms <ms>         Total timeout in milliseconds (default: 300000)
   --no-prompt               Skip interactive interview, use defaults or args
@@ -116,6 +120,19 @@ function parseFlags(argv: string[]): ExploreFlags {
     } else if (arg === "--compare" && next) {
       flags.compare = next;
       i++;
+    } else if (arg === "--device-id" && next) {
+      flags.deviceId = next;
+      i++;
+    } else if (arg === "--launch-env" && next) {
+      const eqIdx = next.indexOf("=");
+      if (eqIdx <= 0) {
+        console.error(`Error: --launch-env must be in KEY=VALUE format`);
+        process.exit(2);
+      }
+      const key = next.slice(0, eqIdx);
+      const value = next.slice(eqIdx + 1);
+      flags.launchEnv = { ...(flags.launchEnv ?? {}), [key]: value };
+      i++;
     }
   }
 
@@ -145,6 +162,7 @@ export async function explore(argv: string[], server: InvokableServer): Promise<
   if (flags.timeoutMs !== undefined) overrides.timeoutMs = flags.timeoutMs;
   if (flags.output) overrides.reportDir = flags.output;
   if (flags.compare !== undefined) overrides.compareWith = flags.compare;
+  if (flags.deviceId) overrides.deviceId = flags.deviceId;
 
   // Try to load saved config
   const savedConfig = loadConfig(flags.configPath);
@@ -167,13 +185,16 @@ export async function explore(argv: string[], server: InvokableServer): Promise<
     process.exit(2);
   }
 
-  // Save the config for future reuse
+  // Save the config for future reuse (never persist transient launchEnv secrets)
+  const { launchEnv: _omitLaunchEnv, ...persistableConfig } = finalConfig;
   const store = new ConfigStore(flags.configPath);
-  store.save(finalConfig);
+  store.save(persistableConfig);
 
   // Run the exploration
   const result = await runExplore(server, {
     ...finalConfig,
+    deviceId: flags.deviceId ?? finalConfig.deviceId,
+    launchEnv: flags.launchEnv,
     configPath: flags.configPath,
     skipInterview: flags.noPrompt,
   });

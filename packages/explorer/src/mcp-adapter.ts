@@ -20,6 +20,7 @@ import type {
   RequestManualHandoffData,
   GetScreenSummaryData,
   TapData,
+  TerminateAppData,
   ScrollOnlyContainerBounds,
   ScrollOnlyData,
 } from "@mobile-e2e-mcp/contracts";
@@ -51,7 +52,12 @@ export interface NavigateBackArgs {
 
 /** Type-safe interface for MCP tools consumed by the explorer engine. */
 export interface McpToolInterface {
-  launchApp(args: { appId: string }): Promise<ToolResult<LaunchAppData>>;
+  launchApp(args: {
+    appId: string;
+    launchEnv?: Record<string, string>;
+    terminateRunning?: boolean;
+  }): Promise<ToolResult<LaunchAppData>>;
+  terminateApp?(args: { appId: string }): Promise<ToolResult<TerminateAppData>>;
   waitForUiStable(args: { timeoutMs: number }): Promise<ToolResult<WaitForUiStableData>>;
   inspectUi(args?: { appId?: string }): Promise<ToolResult<InspectUiData>>;
   tapElement(args: {
@@ -101,7 +107,14 @@ export function createMcpAdapter(
 
   return {
     launchApp: (args) =>
-      invoke("launch_app", { ...baseInput(), appId: args.appId }) as Promise<ToolResult<LaunchAppData>>,
+      invoke("launch_app", {
+        ...baseInput(),
+        appId: args.appId,
+        ...(args.launchEnv ? { launchEnv: args.launchEnv } : {}),
+        ...(args.terminateRunning !== undefined ? { terminateRunning: args.terminateRunning } : {}),
+      }) as Promise<ToolResult<LaunchAppData>>,
+    terminateApp: (args) =>
+      invoke("terminate_app", { ...baseInput(), appId: args.appId }) as Promise<ToolResult<TerminateAppData>>,
     waitForUiStable: (args) =>
       invoke("wait_for_ui_stable", {
         ...baseInput(),

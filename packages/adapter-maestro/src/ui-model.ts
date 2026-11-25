@@ -132,6 +132,9 @@ export function isIosEditableNode(node: InspectUiNode | undefined): boolean {
   const className = node?.className?.toLowerCase();
   return className === "textfield"
     || className === "securetextfield"
+    || className === "searchfield"
+    || className === "textview"
+    || className === "textarea"
     || className === "edittext";
 }
 
@@ -376,6 +379,60 @@ export function detectViewportBounds(nodes: InspectUiNode[]): UiBounds {
     };
 }
 
+function largestBounds(items: InspectUiNode[]): UiBounds | undefined {
+  let best: UiBounds | undefined;
+  let bestArea = 0;
+  for (const node of items) {
+    const bounds = parseUiBounds(node.bounds);
+    if (!bounds || bounds.width <= 0 || bounds.height <= 0) {
+      continue;
+    }
+    const area = bounds.width * bounds.height;
+    if (area > bestArea) {
+      best = bounds;
+      bestArea = area;
+    }
+  }
+  return best;
+}
+
+export function detectScreenBounds(nodes: InspectUiNode[]): UiBounds {
+  const windowNodes = nodes.filter((node) => node.className === "Application" || node.className === "Window");
+  const rootDepthNodes = nodes.filter((node) => node.depth === 0);
+  const primary = largestBounds(windowNodes) ?? largestBounds(rootDepthNodes);
+
+  if (primary) {
+    // Foldable / landscape iOS AX snapshots (e.g. iPhone Duo unfolded) may leave
+    // depth=0 Application in unrotated portrait dims while depth=1 Group/Window holds rotated landscape bounds.
+    const rotatedChildren = nodes.filter((node) => {
+      if (node.depth !== 1 || (node.className !== "Window" && node.className !== "Group")) {
+        return false;
+      }
+      const b = parseUiBounds(node.bounds);
+      if (!b || b.width <= 0 || b.height <= 0) {
+        return false;
+      }
+      return Math.abs(b.width - primary.height) <= 2 && Math.abs(b.height - primary.width) <= 2;
+    });
+    const rotated = largestBounds(rotatedChildren);
+    if (rotated) {
+      return rotated;
+    }
+    return primary;
+  }
+
+  return largestBounds(nodes)
+    ?? {
+      left: 0,
+      top: 0,
+      right: 1080,
+      bottom: 1920,
+      width: 1080,
+      height: 1920,
+      center: { x: 540, y: 960 },
+    };
+}
+
 export function calculateViewportOverlap(bounds: UiBounds, viewport: UiBounds): number {
   const visibleX = Math.max(0, Math.min(bounds.right, viewport.right) - Math.max(bounds.left, viewport.left));
   const visibleY = Math.max(0, Math.min(bounds.bottom, viewport.bottom) - Math.max(bounds.top, viewport.top));
@@ -435,7 +492,7 @@ export function diffAmbiguousCandidates(matches: InspectUiMatch[]): AmbiguityDif
 }
 
 export function queryUiNodes(nodes: InspectUiNode[], query: QueryUiSelector): { totalMatches: number; matches: InspectUiMatch[] } {
-  const viewport = detectViewportBounds(nodes);
+  const viewport = detectScreenBounds(nodes);
   const allMatches = nodes.flatMap((node) => {
     const matchedBy: InspectUiMatchField[] = [];
     const scoreBreakdown: string[] = [];
