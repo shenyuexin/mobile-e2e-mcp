@@ -1163,6 +1163,22 @@ export async function typeIntoElementWithMaestroTool(
 		}
 	}
 
+	if (!input.dryRun && runtimeHooks.settleAfterFocus) {
+		const selection = await loadHarnessSelection(
+			repoRoot,
+			platform,
+			runnerProfile,
+			input.harnessConfigPath ?? DEFAULT_HARNESS_CONFIG_PATH,
+		);
+		const deviceId =
+			input.deviceId ?? selection.deviceId ?? buildDefaultDeviceId(platform);
+		await runtimeHooks.settleAfterFocus({
+			repoRoot,
+			deviceId,
+			settleDelayMs: input.focusSettleDelayMs,
+		});
+	}
+
 	const typeResult = await typeTextWithMaestroTool({
 		sessionId: input.sessionId,
 		platform,
@@ -1225,6 +1241,7 @@ export async function typeIntoElementWithMaestroTool(
 					keyboardState,
 				},
 				nextSuggestions: [
+					...(verification.diagnosticHint ? [verification.diagnosticHint] : []),
 					"The iOS field could not be re-verified after typing. Refresh the hierarchy, confirm focus stayed on the target field, and retry type_into_element.",
 				],
 			};

@@ -21,7 +21,33 @@
 }
 ```
 
-安装后，你将获得 **66 个 MCP 工具** 用于受治理的移动端自动化，以及内置的 **Explorer** 自动页面遍历能力。
+默认情况下，MCP stdio 服务启用 **`core` 工具集（18 个高频核心工具，含 `audit_ui_surface` 结构体检）**，可显著降低 Agent 上下文 schema 开销（减少约 73%）。如需暴露全部 **67 个 MCP 工具**（录制回放、失败归因、网络策略诊断、性能采集、JS 调试目标等），可传入 `--toolset full` 或设置环境变量 `MOBILE_E2E_TOOLSET=full`：
+
+```json
+{
+  "mcpServers": {
+    "mobile-e2e-mcp": {
+      "command": "npx",
+      "args": ["-y", "@shenyuexin/mobile-e2e-mcp@latest", "--toolset", "full"]
+    }
+  }
+}
+```
+
+### 统一单入口 CLI
+
+单包二进制入口同时提供 MCP stdio 服务与本地 CLI 工作流（`stdio`、`doctor`、`init`、`explore`、`run`）：
+
+```bash
+# 检查本地 Android/iOS 工具链与已连接设备
+npx -y @shenyuexin/mobile-e2e-mcp@latest doctor
+
+# 生成轻量 .e2e/config.yaml 工程配置
+npx -y @shenyuexin/mobile-e2e-mcp@latest init --platform ios --app-id com.example.app --no-prompt
+
+# 在受治理 session 内运行确定性 flow
+npx -y @shenyuexin/mobile-e2e-mcp@latest run flows/smoke.yaml --dry-run
+```
 
 ## 主要产品面：Explorer
 

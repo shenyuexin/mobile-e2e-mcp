@@ -724,6 +724,111 @@ function selectDominantCandidate(matches: InspectUiMatch[]): InspectUiMatch | un
   return bestCandidate;
 }
 
+const INTERACTIVE_LEAF_CLASSES = new Set([
+  "button",
+  "textfield",
+  "securetextfield",
+  "searchfield",
+  "textview",
+  "textarea",
+  "switch",
+  "checkbox",
+  "toggle",
+  "link",
+  "menuitem",
+  "slider",
+  "stepper",
+  "segmentedcontrol",
+  "tab",
+  "android.widget.button",
+  "android.widget.edittext",
+  "android.widget.checkbox",
+  "android.widget.switch",
+  "android.widget.radiobutton",
+  "android.widget.imagebutton",
+]);
+
+const NON_INTERACTIVE_CONTAINER_CLASSES = new Set([
+  "group",
+  "other",
+  "view",
+  "layout",
+  "container",
+  "scrollarea",
+  "scrollview",
+  "cell",
+  "collectionview",
+  "table",
+  "window",
+  "application",
+  "android.view.viewgroup",
+  "android.widget.framelayout",
+  "android.widget.linearlayout",
+  "android.widget.relativelayout",
+  "androidx.constraintlayout.widget.constraintlayout",
+]);
+
+function selectInteractiveLeafOverContainers(matches: InspectUiMatch[]): InspectUiMatch | undefined {
+  const visibleEnabled = matches.filter(
+    (match) => match.node.enabled !== false && !match.isOffScreen && (match.viewportOverlapPercent ?? 1) >= 0.25,
+  );
+  if (visibleEnabled.length < 2) {
+    return undefined;
+  }
+
+  for (const match of visibleEnabled) {
+    const hasStrongSelector = match.matchedBy.some(
+      (field) => field === "resourceId" || field === "text" || field === "contentDesc",
+    );
+    if (!hasStrongSelector || match.matchQuality !== "exact") {
+      return undefined;
+    }
+  }
+
+  const leaves: InspectUiMatch[] = [];
+  const others: InspectUiMatch[] = [];
+  for (const match of visibleEnabled) {
+    const cls = (match.node.className ?? "").toLowerCase();
+    if (INTERACTIVE_LEAF_CLASSES.has(cls)) {
+      leaves.push(match);
+    } else {
+      others.push(match);
+    }
+  }
+
+  if (leaves.length !== 1 || others.length === 0) {
+    return undefined;
+  }
+
+  const leaf = leaves[0];
+  const leafBounds = parseUiBounds(leaf.node.bounds);
+  if (!leafBounds) {
+    return undefined;
+  }
+
+  for (const other of others) {
+    const cls = (other.node.className ?? "").toLowerCase();
+    if (INTERACTIVE_LEAF_CLASSES.has(cls)) {
+      return undefined;
+    }
+    if (other.node.clickable !== false && !NON_INTERACTIVE_CONTAINER_CLASSES.has(cls)) {
+      return undefined;
+    }
+    if (leaf.node.depth !== undefined && other.node.depth !== undefined && leaf.node.depth < other.node.depth) {
+      return undefined;
+    }
+    const otherBounds = parseUiBounds(other.node.bounds);
+    if (!otherBounds) {
+      return undefined;
+    }
+    if (calculateBoundsOverlapRatio(leafBounds, otherBounds) < 0.85) {
+      return undefined;
+    }
+  }
+
+  return leaf;
+}
+
 export function buildUiTargetResolution(query: QueryUiSelector, result: InspectUiQueryResult, supportLevel: "full" | "partial"): UiTargetResolution {
   if (supportLevel === "partial") {
     return {
@@ -756,7 +861,9 @@ export function buildUiTargetResolution(query: QueryUiSelector, result: InspectU
 
   if (result.totalMatches > 1) {
     const bestCandidate = result.matches[0];
-    const dominantCandidate = selectDominantCandidate(result.matches);
+    const dominantCandidate =
+      selectDominantCandidate(result.matches) ??
+      selectInteractiveLeafOverContainers(result.matches);
     if (dominantCandidate) {
       const matchedNode = dominantCandidate.node;
       const resolvedBounds = parseUiBounds(matchedNode.bounds);

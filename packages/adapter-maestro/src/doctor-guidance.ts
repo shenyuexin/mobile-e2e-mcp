@@ -139,6 +139,17 @@ const GUIDANCE_RULES: DoctorGuidanceRule[] = [
     verifyCommands: ["which trace_processor", "trace_processor --help"],
     envHints: ["Set TRACE_PROCESSOR_PATH if trace_processor is not discoverable on PATH."],
   },
+  {
+    dependency: "ios-simulator-keyboard",
+    platformScope: "ios",
+    matches: (check) => check.name.toLowerCase().startsWith("ios simulator keyboard"),
+    installCommands: [],
+    verifyCommands: ["xcrun simctl spawn <UDID> defaults read -g AppleKeyboards"],
+    envHints: [
+      "Promote 'en_US@sw=QWERTY;hw=Automatic' to index 0 of AppleKeyboards on booted iOS simulators so 'axe type' does not produce Pinyin candidate spaces (\\u2006).",
+      "Example: xcrun simctl spawn <UDID> defaults write -g AppleKeyboards -array \"en_US@sw=QWERTY;hw=Automatic\" \"zh_Hans-Pinyin@sw=Pinyin-Simplified;hw=ABC\"",
+    ],
+  },
 ];
 
 function toGuidanceItem(check: DoctorCheck, rule: DoctorGuidanceRule): DoctorGuidanceItem {

@@ -257,6 +257,26 @@ export async function verifyResolvedIosPointWithHooks(
 	};
 }
 
+export const DEFAULT_IOS_FOCUS_SETTLE_DELAY_MS = 350;
+
+export function detectIosImeInputMismatch(
+	expected: string,
+	observed: string | undefined,
+): string | undefined {
+	if (!observed) {
+		return undefined;
+	}
+	if (observed.includes("\u2006")) {
+		return `Observed typed value ${JSON.stringify(observed)} contains Apple Pinyin candidate separator (\\u2006) instead of ${JSON.stringify(expected)}. Check '-g AppleKeyboards' with 'mobile-e2e-mcp doctor' and ensure an English keyboard is first.`;
+	}
+	const expectedIsAscii = /^[\x20-\x7e]+$/.test(expected);
+	const observedHasNonAscii = /[^\x20-\x7e]/.test(observed);
+	if (expectedIsAscii && observedHasNonAscii) {
+		return `Observed typed value ${JSON.stringify(observed)} contains non-ASCII IME characters instead of expected ASCII ${JSON.stringify(expected)}. Run 'mobile-e2e-mcp doctor' to check simulator AppleKeyboards.`;
+	}
+	return undefined;
+}
+
 export async function verifyTypedIosPostconditionWithHooks(
 	params: UiTypedPostconditionVerificationParams & {
 		executeDescribePointCommand?: typeof executeUiActionCommand;
@@ -335,6 +355,10 @@ export async function verifyTypedIosPostconditionWithHooks(
 				command: baseVerification.command,
 				exitCode: actionResult.execution.exitCode,
 				reasonCode: REASON_CODES.actionTypeFailed,
+				diagnosticHint: detectIosImeInputMismatch(
+					params.typedValue,
+					observedValue,
+				),
 			};
 		}
 	}
@@ -366,6 +390,23 @@ export function createIosUiRuntimeHooks(): UiRuntimePlatformHooks {
 		},
 		verifyResolvedPoint: verifyResolvedIosPointWithHooks,
 		verifyTypedPostcondition: verifyTypedIosPostconditionWithHooks,
+		settleAfterFocus: async ({ settleDelayMs }) => {
+			const envDelayRaw = process.env.M2E_IOS_FOCUS_SETTLE_MS;
+			const parsedEnvDelay =
+				envDelayRaw !== undefined && envDelayRaw.trim().length > 0
+					? Number(envDelayRaw)
+					: undefined;
+			const delayMs =
+				settleDelayMs ??
+				(parsedEnvDelay !== undefined &&
+				Number.isFinite(parsedEnvDelay) &&
+				parsedEnvDelay >= 0
+					? Math.floor(parsedEnvDelay)
+					: DEFAULT_IOS_FOCUS_SETTLE_DELAY_MS);
+			if (delayMs > 0) {
+				await new Promise((resolve) => setTimeout(resolve, delayMs));
+			}
+		},
 		buildTypeTextCommand: (deviceId, text) => {
 			const backend = router.selectBackend(deviceId);
 			return backend.buildTypeTextCommand(deviceId, text);
