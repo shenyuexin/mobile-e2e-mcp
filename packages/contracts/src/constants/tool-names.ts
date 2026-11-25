@@ -53,6 +53,7 @@ export const TOOL_NAMES = {
   resolveUiTarget: "resolve_ui_target",
   waitForUi: "wait_for_ui",
   waitForUiStable: "wait_for_ui_stable",
+  auditUiSurface: "audit_ui_surface",
   getScreenSummary: "get_screen_summary",
   getSessionState: "get_session_state",
   getPageContext: "get_page_context",

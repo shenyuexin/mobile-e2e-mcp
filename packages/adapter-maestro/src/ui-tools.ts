@@ -4,6 +4,7 @@ export {
   resolveUiTargetWithMaestroTool,
   waitForUiWithMaestroTool,
 } from "./ui-inspection-tools.js";
+export { auditUiSurfaceWithMaestroTool } from "./ui-audit-tool.js";
 export {
   tapWithMaestroTool,
   tapElementWithMaestroTool,

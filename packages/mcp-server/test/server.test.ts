@@ -74,6 +74,7 @@ test("createServer lists newly added UI tools", () => {
   assert.ok(tools.includes("resolve_ui_target"));
   assert.ok(tools.includes("wait_for_ui"));
   assert.ok(tools.includes("wait_for_ui_stable"));
+  assert.ok(tools.includes("audit_ui_surface"));
   assert.ok(tools.includes("scroll_only"));
   assert.ok(tools.includes("scroll_and_resolve_ui_target"));
   assert.ok(tools.includes("scroll_and_tap_element"));
@@ -178,12 +179,57 @@ test("server invoke returns capability discovery profiles", async () => {
   assert.equal(result.reasonCode, "OK");
   assert.equal(result.data.capabilities.platform, "ios");
   assert.equal(result.data.capabilities.toolCapabilities.find((tool) => tool.toolName === "wait_for_ui")?.supportLevel, "full");
+  assert.equal(result.data.capabilities.toolCapabilities.find((tool) => tool.toolName === "audit_ui_surface")?.supportLevel, "full");
   assert.equal(result.data.capabilities.toolCapabilities.find((tool) => tool.toolName === "scroll_only")?.supportLevel, "full");
   assert.equal(result.data.capabilities.toolCapabilities.find((tool) => tool.toolName === "diagnose_network_failure")?.supportLevel, "full");
   assert.equal(result.data.capabilities.toolCapabilities.find((tool) => tool.toolName === "inspect_network_policy")?.supportLevel, "full");
   assert.equal(result.data.capabilities.ocrFallback?.deterministicFirst, true);
   assert.equal(result.data.capabilities.ocrFallback?.hostRequirement, "darwin");
   assert.equal(Array.isArray(result.data.capabilities.ocrFallback?.configuredProviders), true);
+});
+
+test("server invoke supports audit_ui_surface with inline nodes and dryRun", async () => {
+  const server = createServer();
+  const sessionId = `server-audit-ui-${Date.now()}`;
+  try {
+    const started = await server.invoke("start_session", {
+      sessionId,
+      platform: "ios",
+      deviceId: buildTestDeviceId(sessionId),
+      appId: "com.example.app",
+      profile: "native_ios",
+    });
+    assert.equal(started.status, "success");
+
+    const inlineAudit = await server.invoke("audit_ui_surface", {
+      sessionId,
+      platform: "ios",
+      surfaceName: "paywall",
+      screenWidth: 400,
+      screenHeight: 800,
+      nodes: [
+        { className: "Application", clickable: false, enabled: true, scrollable: false, depth: 0, bounds: "[0,0][400,800]" },
+        { className: "Button", contentDesc: "subscription.paywall.buy", clickable: true, enabled: true, scrollable: false, depth: 1, bounds: "[20,40][50,70]" },
+      ],
+    });
+    assert.equal(inlineAudit.status, "success");
+    assert.equal(inlineAudit.data.issueCounts.smallTargets, 1);
+    assert.equal(inlineAudit.data.issueCounts.missingA11yId, 1);
+    assert.equal(inlineAudit.data.issueCounts.rawI18nKeys, 1);
+
+    const dryRunAudit = await server.invoke("audit_ui_surface", {
+      sessionId,
+      platform: "ios",
+      dryRun: true,
+    });
+    assert.equal(dryRunAudit.status, "success");
+    assert.equal(dryRunAudit.data.dryRun, true);
+    assert.equal(dryRunAudit.data.command[0], "__wda_http__");
+  } finally {
+    await rm(path.resolve(repoRoot, buildSessionRecordRelativePath(sessionId)), { force: true });
+    await rm(path.resolve(repoRoot, buildSessionAuditRelativePath(sessionId)), { force: true });
+    await rm(path.resolve(repoRoot, buildDeviceLeaseRecordRelativePath("ios", buildTestDeviceId(sessionId))), { force: true });
+  }
 });
 
 test("server invoke records manual handoff checkpoints into session timeline", async () => {

@@ -21,6 +21,7 @@ import {
 } from "../src/ui-action-tools-ios-physical.ts";
 import {
 	buildIosPhysicalActionExecutionPlan,
+	detectIosImeInputMismatch,
 	isIosSimulatorOnlyIdbActionError,
 	verifyTypedIosPostconditionWithHooks,
 } from "../src/ui-runtime-ios.ts";
@@ -1181,4 +1182,17 @@ test("buildOwnedRunnerActionEnv ignores wildcard flow appId and preserves action
 	});
 	assert.equal(envPatch.IOS_OWNED_RUNNER_TARGET_BUNDLE_ID, undefined);
 	assert.equal(envPatch.IOS_OWNED_RUNNER_ACTION_TYPE, "tap");
+});
+
+test("detectIosImeInputMismatch flags Pinyin U+2006 candidate corruption and non-ASCII mismatch", () => {
+	const pinyinHint = detectIosImeInputMismatch("Folder1", "Folder\u20061");
+	assert.ok(pinyinHint);
+	assert.match(pinyinHint, /\\u2006/);
+	assert.match(pinyinHint, /AppleKeyboards/);
+
+	const cjkHint = detectIosImeInputMismatch("Notes", "笔记");
+	assert.ok(cjkHint);
+	assert.match(cjkHint, /non-ASCII IME/);
+
+	assert.equal(detectIosImeInputMismatch("Notes", "Notes"), undefined);
 });

@@ -88,6 +88,7 @@ test("buildToolList includes the new UI tools", () => {
   assert.ok(toolNames.includes("resolve_ui_target"));
   assert.ok(toolNames.includes("wait_for_ui"));
   assert.ok(toolNames.includes("wait_for_ui_stable"));
+  assert.ok(toolNames.includes("audit_ui_surface"));
   assert.ok(toolNames.includes("scroll_only"));
   assert.ok(toolNames.includes("scroll_and_resolve_ui_target"));
   assert.ok(toolNames.includes("scroll_and_tap_element"));

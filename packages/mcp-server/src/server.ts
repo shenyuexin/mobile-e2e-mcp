@@ -1,4 +1,6 @@
 import type {
+	AuditUiSurfaceData,
+	AuditUiSurfaceInput,
 	CancelRecordSessionData,
 	CancelRecordSessionInput,
 	CaptureJsConsoleLogsData,
@@ -226,6 +228,7 @@ export interface MobileE2EMcpToolContractMap {
 	>;
 	inspect_ui: ToolContract<InspectUiInput, InspectUiData>;
 	query_ui: ToolContract<QueryUiInput, QueryUiData>;
+	audit_ui_surface: ToolContract<AuditUiSurfaceInput, AuditUiSurfaceData>;
 	recover_to_known_state: ToolContract<
 		RecoverToKnownStateInput,
 		RecoverToKnownStateData

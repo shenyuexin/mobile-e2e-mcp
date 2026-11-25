@@ -10,8 +10,10 @@ import type {
 	ResolveInterruptionInput,
 	ResumeInterruptedActionInput,
 	ToolResult,
+	ToolSetName,
 } from "@mobile-e2e-mcp/contracts";
-import { REASON_CODES, TOOL_NAMES } from "@mobile-e2e-mcp/contracts";
+import { REASON_CODES, TOOL_NAMES, TOOLSET_NAMES } from "@mobile-e2e-mcp/contracts";
+import { filterToolListByToolset } from "./toolsets.js";
 import {
 	appendSessionTimelineEvent,
 	coreEvidencePaths,
@@ -32,6 +34,7 @@ import {
 } from "./server.js";
 import { cancelRecordSession } from "./tools/cancel-record-session.js";
 import { captureElementScreenshot } from "./tools/capture-element-screenshot.js";
+import { auditUiSurface } from "./tools/audit-ui-surface.js";
 import { captureJsConsoleLogs } from "./tools/capture-js-console-logs.js";
 import { captureJsNetworkEvents } from "./tools/capture-js-network-events.js";
 import { classifyInterruption } from "./tools/classify-interruption.js";
@@ -1138,6 +1141,15 @@ const TOOL_DESCRIPTORS: ReadonlyArray<ToolDescriptor> = [
 		audit: { captureResultEvidence: false },
 	}),
 	defineToolDescriptor({
+		name: TOOL_NAMES.auditUiSurface,
+		description:
+			"Run deterministic structural, HIG/Material touch-target, overlap, edge-clipping, accessibility-ID, and raw i18n key audits on the current screen or provided UI nodes.",
+		handler: auditUiSurface,
+		policy: { enforced: true, requiredScopes: ["read"] },
+		session: { required: true, requireResolvedSessionContext: true },
+		audit: { captureResultEvidence: false },
+	}),
+	defineToolDescriptor({
 		name: TOOL_NAMES.endSession,
 		description: "Close a session and return final metadata.",
 		handler: endSession,
@@ -1147,12 +1159,24 @@ const TOOL_DESCRIPTORS: ReadonlyArray<ToolDescriptor> = [
 	}),
 ];
 
-export function buildToolListMetadata(): ToolListItem[] {
-	return TOOL_DESCRIPTORS.map((descriptor) => ({
+export function buildToolListMetadata(
+	toolset: ToolSetName = TOOLSET_NAMES.full,
+): ToolListItem[] {
+	const items = TOOL_DESCRIPTORS.map((descriptor) => ({
 		name: descriptor.name,
 		description: descriptor.description,
 	}));
+	return filterToolListByToolset(items, toolset);
 }
+
+export {
+	buildToolsetDeniedResult,
+	DEFAULT_MCP_TOOLSET,
+	filterToolListByToolset,
+	isToolEnabledInToolset,
+	parseToolsetFlag,
+	resolveMcpToolset,
+} from "./toolsets.js";
 
 export function createServer(): MobileE2EMcpServer {
 	const registry: Record<ToolName, AnyToolHandler> = {} as Record<

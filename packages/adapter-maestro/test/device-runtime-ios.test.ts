@@ -3,7 +3,7 @@ import { chmod, mkdtemp, readFile, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { isIosPhysicalDeviceId, takeScreenshotWithRuntime } from "../src/device-runtime.ts";
+import { isIosPhysicalDeviceId, recordScreenWithRuntime, takeScreenshotWithRuntime } from "../src/device-runtime.ts";
 import {
   buildIosLogLevelPredicate,
   extractIosSimulatorProcessId,
@@ -466,6 +466,81 @@ exit 0
     assert.ok(info.size > 0);
     const body = await readFile(outPath, "utf8");
     assert.equal(body, "PNG_FALLBACK");
+  } finally {
+    process.env.PATH = originalPath;
+  }
+});
+
+test("createIosDeviceRuntimeHooks provides AXe multi-display fallback plan for simulator record_screen", () => {
+  const hooks = createIosDeviceRuntimeHooks();
+  const simPlan = hooks.buildRecordScreenPlan({
+    sessionId: "rec-sim",
+    deviceId: "7FAAF425-69B6-49B6-8CC4-297FA9DAEA88",
+    durationMs: 2000,
+    absoluteOutputPath: "/tmp/sim-video.mp4",
+  });
+  assert.deepEqual(simPlan.fallbackCommandLabels, ["record_axe_fallback"]);
+  assert.match(simPlan.commands[0]?.[2] ?? "", /\[ -s '\/tmp\/sim-video\.mp4' \]|\[ -s \/tmp\/sim-video\.mp4 \]/);
+  assert.match(simPlan.fallbackCommands?.[0]?.[2] ?? "", /axe record-video .*--follow-active-display/);
+
+  const physicalPlan = hooks.buildRecordScreenPlan({
+    sessionId: "rec-phys",
+    deviceId: "00008101-000D482C1E78001E",
+    durationMs: 2000,
+    absoluteOutputPath: "/tmp/phys-video.mp4",
+  });
+  assert.equal(physicalPlan.fallbackCommands, undefined);
+});
+
+test("recordScreenWithRuntime falls back to axe record-video when primary simctl recording fails", async () => {
+  const binDir = await mkdtemp(path.join(tmpdir(), "mobile-e2e-duo-rec-"));
+  const workDir = await mkdtemp(path.join(tmpdir(), "mobile-e2e-duo-rec-out-"));
+  const xcrunPath = path.join(binDir, "xcrun");
+  const axePath = path.join(binDir, "axe");
+  await writeFile(
+    xcrunPath,
+    `#!/bin/sh
+exit 22
+`,
+    "utf8",
+  );
+  await writeFile(
+    axePath,
+    `#!/bin/sh
+out=""
+while [ $# -gt 0 ]; do
+  if [ "$1" = "--output" ]; then
+    out="$2"
+    shift 2
+    continue
+  fi
+  shift
+done
+printf "MP4_FALLBACK" > "$out"
+exit 0
+`,
+    "utf8",
+  );
+  await chmod(xcrunPath, 0o755);
+  await chmod(axePath, 0o755);
+
+  const originalPath = process.env.PATH;
+  process.env.PATH = `${binDir}${path.delimiter}${originalPath ?? ""}`;
+  const outPath = path.join(workDir, "videos/duo.mp4");
+  try {
+    const result = await recordScreenWithRuntime({
+      sessionId: "duo-rec-test",
+      platform: "ios",
+      deviceId: "7FAAF425-69B6-49B6-8CC4-297FA9DAEA88",
+      durationMs: 500,
+      outputPath: outPath,
+    });
+    assert.equal(result.status, "success");
+    assert.equal(result.attempts, 2);
+    assert.deepEqual(result.data.commandLabels, ["record", "record_axe_fallback"]);
+    assert.equal(result.data.commands.length, 2);
+    const body = await readFile(outPath, "utf8");
+    assert.equal(body, "MP4_FALLBACK");
   } finally {
     process.env.PATH = originalPath;
   }
