@@ -531,19 +531,35 @@ export function createIosDeviceRuntimeHooks(): DeviceRuntimePlatformHooks {
     screenshotFailureSuggestion: "Check simulator boot state before retrying take_screenshot.",
     buildRecordScreenPlan: ({ deviceId, durationMs, absoluteOutputPath }) => {
       const durationSeconds = Math.max(1, Math.ceil(durationMs / 1000));
+      const physical = isIosPhysicalDeviceId(deviceId);
       const iosScript = [
         `xcrun simctl io ${shellEscape(deviceId)} recordVideo --codec=h264 --force ${shellEscape(absoluteOutputPath)} >/dev/null 2>&1 &`,
         "pid=$!",
         `sleep ${String(durationSeconds)}`,
         "kill -INT \"$pid\" >/dev/null 2>&1 || true",
         "wait \"$pid\" >/dev/null 2>&1 || true",
+        `[ -s ${shellEscape(absoluteOutputPath)} ]`,
+      ].join("\n");
+      const axeFallbackScript = [
+        `axe record-video --udid ${shellEscape(deviceId)} --fps 15 --follow-active-display --output ${shellEscape(absoluteOutputPath)} >/dev/null 2>&1 &`,
+        "pid=$!",
+        `sleep ${String(durationSeconds)}`,
+        "kill -INT \"$pid\" >/dev/null 2>&1 || true",
+        "wait \"$pid\" >/dev/null 2>&1 || true",
+        `[ -s ${shellEscape(absoluteOutputPath)} ]`,
       ].join("\n");
       return {
         commandLabels: ["record"],
-        commands: [["sh", "-lc", iosScript]],
+        commands: [["sh", "-c", iosScript]],
+        ...(physical
+          ? {}
+          : {
+            fallbackCommandLabels: ["record_axe_fallback"],
+            fallbackCommands: [["sh", "-c", axeFallbackScript]],
+          }),
         supportLevel: "partial",
-        dryRunSuggestion: "Run record_screen without dryRun to capture an iOS simulator recording via simctl.",
-        failureSuggestion: "Check simulator boot state and xcrun simctl io recordVideo availability before retrying record_screen.",
+        dryRunSuggestion: "Run record_screen without dryRun to capture an iOS simulator recording via simctl (with AXe multi-display fallback).",
+        failureSuggestion: "Check simulator boot state, xcrun simctl io recordVideo, and axe record-video availability before retrying record_screen.",
       };
     },
     buildGetLogsCapturePlan: ({ repoRoot, sessionId, outputPath, runnerProfile, deviceId, sinceSeconds, appId, appFilterApplied, minLogLevel }) => {

@@ -44,6 +44,7 @@ import {
   toRelativePath,
 } from "./runtime-shared.js";
 import { classifyDebugSignal } from "./js-debug.js";
+import { enrichIosSimulatorDisplayMetadata } from "./ios-simulator-env.js";
 import { spawn } from "node:child_process";
 
 export type GetLogsCapture = GetLogsCapturePlan;
@@ -392,10 +393,11 @@ export async function listAvailableDevices(repoRoot: string, includeUnavailable 
       if (reasonCode === REASON_CODES.ok) reasonCode = REASON_CODES.deviceUnavailable;
       nextSuggestions.push("xcrun xctrace is unavailable in the current environment.");
     }
-    iosDevices = mergeIosDiscoveredDevices(simulatorDevices, physicalDevices).map((device) => ({
+    const rawIosDevices = mergeIosDiscoveredDevices(simulatorDevices, physicalDevices).map((device) => ({
       ...device,
       capabilities: buildCapabilityProfile("ios", null),
     }));
+    iosDevices = await enrichIosSimulatorDisplayMetadata(repoRoot, rawIosDevices);
   } catch {
     status = "partial"; if (reasonCode === REASON_CODES.ok) reasonCode = REASON_CODES.deviceUnavailable; nextSuggestions.push("xcrun simctl is unavailable in the current environment.");
   }
@@ -786,7 +788,22 @@ export async function recordScreenWithRuntime(input: RecordScreenInput): Promise
   }
 
   const [recordCommand, pullCommand, cleanupCommand] = plan.commands;
-  const recordExecution = await executeRunner(recordCommand, repoRoot, process.env);
+  const fallbackCommand = plan.fallbackCommands?.[0];
+  let recordExecution = await executeRunner(recordCommand, repoRoot, process.env);
+  let effectiveCommands = [...plan.commands];
+  let effectiveLabels = [...plan.commandLabels];
+  let attempts = 1;
+  let usedFallback = false;
+
+  if (recordExecution.exitCode !== 0 && fallbackCommand) {
+    attempts = 2;
+    const fallbackExecution = await executeRunner(fallbackCommand, repoRoot, process.env);
+    effectiveCommands = [...effectiveCommands, fallbackCommand];
+    effectiveLabels = [...effectiveLabels, ...(plan.fallbackCommandLabels ?? ["record_fallback"])];
+    recordExecution = fallbackExecution;
+    usedFallback = fallbackExecution.exitCode === 0;
+  }
+
   if (recordExecution.exitCode !== 0) {
     if (cleanupCommand) {
       await executeRunner(cleanupCommand, repoRoot, process.env).catch(() => undefined);
@@ -796,7 +813,7 @@ export async function recordScreenWithRuntime(input: RecordScreenInput): Promise
       reasonCode: buildFailureReason(recordExecution.stderr, recordExecution.exitCode),
       sessionId: input.sessionId,
       durationMs: Date.now() - startTime,
-      attempts: 1,
+      attempts,
       artifacts: [],
       data: {
         dryRun: false,
@@ -804,8 +821,8 @@ export async function recordScreenWithRuntime(input: RecordScreenInput): Promise
         outputPath: relativeOutputPath,
         durationMs,
         bitrateMbps,
-        commandLabels: plan.commandLabels,
-        commands: plan.commands,
+        commandLabels: effectiveLabels,
+        commands: effectiveCommands,
         exitCode: recordExecution.exitCode,
         supportLevel: plan.supportLevel,
       },
@@ -823,7 +840,7 @@ export async function recordScreenWithRuntime(input: RecordScreenInput): Promise
     reasonCode: finalizeExecution.exitCode === 0 ? REASON_CODES.ok : buildFailureReason(finalizeExecution.stderr, finalizeExecution.exitCode),
     sessionId: input.sessionId,
     durationMs: Date.now() - startTime,
-    attempts: 1,
+    attempts,
     artifacts: finalizeExecution.exitCode === 0 ? [relativeOutputPath] : [],
     data: {
       dryRun: false,
@@ -831,11 +848,13 @@ export async function recordScreenWithRuntime(input: RecordScreenInput): Promise
       outputPath: relativeOutputPath,
       durationMs,
       bitrateMbps,
-      commandLabels: plan.commandLabels,
-      commands: plan.commands,
+      commandLabels: effectiveLabels,
+      commands: effectiveCommands,
       exitCode: finalizeExecution.exitCode,
       supportLevel: plan.supportLevel,
-      evidence: finalizeExecution.exitCode === 0 ? [buildExecutionEvidence("screen_recording", relativeOutputPath, plan.supportLevel, `Captured ${input.platform === "android" ? "Android" : "iOS simulator"} screen recording artifact.`)] : undefined,
+      evidence: finalizeExecution.exitCode === 0
+        ? [buildExecutionEvidence("screen_recording", relativeOutputPath, plan.supportLevel, `Captured ${input.platform === "android" ? "Android" : "iOS simulator"} screen recording artifact${usedFallback ? " (AXe fallback)" : ""}.`)]
+        : undefined,
     },
     nextSuggestions: finalizeExecution.exitCode === 0 ? [] : [input.platform === "android"
       ? "Android recording completed but artifact pull failed. Check adb device connectivity and storage path."

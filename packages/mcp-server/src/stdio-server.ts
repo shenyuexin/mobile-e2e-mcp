@@ -2,6 +2,7 @@ import process from "node:process";
 import path from "node:path";
 import readline from "node:readline";
 import { fileURLToPath } from "node:url";
+import { TOOLSET_NAMES, type ToolSetName } from "@mobile-e2e-mcp/contracts";
 import { buildToolListMetadata, createServer } from "./index.js";
 
 export interface StdioRequest {
@@ -35,8 +36,8 @@ export function toErrorMessage(error: unknown): string {
   return String(error);
 }
 
-export function buildToolList() {
-  return buildToolListMetadata();
+export function buildToolList(toolset: ToolSetName = TOOLSET_NAMES.full) {
+  return buildToolListMetadata(toolset);
 }
 
 function normalizeInvokedToolName(rawToolName: string): string {

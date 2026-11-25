@@ -11,6 +11,7 @@ export interface UiResolvedPointVerificationResult {
   command: string[];
   exitCode: number | null;
   reasonCode?: ReasonCode;
+  diagnosticHint?: string;
 }
 
 export interface UiResolvedPointVerificationParams {
@@ -35,6 +36,7 @@ export interface UiRuntimePlatformHooks {
   buildDescribePointCommand?: (deviceId: string, x: number, y: number) => string[];
   verifyResolvedPoint?: (params: UiResolvedPointVerificationParams) => Promise<UiResolvedPointVerificationResult>;
   verifyTypedPostcondition?: (params: UiTypedPostconditionVerificationParams) => Promise<UiResolvedPointVerificationResult>;
+  settleAfterFocus?: (params: { repoRoot: string; deviceId: string; settleDelayMs?: number }) => Promise<void>;
   buildTypeTextCommand: (deviceId: string, text: string) => string[];
   buildSwipeCommand: (deviceId: string, swipe: { start: { x: number; y: number }; end: { x: number; y: number }; durationMs: number; delta?: number; preDelaySec?: number; postDelaySec?: number }) => string[];
   buildHierarchyCapturePreviewCommand: (deviceId: string) => string[];

@@ -2778,3 +2778,96 @@ test("parseIosInspectNodes handles axe/idb array format", () => {
   assert.ok(generalNode, "Should find General button node");
   assert.equal(generalNode?.className, "Button");
 });
+
+test("buildUiTargetResolution disambiguates SwiftUI Group+Button sharing same resourceId", () => {
+  const nodes = parseIosInspectNodes(JSON.stringify([
+    {
+      type: "Application",
+      enabled: true,
+      frame: { x: 0, y: 0, width: 400, height: 800 },
+      children: [
+        {
+          type: "Group",
+          identifier: "subscription.paywall.close",
+          AXLabel: "Close",
+          enabled: true,
+          frame: { x: 320, y: 40, width: 48, height: 48 },
+          children: [
+            {
+              type: "Button",
+              identifier: "subscription.paywall.close",
+              AXLabel: "Close",
+              enabled: true,
+              frame: { x: 324, y: 44, width: 40, height: 40 },
+              children: [],
+            },
+          ],
+        },
+      ],
+    },
+  ]));
+
+  const query = normalizeQueryUiSelector({ resourceId: "subscription.paywall.close" });
+  const queryResult = { query, ...queryUiNodes(nodes, query) };
+  assert.equal(queryResult.totalMatches, 2);
+
+  const resolution = buildUiTargetResolution(query, queryResult, "full");
+  assert.equal(resolution.status, "resolved");
+  assert.equal(resolution.matchedNode?.className, "Button");
+  assert.deepEqual(resolution.resolvedPoint, { x: 344, y: 64 });
+});
+
+test("buildUiTargetResolution resolves nested Group->Group->TextField but keeps peer Buttons ambiguous", () => {
+  const nestedFieldNodes = parseIosInspectNodes(JSON.stringify([
+    {
+      type: "Application",
+      enabled: true,
+      frame: { x: 0, y: 0, width: 400, height: 800 },
+      children: [
+        {
+          type: "Group",
+          identifier: "folder.name.input",
+          enabled: true,
+          frame: { x: 20, y: 200, width: 320, height: 50 },
+          children: [
+            {
+              type: "Group",
+              identifier: "folder.name.input",
+              enabled: true,
+              frame: { x: 24, y: 204, width: 312, height: 42 },
+              children: [
+                {
+                  type: "TextField",
+                  identifier: "folder.name.input",
+                  enabled: true,
+                  frame: { x: 28, y: 206, width: 300, height: 38 },
+                  children: [],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+  ]));
+
+  const fieldQuery = normalizeQueryUiSelector({ resourceId: "folder.name.input" });
+  const fieldRes = buildUiTargetResolution(fieldQuery, { query: fieldQuery, ...queryUiNodes(nestedFieldNodes, fieldQuery) }, "full");
+  assert.equal(fieldRes.status, "resolved");
+  assert.equal(fieldRes.matchedNode?.className, "TextField");
+
+  const peerButtons = parseIosInspectNodes(JSON.stringify([
+    {
+      type: "Application",
+      enabled: true,
+      frame: { x: 0, y: 0, width: 400, height: 800 },
+      children: [
+        { type: "Button", identifier: "row.action", AXLabel: "Action", enabled: true, frame: { x: 20, y: 100, width: 100, height: 44 }, children: [] },
+        { type: "Button", identifier: "row.action", AXLabel: "Action", enabled: true, frame: { x: 20, y: 100, width: 100, height: 44 }, children: [] },
+      ],
+    },
+  ]));
+  const peerQuery = normalizeQueryUiSelector({ resourceId: "row.action" });
+  const peerRes = buildUiTargetResolution(peerQuery, { query: peerQuery, ...queryUiNodes(peerButtons, peerQuery) }, "full");
+  assert.equal(peerRes.status, "ambiguous");
+});

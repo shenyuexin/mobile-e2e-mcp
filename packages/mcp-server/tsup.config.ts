@@ -15,6 +15,8 @@ export default defineConfig({
     "@mobile-e2e-mcp/contracts",
     "@mobile-e2e-mcp/core",
     "@mobile-e2e-mcp/adapter-maestro",
+    "@mobile-e2e-mcp/adapter-vision",
+    "@mobile-e2e-mcp/explorer",
   ],
   outExtension: () => ({
     js: ".cjs",

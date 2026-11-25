@@ -29,6 +29,7 @@ import {
 } from "./harness-config.js";
 import { EVIDENCE_ROOT, LEGACY_ARTIFACTS_ROOT } from "./artifact-paths.js";
 import { WdaRealDeviceBackend } from "./ios-backend-wda.js";
+import { collectIosKeyboardDoctorChecks } from "./ios-simulator-env.js";
 import {
 	resolveAndroidPerformancePlanStrategy,
 	resolveTraceProcessorPath,
@@ -1043,6 +1044,9 @@ export async function runDoctorWithMaestro(
 	);
 	checks.push(
 		...(await collectIosPerformanceEnvironmentChecks(repoRoot, devices.ios)),
+	);
+	checks.push(
+		...(await collectIosKeyboardDoctorChecks(repoRoot, devices.ios)),
 	);
 
 	const { status, reasonCode } = classifyDoctorOutcome(checks);

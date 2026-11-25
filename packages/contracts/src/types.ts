@@ -519,7 +519,28 @@ export interface TimelineEvent {
 export interface SessionTimelineEvent extends TimelineEvent {}
 export interface Session { sessionId: string; platform: Platform; deviceId: string; appId: string; policyProfile: string; startedAt: string; artifactsRoot: string; timeline: SessionTimelineEvent[]; profile?: RunnerProfile | null; phase?: string | null; sampleName?: string | null; capabilities?: CapabilityProfile; latestStateSummary?: StateSummary; interruptionEvents?: InterruptionEvent[]; lastInterruptedActionCheckpoint?: ResumeCheckpoint; }
 export interface ToolResult<TData = unknown> { status: ToolStatus; reasonCode: ReasonCode; sessionId: string; durationMs: number; attempts: number; artifacts: string[]; data: TData; nextSuggestions: string[]; }
-export interface DeviceInfo { id: string; name?: string; platform: Platform; state: string; available: boolean; capabilities?: CapabilityProfile; }
+export interface DeviceDisplayScreen {
+  id?: number;
+  uuid?: string;
+  role?: string;
+  width: number;
+  height: number;
+  scale?: number;
+  orientation?: string;
+  rotation?: number;
+  state?: string;
+}
+export interface DeviceHingeInfo {
+  degrees?: number;
+  mechanicalDegrees?: number;
+  posture?: string;
+}
+export interface DeviceDisplayMetadata {
+  activeScreen: DeviceDisplayScreen;
+  otherScreens?: DeviceDisplayScreen[];
+  hinge?: DeviceHingeInfo;
+}
+export interface DeviceInfo { id: string; name?: string; platform: Platform; state: string; available: boolean; capabilities?: CapabilityProfile; displays?: DeviceDisplayMetadata; }
 export interface DoctorCheck { name: string; status: "pass" | "warn" | "fail"; detail: string; }
 export interface DoctorGuidanceItem { dependency: string; status: "pass" | "warn" | "fail"; platformScope: "android" | "ios" | "cross"; installCommands: string[]; verifyCommands: string[]; envHints: string[]; }
 export interface DoctorData { checks: DoctorCheck[]; devices: { android: DeviceInfo[]; ios: DeviceInfo[] }; guidance: DoctorGuidanceItem[]; }
@@ -1754,6 +1775,7 @@ export interface ResolveUiTargetData {
 export interface TypeIntoElementInput extends InspectUiQueryInput {
   platform?: Platform;
   value: string;
+  focusSettleDelayMs?: number;
 }
 export interface TypeIntoElementData {
   dryRun: boolean;
@@ -1806,6 +1828,92 @@ export interface InspectUiData {
   content?: string;
   pageContext?: import("./page-context.js").PageContext;
   summary?: InspectUiSummary;
+}
+export interface AuditUiSurfaceInput {
+  sessionId: string;
+  platform?: Platform;
+  runnerProfile?: RunnerProfile;
+  harnessConfigPath?: string;
+  deviceId?: string;
+  outputPath?: string;
+  surfaceName?: string;
+  screenWidth?: number;
+  screenHeight?: number;
+  minTouchTargetPt?: number;
+  severeTouchTargetPt?: number;
+  maxOverlapRatio?: number;
+  minVisibleRatio?: number;
+  i18nKeyPrefixes?: string[];
+  nodes?: InspectUiNode[];
+  dryRun?: boolean;
+}
+export interface UiAuditFindingNode {
+  className?: string;
+  resourceId?: string;
+  label?: string;
+  bounds: UiBounds;
+}
+export interface UiAuditEdgeClipFinding extends UiAuditFindingNode {
+  visibleRatio: number;
+}
+export interface UiAuditSmallTargetFinding extends UiAuditFindingNode {
+  severity: "severe" | "compact";
+  minRequiredPt: number;
+}
+export interface UiAuditOverlapFinding {
+  ratio: number;
+  a: UiAuditFindingNode;
+  b: UiAuditFindingNode;
+}
+export interface UiAuditMissingIdFinding {
+  className?: string;
+  label?: string;
+  bounds: UiBounds;
+}
+export interface UiAuditDuplicateIdFinding {
+  resourceId: string;
+  count: number;
+  occurrences: UiAuditFindingNode[];
+}
+export interface UiAuditRawI18nFinding extends UiAuditFindingNode {
+  label: string;
+}
+export interface UiAuditZeroSizeFinding {
+  className?: string;
+  resourceId?: string;
+  label?: string;
+  bounds?: UiBounds;
+}
+export interface UiSurfaceAuditIssueCounts {
+  edgeClipping: number;
+  siblingOverlaps: number;
+  smallTargets: number;
+  severeSmallTargets: number;
+  missingA11yId: number;
+  duplicateA11yIds: number;
+  rawI18nKeys: number;
+  zeroSize: number;
+  total: number;
+}
+export interface AuditUiSurfaceData {
+  dryRun: boolean;
+  runnerProfile: RunnerProfile;
+  surfaceName: string;
+  outputPath?: string;
+  command: string[];
+  exitCode: number | null;
+  supportLevel: "full" | "partial";
+  screenBounds: { width: number; height: number };
+  totalNodes: number;
+  visibleInteractiveCount: number;
+  issueCounts: UiSurfaceAuditIssueCounts;
+  edgeClipping: UiAuditEdgeClipFinding[];
+  smallTargets: UiAuditSmallTargetFinding[];
+  siblingOverlaps: UiAuditOverlapFinding[];
+  missingA11yId: UiAuditMissingIdFinding[];
+  duplicateA11yIds: UiAuditDuplicateIdFinding[];
+  rawI18nKeys: UiAuditRawI18nFinding[];
+  zeroSize: UiAuditZeroSizeFinding[];
 }
 export type WaitForUiMode = "visible" | "gone" | "unique";
 export interface WaitForUiInput extends InspectUiQueryInput {

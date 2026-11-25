@@ -1,5 +1,6 @@
 import type { ActionIntent, AndroidPerformancePreset, AndroidReplayOptions, CaptureJsConsoleLogsInput, CaptureJsNetworkEventsInput, CollectDebugEvidenceInput, CollectDiagnosticsInput, CompareAgainstBaselineInput, DescribeCapabilitiesInput, DoctorInput, ExplainLastFailureInput, FindSimilarFailuresInput, GetActionOutcomeInput, GetCrashSignalsInput, GetLogsInput, GetScreenSummaryInput, GetSessionStateInput, InspectUiInput, InstallAppInput, IosPerformanceTemplate, LaunchAppInput, ListDevicesInput, ListJsDebugTargetsInput, MeasureAndroidPerformanceInput, MeasureIosPerformanceInput, PerformActionWithEvidenceInput, Platform, QueryUiInput, RankFailureCandidatesInput, RecordScreenInput, RecoverToKnownStateInput, ReplayLastStablePathInput, RequestManualHandoffInput, ResetAppStateInput, ResetAppStateStrategy, ResolveUiTargetInput, RunFlowInput, RunnerProfile, ScreenshotInput, ScrollAndResolveUiTargetInput, ScrollAndTapElementInput, ScrollOnlyInput, StartSessionInput, SuggestKnownRemediationInput, TapElementInput, TapInput, TerminateAppInput, ToolResult, TypeTextInput, TypeIntoElementInput, UiScrollDirection, WaitForUiInput, WaitForUiMode } from "@mobile-e2e-mcp/contracts";
 import process from "node:process";
+import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { applyContextAlias } from "./cli/context-resolver.js";
 import { executePreset } from "./cli/preset-runner.js";
@@ -385,8 +386,8 @@ export function parseCliArgs(argv: string[]): CliOptions {
   };
 }
 
-export async function main(): Promise<void> {
-  const cliOptions = parseCliArgs(process.argv.slice(2));
+export async function main(argv: string[] = process.argv.slice(2)): Promise<void> {
+  const cliOptions = parseCliArgs(argv);
   const server = createServer();
 
   const aliasResult = await applyContextAlias(cliOptions);
@@ -1061,7 +1062,11 @@ export async function main(): Promise<void> {
   if (runResult.status === "failed") process.exitCode = 1;
 }
 
-const isEntrypoint = process.argv[1] ? fileURLToPath(import.meta.url) === process.argv[1] : false;
+const currentScriptPath = process.argv[1] ?? "";
+const isDirectDevCliScript = ["dev-cli.ts", "dev-cli.js", "dev-cli.cjs"].includes(path.basename(currentScriptPath));
+const isEntrypoint = currentScriptPath
+  ? fileURLToPath(import.meta.url) === currentScriptPath && isDirectDevCliScript
+  : false;
 
 if (isEntrypoint) {
   main().catch((error: unknown) => {

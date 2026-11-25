@@ -21,7 +21,33 @@ This repository is a pnpm monorepo that combines MCP tooling, adapter execution,
 }
 ```
 
-Once installed, you get **66 MCP tools** for governed mobile automation, plus a built-in **Explorer** for automatic page traversal.
+By default, the MCP stdio server exposes the **`core` toolset (18 high-frequency tools, including `audit_ui_surface`)** to minimize agent context overhead (~73% fewer schemas). To enable all **67 MCP tools** (recording, failure intelligence, network policy/diagnosis, performance, JS debug targets), pass `--toolset full` or set `MOBILE_E2E_TOOLSET=full`:
+
+```json
+{
+  "mcpServers": {
+    "mobile-e2e-mcp": {
+      "command": "npx",
+      "args": ["-y", "@shenyuexin/mobile-e2e-mcp@latest", "--toolset", "full"]
+    }
+  }
+}
+```
+
+### Unified CLI Commands
+
+The single package entrypoint supports both MCP stdio serving and local CLI workflows (`stdio`, `doctor`, `init`, `explore`, `run`):
+
+```bash
+# Check Android/iOS host tools and connected devices
+npx -y @shenyuexin/mobile-e2e-mcp@latest doctor
+
+# Interactive or flag-driven .e2e/config.yaml setup
+npx -y @shenyuexin/mobile-e2e-mcp@latest init --platform ios --app-id com.example.app --no-prompt
+
+# Run a deterministic flow inside a governed session
+npx -y @shenyuexin/mobile-e2e-mcp@latest run flows/smoke.yaml --dry-run
+```
 
 ## Primary Product Surface: Explorer
 

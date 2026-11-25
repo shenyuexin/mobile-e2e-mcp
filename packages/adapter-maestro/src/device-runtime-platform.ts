@@ -36,6 +36,8 @@ export interface CollectDiagnosticsCapturePlan {
 export interface RecordScreenPlan {
   commandLabels: string[];
   commands: string[][];
+  fallbackCommandLabels?: string[];
+  fallbackCommands?: string[][];
   supportLevel: "full" | "partial";
   dryRunSuggestion: string;
   failureSuggestion: string;
