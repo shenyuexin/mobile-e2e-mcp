@@ -76,3 +76,14 @@ test("doctor --json includes machine-readable version warnings", async () => {
     console.log = originalLog;
   }
 });
+
+test("doctor rejects unknown options with exit code 2", async () => {
+  const origErr = console.error;
+  console.error = () => {};
+  try {
+    const server = { invoke: async () => doctorResult("axe 2.2.0") } as never;
+    assert.equal(await executeDoctor(server, ["--bogus"]), 2);
+  } finally {
+    console.error = origErr;
+  }
+});

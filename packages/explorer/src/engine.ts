@@ -105,6 +105,11 @@ export { FailureLog } from "./engine-helpers.js";
 export async function explore(
 	config: ExplorerConfig,
 	mcp: McpToolInterface,
+	options?: {
+		skipReport?: boolean;
+		runId?: string;
+		startedAt?: string;
+	},
 ): Promise<ExplorationResult> {
 	const visited = new PageRegistry();
 	const failed = new FailureLog();
@@ -1493,14 +1498,18 @@ export async function explore(
 		stateGraph: stateGraph.getSummary(),
 	};
 
-	await generateReport(visited.getEntries(), failed.getEntries(), config, {
-		partial: result.aborted ?? false,
-		abortReason: result.abortReason,
-		durationMs: Date.now() - startTime,
-		sampling: result.sampling,
-		transitionLifecycle: result.transitionLifecycle,
-		stateGraph: result.stateGraph,
-	});
+	if (!options?.skipReport) {
+		await generateReport(visited.getEntries(), failed.getEntries(), config, {
+			partial: result.aborted ?? false,
+			abortReason: result.abortReason,
+			durationMs: Date.now() - startTime,
+			startedAt: options?.startedAt,
+			runId: options?.runId,
+			sampling: result.sampling,
+			transitionLifecycle: result.transitionLifecycle,
+			stateGraph: result.stateGraph,
+		});
+	}
 
 	return result;
 }

@@ -12,7 +12,7 @@ import { buildDefaultConfig } from "./config.js";
 import { explore } from "./engine.js";
 import type { InvokableServer } from "./mcp-adapter.js";
 import { createMcpAdapter, type SessionContext } from "./mcp-adapter.js";
-import { generateReport } from "./report.js";
+import { generateReport, type GeneratedReportPaths } from "./report.js";
 import { exportFlows } from "./report/flow-exporter.js";
 import type {
   AuthConfig,
@@ -55,6 +55,10 @@ export interface RunnerInput {
   launchEnv?: Record<string, string>;
   /** Export deterministic Maestro smoke flows to this directory. */
   exportFlows?: string;
+  /** Optional deterministic single-segment run directory name. */
+  runId?: string;
+  /** Route runner progress logs to stderr so stdout stays clean JSON. */
+  quiet?: boolean;
 }
 
 function parseLaunchEnvFromProcessEnv(): Record<string, string> | undefined {
@@ -82,6 +86,12 @@ export interface ExplorerResult {
   failedCount: number;
   durationMs: number;
   reportPath: string | null;
+  runId?: string;
+  runDir?: string;
+  reportHtmlPath?: string;
+  reportMdPath?: string;
+  summaryJsonPath?: string;
+  latestJsonPath?: string;
   stage: string;
   error?: string;
   /** Paths of exported deterministic smoke flows, when --export-flows was used. */
@@ -100,22 +110,29 @@ export async function runExplore(
   input: RunnerInput = {},
 ): Promise<ExplorerResult> {
   const startTime = Date.now();
+  const logRunner = (message: string): void => {
+    if (input.quiet) {
+      console.error(message);
+    } else {
+      console.log(message);
+    }
+  };
 
   // --- Stage 1: Load config ---
-  console.log("[RUNNER] Stage 1/5: Loading configuration...");
+  logRunner("[RUNNER] Stage 1/6: Loading configuration...");
   let config: ExplorerConfig;
   try {
     const store = new ConfigStore(input.configPath);
     const saved = store.load();
     const defaults = buildDefaultConfig(input);
     config = saved ? { ...defaults, ...saved, ...input } : defaults;
-    console.log(`[RUNNER]   mode=${config.mode}, appId=${config.appId}, platform=${config.platform}`);
+    logRunner(`[RUNNER]   mode=${config.mode}, appId=${config.appId}, platform=${config.platform}`);
   } catch (err) {
     return failResult("config-load", startTime, err);
   }
 
   // --- Stage 2: Create session context ---
-  console.log("[RUNNER] Stage 2/6: Creating session context...");
+  logRunner("[RUNNER] Stage 2/6: Creating session context...");
   const sessionId = `explorer-${Date.now()}`;
   const platform = toMcpPlatform(config.platform ?? "ios-simulator");
   const runnerProfile = toRunnerProfile(config.platform ?? "ios-simulator");
@@ -134,10 +151,10 @@ export async function runExplore(
     deviceId,
   };
 
-  console.log(`[RUNNER]   sessionId=${sessionId}, platform=${platform}, runnerProfile=${runnerProfile}`);
+  logRunner(`[RUNNER]   sessionId=${sessionId}, platform=${platform}, runnerProfile=${runnerProfile}`);
 
   // --- Stage 3: Pre-flight auth ---
-  console.log("[RUNNER] Stage 3/6: Auth pre-flight...");
+  logRunner("[RUNNER] Stage 3/6: Auth pre-flight...");
   const mcp = createMcpAdapter(server, sessionCtx);
   try {
     const authResult = await checkAuth(
@@ -152,31 +169,34 @@ export async function runExplore(
     return failResult("auth", startTime, err);
   }
 
-  // --- Stage 4: Run explore engine ---
-  console.log("[RUNNER] Stage 4/6: Running exploration engine...");
+  // --- Stage 4: Run explore engine (report written once in Stage 5) ---
+  logRunner("[RUNNER] Stage 4/6: Running exploration engine...");
   let explorationResult: Awaited<ReturnType<typeof explore>>;
   try {
-    explorationResult = await explore(config, mcp);
-    console.log(`[RUNNER]   Visited ${explorationResult.visited.count} pages, ${explorationResult.failed.getEntries().length} failures`);
+    explorationResult = await explore(config, mcp, { skipReport: true });
+    logRunner(`[RUNNER]   Visited ${explorationResult.visited.count} pages, ${explorationResult.failed.getEntries().length} failures`);
   } catch (err) {
     return failResult("engine", startTime, err);
   }
 
   // --- Stage 5: Generate report ---
-  console.log("[RUNNER] Stage 5/6: Generating report...");
+  logRunner("[RUNNER] Stage 5/6: Generating report...");
   const entries = explorationResult.visited.getEntries();
   const failures = explorationResult.failed.getEntries();
+  let reportPaths: GeneratedReportPaths | undefined;
   try {
     const durationMs = Date.now() - startTime;
-    await generateReport(entries, failures, config, {
+    reportPaths = await generateReport(entries, failures, config, {
       partial: explorationResult.aborted ?? false,
       abortReason: explorationResult.abortReason,
       durationMs,
       startedAt: new Date(startTime).toISOString(),
       sampling: explorationResult.sampling,
-      runId: process.env.EXPLORER_RUN_ID,
+      transitionLifecycle: explorationResult.transitionLifecycle,
+      stateGraph: explorationResult.stateGraph,
+      runId: input.runId ?? process.env.EXPLORER_RUN_ID,
     });
-    console.log(`[RUNNER]   Report written to ${config.reportDir}/`);
+    logRunner(`[RUNNER]   Report written to ${reportPaths.runDir}/`);
   } catch (err) {
     console.error(`[RUNNER] Report generation failed: ${err}`);
     // Non-fatal — exploration data is still valid
@@ -187,7 +207,7 @@ export async function runExplore(
     try {
       const flows = exportFlows(entries, config.appId, resolve(process.cwd(), input.exportFlows));
       exportedFlows = flows.map((flow) => flow.filePath);
-      console.log(`[RUNNER]   Exported ${flows.length} deterministic flow(s) to ${input.exportFlows}`);
+      logRunner(`[RUNNER]   Exported ${flows.length} deterministic flow(s) to ${input.exportFlows}`);
     } catch (err) {
       console.error(`[RUNNER] Flow export failed: ${err}`);
       // Non-fatal — exploration data is still valid
@@ -195,7 +215,7 @@ export async function runExplore(
   }
 
   // --- Stage 6: Cleanup ---
-  console.log("[RUNNER] Stage 6/6: Cleanup...");
+  logRunner("[RUNNER] Stage 6/6: Cleanup...");
   if (config.platform.startsWith("ios") && launchEnv && Object.keys(launchEnv).length > 0) {
     try {
       await mcp.terminateApp?.({ appId: config.appId });
@@ -222,7 +242,17 @@ export async function runExplore(
     visitedPages: visitedCount,
     failedCount,
     durationMs,
-    reportPath: `${config.reportDir}/index.json`,
+    reportPath: reportPaths?.indexJsonPath ?? `${config.reportDir}/index.json`,
+    ...(reportPaths
+      ? {
+          runId: reportPaths.runId,
+          runDir: reportPaths.runDir,
+          reportHtmlPath: reportPaths.reportHtmlPath,
+          reportMdPath: reportPaths.reportMdPath,
+          summaryJsonPath: reportPaths.summaryJsonPath,
+          latestJsonPath: reportPaths.latestJsonPath,
+        }
+      : {}),
     stage: "complete",
     ...(exportedFlows ? { exportedFlows } : {}),
   };

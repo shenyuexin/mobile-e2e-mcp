@@ -5,4 +5,4 @@
  * The previous stub was replaced by the 25-02 Report Generator implementation.
  */
 
-export { generateReport } from './report/index.js';
+export { generateReport, type GeneratedReportPaths, type ReportOpts } from './report/index.js';

@@ -9,6 +9,7 @@ import {
   type UiAuditBaselineMode,
 } from "@mobile-e2e-mcp/contracts";
 import type { MobileE2EMcpServer } from "../server.js";
+import { requireCliFlagValue } from "./cli-args.js";
 import { loadProjectConfig } from "./project-config.js";
 
 export interface AuditCommandOptions {
@@ -66,35 +67,76 @@ export function parseAuditArgs(argv: string[]): AuditCommandOptions {
       options.json = true;
     } else if (arg === "--fail-on-regression") {
       options.failOnRegression = true;
-    } else if (arg === "--platform" && next) {
+    } else if (arg === "--platform") {
+      const missing = requireCliFlagValue(arg, next);
+      if (missing) {
+        options.error = missing;
+        return options;
+      }
       if (next !== "ios" && next !== "android") {
         options.error = `Invalid --platform "${next}". Expected "ios" or "android".`;
         return options;
       }
       options.platform = next;
       i += 1;
-    } else if (arg === "--baseline-mode" && next) {
+    } else if (arg === "--baseline-mode") {
+      const missing = requireCliFlagValue(arg, next);
+      if (missing) {
+        options.error = missing;
+        return options;
+      }
       if (next !== "compare" && next !== "update") {
         options.error = `Invalid --baseline-mode "${next}". Expected "compare" or "update".`;
         return options;
       }
       options.baselineMode = next;
       i += 1;
-    } else if (arg === "--device-id" && next) {
+    } else if (arg === "--device-id") {
+      const missing = requireCliFlagValue(arg, next);
+      if (missing) {
+        options.error = missing;
+        return options;
+      }
       options.deviceId = next;
       i += 1;
-    } else if (arg === "--app-id" && next) {
+    } else if (arg === "--app-id") {
+      const missing = requireCliFlagValue(arg, next);
+      if (missing) {
+        options.error = missing;
+        return options;
+      }
       options.appId = next;
       i += 1;
-    } else if (arg === "--baseline-path" && next) {
+    } else if (arg === "--baseline-path") {
+      const missing = requireCliFlagValue(arg, next);
+      if (missing) {
+        options.error = missing;
+        return options;
+      }
       options.baselinePath = next;
       i += 1;
-    } else if (arg === "--output" && next) {
+    } else if (arg === "--output") {
+      const missing = requireCliFlagValue(arg, next);
+      if (missing) {
+        options.error = missing;
+        return options;
+      }
       options.output = next;
       i += 1;
-    } else if (arg === "--config" && next) {
+    } else if (arg === "--config") {
+      const missing = requireCliFlagValue(arg, next);
+      if (missing) {
+        options.error = missing;
+        return options;
+      }
       options.configPath = next;
       i += 1;
+    } else if (arg.startsWith("-")) {
+      options.error = `Unknown option "${arg}". Run "mobile-e2e-mcp audit --help" for usage.`;
+      return options;
+    } else {
+      options.error = `Unexpected argument "${arg}". Run "mobile-e2e-mcp audit --help" for usage.`;
+      return options;
     }
   }
 

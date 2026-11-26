@@ -12,6 +12,7 @@ import { join } from "path";
 import { rmSync, mkdirSync } from "fs";
 import { buildDefaultConfig, loadConfig, saveConfig, INTERVIEW_QUESTIONS } from "../src/config.js";
 import { ConfigStore } from "../src/config-store.js";
+import { parseExploreFlags } from "../src/cli.js";
 
 // ---------------------------------------------------------------------------
 // --help output
@@ -138,5 +139,37 @@ describe("ConfigStore integration", () => {
     assert.ok(!store.exists());
 
     rmSync(dir, { recursive: true, force: true });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// parseExploreFlags hardening
+// ---------------------------------------------------------------------------
+
+describe("parseExploreFlags hardening", () => {
+  it("parses --run-id, --json, and -h", () => {
+    const flags = parseExploreFlags([
+      "--app-id", "com.example.app",
+      "--run-id", "verify-run-01",
+      "--json",
+      "--no-prompt",
+    ]);
+    assert.equal(flags.error, undefined);
+    assert.equal(flags.appId, "com.example.app");
+    assert.equal(flags.runId, "verify-run-01");
+    assert.equal(flags.json, true);
+    assert.equal(flags.noPrompt, true);
+
+    assert.equal(parseExploreFlags(["-h"]).help, true);
+  });
+
+  it("rejects unknown options, missing values, and unsafe --run-id", () => {
+    assert.match(parseExploreFlags(["--bogus"]).error ?? "", /Unknown option/);
+    assert.match(parseExploreFlags(["unexpected"]).error ?? "", /Unexpected positional/);
+    assert.match(parseExploreFlags(["--output"]).error ?? "", /Missing value/);
+    assert.match(parseExploreFlags(["--output", "--json"]).error ?? "", /Missing value/);
+    assert.match(parseExploreFlags(["--run-id", "../escape"]).error ?? "", /Invalid --run-id/);
+    assert.match(parseExploreFlags(["--run-id", "a/b"]).error ?? "", /Invalid --run-id/);
+    assert.match(parseExploreFlags(["--max-depth", "-2"]).error ?? "", /positive integer/);
   });
 });

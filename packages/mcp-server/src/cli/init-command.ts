@@ -81,35 +81,66 @@ export function parseInitArgs(argv: string[]): InitCommandOptions {
       options.smokeFlow = true;
     } else if (arg === "--no-smoke-flow") {
       options.smokeFlow = false;
-    } else if (arg === "--app-id" && next) {
+    } else if (arg === "--app-id") {
+      if (!next || next.startsWith("-")) {
+        options.error = `Missing value for ${arg}.`;
+        return options;
+      }
       options.appId = next;
       i += 1;
-    } else if (arg === "--platform" && next) {
+    } else if (arg === "--platform") {
+      if (!next || next.startsWith("-")) {
+        options.error = `Missing value for ${arg}.`;
+        return options;
+      }
       if (next !== "ios" && next !== "android") {
         options.error = `Invalid --platform "${next}". Expected "ios" or "android".`;
         return options;
       }
       options.platform = next;
       i += 1;
-    } else if (arg === "--device-id" && next) {
+    } else if (arg === "--device-id") {
+      if (!next || next.startsWith("-")) {
+        options.error = `Missing value for ${arg}.`;
+        return options;
+      }
       options.deviceId = next;
       i += 1;
-    } else if (arg === "--runner-profile" && next) {
+    } else if (arg === "--runner-profile") {
+      if (!next || next.startsWith("-")) {
+        options.error = `Missing value for ${arg}.`;
+        return options;
+      }
       if (!VALID_RUNNER_PROFILES.includes(next as RunnerProfile)) {
         options.error = `Invalid --runner-profile "${next}". Expected one of: ${VALID_RUNNER_PROFILES.join(", ")}.`;
         return options;
       }
       options.runnerProfile = next as RunnerProfile;
       i += 1;
-    } else if (arg === "--policy-profile" && next) {
+    } else if (arg === "--policy-profile") {
+      if (!next || next.startsWith("-")) {
+        options.error = `Missing value for ${arg}.`;
+        return options;
+      }
       options.policyProfile = next;
       i += 1;
-    } else if (arg === "--flow-path" && next) {
+    } else if (arg === "--flow-path") {
+      if (!next || next.startsWith("-")) {
+        options.error = `Missing value for ${arg}.`;
+        return options;
+      }
       options.flowPath = next;
       i += 1;
-    } else if (arg === "--output" && next) {
+    } else if (arg === "--output") {
+      if (!next || next.startsWith("-")) {
+        options.error = `Missing value for ${arg}.`;
+        return options;
+      }
       options.outputPath = next;
       i += 1;
+    } else {
+      options.error = `Unknown argument "${arg}". Run "mobile-e2e-mcp init --help" for usage.`;
+      return options;
     }
   }
 

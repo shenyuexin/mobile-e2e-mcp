@@ -208,3 +208,100 @@ test("suggest-heal is not invoked on a successful run", async () => {
     await rm(dir, { recursive: true, force: true });
   }
 });
+
+test("parseRunArgs rejects unknown flags, missing values, and extra positional arguments", () => {
+  assert.match(parseRunArgs(["flows/smoke.yaml", "--bogus"]).error ?? "", /Unknown option/);
+  assert.match(parseRunArgs(["--output"]).error ?? "", /Missing value/);
+  assert.match(parseRunArgs(["--output", "--json"]).error ?? "", /Missing value/);
+  assert.match(parseRunArgs(["flows/a.yaml", "flows/b.yaml"]).error ?? "", /Unexpected argument/);
+});
+
+test("run executes directory flows in sorted order, writes output summary, and respects --fail-fast", async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), "m2e-run-dir-"));
+  try {
+    const flowsDir = path.join(dir, "flows");
+    await import("node:fs/promises").then((fs) => fs.mkdir(flowsDir, { recursive: true }));
+    await writeFile(path.join(flowsDir, "02-second.yaml"), "appId: com.example\n---\n- launchApp\n", "utf-8");
+    await writeFile(path.join(flowsDir, "01-first.yaml"), "appId: com.example\n---\n- launchApp\n", "utf-8");
+    await writeFile(path.join(flowsDir, "notes.txt"), "ignore me", "utf-8");
+
+    const runOrder: string[] = [];
+    const server = {
+      invoke: async (tool: string, input: Record<string, unknown>) => {
+        if (tool === "start_session") return result();
+        if (tool === "record_screen") {
+          return result({
+            mode: input.mode,
+            recordingId: "rec-dir",
+            discarded: Boolean(input.discardOnStop),
+            outputPath: String(input.outputPath ?? ""),
+          });
+        }
+        if (tool === "run_flow") {
+          const flowPath = String(input.flowPath);
+          runOrder.push(flowPath);
+          const status = flowPath.includes("01-first") ? "failed" : "success";
+          return result({ durationMs: 5 }, status);
+        }
+        return result();
+      },
+    } as never;
+
+    const outDir = path.join(dir, "out-all");
+    const allRun = await captureConsole(() =>
+      executeRun(server, [flowsDir, "--output", outDir, "--record-on-failure", "--json"], dir),
+    );
+    assert.equal(allRun.result, 1);
+    assert.deepEqual(runOrder, ["flows/01-first.yaml", "flows/02-second.yaml"]);
+    const summaryPayload = JSON.parse(await readFile(path.join(outDir, "summary.json"), "utf-8")) as {
+      mode: string;
+      totalFlows: number;
+      passedFlows: number;
+      failedFlows: number;
+      flows: Array<{ recording: { outputPath: string; discarded: boolean } }>;
+    };
+    assert.equal(summaryPayload.mode, "directory");
+    assert.equal(summaryPayload.totalFlows, 2);
+    assert.equal(summaryPayload.passedFlows, 1);
+    assert.equal(summaryPayload.failedFlows, 1);
+    assert.equal(summaryPayload.flows[0]?.recording.outputPath, "out-all/videos/01-01-first.mp4");
+    assert.equal(summaryPayload.flows[0]?.recording.discarded, false);
+    assert.equal(summaryPayload.flows[1]?.recording.discarded, true);
+
+    runOrder.length = 0;
+    const fastFail = await captureConsole(() =>
+      executeRun(server, [flowsDir, "--fail-fast"], dir),
+    );
+    assert.equal(fastFail.result, 1);
+    assert.deepEqual(runOrder, ["flows/01-first.yaml"]);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("single-file run --output writes summary.json while preserving stdout JSON contract", async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), "m2e-run-single-out-"));
+  try {
+    const { server } = makeServer("success");
+    const captured = await captureConsole(() =>
+      executeRun(server, ["flows/smoke.yaml", "--output", "out-single", "--json"], dir),
+    );
+    assert.equal(captured.result, 0);
+    const stdoutJson = JSON.parse(captured.stdout) as {
+      startResult: unknown;
+      runResult: { status: string };
+      endResult: unknown;
+      summaryJsonPath?: string;
+    };
+    assert.ok(stdoutJson.startResult);
+    assert.equal(stdoutJson.runResult.status, "success");
+    assert.ok(stdoutJson.endResult);
+    assert.equal(stdoutJson.summaryJsonPath, path.join(dir, "out-single", "summary.json"));
+    const diskJson = JSON.parse(await readFile(stdoutJson.summaryJsonPath!, "utf-8")) as {
+      runResult: { status: string };
+    };
+    assert.equal(diskJson.runResult.status, "success");
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});

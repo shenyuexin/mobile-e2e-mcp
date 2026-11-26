@@ -5,6 +5,7 @@ export interface DoctorCommandOptions {
   json: boolean;
   includeUnavailable: boolean;
   help: boolean;
+  error?: string;
 }
 
 /** Minimum AXe version required for perform_gesture and `axe serve`. */
@@ -51,11 +52,24 @@ Options:
 }
 
 export function parseDoctorArgs(argv: string[]): DoctorCommandOptions {
-  return {
-    json: argv.includes("--json"),
-    includeUnavailable: argv.includes("--include-unavailable"),
-    help: argv.includes("--help") || argv.includes("-h"),
+  const options: DoctorCommandOptions = {
+    json: false,
+    includeUnavailable: false,
+    help: false,
   };
+  for (const arg of argv) {
+    if (arg === "--json") {
+      options.json = true;
+    } else if (arg === "--include-unavailable") {
+      options.includeUnavailable = true;
+    } else if (arg === "--help" || arg === "-h") {
+      options.help = true;
+    } else {
+      options.error = `Unknown option "${arg}". Run "mobile-e2e-mcp doctor --help" for usage.`;
+      return options;
+    }
+  }
+  return options;
 }
 
 export function formatDoctorReport(result: ToolResult<DoctorData>): string {
@@ -126,6 +140,10 @@ export async function executeDoctor(
   if (options.help) {
     printDoctorHelp();
     return 0;
+  }
+  if (options.error) {
+    console.error(options.error);
+    return 2;
   }
 
   const result = await server.invoke(TOOL_NAMES.doctor, {

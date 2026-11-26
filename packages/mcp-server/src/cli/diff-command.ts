@@ -8,6 +8,7 @@ import {
   type HtmlReportOptions,
   type RunComparison,
 } from "@mobile-e2e-mcp/explorer";
+import { requireCliFlagValue } from "./cli-args.js";
 
 export interface DiffCommandOptions {
   baseDir?: string;
@@ -58,18 +59,32 @@ export function parseDiffArgs(argv: string[]): DiffCommandOptions {
       options.json = true;
     } else if (arg === "--fail-on-regression") {
       options.failOnRegression = true;
-    } else if (arg === "--markdown" && next) {
+    } else if (arg === "--markdown") {
+      const missing = requireCliFlagValue(arg, next);
+      if (missing) {
+        options.error = missing;
+        return options;
+      }
       options.markdown = next;
       i += 1;
-    } else if (arg === "--html" && next) {
+    } else if (arg === "--html") {
+      const missing = requireCliFlagValue(arg, next);
+      if (missing) {
+        options.error = missing;
+        return options;
+      }
       options.html = next;
       i += 1;
-    } else if (!arg.startsWith("-")) {
-      if (!options.baseDir) {
-        options.baseDir = arg;
-      } else if (!options.headDir) {
-        options.headDir = arg;
-      }
+    } else if (arg.startsWith("-")) {
+      options.error = `Unknown option "${arg}". Run "mobile-e2e-mcp diff --help" for usage.`;
+      return options;
+    } else if (!options.baseDir) {
+      options.baseDir = arg;
+    } else if (!options.headDir) {
+      options.headDir = arg;
+    } else {
+      options.error = `Unexpected argument "${arg}". Run "mobile-e2e-mcp diff --help" for usage.`;
+      return options;
     }
   }
 
@@ -96,6 +111,10 @@ export async function executeDiff(
   if (options.help) {
     printDiffHelp();
     return 0;
+  }
+  if (options.error) {
+    console.error(options.error);
+    return 2;
   }
   if (!options.baseDir || !options.headDir) {
     console.error("Usage: mobile-e2e-mcp diff <baseDir> <headDir> [--markdown <path>] [--html <path>] [--json] [--fail-on-regression]");

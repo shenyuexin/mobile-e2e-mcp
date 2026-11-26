@@ -75,23 +75,38 @@ export function parseSetupAgentArgs(argv: string[]): SetupAgentOptions {
       options.force = true;
     } else if (arg === "--json") {
       options.json = true;
-    } else if (arg === "--target" && next) {
+    } else if (arg === "--target") {
+      if (!next || next.startsWith("-")) {
+        options.error = `Missing value for ${arg}.`;
+        return options;
+      }
       if (!VALID_TARGETS.includes(next as SetupAgentTarget)) {
         options.error = `Invalid --target "${next}". Expected one of: ${VALID_TARGETS.join(", ")}.`;
         return options;
       }
       options.target = next as SetupAgentTarget;
       i += 1;
-    } else if (arg === "--toolset" && next) {
+    } else if (arg === "--toolset") {
+      if (!next || next.startsWith("-")) {
+        options.error = `Missing value for ${arg}.`;
+        return options;
+      }
       if (next !== "core" && next !== "full") {
         options.error = `Invalid --toolset "${next}". Expected "core" or "full".`;
         return options;
       }
       options.toolset = next;
       i += 1;
-    } else if (arg === "--cwd" && next) {
+    } else if (arg === "--cwd") {
+      if (!next || next.startsWith("-")) {
+        options.error = `Missing value for ${arg}.`;
+        return options;
+      }
       options.cwd = next;
       i += 1;
+    } else {
+      options.error = `Unknown argument "${arg}". Run "mobile-e2e-mcp setup-agent --help" for usage.`;
+      return options;
     }
   }
   return options;

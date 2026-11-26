@@ -42,6 +42,8 @@ export interface RunIndexEntry {
   configPath: string;
   /** Path to the summary.json for this run. */
   summaryPath: string;
+  /** Path to the self-contained report.html for this run. */
+  htmlReportPath?: string;
   /** Whether the run completed fully or was aborted. */
   status: "complete" | "partial";
   /** Whether the run was aborted. */
@@ -347,6 +349,22 @@ export function sanitizeRunIdTimestamp(timestamp: string): string {
   return formatRunTimestamp(timestamp).replace(/[:.]/g, "-").slice(0, 19);
 }
 
+/** Validate a single-segment filesystem-safe run ID. */
+export function validateRunId(raw: string): string {
+  const trimmed = raw.trim();
+  if (
+    !trimmed ||
+    trimmed === "." ||
+    trimmed === ".." ||
+    trimmed.includes("/") ||
+    trimmed.includes("\\") ||
+    /\0/.test(trimmed)
+  ) {
+    throw new Error(`Invalid run ID "${raw}": must be a single path-safe segment.`);
+  }
+  return trimmed;
+}
+
 /** Resolve the stable run ID for the current exploration run. */
 export function resolveRunId(opts: {
   runId?: string;
@@ -354,11 +372,11 @@ export function resolveRunId(opts: {
   envRunId?: string;
 }): string {
   if (opts.runId?.trim()) {
-    return opts.runId.trim();
+    return validateRunId(opts.runId);
   }
 
   if (opts.envRunId?.trim()) {
-    return opts.envRunId.trim();
+    return validateRunId(opts.envRunId);
   }
 
   if (opts.startedAt?.trim()) {

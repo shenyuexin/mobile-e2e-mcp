@@ -58,6 +58,22 @@ export interface ReportOpts {
   runId?: string;
 }
 
+/** Exact file paths produced by `generateReport`. */
+export interface GeneratedReportPaths {
+  runId: string;
+  runDir: string;
+  reportDir: string;
+  summaryJsonPath: string;
+  reportMdPath: string;
+  reportHtmlPath: string;
+  failureReviewJsonPath: string;
+  failureReviewMdPath: string;
+  treeTxtPath: string;
+  configJsonPath: string;
+  indexJsonPath: string;
+  latestJsonPath: string;
+}
+
 /**
  * Generate a complete exploration report.
  *
@@ -68,7 +84,7 @@ export interface ReportOpts {
  * - failure-review.json / failure-review.md — focused failure diagnostics
  * - tree.txt — ASCII tree of discovered pages
  * - config.json — configuration snapshot
- * - Updates index.json in the parent report directory
+ * - Updates index.json and latest.json in the parent report directory
  *
  * @param pages - All visited page entries
  * @param failures - All failure entries
@@ -80,7 +96,7 @@ export async function generateReport(
   failures: FailureEntry[],
   config: ExplorerConfig,
   opts: ReportOpts,
-): Promise<void> {
+): Promise<GeneratedReportPaths> {
   const modules = inferModules(pages);
   const reportDir = config.reportDir;
   const runId = resolveRunId({
@@ -161,16 +177,62 @@ export async function generateReport(
     maxDepthReached: maxDepth,
     configPath: join(runId, 'config.json'),
     summaryPath: join(runId, 'summary.json'),
+    htmlReportPath: join(runId, 'report.html'),
     status: opts.partial ? 'partial' : 'complete',
     ...(opts.partial ? { aborted: true, abortReason: opts.abortReason } : {}),
   };
 
   updateIndex(reportDir, indexEntry);
+
+  const summaryJsonPath = join(runDir, 'summary.json');
+  const reportMdPath = join(runDir, 'report.md');
+  const reportHtmlPath = join(runDir, 'report.html');
+  const failureReviewJsonPath = join(runDir, 'failure-review.json');
+  const failureReviewMdPath = join(runDir, 'failure-review.md');
+  const treeTxtPath = join(runDir, 'tree.txt');
+  const configJsonPath = join(runDir, 'config.json');
+  const indexJsonPath = join(reportDir, 'index.json');
+  const latestJsonPath = join(reportDir, 'latest.json');
+
+  writeFileSync(
+    latestJsonPath,
+    JSON.stringify(
+      {
+        runId,
+        runDir,
+        reportHtmlPath,
+        reportMdPath,
+        summaryJsonPath,
+        failureReviewJsonPath,
+        indexJsonPath,
+        status: indexEntry.status,
+        updatedAt: new Date().toISOString(),
+      },
+      null,
+      2,
+    ),
+    'utf-8',
+  );
+
+  return {
+    runId,
+    runDir,
+    reportDir,
+    summaryJsonPath,
+    reportMdPath,
+    reportHtmlPath,
+    failureReviewJsonPath,
+    failureReviewMdPath,
+    treeTxtPath,
+    configJsonPath,
+    indexJsonPath,
+    latestJsonPath,
+  };
 }
 
 export { inferModules } from './modules.js';
 export type { ModuleGroup } from './modules.js';
-export { generateSummaryJson, generateRunId, countUniquePaths } from './summary.js';
+export { generateSummaryJson, generateRunId, validateRunId, countUniquePaths } from './summary.js';
 export type { RunSummary, RunIndexEntry } from './summary.js';
 export { generateMarkdown } from './markdown.js';
 export {

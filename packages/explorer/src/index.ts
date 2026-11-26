@@ -125,7 +125,7 @@ export type { SegmentDiscoveryResult, HorizontalContainerInfo, ProbeResult } fro
 export { normalizeScrollState } from "./types.js";
 
 // Report
-export { generateReport } from "./report.js";
+export { generateReport, type GeneratedReportPaths, type ReportOpts } from "./report.js";
 export {
   compareRunArtifacts,
   computeRunDiff,
@@ -186,4 +186,4 @@ export { runExplore } from "./runner.js";
 export type { RunnerInput, ExplorerResult } from "./runner.js";
 
 // CLI entry point
-export { explore } from "./cli.js";
+export { explore, parseExploreFlags, type ExploreFlags } from "./cli.js";

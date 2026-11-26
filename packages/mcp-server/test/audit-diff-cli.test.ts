@@ -277,4 +277,11 @@ test("unified CLI dispatches audit and diff subcommands", async () => {
   const help = await captureConsole(() => runUnifiedCli(["--help"]));
   assert.match(help.stdout, /mobile-e2e-mcp audit \[options\]/);
   assert.match(help.stdout, /mobile-e2e-mcp diff <baseDir> <headDir>/);
+
+  assert.equal(parseAuditArgs(["--bogus"]).error?.includes("Unknown option"), true);
+  assert.equal(parseAuditArgs(["--output"]).error?.includes("Missing value"), true);
+  assert.equal(parseDiffArgs(["a", "b", "--bogus"]).error?.includes("Unknown option"), true);
+  assert.equal(parseDiffArgs(["a", "b", "--html"]).error?.includes("Missing value"), true);
+  assert.equal(await executeAudit(makeServer(okResult(auditData(false))).server, ["--bogus"]), 2);
+  assert.equal(await executeDiff(["a", "b", "--bogus"], {}), 2);
 });
