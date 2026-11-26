@@ -131,5 +131,5 @@ ios-simulator-smoke:
 ## 相关文档
 
 - [iOS Simulator Tool Probe 故障排查](./real-device-acceptance-troubleshooting.md)
-- [NPM 发版与 Git Tag 关联规范](./npm-release-and-git-tagging.zh-CN.md)
+- [NPM 发版与 Git Tag 关联规范](../delivery/npm-release-and-git-tagging.zh-CN.md)
 - [AI-First 能力扩展指南](./ai-first-capability-expansion-guideline.md)

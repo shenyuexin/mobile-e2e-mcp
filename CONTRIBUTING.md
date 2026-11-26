@@ -51,4 +51,5 @@ If you are unsure where to place changes, read:
 - `AGENTS.md`
 - `README.md`
 - `docs/engineering/ai-first-capability-expansion-guideline.md`
-- `docs/architecture/architecture.md`
+- `docs/architecture/README.md`
+- `docs/architecture/01-system-architecture.md`

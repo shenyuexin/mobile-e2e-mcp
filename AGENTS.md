@@ -88,10 +88,12 @@ Use these as source-of-truth references instead of duplicating details in this f
 
 - `docs/engineering/ai-first-capability-expansion-guideline.md`
 - `docs/engineering/explorer-rule-registry.zh-CN.md` — Explorer 规则添加、覆盖、禁用、校验与报告解释指南
-- `docs/architecture/overview.md`
-- `docs/architecture/architecture.md`
-- `docs/architecture/capability-map.md`
-- `docs/architecture/governance-security.md`
+- `docs/architecture/README.md` — architecture documentation index
+- `docs/architecture/01-system-architecture.md` — system topology, contracts, and reliability
+- `docs/architecture/02-platform-adapters.md` — Android/iOS backend adapters and framework profiles
+- `docs/architecture/03-capability-model.md` — AI-first capability taxonomy and maturity levels
+- `docs/architecture/04-runtime-architecture.md` — execution coordinator, fallback, and recovery
+- `docs/architecture/05-governance-security.md` — governance, policy, and security model
 - `docs/guides/ui-stabilization-timing.md` — **UI 稳定时序**：为什么需要等待、各动作推荐时间、Flow 编写最佳实践
 - `tests/README.md`
 

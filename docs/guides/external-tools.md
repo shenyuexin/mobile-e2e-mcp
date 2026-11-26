@@ -34,10 +34,15 @@ AXe is a single-binary CLI tool that interacts with iOS simulators using Apple's
 | Project Action | AXe Command |
 |---|---|
 | `inspect_ui` | `axe describe-ui --udid <UDID>` |
+| `displays` | `axe displays --udid <UDID>` (dual-display detection) |
 | `tap` | `axe tap -x <x> -y <y> --udid <UDID>` |
 | `type_text` | `axe type "<text>" --udid <UDID>` |
 | `swipe` | `axe swipe --start-x <x1> --start-y <y1> --end-x <x2> --end-y <y2> --udid <UDID>` |
+| `perform_gesture` (AXe v2.2+) | `axe draw` / `axe drag` / `axe gesture pinch\|double-tap\|two-finger-tap --udid <UDID>` |
 | `take_screenshot` | `axe screenshot --udid <UDID> --output <path>` |
+| `record_screen` | `axe record-video --udid <UDID> --output <path>` (with `xcrun simctl io recordVideo` fallback) |
+
+> **Persistent `axe serve` transport pool**: Read/capture commands (`describe-ui`, `displays`, `screenshot`, `ping`) reuse a per-UDID persistent `axe serve` worker with idle shutdown, while HID input commands stay one-shot to prevent `dtuhidd` virtual HID service accumulation. Set `M2E_DISABLE_AXE_SERVE=1` to disable the pool.
 
 ### Install
 
@@ -132,6 +137,8 @@ iproxy 8100 8100 --udid <DEVICE_UDID> &
 | `tap` | `adb shell input tap <x> <y>` |
 | `type_text` | `adb shell input text "<escaped_text>"` |
 | `swipe` | `adb shell input swipe <x1> <y1> <x2> <y2> <duration>` |
+| `perform_gesture` (partial) | `adb shell input swipe` / `tap` for `drag`, 2-point `draw`, and `double_tap` |
+| `record_screen` | `adb shell screenrecord` |
 | `launch_app` | `adb shell monkey -p <package> -c android.intent.category.LAUNCHER 1` |
 | `stop_app` | `adb shell am force-stop <package>` |
 | `clear_state` | `adb shell pm clear <package>` |
@@ -276,8 +283,10 @@ You'll see a deprecation warning but it will still work.
 
 | Variable | Values | Effect |
 |---|---|---|
+| `MOBILE_E2E_TOOLSET` | `core`, `full` | Select exposed MCP toolset (`core` = 20 default tools; `full` = all 68 tools; `--toolset` flag takes precedence) |
 | `IOS_EXECUTION_BACKEND` | `axe`, `wda`, `simctl`, `devicectl`, `maestro`, `idb` | Force specific iOS backend |
 | `ANDROID_REPLAY_BACKEND` | `owned-adb`, `maestro` | Force specific Android replay backend |
+| `M2E_DISABLE_AXE_SERVE` | `1`, `true` | Opt out of the per-UDID persistent `axe serve` pool and force one-shot `axe` CLI calls |
 | `IDB_CLI_PATH` | Path to idb binary | Custom idb location (deprecated) |
 | `IDB_COMPANION_PATH` | Path to idb_companion | Custom companion location (deprecated) |
 

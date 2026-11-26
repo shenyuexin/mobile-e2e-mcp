@@ -1,8 +1,11 @@
-# Mobile E2E MCP（中文版）
+# Mobile E2E MCP
 
+[![npm version](https://img.shields.io/npm/v/%40shenyuexin%2Fmobile-e2e-mcp)](https://www.npmjs.com/package/@shenyuexin/mobile-e2e-mcp)
 [![CI（build + typecheck + unit + smoke）](https://github.com/shenyuexin/mobile-e2e-mcp/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/shenyuexin/mobile-e2e-mcp/actions/workflows/ci.yml)
 [![Platform Smoke（iOS 模拟器 + Android 模拟器）](https://github.com/shenyuexin/mobile-e2e-mcp/actions/workflows/platform-smoke.yml/badge.svg?branch=main)](https://github.com/shenyuexin/mobile-e2e-mcp/actions/workflows/platform-smoke.yml)
 [![Real Device Acceptance（self-hosted）](https://img.shields.io/badge/Real%20Device%20Acceptance-self--hosted%20manual-0A66C2)](https://github.com/shenyuexin/mobile-e2e-mcp/actions/workflows/real-device-acceptance.yml)
+
+[English](README.md) | 简体中文
 
 > 通过 MCP 给 AI Agent 提供安全的移动设备控制层：以 policy、session、evidence 为核心，覆盖 Android / iOS 确定性优先执行、有边界视觉兜底与可审计结果。
 
@@ -49,9 +52,9 @@ npx -y @shenyuexin/mobile-e2e-mcp@latest init --platform ios --app-id com.exampl
 npx -y @shenyuexin/mobile-e2e-mcp@latest run flows/smoke.yaml --dry-run
 ```
 
-## 主要产品面：Explorer
+## Explorer：核心产品面
 
-Explorer 是这个仓库最重要的对外产品能力。它不是旁路附加的 crawler，而是把底层 MCP 工具组合成一个开发者可以直接理解的产品入口：设备发现、可审计 session、UI inspection、受限 UI action、规则风险门控、中断/恢复处理，以及结构化 evidence，都会在一次全面 app exploration 中被串起来。
+Explorer 是这个仓库最核心的对外产品能力——一个内置于 MCP 服务器的 DFS 自动页面遍历引擎。它不是旁路附加的 crawler，而是把移动端 AI Agent 真正需要的一整套核心能力串成闭环：设备发现、可审计 session、UI inspection、受限 UI action、规则风险门控、中断/恢复处理以及结构化 evidence。
 
 适合用 Explorer 回答的问题包括：
 
@@ -59,31 +62,6 @@ Explorer 是这个仓库最重要的对外产品能力。它不是旁路附加�
 - 哪些路径被 policy、外部 app 边界、风险规则或连续失败挡住？
 - 两次探索之间，页面覆盖、失败、规则决策发生了什么变化？
 - 哪些已发现路径值得提升为确定性 replay flow 或 PR review evidence？
-
-Explorer 会产出固定、可审查的 `tree.txt`、`report.md`、`summary.json`、`config.json` 与 failure-review JSON/Markdown。当前本地与历史证据已经包含 Settings 这类 100+ 页面的大规模探索，并保留 rule decision、中断/失败上下文与机器可消费页面元数据。
-
-## 核心切入点：受治理的 Agent 控制
-
-这个项目最强的使用场景不是“替代所有移动端 E2E 框架”，而是：给 AI Agent 一个更安全的移动设备控制平面。
-
-相比很薄的 `adb` 或平台命令 wrapper，这个 harness 补上的是：
-
-- **策略边界**：动作执行前会先经过 policy profile 校验。
-- **可审计 session**：动作被放进 session、lease、audit、evidence 语境里。
-- **能力边界披露**：Agent 可以在行动前查询平台支持范围与限制。
-- **结构化结果**：失败、拒绝、证据不是纯日志，而是机器可消费结果。
-
-可以复跑 dry-run proof：
-
-```bash
-pnpm run proof:governed-agent-mobile-control
-```
-
-该 proof 会在 `output/showcase/governed-agent-mobile-control/<run-id>/` 下生成带时间戳的证据包，并验证 read-only session 会用结构化 `POLICY_DENIED` 阻止交互动作。详见 [Governed Agent Mobile Control Proof](docs/showcase/governed-agent-mobile-control.md)。
-
-## Explorer：自动页面遍历
-
-Explorer 是内置于 MCP 服务器的 DFS 自动页面遍历引擎。它会系统化地导航你的应用页面，构建状态图，并输出结构化覆盖率报告，无需手动定义流程。
 
 ```bash
 npx -y @shenyuexin/mobile-e2e-mcp@latest explore \
@@ -97,9 +75,9 @@ npx -y @shenyuexin/mobile-e2e-mcp@latest explore \
 - **DFS 遍历**：系统化地从起始点探索所有可达页面
 - **状态图追踪**：记录已访问状态，检测循环以避免无限遍历
 - **熔断器**：当探索收益递减或达到配置限制时自动停止
-- **结构化覆盖率报告**：输出机器可消费的报告，展示已发现的页面与元素
 - **规则门控**：遵循跳过页面、跳过元素、采样与风险门控规则，确保安全探索
 - **中断感知证据**：被阻塞、被跳过、被外部边界截断或失败的遍历决策都会带原因，方便复盘而不是只看原始日志
+- **实验性横向滚动兜底**：垂直分段遍历结束后，可通过有边界的页面身份校验探测横向可滚动区域
 - **iOS/iPad 加固与工程配置**：支持 SplitView/Popover 作用域识别、防止跑偏到 SpringBoard/Dock/Spotlight 的前台预检、可重复 `--launch-env KEY=VALUE` 注入、`.e2e/config.yaml` 自动加载以及 `--no-prompt --config` 只读保护
 
 ### 输出产物
@@ -121,103 +99,64 @@ Explorer 会生成一个包含结构化产物的目录：
 - [`report.md`](docs/showcase/explorer/report.md) — 模块分组与路径
 - [`summary.json`](docs/showcase/explorer/summary.json) — 指标与元数据
 
-本地真机运行会写入 `output/evidence/explorer/`。这些输出的结构已经固定，后续可以被整理成公开 showcase 证据，也可以被 PR summary、coverage diff、replay path extraction 等消费层继续使用。
-
-架构设计与规则配置参考：
+本地真机运行会写入 `output/evidence/explorer/`。架构设计与规则配置参考：
 
 - [Explorer 混合遍历设计](docs/architecture/explorer-hybrid-traversal-ascii.md)
 - [Explorer 规则注册表](docs/engineering/explorer-rule-registry.zh-CN.md)
 
-## 这个仓库"本质上"是什么
+## 核心切入点：受治理的 Agent 控制
 
-本仓库同时包含两层内容：
+这个项目最强的使用场景不是“替代所有移动端 E2E 框架”，而是：给 AI Agent 一个更安全的移动设备控制平面。
 
-1. **可执行实现**（MCP server、adapters、contracts、core 编排能力）
-2. **架构与交付知识库**（设计原则、能力模型、阶段规划文档）
+相比很薄的 `adb` 或平台命令 wrapper，这个 harness 补上的是：
 
-如果只记住一句话：它是一个 **Explorer-led、给 AI Agent 用的受治理移动控制层**，不是单一框架的测试 runner。
+- **策略边界**：动作执行前会先经过 policy profile 校验。
+- **可审计 session**：动作被放进 session、lease、audit、evidence 语境里。
+- **能力边界披露**：Agent 可以在行动前查询平台支持范围与限制。
+- **结构化结果**：失败、拒绝、证据不是纯日志，而是机器可消费结果。
 
-## Mobile E2E Harness 定位
+可以复跑 dry-run proof：
 
-这个项目可以理解为一个 **AI mobile E2E harness（面向 AI 的移动端执行编排层）**：
-它不是单纯执行动作，而是在 AI Agent 需要操作移动设备时提供策略约束、会话治理、确定性优先执行路径与结构化证据输出。
+```bash
+pnpm run proof:governed-agent-mobile-control
+```
 
-如果你在搜索这些关键词：**mobile test harness / Android test harness / AI automation harness / mobile CI harness**，本仓库就是为这类需求设计的。
+该 proof 会在 `output/showcase/governed-agent-mobile-control/<run-id>/` 下生成带时间戳的证据包，并验证 read-only session 会用结构化 `POLICY_DENIED` 阻止交互动作。详见 [Governed Agent Mobile Control Proof](docs/showcase/governed-agent-mobile-control.md)。
 
-### 为什么团队会用这个 harness
+## 项目定位：面向 AI 的 Mobile E2E Harness
 
-- **Deterministic-first harness**：优先稳定定位与可解释重试，再进入 OCR/CV 兜底
-- **Failure-intelligence harness**：失败有原因码、证据产物、候选根因与修复建议
-- **Governance-aware harness**：策略 profile、可审计 session、受控工具面
-- **Explorer harness**：主要产品面，组合遍历、工具编排、风险规则、中断处理、恢复与结构化覆盖/失败证据*（可通过 CLI 使用）*
-- **真机证据**：以 Explorer/probe 产物为主，并保留 happy path 与中断恢复历史录屏
+本仓库同时包含**可执行实现**（MCP server、adapters、contracts、core 编排能力）与**架构和交付知识库**（设计原则、能力模型、阶段规划文档）。它的核心定位是一个 **Explorer-led、给 AI Agent 用的受治理移动控制层**——在多后端间路由 E2E 动作，以策略约束、会话治理、确定性优先与结构化证据确保可控执行，而不是薄封装的测试 runner。
+
+为什么团队会用这个 harness：
+
+- **Deterministic-first**：优先稳定定位与可解释重试，再进入有边界 OCR/CV 兜底
+- **Failure-intelligence**：失败携带原因码、证据产物、候选根因与修复建议
+- **Governance-aware**：策略 profile、可审计 session 与受控工具面
+- **Evidence-first**：真机 Explorer/probe 产物、历史录屏演示与 CI 校验过的 smoke 证据包协同沉淀
 
 ## 能力展示
-
-如果你想先快速了解能力，再深入看架构细节，先看这部分：
-
-- Happy Path 录屏（登录 -> 滚动 -> 加购 -> Orders -> Cart）：
-  - `docs/showcase/videos/m2e-happy-path-scroll-pause-40s.mp4`
-- 可见中断与恢复录屏（HOME 中断 -> recover_to_known_state -> 继续动作）：
-  - `docs/showcase/videos/m2e-interruption-home-recovery-35s.mp4`
-- 当前真机验证：
-  - Android Explorer 证据：`docs/showcase/evidence/android-explorer-full-2026-04-28T03-38-20/`
-  - Android probe 入口：`pnpm run validate:android-tool-probe`（最新 Vivo V2405A 真机结果：20/23 success、0 partial、3 个预期诊断类失败；核心 UI action 与中断恢复链路已通过）
-  - iOS probe 入口：`pnpm run validate:ios-tool-probe`
-- 受治理控制 proof：
-  - `pnpm run quickstart:governed-control`（首次运行 readiness 与下一步命令指南）
-  - `pnpm run proof:governed-agent-mobile-control`
-  - `pnpm run proof:governed-agent-mobile-control:preflight`（检查 Android live proof 前置条件）
-  - `pnpm run proof:governed-agent-mobile-control:live`（需要 Android 设备/模拟器）
-  - `pnpm run proof:governed-business-app-workflow`（安装/启动 demo app，然后切到 read-only 受治理观察）
-  - `pnpm run proof:governed-policy-escalation`（read-only 下拒绝，再切到 interactive policy 重试）
-  - `pnpm run validate:governed-control-evidence`
-  - `pnpm run validate:governed-business-app-evidence`
-  - `pnpm run validate:governed-business-app-comparison`
-  - `pnpm run validate:governed-policy-escalation-evidence`
-  - `pnpm run validate:governed-evidence-brief`
-  - `pnpm run validate:governed-pr-evidence-summary`
-  - `pnpm run verify:mobile-change`（一条命令跑移动变更验证；repo-owned demo app 可用 `-- --live --contract=configs/readiness/demo-android-app.android.json`）
-  - `pnpm run generate:mobile-change-repo-app-success-candidate` / `pnpm run validate:mobile-change-repo-app-success-candidate`（repo-owned demo app 成功候选证据；blocked 结果不会被当成成功证据）
-  - `pnpm run generate:mobile-change-ci-pr-evidence` / `pnpm run validate:mobile-change-ci-pr-evidence`（生成 PR/CI 可读的移动变更证据摘要，保留 blocked/failed/success proof level）
-  - `pnpm run generate:mobile-change-failure-memory` / `pnpm run validate:mobile-change-failure-memory`（聚合重复 failure packet，并给出有边界的下一步处理建议）
-  - [docs/showcase/governed-agent-mobile-control.md](docs/showcase/governed-agent-mobile-control.md)
-  - [docs/showcase/governed-agent-mobile-control-live.md](docs/showcase/governed-agent-mobile-control-live.md)
-  - [docs/showcase/governed-business-app-workflow.md](docs/showcase/governed-business-app-workflow.md)
-  - [docs/showcase/governed-policy-escalation.md](docs/showcase/governed-policy-escalation.md)
-  - [docs/showcase/governed-quickstart.md](docs/showcase/governed-quickstart.md)
-  - [docs/showcase/evidence/governed-control-brief/brief.md](docs/showcase/evidence/governed-control-brief/brief.md)
-  - [docs/showcase/evidence/governed-control-brief/pr-comment.md](docs/showcase/evidence/governed-control-brief/pr-comment.md)
-  - [docs/showcase/evidence/governed-control-vivo-2026-05-23/report.md](docs/showcase/evidence/governed-control-vivo-2026-05-23/report.md)
-  - [docs/showcase/evidence/governed-business-app-vivo-2026-05-24/report.md](docs/showcase/evidence/governed-business-app-vivo-2026-05-24/report.md)
-  - [docs/showcase/evidence/governed-business-app-vivo-2026-05-24/comparison.md](docs/showcase/evidence/governed-business-app-vivo-2026-05-24/comparison.md)
-  - [docs/showcase/evidence/governed-policy-escalation-dry-run-2026-05-25/report.md](docs/showcase/evidence/governed-policy-escalation-dry-run-2026-05-25/report.md)
-  - [docs/showcase/evidence/mobile-change-repo-app-success-candidate/candidate.md](docs/showcase/evidence/mobile-change-repo-app-success-candidate/candidate.md)
-  - [docs/showcase/evidence/mobile-change-ci-pr-evidence/pr-summary.md](docs/showcase/evidence/mobile-change-ci-pr-evidence/pr-summary.md)
-  - [docs/showcase/evidence/mobile-change-failure-memory/remediation.md](docs/showcase/evidence/mobile-change-failure-memory/remediation.md)
-- 历史演示脚本：
-  - `bash scripts/legacy/dev/record-demo-happy-path-android.sh`
-  - `bash scripts/legacy/dev/record-demo-interruption-home-recovery-android.sh`
-  - `bash scripts/legacy/dev/publish-showcase-assets-android.sh`（录制 + 归档视频 + 刷新截图/GIF）
-- 演示说明与证据索引：
-  - [docs/showcase/README.md](docs/showcase/README.md)
-  - [docs/showcase/demo-playbook.zh-CN.md](docs/showcase/demo-playbook.zh-CN.md)
-  - [docs/showcase/failure-intelligence-demo.md](docs/showcase/failure-intelligence-demo.md)
-- AI 调用与任务指南：
-  - [docs/guides/ai-agent-invocation.zh-CN.md](docs/guides/ai-agent-invocation.zh-CN.md)
-  - [docs/guides/golden-path.md](docs/guides/golden-path.md)
-  - [docs/guides/flow-generation.md](docs/guides/flow-generation.md)
-- CI 证据与边界说明：
-  - [docs/showcase/ci-evidence.md](docs/showcase/ci-evidence.md)
-  - [CI 工作流运行记录](https://github.com/shenyuexin/mobile-e2e-mcp/actions/workflows/ci.yml)
-  - [Platform Smoke 工作流运行记录](https://github.com/shenyuexin/mobile-e2e-mcp/actions/workflows/platform-smoke.yml)
-  - [Real Device Acceptance 工作流运行记录](https://github.com/shenyuexin/mobile-e2e-mcp/actions/workflows/real-device-acceptance.yml)
 
 ### GIF 快速预览
 
 | Happy Path GIF | 中断恢复 GIF |
 |---|---|
 | ![Happy Path 预览](docs/showcase/assets/happy-preview.gif) | ![中断恢复预览](docs/showcase/assets/interruption-preview.gif) |
+
+快速体验可复现演示、真机验证与 CI 证据入口：
+
+- **真机录屏与 Explorer/probe 证据**：
+  - 历史录屏：[`m2e-happy-path-scroll-pause-40s.mp4`](docs/showcase/videos/m2e-happy-path-scroll-pause-40s.mp4)、[`m2e-interruption-home-recovery-35s.mp4`](docs/showcase/videos/m2e-interruption-home-recovery-35s.mp4)
+  - Android 真机 Explorer 证据（45 页面、最大深度 4、0 失败）：`docs/showcase/evidence/android-explorer-full-2026-04-28T03-38-20/`（`pnpm run validate:explorer-android-evidence -- --min-pages 45 --min-depth 4`）
+  - 设备 probe 入口：`pnpm run validate:android-tool-probe`（最新 Vivo V2405A 真机结果：20/23 success、0 partial、3 个预期诊断类失败）与 `pnpm run validate:ios-tool-probe`
+- **受治理控制与移动变更验证**：
+  - `pnpm run quickstart:governed-control`（首次运行 readiness 与下一步命令指南）
+  - `pnpm run proof:governed-agent-mobile-control` / `pnpm run proof:governed-policy-escalation`
+  - `pnpm run verify:mobile-change`（一条命令跑移动变更验证；contract 模式可用 `-- --live --contract=configs/readiness/mobile-change.android.json`）
+  - `pnpm run verify:react-native-change`（实验性 RN lane，编排 readiness 与 evidence-pack；只有接入设备、Metro/调试目标并完成 intake 才算 live 成功证据，blocked 输出不代表成功）
+- **完整证据索引与 AI 调用指南**：
+  - [演示与证据总索引](docs/showcase/README.md) — 完整收录全部 `generate:*` / `validate:*` 命令、失败归因/交接包及跟踪证据报告
+  - [CI 证据与边界说明](docs/showcase/ci-evidence.md)、[CI 运行记录](https://github.com/shenyuexin/mobile-e2e-mcp/actions/workflows/ci.yml)、[Platform Smoke](https://github.com/shenyuexin/mobile-e2e-mcp/actions/workflows/platform-smoke.yml)、[Real Device Acceptance](https://github.com/shenyuexin/mobile-e2e-mcp/actions/workflows/real-device-acceptance.yml)
+  - 指南文档：[AI Agent 调用指南](docs/guides/ai-agent-invocation.zh-CN.md)、[Golden Path](docs/guides/golden-path.md)、[Flow 生成指南](docs/guides/flow-generation.md)
 
 ## FAQ
 
@@ -260,6 +199,18 @@ Android 真机 Explorer 证据保存在 `docs/showcase/evidence/android-explorer
 | 证据模型 | 依赖外部拼装 | 内建证据优先 action outcome |
 | Helper app 依赖 | iOS/Android 回放都需要 | Android: owned-adb 主路径（常用命令不需要 helper app）；iOS 模拟器: axe CLI；iOS 真机: WDA（一次性配置，详见 [外部工具指南](docs/guides/external-tools.md)） |
 
+## 官方 AI 移动端工具与本 Harness 的关系
+
+Android CLI/Journeys、Android Studio Journeys 与 Dart/Flutter MCP Server 属于互补的上游工具，而不是本 harness 的替代品。它们适合提供原生框架上下文、旅程编写或原生执行；只有在证明边界（proof boundary）明确的前提下，才将它们的输出纳入 mobile-e2e 的证据 intake 链路。
+
+可通过以下命令生成机器可读的桥接契约：
+
+```bash
+pnpm run validate:official-tool-bridge
+```
+
+当前关系矩阵见 `docs/showcase/evidence/official-tool-bridge/bridge.md`。
+
 ## 端到端执行原理（How It Works）
 
 典型执行路径：
@@ -283,9 +234,9 @@ Android 真机 Explorer 证据保存在 `docs/showcase/evidence/android-explorer
 
 架构参考：
 
-- [系统架构总览（Mermaid，仓库内）](docs/architecture/system-architecture-overview.md)
-- [参考架构详细版](docs/architecture/architecture.md)
-- [架构导航索引（中文版）](docs/architecture/README.zh-CN.md)
+- [系统架构与契约（01）](docs/architecture/01-system-architecture.md)
+- [平台适配与框架 Profile（02）](docs/architecture/02-platform-adapters.md)
+- [架构文档索引（English）](docs/architecture/README.md) | [架构导航索引（中文）](docs/architecture/README.zh-CN.md)
 
 Source-of-truth 说明：
 
@@ -304,7 +255,10 @@ Source-of-truth 说明：
 
 ## 完整 MCP 工具目录（当前）
 
-当前服务共暴露 **68 个工具**。对于 AI Agent，这是最快建立"可做什么"的入口。
+服务**默认暴露 20 个 `core` 工具**，传入 `--toolset full` 或设置 `MOBILE_E2E_TOOLSET=full` 可启用**全部 68 个工具**。
+
+<details>
+<summary>展开查看全部 68 个 MCP 工具（9 大分类）</summary>
 
 ### 1）会话与生命周期
 
@@ -320,7 +274,7 @@ Source-of-truth 说明：
 
 ### 4）UI 感知、定位与交互
 
-`inspect_ui`、`query_ui`、`resolve_ui_target`、`audit_ui_surface`（支持通过 `baselinePath` / `baselineMode` 做结构基线增量门禁比对）、`scroll_only`、`perform_gesture`（iOS 模拟器通过 AXe 完整支持 `draw` / `drag` / `pinch` / `double_tap` / `two_finger_tap`；Android 通过 `adb` 部分支持 `drag` / 两点 `draw` / `double_tap`）、`scroll_and_resolve_ui_target`、`wait_for_ui`、`wait_for_ui_stable`、`tap`、`tap_element`、`scroll_and_tap_element`、`type_text`、`type_into_element`、`navigate_back`（iOS 模拟器 AXe 只读/采集命令 `describe-ui` / `displays` / `screenshot` / `ping` 默认复用按 UDID 维护的常驻 `axe serve` 传输池，空闲自动释放，支持 `M2E_DISABLE_AXE_SERVE=1` 关闭；HID 输入命令保持单次调用以避免 `dtuhidd` 虚拟 HID 服务泄漏）
+`inspect_ui`、`query_ui`、`resolve_ui_target`、`audit_ui_surface`（支持通过 `baselinePath` / `baselineMode` 做结构基线增量门禁比对）、`scroll_only`、`perform_gesture`（iOS 模拟器通过 AXe v2.2+ 完整支持 `draw` / `drag` / `pinch` / `double_tap` / `two_finger_tap`；Android 通过 `adb` 部分支持 `drag` / 两点 `draw` / `double_tap`）、`scroll_and_resolve_ui_target`、`wait_for_ui`、`wait_for_ui_stable`、`tap`、`tap_element`、`scroll_and_tap_element`、`type_text`、`type_into_element`、`navigate_back`（iOS 模拟器 AXe 只读/采集命令 `describe-ui` / `displays` / `screenshot` / `ping` 默认复用按 UDID 维护的常驻 `axe serve` 传输池，空闲自动释放，支持 `M2E_DISABLE_AXE_SERVE=1` 关闭；HID 输入命令保持单次调用以避免 `dtuhidd` 虚拟 HID 服务泄漏）
 
 ### 5）证据、可观测与诊断
 
@@ -343,6 +297,8 @@ Source-of-truth 说明：
 `probe_network_readiness`、`diagnose_network_failure`、`inspect_network_policy`
 
 `probe_network_readiness` 检查运行时连通性、DNS、延迟和可选后端可达性。`diagnose_network_failure` 从已观察到的失败请求出发，判断失败是否很可能来自 Android cleartext 或 iOS ATS release 策略拦截。`inspect_network_policy` 保留为底层静态检查器，使用已解码的 manifest、network-security-config、Info.plist，或可读 APK/IPA ZIP artifact 证据，检查普通 HTTP endpoint 是否被策略允许。这些工具不代理流量，也不修改 App 配置。
+
+</details>
 
 精确签名与输入输出以 `packages/mcp-server/src/server.ts`（工具注册源）为准。
 
@@ -418,9 +374,11 @@ Source-of-truth 说明：
 
 公开的路线与范围以 `docs/delivery/roadmap.md` 与 `docs/architecture/*` 为准。
 
-## 项目定位
+## 开源协作
 
-这不是一个孤立的测试框架，而是一个面向 AI 的移动端编排层：在多后端间路由 E2E 动作，并以确定性优先与治理边界确保可控执行。
+- License: [MIT](LICENSE)
+- Contributing guide: [CONTRIBUTING.md](CONTRIBUTING.md)
+- Changelog: [CHANGELOG.md](CHANGELOG.md)
 
 ## 支持这个项目
 

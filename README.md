@@ -1,8 +1,11 @@
-# Mobile E2E MCP (2026)
+# Mobile E2E MCP
 
+[![npm version](https://img.shields.io/npm/v/%40shenyuexin%2Fmobile-e2e-mcp)](https://www.npmjs.com/package/@shenyuexin/mobile-e2e-mcp)
 [![CI (build + typecheck + unit + smoke)](https://github.com/shenyuexin/mobile-e2e-mcp/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/shenyuexin/mobile-e2e-mcp/actions/workflows/ci.yml)
 [![Platform Smoke (iOS sim + Android emulator)](https://github.com/shenyuexin/mobile-e2e-mcp/actions/workflows/platform-smoke.yml/badge.svg?branch=main)](https://github.com/shenyuexin/mobile-e2e-mcp/actions/workflows/platform-smoke.yml)
 [![Real Device Acceptance (self-hosted)](https://img.shields.io/badge/Real%20Device%20Acceptance-self--hosted%20manual-0A66C2)](https://github.com/shenyuexin/mobile-e2e-mcp/actions/workflows/real-device-acceptance.yml)
+
+English | [简体中文](README.zh-CN.md)
 
 > AI-safe mobile device control via MCP: a policy-guarded, session-oriented mobile automation harness for AI agents, with deterministic-first Android/iOS execution, bounded visual fallback, and evidence-rich outcomes.
 
@@ -49,18 +52,57 @@ npx -y @shenyuexin/mobile-e2e-mcp@latest init --platform ios --app-id com.exampl
 npx -y @shenyuexin/mobile-e2e-mcp@latest run flows/smoke.yaml --dry-run
 ```
 
-## Primary Product Surface: Explorer
+## Explorer: Primary Product Surface
 
-Explorer is the main outward-facing product capability of this repository. It is not a standalone crawler bolted onto the side; it is the clearest product surface for the harness because broad app exploration requires the same core MCP capabilities a mobile AI agent needs in practice: device discovery, auditable sessions, UI inspection, bounded UI actions, rule-based risk gates, interruption/recovery handling, and structured evidence.
+Explorer is the main outward-facing product capability of this repository—a DFS-based automatic page traversal engine built into the MCP server. Rather than being a standalone crawler bolted onto the side, it exercises the same core capabilities a mobile AI agent needs in practice: device discovery, auditable sessions, UI inspection, bounded UI actions, rule-based risk gates, interruption/recovery handling, and structured evidence.
 
-Use Explorer when you want to answer product questions such as:
+Use Explorer to answer product questions such as:
 
 - Which screens are reachable from this app entry point?
 - Which flows are blocked by policy, external-app boundaries, risk gates, or repeated failures?
 - What changed between two exploration runs?
 - Which discovered paths should be promoted into deterministic replay or PR review evidence?
 
-Explorer writes fixed, reviewable artifacts such as `tree.txt`, `report.md`, `summary.json`, `config.json`, and failure-review JSON/Markdown. Current local and tracked evidence includes large Settings explorations, including 100+ page runs, with rule decisions, interruption/failure context, and machine-consumable page metadata.
+```bash
+npx -y @shenyuexin/mobile-e2e-mcp@latest explore \
+  --app-id com.example.app \
+  --platform android \
+  --output ./explore-report
+```
+
+Key features:
+
+- **DFS-based traversal**: systematically explores reachable screens from a starting point
+- **State graph tracking**: records visited states and detects cycles to avoid infinite loops
+- **Circuit breaker**: stops when exploration hits diminishing returns or configured limits
+- **Rule-based gating**: respects skip-page, skip-element, sampling, and risk-gating rules
+- **Interruption-aware evidence**: records blocked, interrupted, skipped, and failed traversal decisions with explicit reasons
+- **Experimental horizontal fallback**: after vertical segments are exhausted, Explorer can probe horizontally scrollable content with bounded page-identity checks
+- **iOS/iPad hardening & project config**: SplitView/Popover presentation scoping, foreground pre-flight guard against SpringBoard/Dock/Spotlight drift, repeatable `--launch-env KEY=VALUE` injection, `.e2e/config.yaml` auto-loading, and read-only `--no-prompt --config` protection
+
+### Output
+
+Explorer writes fixed, reviewable artifacts:
+
+| File | Description |
+|------|-------------|
+| `tree.txt` | ASCII tree of all discovered pages and navigation paths |
+| `report.md` | Human-readable coverage report with module breakdown |
+| `failure-review.md` | Human-readable failure triage with grouped patterns and suggested next actions |
+| `failure-review.json` | Machine-consumable failure triage summary |
+| `summary.json` | Machine-consumable metrics and page metadata |
+| `config.json` | Runtime configuration and rule settings used for the run |
+
+Example output from a real run against iOS Settings (181 pages, max depth 5):
+
+- [`tree.txt`](docs/showcase/explorer/tree.txt) — full page hierarchy
+- [`report.md`](docs/showcase/explorer/report.md) — module breakdown and paths
+- [`summary.json`](docs/showcase/explorer/summary.json) — metrics and metadata
+
+Local real-device runs are written under `output/evidence/explorer/`. Architecture and rule configuration references:
+
+- [Explorer hybrid traversal design](docs/architecture/explorer-hybrid-traversal-ascii.md)
+- [Explorer rule registry](docs/engineering/explorer-rule-registry.zh-CN.md)
 
 ## Core Wedge: Governed Agent Control
 
@@ -81,167 +123,40 @@ pnpm run proof:governed-agent-mobile-control
 
 The proof writes a timestamped bundle under `output/showcase/governed-agent-mobile-control/<run-id>/` and verifies that a read-only session blocks an interactive action with structured `POLICY_DENIED`. See [Governed Agent Mobile Control Proof](docs/showcase/governed-agent-mobile-control.md).
 
-## Explorer: Automatic Page Traversal
+## Positioning: AI Mobile E2E Harness
 
-Explorer is a DFS-based automatic page traversal engine built into the MCP server. It systematically navigates through your app's screens, builds a state graph, and produces structured coverage reports without requiring manual flow definitions.
+This repository combines **executable implementation** (MCP server, adapters, contracts, core orchestration) with an **architecture and delivery knowledge base** (design principles, capability model, phased rollout docs). It is designed as an **Explorer-led, governed mobile control layer for AI agents**—a policy-aware, session-oriented, deterministic-first harness rather than a thin single-framework test runner.
 
-```bash
-npx -y @shenyuexin/mobile-e2e-mcp@latest explore \
-  --app-id com.example.app \
-  --platform android \
-  --output ./explore-report
-```
+Why teams use this harness:
 
-Key features:
-
-- **DFS-based traversal**: systematically explores every reachable screen from a starting point
-- **State graph tracking**: records visited states and detects cycles to avoid infinite loops
-- **Circuit breaker**: automatically stops when exploration hits diminishing returns or configured limits
-- **Structured coverage reports**: outputs machine-consumable reports showing which screens and elements were discovered
-- **Rule-based gating**: respects skip-page, skip-element, sampling, and risk-gating rules for safe exploration
-- **Interruption-aware evidence**: records blocked, interrupted, skipped, and failed traversal decisions with reasons so a run can be reviewed instead of treated as a raw pass/fail crawl
-- **Experimental horizontal fallback**: after vertical segments are exhausted, Explorer can probe horizontally scrollable content with bounded page-identity checks
-- **iOS/iPad hardening & project config**: SplitView/Popover presentation scoping, foreground pre-flight guard against SpringBoard/Dock/Spotlight drift, repeatable `--launch-env KEY=VALUE` injection, `.e2e/config.yaml` auto-loading, and read-only `--no-prompt --config` protection
-
-### Output
-
-Explorer produces a directory of structured artifacts:
-
-| File | Description |
-|------|-------------|
-| `tree.txt` | ASCII tree of all discovered pages and navigation paths |
-| `report.md` | Human-readable coverage report with module breakdown |
-| `failure-review.md` | Human-readable failure triage with grouped patterns and suggested next actions |
-| `failure-review.json` | Machine-consumable failure triage summary |
-| `summary.json` | Machine-consumable metrics and page metadata |
-| `config.json` | Runtime configuration and rule settings used for the run |
-
-Example output from a real run against iOS Settings (181 pages, max depth 5):
-
-- [`tree.txt`](docs/showcase/explorer/tree.txt) — full page hierarchy
-- [`report.md`](docs/showcase/explorer/report.md) — module breakdown and paths
-- [`summary.json`](docs/showcase/explorer/summary.json) — metrics and metadata
-
-Local real-device runs are written under `output/evidence/explorer/`. These outputs are intentionally structured so they can be curated into public showcase evidence or consumed by follow-on tooling such as coverage diffing, PR summaries, and replay path extraction.
-
-For architecture details and rule configuration:
-
-- [Explorer hybrid traversal design](docs/architecture/explorer-hybrid-traversal-ascii.md)
-- [Explorer rule registry](docs/engineering/explorer-rule-registry.zh-CN.md)
-
-## What This Repository Actually Is
-
-This repo contains both:
-
-1. **Executable implementation** (MCP server, adapters, contracts, core orchestration), and
-2. **Architecture and delivery knowledge base** (design principles, capability model, phased rollout docs).
-
-If you only remember one thing: this project is designed as an **Explorer-led, governed mobile control layer for AI agents**, not a single-framework test runner.
-
-## Mobile E2E Harness Positioning
-
-This project is an **AI mobile E2E harness**: a policy-aware, session-oriented, deterministic-first execution harness for mobile automation where an AI agent needs controlled action, evidence, and support-boundary clarity.
-
-If you're searching for terms like **mobile test harness**, **real-device Android test harness**, **AI automation harness**, or **mobile CI harness**, this repository is built for that exact workflow.
-
-### Why teams use this harness
-
-- **Deterministic-first harness**: stable selectors and structured retries before OCR/CV fallback
-- **Failure-intelligence harness**: reason codes, evidence artifacts, and remediation suggestions
-- **Governance-aware harness**: policy profiles, auditable sessions, and controlled tool surfaces
-- **Explorer harness**: the primary product surface, combining traversal, tool orchestration, risk gating, interruption handling, recovery, and structured coverage/failure evidence *(available via CLI)*
-- **Real-device evidence**: Explorer/probe artifacts plus historical videos for happy path and interruption recovery
+- **Deterministic-first**: stable selectors and structured retries before bounded OCR/CV fallback
+- **Failure-intelligence**: reason codes, evidence artifacts, candidate root causes, and remediation hints
+- **Governance-aware**: policy profiles, auditable sessions, and controlled tool surfaces
+- **Evidence-first**: real-device Explorer/probe artifacts alongside historical video demos and CI-validated smoke bundles
 
 ## Capability Showcase
-
-If you want a quick hands-on tour before diving into architecture details, start here:
-
-- Happy path video (login -> scroll -> add to cart -> orders -> cart):
-  - `docs/showcase/videos/m2e-happy-path-scroll-pause-40s.mp4`
-- Visible interruption + recovery video (HOME interruption -> recover_to_known_state -> continue action):
-  - `docs/showcase/videos/m2e-interruption-home-recovery-35s.mp4`
-- Current real-device verification:
-  - Android Explorer evidence: `docs/showcase/evidence/android-explorer-full-2026-04-28T03-38-20/`
-  - Android probe entrypoint: `pnpm run validate:android-tool-probe` (latest Vivo V2405A run: 20/23 success, 0 partial, 3 expected diagnostic failures; core UI and interruption-resume paths passed)
-  - iOS probe entrypoint: `pnpm run validate:ios-tool-probe`
-- Governed-control proof:
-  - `pnpm run quickstart:governed-control` (first-run readiness and next-command guide)
-  - `pnpm run proof:governed-agent-mobile-control`
-  - `pnpm run proof:governed-agent-mobile-control:preflight` (checks Android live-proof readiness)
-  - `pnpm run proof:governed-agent-mobile-control:live` (requires an Android device/emulator)
-  - `pnpm run proof:governed-business-app-workflow` (installs/launches the demo app, then switches to read-only governed agent observation)
-  - `pnpm run proof:governed-policy-escalation` (denies under read-only, then retries under interactive policy)
-  - `pnpm run validate:governed-control-evidence`
-  - `pnpm run validate:governed-business-app-evidence`
-  - `pnpm run validate:governed-business-app-comparison`
-  - `pnpm run validate:governed-policy-escalation-evidence`
-  - `pnpm run validate:governed-evidence-brief`
-  - `pnpm run validate:governed-pr-evidence-summary`
-  - `pnpm run verify:mobile-change` (one-command mobile change verification UX; use `-- --live --contract=configs/readiness/mobile-change.android.json` for contract-backed live mode)
-  - `pnpm run generate:mobile-change-readiness-contract` / `pnpm run validate:mobile-change-readiness-contract`
-  - `pnpm run generate:mobile-change-repo-app-success-candidate` / `pnpm run validate:mobile-change-repo-app-success-candidate` (repo-owned demo app success candidate; blocked output is not success evidence until a device/emulator run passes intake)
-  - `pnpm run generate:mobile-change-ci-pr-evidence` / `pnpm run validate:mobile-change-ci-pr-evidence` (compact PR/CI artifact with proof-level-safe blocked/failed/success labels)
-  - `pnpm run generate:mobile-change-failure-memory` / `pnpm run validate:mobile-change-failure-memory` (deterministic failure-pattern grouping and bounded next-action routing)
-  - `pnpm run verify:react-native-change` (experimental RN lane that runs readiness plus evidence-pack orchestration; live success still requires device, Metro, debug target, stable selectors, and intake-backed proof)
-  - `pnpm run generate:react-native-readiness` / `pnpm run validate:react-native-readiness` (RN preflight for device, Metro, JS debug target, readiness contract, and stable selectors)
-  - `pnpm run generate:react-native-evidence-pack` / `pnpm run validate:react-native-evidence-pack` (RN review artifact that keeps Metro signals supplemental)
-  - `pnpm run proof:mobile-change-verification` (fixture-backed mobile change verification bundle, failure packet, and scenario index)
-  - `pnpm run generate:mobile-change-device-readiness` / `pnpm run validate:mobile-change-device-readiness` (structured device/app/readiness preflight before attempting live mobile change proof)
-  - `pnpm run proof:mobile-change-verification:live` (optional live device/emulator proof; use `M2E_LIVE_MOBILE_CHANGE_ALLOW_NO_DEVICE=1` for structured no-device output)
-  - `pnpm run proof:mobile-change-verification:live-settings` (runnable no-APK Android Settings success lane; requires `10AEA40Z3Y000R5` or editing the device id)
-  - `pnpm run generate:mobile-change-live-settings-lane` / `pnpm run validate:mobile-change-live-settings-lane`
-  - `pnpm run proof:mobile-change-verification:readiness-failure` (controlled live-runner-derived app readiness failure packet)
-  - `pnpm run validate:mobile-change-verification`
-  - `pnpm run validate:mobile-change-live-android-evidence` (tracked Android device `10AEA40Z3Y000R5` live app-readiness failure evidence)
-  - `pnpm run validate:mobile-change-readiness-failure`
-  - `pnpm run generate:mobile-change-handoff` / `pnpm run validate:mobile-change-handoff`
-  - `pnpm run intake:mobile-change-live-proof` / `pnpm run validate:mobile-change-live-proof-intake` (review live runner output before promoting it as tracked evidence)
-  - [docs/showcase/governed-agent-mobile-control.md](docs/showcase/governed-agent-mobile-control.md)
-  - [docs/showcase/governed-agent-mobile-control-live.md](docs/showcase/governed-agent-mobile-control-live.md)
-  - [docs/showcase/governed-business-app-workflow.md](docs/showcase/governed-business-app-workflow.md)
-  - [docs/showcase/governed-policy-escalation.md](docs/showcase/governed-policy-escalation.md)
-  - [docs/showcase/governed-quickstart.md](docs/showcase/governed-quickstart.md)
-  - [docs/showcase/evidence/governed-control-brief/brief.md](docs/showcase/evidence/governed-control-brief/brief.md)
-  - [docs/showcase/evidence/governed-control-brief/pr-comment.md](docs/showcase/evidence/governed-control-brief/pr-comment.md)
-  - [docs/showcase/evidence/governed-control-vivo-2026-05-23/report.md](docs/showcase/evidence/governed-control-vivo-2026-05-23/report.md)
-  - [docs/showcase/evidence/governed-business-app-vivo-2026-05-24/report.md](docs/showcase/evidence/governed-business-app-vivo-2026-05-24/report.md)
-  - [docs/showcase/evidence/governed-business-app-vivo-2026-05-24/comparison.md](docs/showcase/evidence/governed-business-app-vivo-2026-05-24/comparison.md)
-  - [docs/showcase/evidence/governed-policy-escalation-dry-run-2026-05-25/report.md](docs/showcase/evidence/governed-policy-escalation-dry-run-2026-05-25/report.md)
-  - [docs/showcase/evidence/mobile-change-verification-fixture/report.md](docs/showcase/evidence/mobile-change-verification-fixture/report.md)
-  - [docs/showcase/evidence/mobile-change-verification-fixture/failure-packet.md](docs/showcase/evidence/mobile-change-verification-fixture/failure-packet.md)
-  - [docs/showcase/evidence/mobile-change-verification-fixture/scenario-index.md](docs/showcase/evidence/mobile-change-verification-fixture/scenario-index.md)
-  - [docs/showcase/evidence/mobile-change-device-readiness/report.md](docs/showcase/evidence/mobile-change-device-readiness/report.md)
-  - [docs/showcase/evidence/mobile-change-live-android-10AEA40Z3Y000R5/report.md](docs/showcase/evidence/mobile-change-live-android-10AEA40Z3Y000R5/report.md)
-  - [docs/showcase/evidence/mobile-change-live-settings-lane/lane.md](docs/showcase/evidence/mobile-change-live-settings-lane/lane.md)
-  - [docs/showcase/evidence/mobile-change-live-proof-intake/intake.md](docs/showcase/evidence/mobile-change-live-proof-intake/intake.md)
-  - [docs/showcase/evidence/mobile-change-repo-app-success-candidate/candidate.md](docs/showcase/evidence/mobile-change-repo-app-success-candidate/candidate.md)
-  - [docs/showcase/evidence/mobile-change-ci-pr-evidence/pr-summary.md](docs/showcase/evidence/mobile-change-ci-pr-evidence/pr-summary.md)
-  - [docs/showcase/evidence/mobile-change-failure-memory/remediation.md](docs/showcase/evidence/mobile-change-failure-memory/remediation.md)
-  - [docs/showcase/evidence/mobile-change-readiness-failure/failure-packet.md](docs/showcase/evidence/mobile-change-readiness-failure/failure-packet.md)
-  - [docs/showcase/evidence/mobile-change-readiness-failure/handoff.md](docs/showcase/evidence/mobile-change-readiness-failure/handoff.md)
-- Historical demo scripts:
-  - `bash scripts/legacy/dev/record-demo-happy-path-android.sh`
-  - `bash scripts/legacy/dev/record-demo-interruption-home-recovery-android.sh`
-  - `bash scripts/legacy/dev/publish-showcase-assets-android.sh` (record + curate videos + refresh snapshots/GIFs)
-- Demo playbook and evidence index:
-  - [docs/showcase/README.md](docs/showcase/README.md)
-  - [docs/showcase/demo-playbook.zh-CN.md](docs/showcase/demo-playbook.zh-CN.md)
-  - [docs/showcase/failure-intelligence-demo.md](docs/showcase/failure-intelligence-demo.md)
-- AI invocation and task guides:
-  - [docs/guides/ai-agent-invocation.zh-CN.md](docs/guides/ai-agent-invocation.zh-CN.md)
-  - [docs/guides/golden-path.md](docs/guides/golden-path.md)
-  - [docs/guides/flow-generation.md](docs/guides/flow-generation.md)
-- CI evidence and boundary notes:
-  - [docs/showcase/ci-evidence.md](docs/showcase/ci-evidence.md)
-  - [CI workflow runs](https://github.com/shenyuexin/mobile-e2e-mcp/actions/workflows/ci.yml)
-  - [Platform smoke workflow runs](https://github.com/shenyuexin/mobile-e2e-mcp/actions/workflows/platform-smoke.yml)
-  - [Real-device acceptance workflow runs](https://github.com/shenyuexin/mobile-e2e-mcp/actions/workflows/real-device-acceptance.yml)
 
 ### Quick GIF Preview
 
 | Happy path GIF | Interruption recovery GIF |
 |---|---|
 | ![Happy path preview](docs/showcase/assets/happy-preview.gif) | ![Interruption recovery preview](docs/showcase/assets/interruption-preview.gif) |
+
+Start here for runnable demos, real-device verification, and tracked CI proof:
+
+- **Real-device videos & Explorer/probe evidence**:
+  - Historical recordings: [`m2e-happy-path-scroll-pause-40s.mp4`](docs/showcase/videos/m2e-happy-path-scroll-pause-40s.mp4), [`m2e-interruption-home-recovery-35s.mp4`](docs/showcase/videos/m2e-interruption-home-recovery-35s.mp4)
+  - Android Explorer evidence (45 pages, max depth 4, 0 failures): `docs/showcase/evidence/android-explorer-full-2026-04-28T03-38-20/` (`pnpm run validate:explorer-android-evidence -- --min-pages 45 --min-depth 4`)
+  - Device probe entrypoints: `pnpm run validate:android-tool-probe` (latest Vivo V2405A run: 20/23 success, 0 partial, 3 expected diagnostic failures) and `pnpm run validate:ios-tool-probe`
+- **Governed-control & mobile-change proofs**:
+  - `pnpm run quickstart:governed-control` (first-run readiness guide)
+  - `pnpm run proof:governed-agent-mobile-control` / `pnpm run proof:governed-policy-escalation`
+  - `pnpm run verify:mobile-change` (one-command mobile change verification; use `-- --live --contract=configs/readiness/mobile-change.android.json` for contract-backed live mode)
+  - `pnpm run verify:react-native-change` (experimental RN lane with readiness + evidence-pack orchestration; blocked output is not live success evidence until a connected device, Metro/debug target, and intake pass)
+- **Full evidence index & AI agent guides**:
+  - [Showcase & Evidence Index](docs/showcase/README.md) — complete catalog of `generate:*` / `validate:*` commands, failure-memory/handoff packets, and tracked evidence reports
+  - [CI Evidence and Boundary Guide](docs/showcase/ci-evidence.md), [CI runs](https://github.com/shenyuexin/mobile-e2e-mcp/actions/workflows/ci.yml), [Platform Smoke](https://github.com/shenyuexin/mobile-e2e-mcp/actions/workflows/platform-smoke.yml), [Real-Device Acceptance](https://github.com/shenyuexin/mobile-e2e-mcp/actions/workflows/real-device-acceptance.yml)
+  - Guides: [AI Agent Invocation (zh-CN)](docs/guides/ai-agent-invocation.zh-CN.md), [Golden Path](docs/guides/golden-path.md), [Flow Generation](docs/guides/flow-generation.md)
 
 ## FAQ
 
@@ -317,11 +232,11 @@ Reference split:
 - **Control plane**: tool contracts, policy checks, session orchestration, audit/evidence indexing
 - **Execution plane**: platform actions, UI resolution, retries, interruption handling, visual fallback
 
-Architecture reference:
+Architecture references:
 
-- [System architecture overview (Mermaid, in-repo)](docs/architecture/system-architecture-overview.md)
-- [Reference architecture details](docs/architecture/architecture.md)
-- [Architecture navigation index (zh-CN)](docs/architecture/README.zh-CN.md)
+- [System architecture & contracts (01)](docs/architecture/01-system-architecture.md)
+- [Platform adapters & framework profiles (02)](docs/architecture/02-platform-adapters.md)
+- [Architecture index (EN)](docs/architecture/README.md) | [Architecture index (zh-CN)](docs/architecture/README.zh-CN.md)
 
 Source-of-truth note:
 
@@ -340,7 +255,10 @@ Tool registry/signature dispatch live in `packages/mcp-server/src/server.ts`, wh
 
 ## Complete MCP Tool Catalog (Current)
 
-The server currently exposes **68 tools**. For AI agents, this is the current tool surface.
+The server exposes **20 `core` tools by default** and **68 tools in `--toolset full`** (via `--toolset full` or `MOBILE_E2E_TOOLSET=full`).
+
+<details>
+<summary>View all 68 MCP tools (9 categories)</summary>
 
 ### 1) Session & lifecycle
 
@@ -356,7 +274,7 @@ The server currently exposes **68 tools**. For AI agents, this is the current to
 
 ### 4) UI perception, targeting, and interaction
 
-`inspect_ui`, `query_ui`, `resolve_ui_target`, `audit_ui_surface` (with optional baseline ratchet diffing via `baselinePath` / `baselineMode`), `scroll_only`, `perform_gesture` (iOS simulator full via AXe `draw` / `drag` / `pinch` / `double_tap` / `two_finger_tap`; Android partial via `adb` `drag` / 2-point `draw` / `double_tap`), `scroll_and_resolve_ui_target`, `wait_for_ui`, `wait_for_ui_stable`, `tap`, `tap_element`, `scroll_and_tap_element`, `type_text`, `type_into_element`, `navigate_back` (iOS simulator AXe read/capture commands `describe-ui`, `displays`, `screenshot`, and `ping` reuse a per-UDID persistent `axe serve` transport pool with idle shutdown and `M2E_DISABLE_AXE_SERVE=1` opt-out; HID input commands remain one-shot to avoid `dtuhidd` virtual HID service accumulation)
+`inspect_ui`, `query_ui`, `resolve_ui_target`, `audit_ui_surface` (with optional baseline ratchet diffing via `baselinePath` / `baselineMode`), `scroll_only`, `perform_gesture` (iOS simulator full via AXe v2.2+ `draw` / `drag` / `pinch` / `double_tap` / `two_finger_tap`; Android partial via `adb` `drag` / 2-point `draw` / `double_tap`), `scroll_and_resolve_ui_target`, `wait_for_ui`, `wait_for_ui_stable`, `tap`, `tap_element`, `scroll_and_tap_element`, `type_text`, `type_into_element`, `navigate_back` (iOS simulator AXe read/capture commands `describe-ui`, `displays`, `screenshot`, and `ping` reuse a per-UDID persistent `axe serve` transport pool with idle shutdown and `M2E_DISABLE_AXE_SERVE=1` opt-out; HID input commands remain one-shot to avoid `dtuhidd` virtual HID service accumulation)
 
 ### 5) Evidence, observability, and diagnostics
 
@@ -379,6 +297,8 @@ The server currently exposes **68 tools**. For AI agents, this is the current to
 `probe_network_readiness`, `diagnose_network_failure`, `inspect_network_policy`
 
 `probe_network_readiness` checks runtime connectivity, DNS, latency, and optional backend reachability. `diagnose_network_failure` starts from an observed failed request and attributes likely Android cleartext or iOS ATS release-policy blockers. `inspect_network_policy` remains the lower-level static checker for plain HTTP endpoints using decoded manifest, network-security-config, Info.plist, or readable APK/IPA ZIP artifact evidence. These tools do not proxy traffic or mutate app configuration.
+
+</details>
 
 For exact signatures and supported inputs/outputs, use `packages/mcp-server/src/server.ts` (the tool registry source of truth).
 
@@ -459,10 +379,6 @@ Detailed public planning references are maintained in `docs/delivery/roadmap.md`
 - License: [MIT](LICENSE)
 - Contributing guide: [CONTRIBUTING.md](CONTRIBUTING.md)
 - Changelog: [CHANGELOG.md](CHANGELOG.md)
-
-## Positioning
-
-This project is not another isolated test framework. It is an AI-facing orchestration layer that routes mobile E2E actions through shared platform adapters and framework profiles, with deterministic-first behavior and strict governance boundaries.
 
 ## Support This Project
 

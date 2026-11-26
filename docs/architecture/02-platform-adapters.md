@@ -41,7 +41,9 @@ flowchart TD
 | tap | `adb shell input tap <x> <y>` |
 | type text | `adb shell input text '<escaped>'` |
 | swipe | `adb shell input swipe <x1> <y1> <x2> <y2> <duration>` |
+| perform_gesture (partial) | `adb shell input swipe` / `tap` for `drag`, 2-point `draw`, and `double_tap` (multi-point `draw`, `pinch`, and `two_finger_tap` are unsupported on plain `adb`) |
 | screenshot | `adb exec-out screencap -p` |
+| record_screen | `adb shell screenrecord` (fixed-duration or non-blocking `start`/`stop`) |
 | hierarchy | `adb shell uiautomator dump /sdcard/ui.xml && adb shell cat /sdcard/ui.xml` |
 | logs | `adb logcat` |
 | back | `adb shell input keyevent 4` |
@@ -87,8 +89,18 @@ Environment variable override  → forced backend
 | tap | `axe tap -x <x> -y <y> --udid <udid>` |
 | type text | `axe type "<text>" --udid <udid>` |
 | swipe | `axe swipe --start-x <x1> --start-y <y1> --end-x <x2> --end-y <y2> --udid <udid>` |
+| perform_gesture (AXe v2.2+) | `axe draw` / `axe drag` / `axe gesture pinch\|double-tap\|two-finger-tap --udid <udid>` |
 | hierarchy | `axe describe-ui --udid <udid>` |
+| displays (dual-display detection) | `axe displays --udid <udid>` |
 | screenshot | `axe screenshot --udid <udid> --output <path>` |
+| record_screen | `axe record-video --udid <udid>` (with `xcrun simctl io <udid> recordVideo` fallback; background `start`/`stop` omits `--follow-active-display` to avoid exclusive lock contention) |
+| launch_app | `xcrun simctl launch` with `SIMCTL_CHILD_*` env injection (`launchEnv`), `launchArgs`, and `terminateRunning` |
+
+Persistent `axe serve` read/capture transport pool:
+
+- Non-HID read/capture commands (`describe-ui`, `displays`, `screenshot`, and `ping`) reuse a per-UDID persistent `axe serve` process pool with idle shutdown to reduce simulator inspection overhead.
+- Set `M2E_DISABLE_AXE_SERVE=1` to opt out and force one-shot `axe` CLI calls.
+- HID input commands (`tap`, `type`, `swipe`, `draw`, `drag`, `gesture`) remain one-shot invocations intentionally so `axe serve` does not accumulate `dtuhidd` virtual HID services in the simulator.
 
 ### Physical Device Commands (WDA — Phase 15+)
 

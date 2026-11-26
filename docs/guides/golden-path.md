@@ -2,6 +2,8 @@
 
 > **Canonical invocation notice**: Authoritative invocation rules and sequencing live in [AI Agent Invocation Guide](./ai-agent-invocation.zh-CN.md). This document covers only the front-door first-run path.
 
+> **Toolset prerequisite**: `mobile-e2e-mcp` defaults to `--toolset core` (20 high-frequency tools) to keep agent schema overhead small. The 7-step failure-intelligence golden path below uses `perform_action_with_evidence`, `explain_last_failure`, and `suggest_known_remediation`, which belong to the `full` toolset—start the server with `--toolset full` or `MOBILE_E2E_TOOLSET=full` before running this path. If you are on the default `core` toolset, jump to [默认 core 工具集首跑路径](#默认-core-工具集首跑路径无需切-full).
+
 本指南用于让新用户在不需要记住全部工具的情况下，按一条固定链路完成一次可观测闭环。
 
 ## 前门工具链（7 步）
@@ -127,6 +129,18 @@
 - 7 个调用全部返回结构化 `status` / `reasonCode`。
 - `start_session` 与 `end_session` 都返回同一 `sessionId`。
 - `perform_action_with_evidence` 返回 `data.outcome` 与证据字段（dry-run 预览也可）。
+
+## 默认 core 工具集首跑路径（无需切 full）
+
+如果你使用默认安装配置（未传 `--toolset full`），服务端暴露的是 **20 个 `core` 工具**。可以按下面 7 步直接完成首跑闭环：
+
+1. `doctor` — 检查宿主环境与在线设备/模拟器
+2. `describe_capabilities` — 查询目标平台能力边界与限制
+3. `start_session` — 启动受治理的可审计会话
+4. `launch_app` — 启动目标应用（iOS 模拟器支持 `launchEnv` / `launchArgs` / `terminateRunning`）
+5. `inspect_ui` / `audit_ui_surface` — 获取语义树并做结构化 UI 体检（支持 baseline diff）
+6. `tap_element` — 基于稳定定位点击目标元素并确认状态变化
+7. `end_session` — 结束会话并落盘执行时间线与证据
 
 ## Escape Hatch（保留低层能力）
 
