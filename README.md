@@ -101,6 +101,7 @@ Key features:
 - **Rule-based gating**: respects skip-page, skip-element, sampling, and risk-gating rules for safe exploration
 - **Interruption-aware evidence**: records blocked, interrupted, skipped, and failed traversal decisions with reasons so a run can be reviewed instead of treated as a raw pass/fail crawl
 - **Experimental horizontal fallback**: after vertical segments are exhausted, Explorer can probe horizontally scrollable content with bounded page-identity checks
+- **iOS/iPad hardening & project config**: SplitView/Popover presentation scoping, foreground pre-flight guard against SpringBoard/Dock/Spotlight drift, repeatable `--launch-env KEY=VALUE` injection, `.e2e/config.yaml` auto-loading, and read-only `--no-prompt --config` protection
 
 ### Output
 
@@ -351,7 +352,7 @@ The server currently exposes **68 tools**. For AI agents, this is the current to
 
 ### 3) Device & app control
 
-`list_devices`, `install_app`, `launch_app`, `terminate_app`, `describe_capabilities`, `doctor`
+`list_devices`, `install_app`, `launch_app` (supports iOS Simulator `launchEnv`, `launchArgs`, and `terminateRunning`), `terminate_app`, `describe_capabilities`, `doctor`
 
 ### 4) UI perception, targeting, and interaction
 
@@ -431,10 +432,11 @@ Key policy/config locations:
 - [docs/guides/ai-agent-invocation.zh-CN.md](docs/guides/ai-agent-invocation.zh-CN.md) — canonical AI-agent invocation guide
 - [docs/guides/policy-profiles.md](docs/guides/policy-profiles.md) — policy profile usage and escalation boundaries
 - [docs/engineering/ai-first-capability-expansion-guideline.md](docs/engineering/ai-first-capability-expansion-guideline.md) — feature expansion rules for AI-first harness capabilities
-- [docs/architecture/overview.md](docs/architecture/overview.md) — goals/scope/principles
-- [docs/architecture/architecture.md](docs/architecture/architecture.md) — reference architecture
-- [docs/architecture/capability-map.md](docs/architecture/capability-map.md) — capability taxonomy/maturity
-- [docs/architecture/governance-security.md](docs/architecture/governance-security.md) — governance/security model
+- [docs/architecture/01-system-architecture.md](docs/architecture/01-system-architecture.md) — system topology, contracts, and reliability
+- [docs/architecture/02-platform-adapters.md](docs/architecture/02-platform-adapters.md) — Android/iOS backend adapters
+- [docs/architecture/03-capability-model.md](docs/architecture/03-capability-model.md) — capability taxonomy and maturity levels
+- [docs/architecture/04-runtime-architecture.md](docs/architecture/04-runtime-architecture.md) — execution coordinator, fallback, and recovery
+- [docs/architecture/05-governance-security.md](docs/architecture/05-governance-security.md) — governance, policy, and security model
 - [docs/architecture/README.zh-CN.md](docs/architecture/README.zh-CN.md) — architecture navigation index (zh-CN)
 - [docs/architecture/session-orchestration-architecture.zh-CN.md](docs/architecture/session-orchestration-architecture.zh-CN.md) — session lease/scheduler/runtime orchestration
 - [docs/architecture/policy-engine-runtime-architecture.zh-CN.md](docs/architecture/policy-engine-runtime-architecture.zh-CN.md) — policy runtime/guard/scope mapping
