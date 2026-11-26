@@ -1,5 +1,12 @@
-import type { IosExecutionBackend, BackendProbeResult } from "./ios-backend-types.js";
+import type {
+  BackendProbeResult,
+  IosDragGestureParams,
+  IosDrawGestureParams,
+  IosExecutionBackend,
+  IosMultiTouchGestureParams,
+} from "./ios-backend-types.js";
 import { executeRunnerWithTestHooks } from "./runtime-shared.js";
+import { formatAxeSeconds } from "./ui-gesture-model.js";
 
 /**
  * IosExecutionBackend for iOS simulators using AXe CLI.
@@ -81,6 +88,114 @@ export class AxeSimulatorBackend implements IosExecutionBackend {
     }
     if (typeof swipe.postDelaySec === "number") {
       command.push("--post-delay", String(swipe.postDelaySec));
+    }
+    command.push("--udid", deviceId);
+    return command;
+  }
+
+  buildDrawCommand(deviceId: string, draw: IosDrawGestureParams): string[] {
+    const command = [
+      "axe",
+      "draw",
+      ...draw.points.map((pt) => `${pt.x},${pt.y}`),
+      "--duration",
+      formatAxeSeconds(draw.durationMs),
+    ];
+    if (draw.close) {
+      command.push("--close");
+    }
+    if (typeof draw.preDelayMs === "number" && draw.preDelayMs > 0) {
+      command.push("--pre-delay", formatAxeSeconds(draw.preDelayMs));
+    }
+    if (typeof draw.postDelayMs === "number" && draw.postDelayMs > 0) {
+      command.push("--post-delay", formatAxeSeconds(draw.postDelayMs));
+    }
+    command.push("--udid", deviceId);
+    return command;
+  }
+
+  buildDragCommand(deviceId: string, drag: IosDragGestureParams): string[] {
+    const command = [
+      "axe",
+      "drag",
+      "--start-x",
+      String(drag.start.x),
+      "--start-y",
+      String(drag.start.y),
+      "--end-x",
+      String(drag.end.x),
+      "--end-y",
+      String(drag.end.y),
+      "--duration",
+      formatAxeSeconds(drag.durationMs),
+    ];
+    if (typeof drag.steps === "number") {
+      command.push("--steps", String(drag.steps));
+    }
+    if (typeof drag.holdMs === "number") {
+      command.push("--hold", formatAxeSeconds(drag.holdMs));
+    }
+    if (typeof drag.preDelayMs === "number" && drag.preDelayMs > 0) {
+      command.push("--pre-delay", formatAxeSeconds(drag.preDelayMs));
+    }
+    if (typeof drag.postDelayMs === "number" && drag.postDelayMs > 0) {
+      command.push("--post-delay", formatAxeSeconds(drag.postDelayMs));
+    }
+    command.push("--udid", deviceId);
+    return command;
+  }
+
+  buildMultiTouchGestureCommand(deviceId: string, gesture: IosMultiTouchGestureParams): string[] {
+    let command: string[];
+    switch (gesture.type) {
+      case "pinch":
+        command = ["axe", "gesture", "pinch", "--scale", String(gesture.scale)];
+        if (gesture.center) {
+          command.push("-x", String(gesture.center.x), "-y", String(gesture.center.y));
+        }
+        if (typeof gesture.radius === "number") {
+          command.push("--radius", String(gesture.radius));
+        }
+        command.push("--duration", formatAxeSeconds(gesture.durationMs));
+        if (typeof gesture.delta === "number") {
+          command.push("--delta", String(gesture.delta));
+        }
+        break;
+      case "double_tap":
+        command = [
+          "axe",
+          "gesture",
+          "double-tap",
+          "-x",
+          String(gesture.point.x),
+          "-y",
+          String(gesture.point.y),
+        ];
+        if (typeof gesture.intervalMs === "number") {
+          command.push("--interval", formatAxeSeconds(gesture.intervalMs));
+        }
+        break;
+      case "two_finger_tap":
+        command = [
+          "axe",
+          "gesture",
+          "two-finger-tap",
+          "-x",
+          String(gesture.point1.x),
+          "-y",
+          String(gesture.point1.y),
+          "--x2",
+          String(gesture.point2.x),
+          "--y2",
+          String(gesture.point2.y),
+        ];
+        break;
+    }
+    if (typeof gesture.preDelayMs === "number" && gesture.preDelayMs > 0) {
+      command.push("--pre-delay", formatAxeSeconds(gesture.preDelayMs));
+    }
+    if (typeof gesture.postDelayMs === "number" && gesture.postDelayMs > 0) {
+      command.push("--post-delay", formatAxeSeconds(gesture.postDelayMs));
     }
     command.push("--udid", deviceId);
     return command;

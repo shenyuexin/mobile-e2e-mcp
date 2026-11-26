@@ -6,6 +6,11 @@ export interface BackAffordance {
   selectorLabels: string[];
   isSearchActiveLike?: boolean;
   isDialogLike?: boolean;
+  isPopoverLike?: boolean;
+  popoverFrame?: { x: number; y: number; width: number; height: number };
+  screenFrame?: { x: number; y: number; width: number; height: number };
+  hasDismissBackdrop?: boolean;
+  dismissButtonLabels?: string[];
 }
 
 export interface BacktrackTapSelector {
@@ -43,6 +48,8 @@ export interface BacktrackLadderContext {
   tryTopBarBackCandidates: () => Promise<boolean>;
   tryScreenSummaryBackAffordance: () => Promise<boolean>;
   tryNavBarCoordinateBack: () => Promise<boolean>;
+  tryPopoverDismissButtons?: (labels: string[]) => Promise<boolean>;
+  tryPopoverDismissTap?: (affordance: BackAffordance) => Promise<boolean>;
   logWarn: (message: string) => void;
   logBackFailureEvidence: () => Promise<void>;
 }
@@ -134,7 +141,7 @@ export async function trySelectorFamily(
 }
 
 export async function tryCancelCloseFamily(ctx: BacktrackLadderContext): Promise<boolean> {
-  for (const label of dedupeLabels(["Cancel", "Close"])) {
+  for (const label of dedupeLabels(["Cancel", "Close", "Dismiss"])) {
     if (
       await ctx.tryTapBackControl("tap_cancel_or_close:contentDesc", { contentDesc: label }) ||
       await ctx.tryTapBackControl("tap_cancel_or_close:text", { text: label })

@@ -71,6 +71,7 @@ import { measureIosPerformance } from "./tools/measure-ios-performance.js";
 import { navigateBack } from "./tools/navigate-back.js";
 import { performActionWithAutoRemediation } from "./tools/perform-action-with-auto-remediation.js";
 import { performActionWithEvidence } from "./tools/perform-action-with-evidence.js";
+import { performGesture } from "./tools/perform-gesture.js";
 import { persistSessionEvidenceCapture } from "./tools/persist-session-evidence.js";
 import { probeNetworkReadinessTool } from "./tools/probe-network-readiness.js";
 import { queryUi } from "./tools/query-ui.js";
@@ -817,6 +818,15 @@ const TOOL_DESCRIPTORS: ReadonlyArray<ToolDescriptor> = [
 		audit: { captureResultEvidence: false },
 	}),
 	defineToolDescriptor({
+		name: TOOL_NAMES.performGesture,
+		description:
+			"Perform canvas/multi-touch gestures (draw polyline stroke, drag, pinch, double_tap, two_finger_tap) with absolute or container-normalized coordinates. Full simulator support on iOS via AXe v2.2+; partial support on Android (drag, 2-point draw, double_tap via adb).",
+		handler: performGesture,
+		policy: { enforced: true, requiredScopes: ["write"] },
+		session: { required: true, requireResolvedSessionContext: true },
+		audit: { captureResultEvidence: false },
+	}),
+	defineToolDescriptor({
 		name: TOOL_NAMES.scrollAndTapElement,
 		description:
 			"Scroll Android UI containers until a target resolves, then tap the resolved element. iOS: use scroll_only → wait_for_ui → tap_element instead.",
@@ -945,7 +955,7 @@ const TOOL_DESCRIPTORS: ReadonlyArray<ToolDescriptor> = [
 	defineToolDescriptor({
 		name: TOOL_NAMES.recordScreen,
 		description:
-			"Record screen output on Android (adb) or iOS simulator (simctl) for a bounded duration.",
+			"Record screen output on Android (adb) or iOS simulator (axe/simctl) in fixed duration or non-blocking start/stop mode (with optional discardOnStop).",
 		handler: recordScreen,
 		policy: { enforced: true, requiredScopes: ["diagnostics"] },
 		session: { required: true, requireResolvedSessionContext: true },

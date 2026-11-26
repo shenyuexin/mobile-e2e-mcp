@@ -469,6 +469,7 @@ export async function tapWithMaestroTool(
 	const tapReasonCode = simulatorOnlyIdbError
 		? REASON_CODES.unsupportedOperation
 		: buildFailureReason(execution.stderr, execution.exitCode);
+	const trimmedStderr = execution.stderr.trim();
 	const tapSuggestions =
 		execution.exitCode === 0
 			? []
@@ -476,7 +477,10 @@ export async function tapWithMaestroTool(
 				? [
 						"Direct iOS tap failed. For simulators, verify axe is installed (brew install cameroncooke/axe/axe). For physical devices, verify WDA is running (iproxy 8100 8100 --udid <udid>).",
 					]
-				: [runtimeHooks.tapFailureSuggestion];
+				: [
+						runtimeHooks.tapFailureSuggestion,
+						...(trimmedStderr.length > 0 ? [`Command stderr: ${trimmedStderr.slice(0, 240)}`] : []),
+					];
 	return {
 		status: execution.exitCode === 0 ? "success" : "failed",
 		reasonCode: execution.exitCode === 0 ? REASON_CODES.ok : tapReasonCode,

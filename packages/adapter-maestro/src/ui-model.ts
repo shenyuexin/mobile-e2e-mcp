@@ -709,11 +709,21 @@ function selectDominantCandidate(matches: InspectUiMatch[]): InspectUiMatch | un
   const secondIsPeerExact = secondHasStrongSelector && secondCandidate.matchQuality === "exact";
   const bestHasExactResourceId = bestCandidate.matchQuality === "exact" && bestCandidate.matchedBy.includes("resourceId");
   const secondHasExactResourceId = secondCandidate.matchQuality === "exact" && secondCandidate.matchedBy.includes("resourceId");
+  const exactResourceIdMatches = matches.filter(
+    (m) =>
+      m.matchQuality === "exact" &&
+      m.matchedBy.includes("resourceId") &&
+      m.node.enabled !== false &&
+      !m.isOffScreen &&
+      (m.viewportOverlapPercent ?? 1) >= 0.25,
+  );
+  const uniqueExactResourceId =
+    bestHasExactResourceId && !secondHasExactResourceId && exactResourceIdMatches.length === 1;
   const topScore = bestCandidate.score ?? 0;
   const secondScore = secondCandidate.score ?? 0;
   const scoreDelta = topScore - secondScore;
 
-  if (scoreDelta < 3) {
+  if (scoreDelta < (uniqueExactResourceId ? 2 : 3)) {
     return undefined;
   }
 

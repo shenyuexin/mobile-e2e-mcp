@@ -1,4 +1,12 @@
-import type { AuditUiSurfaceData, AuditUiSurfaceInput, ToolResult } from "@mobile-e2e-mcp/contracts";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import path from "node:path";
+import type {
+  AuditUiSurfaceData,
+  AuditUiSurfaceInput,
+  ToolResult,
+  UiAuditBaselineDiff,
+  UiAuditBaselineFile,
+} from "@mobile-e2e-mcp/contracts";
 import { REASON_CODES } from "@mobile-e2e-mcp/contracts";
 import {
   buildDefaultDeviceId,
@@ -10,11 +18,70 @@ import {
 import { inspectUiWithMaestroTool } from "./ui-inspection-tools.js";
 import { parseAndroidUiHierarchyNodes, parseIosInspectNodes } from "./ui-model.js";
 import { resolveUiRuntimePlatformHooks } from "./ui-runtime-platform.js";
-import { auditUiNodes, buildUiAuditNextSuggestions } from "./ui-audit-model.js";
+import {
+  buildUiAuditBaselineSurface,
+  diffUiAuditAgainstBaseline,
+  mergeUiAuditBaselineFile,
+  parseUiAuditBaselineFile,
+} from "./ui-audit-baseline.js";
+import {
+  auditUiNodes,
+  buildUiAuditNextSuggestions,
+  type UiNodesAuditCoreResult,
+} from "./ui-audit-model.js";
 import { buildMissingPlatformSuggestion } from "./ui-tool-shared.js";
 
 export interface AuditUiSurfaceToolDeps {
   inspectUi?: typeof inspectUiWithMaestroTool;
+}
+
+async function applyUiAuditBaseline(
+  audit: UiNodesAuditCoreResult,
+  input: AuditUiSurfaceInput,
+): Promise<{ baselineDiff?: UiAuditBaselineDiff; configError?: string }> {
+  const baselinePathRaw = input.baselinePath?.trim();
+  if (!baselinePathRaw) {
+    return {};
+  }
+  const absPath = path.isAbsolute(baselinePathRaw)
+    ? baselinePathRaw
+    : path.resolve(resolveRepoPath(), baselinePathRaw);
+  const mode = input.baselineMode ?? "compare";
+
+  let existingFile: UiAuditBaselineFile | null = null;
+  try {
+    const raw = await readFile(absPath, "utf8");
+    const parsed = parseUiAuditBaselineFile(raw);
+    if (!parsed) {
+      return {
+        configError: `Invalid UI audit baseline file at '${absPath}'. Expected schemaVersion=1 JSON.`,
+      };
+    }
+    existingFile = parsed;
+  } catch (err) {
+    const code = (err as NodeJS.ErrnoException | undefined)?.code;
+    if (code !== "ENOENT") {
+      return {
+        configError: `Unable to read UI audit baseline file at '${absPath}': ${err instanceof Error ? err.message : String(err)}`,
+      };
+    }
+  }
+
+  const baselineUpdated = mode === "update" && !input.dryRun;
+  const baselineDiff = diffUiAuditAgainstBaseline(audit, existingFile, {
+    baselinePath: baselinePathRaw,
+    mode,
+    baselineUpdated,
+  });
+
+  if (baselineUpdated) {
+    const entry = buildUiAuditBaselineSurface(audit);
+    const merged = mergeUiAuditBaselineFile(existingFile, audit.surfaceName, entry);
+    await mkdir(path.dirname(absPath), { recursive: true });
+    await writeFile(absPath, `${JSON.stringify(merged, null, 2)}\n`, "utf8");
+  }
+
+  return { baselineDiff };
 }
 
 export async function auditUiSurfaceWithMaestroTool(
@@ -71,6 +138,27 @@ export async function auditUiSurfaceWithMaestroTool(
       minVisibleRatio: input.minVisibleRatio,
       i18nKeyPrefixes: input.i18nKeyPrefixes,
     });
+    const baselineResult = await applyUiAuditBaseline(audit, input);
+    if (baselineResult.configError) {
+      return {
+        status: "failed",
+        reasonCode: REASON_CODES.configurationError,
+        sessionId: input.sessionId,
+        durationMs: Date.now() - startTime,
+        attempts: 1,
+        artifacts: [],
+        data: {
+          dryRun: Boolean(input.dryRun),
+          runnerProfile,
+          outputPath: input.outputPath,
+          command: [],
+          exitCode: 0,
+          supportLevel: "full",
+          ...audit,
+        },
+        nextSuggestions: [baselineResult.configError],
+      };
+    }
     return {
       status: "success",
       reasonCode: REASON_CODES.ok,
@@ -86,8 +174,9 @@ export async function auditUiSurfaceWithMaestroTool(
         exitCode: 0,
         supportLevel: "full",
         ...audit,
+        ...(baselineResult.baselineDiff ? { baselineDiff: baselineResult.baselineDiff } : {}),
       },
-      nextSuggestions: buildUiAuditNextSuggestions(audit),
+      nextSuggestions: buildUiAuditNextSuggestions(audit, baselineResult.baselineDiff),
     };
   }
 
@@ -191,6 +280,28 @@ export async function auditUiSurfaceWithMaestroTool(
     i18nKeyPrefixes: input.i18nKeyPrefixes,
   });
 
+  const baselineResult = await applyUiAuditBaseline(audit, input);
+  if (baselineResult.configError) {
+    return {
+      status: "failed",
+      reasonCode: REASON_CODES.configurationError,
+      sessionId: input.sessionId,
+      durationMs: Date.now() - startTime,
+      attempts: inspectResult.attempts,
+      artifacts: inspectResult.artifacts,
+      data: {
+        dryRun: false,
+        runnerProfile: inspectResult.data.runnerProfile,
+        outputPath: inspectResult.data.outputPath,
+        command: inspectResult.data.command,
+        exitCode: inspectResult.data.exitCode,
+        supportLevel: "full",
+        ...audit,
+      },
+      nextSuggestions: [baselineResult.configError],
+    };
+  }
+
   return {
     status: "success",
     reasonCode: REASON_CODES.ok,
@@ -206,7 +317,8 @@ export async function auditUiSurfaceWithMaestroTool(
       exitCode: inspectResult.data.exitCode,
       supportLevel: "full",
       ...audit,
+      ...(baselineResult.baselineDiff ? { baselineDiff: baselineResult.baselineDiff } : {}),
     },
-    nextSuggestions: buildUiAuditNextSuggestions(audit),
+    nextSuggestions: buildUiAuditNextSuggestions(audit, baselineResult.baselineDiff),
   };
 }

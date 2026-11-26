@@ -74,6 +74,8 @@ import type {
 	NetworkProbeInput,
 	PerformActionWithEvidenceData,
 	PerformActionWithEvidenceInput,
+	PerformGestureData,
+	PerformGestureInput,
 	QueryUiData,
 	QueryUiInput,
 	RankFailureCandidatesData,
@@ -255,6 +257,7 @@ export interface MobileE2EMcpToolContractMap {
 		ScrollAndResolveUiTargetData
 	>;
 	scroll_only: ToolContract<ScrollOnlyInput, ScrollOnlyData>;
+	perform_gesture: ToolContract<PerformGestureInput, PerformGestureData>;
 	scroll_and_tap_element: ToolContract<
 		ScrollAndTapElementInput,
 		ScrollAndTapElementData

@@ -60,6 +60,13 @@ export {
   toClickableTarget,
   priorityScore,
 } from "./element-prioritizer.js";
+export {
+  inspectIosPresentationScope,
+  isPopoverDismissRegion,
+  extractOverlayDismissButtonLabels,
+  computeOutsidePopoverTapPoints,
+} from "./ios-presentation-scope.js";
+export type { IosPresentationScope, UiFrameRect } from "./ios-presentation-scope.js";
 
 // Page registry and dedup
 export { PageRegistry } from "./page-registry.js";

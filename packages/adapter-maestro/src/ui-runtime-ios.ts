@@ -415,6 +415,59 @@ export function createIosUiRuntimeHooks(): UiRuntimePlatformHooks {
 			const backend = router.selectBackend(deviceId);
 			return backend.buildSwipeCommand(deviceId, swipe);
 		},
+		buildGestureCommands: (deviceId, gesture) => {
+			const backend = router.selectBackend(deviceId);
+			if (gesture.type === "draw") {
+				if (backend.buildDrawCommand) {
+					return {
+						supported: true,
+						commands: [
+							backend.buildDrawCommand(deviceId, {
+								points: gesture.points,
+								durationMs: gesture.durationMs,
+								close: gesture.close,
+								preDelayMs: gesture.preDelayMs,
+								postDelayMs: gesture.postDelayMs,
+							}),
+						],
+						supportLevel: "full",
+						backendId: backend.backendId,
+					};
+				}
+			} else if (gesture.type === "drag") {
+				if (backend.buildDragCommand) {
+					return {
+						supported: true,
+						commands: [
+							backend.buildDragCommand(deviceId, {
+								start: gesture.start,
+								end: gesture.end,
+								durationMs: gesture.durationMs,
+								steps: gesture.steps,
+								holdMs: gesture.holdMs,
+								preDelayMs: gesture.preDelayMs,
+								postDelayMs: gesture.postDelayMs,
+							}),
+						],
+						supportLevel: "full",
+						backendId: backend.backendId,
+					};
+				}
+			} else if (backend.buildMultiTouchGestureCommand) {
+				return {
+					supported: true,
+					commands: [backend.buildMultiTouchGestureCommand(deviceId, gesture)],
+					supportLevel: "full",
+					backendId: backend.backendId,
+				};
+			}
+			return {
+				supported: false,
+				backendId: backend.backendId,
+				reason: `Selected iOS backend '${backend.backendId}' does not support perform_gesture (${gesture.type}).`,
+				suggestion: "Use an iOS simulator with AXe v2.2+ installed (brew install cameroncooke/axe/axe).",
+			};
+		},
 		buildBackPressedCommand: () => {
 			throw new Error(
 				"iOS does not support deterministic system-level back navigation. Use navigate_back with target: 'app' and a selector for app-level back.",

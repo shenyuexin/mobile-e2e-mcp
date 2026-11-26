@@ -16,33 +16,34 @@ import {
   resolveMcpToolset,
 } from "../src/index.ts";
 
-test("CORE_TOOL_NAMES contains 18 unique registered tools from TOOL_NAMES", () => {
+test("CORE_TOOL_NAMES contains 20 unique registered tools from TOOL_NAMES", () => {
   const registeredTools = new Set<string>(createServer().listTools());
   const toolNameValues = new Set<string>(Object.values(TOOL_NAMES));
 
-  assert.equal(CORE_TOOL_NAMES.length, 18);
+  assert.equal(CORE_TOOL_NAMES.length, 20);
   assert.equal(new Set(CORE_TOOL_NAMES).size, CORE_TOOL_NAMES.length);
+  assert.equal(CORE_TOOL_NAMES.includes(TOOL_NAMES.recordScreen), true);
   for (const name of CORE_TOOL_NAMES) {
     assert.equal(registeredTools.has(name), true, `Expected registered tool: ${name}`);
     assert.equal(toolNameValues.has(name), true, `Expected canonical TOOL_NAMES entry: ${name}`);
   }
 });
 
-test("buildToolListMetadata filters core (18) vs full (67) and defaults to full", () => {
+test("buildToolListMetadata filters core (20) vs full (68) and defaults to full", () => {
   const defaultTools = buildToolListMetadata();
   const fullTools = buildToolListMetadata(TOOLSET_NAMES.full);
   const coreTools = buildToolListMetadata(TOOLSET_NAMES.core);
 
-  assert.equal(defaultTools.length, 67);
-  assert.equal(fullTools.length, 67);
-  assert.equal(coreTools.length, 18);
+  assert.equal(defaultTools.length, 68);
+  assert.equal(fullTools.length, 68);
+  assert.equal(coreTools.length, 20);
   assert.deepEqual(
     coreTools.map((tool) => tool.name).sort(),
     [...CORE_TOOL_NAMES].sort(),
   );
   assert.equal(
     filterToolListByToolset(fullTools, TOOLSET_NAMES.core).length,
-    18,
+    20,
   );
 });
 

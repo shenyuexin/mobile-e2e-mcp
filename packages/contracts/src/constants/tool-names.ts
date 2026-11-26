@@ -66,6 +66,7 @@ export const TOOL_NAMES = {
   scrollAndResolveUiTarget: "scroll_and_resolve_ui_target",
   scrollOnly: "scroll_only",
   scrollAndTapElement: "scroll_and_tap_element",
+  performGesture: "perform_gesture",
   navigateBack: "navigate_back",
 
   // App lifecycle

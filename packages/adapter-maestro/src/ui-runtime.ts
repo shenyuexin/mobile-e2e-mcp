@@ -27,6 +27,7 @@ import {
 	executeRunner,
 	executeRunnerWithTestHooks,
 } from "./runtime-shared.js";
+import { executeAxeCommandWithPool } from "./axe-serve-pool.js";
 import {
 	resolveIdbCliPath,
 	resolveIdbCompanionPath,
@@ -567,14 +568,24 @@ export async function executeUiActionCommand(options: {
 		return result;
 	}
 
-	result.execution = await executeRunnerWithTestHooks(
-		options.command,
-		options.repoRoot,
-		process.env,
-		{
-			timeoutMs: DEFAULT_UI_ACTION_TIMEOUT_MS,
-		},
-	);
+	result.execution =
+		options.command[0] === "axe"
+			? await executeAxeCommandWithPool(
+					options.command,
+					options.repoRoot,
+					process.env,
+					{
+						timeoutMs: DEFAULT_UI_ACTION_TIMEOUT_MS,
+					},
+				)
+			: await executeRunnerWithTestHooks(
+					options.command,
+					options.repoRoot,
+					process.env,
+					{
+						timeoutMs: DEFAULT_UI_ACTION_TIMEOUT_MS,
+					},
+				);
 	return result;
 }
 
@@ -754,7 +765,7 @@ export async function captureIosUiSnapshot(
 
 	if (backend.backendId === "axe") {
 		command = backend.buildHierarchyCaptureCommand(deviceId);
-		execution = await executeRunner(command, repoRoot, process.env);
+		execution = await executeAxeCommandWithPool(command, repoRoot, process.env);
 	} else if (backend.backendId === "wda") {
 		command = backend.buildHierarchyCaptureCommand(deviceId);
 		const wdaBackend = backend as WdaRealDeviceBackend;

@@ -1,4 +1,4 @@
-import { resolveRepoPath } from "@mobile-e2e-mcp/adapter-maestro";
+import { cleanupSessionRuntimeResources, resolveRepoPath } from "@mobile-e2e-mcp/adapter-maestro";
 import { appendSessionTimelineEvent, loadSessionRecord, persistEndedSession, releaseLease } from "@mobile-e2e-mcp/core";
 import { REASON_CODES, type EndSessionData, type EndSessionInput, type ToolResult } from "@mobile-e2e-mcp/contracts";
 
@@ -8,6 +8,7 @@ export async function endSession(input: EndSessionInput): Promise<ToolResult<End
   const persisted = await persistEndedSession(repoRoot, input.sessionId, input.artifacts ?? []);
   let leaseArtifactPath: string | undefined;
   let leaseSuggestion: string | undefined;
+  let releasedDeviceLease = false;
   if (existing) {
     const released = await releaseLease(repoRoot, {
       sessionId: input.sessionId,
@@ -15,6 +16,7 @@ export async function endSession(input: EndSessionInput): Promise<ToolResult<End
       deviceId: existing.session.deviceId,
     });
     if (released.released) {
+      releasedDeviceLease = true;
       leaseArtifactPath = released.relativePath;
     } else if (released.reason === "owned_by_another") {
       leaseSuggestion = `Lease for ${existing.session.deviceId} is currently owned by another session.`;
@@ -27,6 +29,12 @@ export async function endSession(input: EndSessionInput): Promise<ToolResult<End
       });
     }
   }
+  await cleanupSessionRuntimeResources({
+    sessionId: input.sessionId,
+    platform: existing?.session.platform,
+    deviceId: existing?.session.deviceId,
+    releaseDeviceResources: releasedDeviceLease || !existing,
+  });
   const endedAt = persisted.endedAt ?? new Date().toISOString();
   const toolArtifacts = [
     ...(persisted.relativePath ? [persisted.relativePath] : []),

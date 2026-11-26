@@ -21,7 +21,7 @@ This repository is a pnpm monorepo that combines MCP tooling, adapter execution,
 }
 ```
 
-By default, the MCP stdio server exposes the **`core` toolset (18 high-frequency tools, including `audit_ui_surface`)** to minimize agent context overhead (~73% fewer schemas). To enable all **67 MCP tools** (recording, failure intelligence, network policy/diagnosis, performance, JS debug targets), pass `--toolset full` or set `MOBILE_E2E_TOOLSET=full`:
+By default, the MCP stdio server exposes the **`core` toolset (20 high-frequency tools, including `audit_ui_surface`, `perform_gesture`, and `record_screen`)** to minimize agent context overhead (~71% fewer schemas). To enable all **68 MCP tools** (recording, failure intelligence, network policy/diagnosis, performance, JS debug targets), pass `--toolset full` or set `MOBILE_E2E_TOOLSET=full`:
 
 ```json
 {
@@ -339,7 +339,7 @@ Tool registry/signature dispatch live in `packages/mcp-server/src/server.ts`, wh
 
 ## Complete MCP Tool Catalog (Current)
 
-The server currently exposes **66 tools**. For AI agents, this is the current tool surface.
+The server currently exposes **68 tools**. For AI agents, this is the current tool surface.
 
 ### 1) Session & lifecycle
 
@@ -355,11 +355,11 @@ The server currently exposes **66 tools**. For AI agents, this is the current to
 
 ### 4) UI perception, targeting, and interaction
 
-`inspect_ui`, `query_ui`, `resolve_ui_target`, `scroll_only`, `scroll_and_resolve_ui_target`, `wait_for_ui`, `wait_for_ui_stable`, `tap`, `tap_element`, `scroll_and_tap_element`, `type_text`, `type_into_element`, `navigate_back`
+`inspect_ui`, `query_ui`, `resolve_ui_target`, `audit_ui_surface` (with optional baseline ratchet diffing via `baselinePath` / `baselineMode`), `scroll_only`, `perform_gesture` (iOS simulator full via AXe `draw` / `drag` / `pinch` / `double_tap` / `two_finger_tap`; Android partial via `adb` `drag` / 2-point `draw` / `double_tap`), `scroll_and_resolve_ui_target`, `wait_for_ui`, `wait_for_ui_stable`, `tap`, `tap_element`, `scroll_and_tap_element`, `type_text`, `type_into_element`, `navigate_back` (iOS simulator AXe read/capture commands `describe-ui`, `displays`, `screenshot`, and `ping` reuse a per-UDID persistent `axe serve` transport pool with idle shutdown and `M2E_DISABLE_AXE_SERVE=1` opt-out; HID input commands remain one-shot to avoid `dtuhidd` virtual HID service accumulation)
 
 ### 5) Evidence, observability, and diagnostics
 
-`take_screenshot`, `record_screen`, `get_logs`, `get_crash_signals`, `collect_diagnostics`, `collect_debug_evidence`, `get_screen_summary`, `get_session_state`, `get_page_context`, `capture_js_console_logs`, `capture_js_network_events`, `list_js_debug_targets`, `capture_element_screenshot`, `compare_visual_baseline`
+`take_screenshot`, `record_screen` (fixed-duration or non-blocking `start`/`stop` with `discardOnStop` and 180s cap; iOS simulator via `axe record-video` with `simctl` fallback, Android via `adb shell screenrecord`, iOS physical device returns `UNSUPPORTED_OPERATION`), `get_logs`, `get_crash_signals`, `collect_diagnostics`, `collect_debug_evidence`, `get_screen_summary`, `get_session_state`, `get_page_context`, `capture_js_console_logs`, `capture_js_network_events`, `list_js_debug_targets`, `capture_element_screenshot`, `compare_visual_baseline`
 
 ### 6) Interruption handling
 

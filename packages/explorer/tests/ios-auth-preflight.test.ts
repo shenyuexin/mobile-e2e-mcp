@@ -93,4 +93,119 @@ describe("checkAuth iOS safety", () => {
     assert.equal(calls[0]?.method, "resetAppState");
     assert.equal(calls[1]?.method, "launchApp");
   });
+
+  it("passes immediately on iOS when foreground Application AXLabel identifies target app", async () => {
+    const calls: Array<{ method: string; args?: unknown }> = [];
+    const baseMcp = createMockMcp(calls);
+    const mcp: McpToolInterface = {
+      ...baseMcp,
+      inspectUi: (args) => {
+        calls.push({ method: "inspectUi", args });
+        return Promise.resolve({
+          status: "success" as const,
+          reasonCode: "OK" as const,
+          sessionId: "test-session",
+          durationMs: 1,
+          attempts: 1,
+          artifacts: [],
+          data: {
+            content: [{ type: "Application", AXLabel: "LinkNotes", children: [] }],
+          } as any,
+          nextSuggestions: [],
+        });
+      },
+    };
+
+    const result = await checkAuth(
+      {
+        auth: { type: "already-logged-in" },
+        appId: "com.timeone.linknotes",
+        platform: "ios-simulator",
+      },
+      mcp,
+      { iosForegroundPollAttempts: 3, iosForegroundPollDelayMs: 0 },
+    );
+
+    assert.equal(result.success, true);
+    assert.equal(calls.filter((c) => c.method === "inspectUi").length, 1);
+  });
+
+  it("polls and recovers on iOS when initial foreground is SpringBoard before settling on target app", async () => {
+    const calls: Array<{ method: string; args?: unknown }> = [];
+    const baseMcp = createMockMcp(calls);
+    let inspectCount = 0;
+    const mcp: McpToolInterface = {
+      ...baseMcp,
+      inspectUi: (args) => {
+        calls.push({ method: "inspectUi", args });
+        inspectCount += 1;
+        const appLabel = inspectCount === 1 ? "SpringBoard" : "LinkNotes";
+        return Promise.resolve({
+          status: "success" as const,
+          reasonCode: "OK" as const,
+          sessionId: "test-session",
+          durationMs: 1,
+          attempts: 1,
+          artifacts: [],
+          data: {
+            content: [{ type: "Application", AXLabel: appLabel, children: [] }],
+          } as any,
+          nextSuggestions: [],
+        });
+      },
+    };
+
+    const result = await checkAuth(
+      {
+        auth: { type: "already-logged-in" },
+        appId: "com.timeone.linknotes",
+        platform: "ios-simulator",
+      },
+      mcp,
+      { iosForegroundPollAttempts: 3, iosForegroundPollDelayMs: 0 },
+    );
+
+    assert.equal(result.success, true);
+    assert.equal(inspectCount, 2);
+  });
+
+  it("fails fast on iOS when foreground remains DockFolderViewService after launch", async () => {
+    const calls: Array<{ method: string; args?: unknown }> = [];
+    const baseMcp = createMockMcp(calls);
+    let inspectCount = 0;
+    const mcp: McpToolInterface = {
+      ...baseMcp,
+      inspectUi: (args) => {
+        calls.push({ method: "inspectUi", args });
+        inspectCount += 1;
+        return Promise.resolve({
+          status: "success" as const,
+          reasonCode: "OK" as const,
+          sessionId: "test-session",
+          durationMs: 1,
+          attempts: 1,
+          artifacts: [],
+          data: {
+            content: [{ type: "Application", AXLabel: "DockFolderViewService", children: [] }],
+          } as any,
+          nextSuggestions: [],
+        });
+      },
+    };
+
+    const result = await checkAuth(
+      {
+        auth: { type: "already-logged-in" },
+        appId: "com.timeone.linknotes",
+        platform: "ios-simulator",
+      },
+      mcp,
+      { iosForegroundPollAttempts: 3, iosForegroundPollDelayMs: 0 },
+    );
+
+    assert.equal(result.success, false);
+    assert.equal(inspectCount, 3);
+    assert.match(result.reason ?? "", /DockFolderViewService/);
+    assert.match(result.reason ?? "", /com\.timeone\.linknotes/);
+  });
 });

@@ -2,6 +2,7 @@ import type {
   AuditUiSurfaceData,
   InspectUiNode,
   Platform,
+  UiAuditBaselineDiff,
   UiAuditDuplicateIdFinding,
   UiAuditEdgeClipFinding,
   UiAuditFindingNode,
@@ -24,8 +25,6 @@ const INTERACTIVE_CLASS_NAMES = new Set([
   "textfield",
   "securetextfield",
   "searchfield",
-  "textview",
-  "textarea",
   "cell",
   "slider",
   "stepper",
@@ -49,8 +48,6 @@ const MISSING_ID_CLASS_NAMES = new Set([
   "textfield",
   "securetextfield",
   "searchfield",
-  "textview",
-  "textarea",
   "android.widget.button",
   "android.widget.imagebutton",
   "android.widget.edittext",
@@ -61,6 +58,10 @@ const MISSING_ID_CLASS_NAMES = new Set([
 
 const EDGE_CLIP_EXEMPT_CLASSES = new Set([
   "cell",
+  "textarea",
+  "textview",
+  "scrollview",
+  "webview",
   "recyclerview",
   "listview",
   "androidx.recyclerview.widget.recyclerview",
@@ -185,8 +186,22 @@ function resolveNodeLabel(node: InspectUiNode): string | undefined {
   return candidate && candidate.trim().length > 0 ? candidate.trim() : undefined;
 }
 
+const SYSTEM_SCROLLBAR_LABEL_PATTERN = /^(vertical|horizontal)\s+scroll\s*bar\b|^(垂直|水平)滚动条|^\d+\s*(pages?|页)$/i;
+
+function isSystemScrollBarNode(node: InspectUiNode): boolean {
+  const cls = (node.className ?? "").toLowerCase();
+  if (cls !== "slider" && cls !== "scrollbar") {
+    return false;
+  }
+  const label = resolveNodeLabel(node);
+  return Boolean(label && SYSTEM_SCROLLBAR_LABEL_PATTERN.test(label));
+}
+
 function isInteractiveNode(node: InspectUiNode): boolean {
   if (node.enabled === false) {
+    return false;
+  }
+  if (isSystemScrollBarNode(node)) {
     return false;
   }
   if (node.clickable) {
@@ -430,8 +445,27 @@ export function auditUiNodes(
   };
 }
 
-export function buildUiAuditNextSuggestions(report: UiNodesAuditCoreResult): string[] {
+export function buildUiAuditNextSuggestions(
+  report: UiNodesAuditCoreResult,
+  baselineDiff?: UiAuditBaselineDiff,
+): string[] {
   const suggestions: string[] = [];
+  if (baselineDiff?.baselineFound && baselineDiff.matchedSurface) {
+    if (baselineDiff.newIssueCounts.total > 0) {
+      const sampleFps = baselineDiff.newRegressions
+        .slice(0, 3)
+        .map((r) => r.fingerprint)
+        .join(", ");
+      suggestions.push(
+        `[ui-baseline] Detected +${baselineDiff.newIssueCounts.total} new regression(s) on '${report.surfaceName}' vs baseline (${sampleFps}).`,
+      );
+    }
+    if (baselineDiff.resolvedIssueCounts.total > 0) {
+      suggestions.push(
+        `[ui-baseline] Resolved ${baselineDiff.resolvedIssueCounts.total} baseline issue(s) on '${report.surfaceName}'; run baseline update mode to tighten the ratchet.`,
+      );
+    }
+  }
   if (report.edgeClipping.length > 0) {
     suggestions.push(`Inspect ${report.edgeClipping.length} edge-clipped interactive element(s) for layout/safe-area clipping.`);
   }

@@ -200,7 +200,7 @@ export const DEFAULT_EXPLORER_RULES: ExplorerRule[] = [
     reason: "Navigation controls should not be treated as content children during DFS expansion",
     source: "default",
     supportLevel: "ci-verified",
-    match: { elementLabelPattern: "^(Back|Cancel|Done|Close)$" },
+    match: { elementLabelPattern: "^(Back|Cancel|Done|Close|Dismiss)$" },
   },
   {
     id: "default.navigation.system-fonts-detail-back",
