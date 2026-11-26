@@ -20,6 +20,8 @@ import {
   generateFailureReviewJson,
   generateFailureReviewMarkdown,
 } from './failure-review.js';
+import { createRunComparison, loadRunArtifacts } from './diff-report.js';
+import { generateHtmlReport } from './html-report.js';
 import { updateIndex } from './index-manager.js';
 import { generateMarkdown } from './markdown.js';
 import { inferModules } from './modules.js';
@@ -62,6 +64,7 @@ export interface ReportOpts {
  * Writes the following to the output directory:
  * - summary.json — structured run data
  * - report.md — human-readable Markdown report
+ * - report.html — self-contained single-file HTML report (inline CSS/JS)
  * - failure-review.json / failure-review.md — focused failure diagnostics
  * - tree.txt — ASCII tree of discovered pages
  * - config.json — configuration snapshot
@@ -113,6 +116,26 @@ export async function generateReport(
   });
   writeFileSync(join(runDir, 'failure-review.json'), JSON.stringify(failureReview, null, 2), 'utf-8');
   writeFileSync(join(runDir, 'failure-review.md'), generateFailureReviewMarkdown(failureReview), 'utf-8');
+
+  // Generate report.html as a self-contained companion to report.md. It reuses
+  // the same diff/report renderer as the `diff` CLI with an empty baseline.
+  const audit = loadRunArtifacts(runDir).audit;
+  const comparison = createRunComparison({
+    runId,
+    pages,
+    failures,
+    failureReview,
+    audit,
+    dir: runDir,
+  });
+  writeFileSync(
+    join(runDir, 'report.html'),
+    generateHtmlReport(comparison, {
+      artifactDir: runDir,
+      outputPath: join(runDir, 'report.html'),
+    }),
+    'utf-8',
+  );
 
   // Generate tree.txt
   const asciiTree = generateAsciiTree(pages, opts.sampling?.details);
@@ -167,3 +190,21 @@ export { generateMermaidGraph, generateMermaidGraphLargeApp, escapeMermaidLabel,
 export { generateAsciiTree } from './ascii.js';
 export { updateIndex, loadIndex, findRunById, computeDiff } from './index-manager.js';
 export type { RunIndex, RunDiff } from './index-manager.js';
+export {
+  compareRunArtifacts,
+  computeRunDiff,
+  createRunComparison,
+  formatDiffMarkdown,
+  loadRunArtifacts,
+  parseAuditArtifact,
+} from './diff-report.js';
+export type {
+  AuditArtifactSnapshot,
+  DiffFailureExample,
+  FailurePatternDelta,
+  RunArtifacts,
+  RunComparison,
+  UiAuditDelta,
+} from './diff-report.js';
+export { escapeHtml, formatHtmlReport, generateHtmlReport } from './html-report.js';
+export type { HtmlReportOptions } from './html-report.js';

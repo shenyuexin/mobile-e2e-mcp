@@ -6,6 +6,8 @@ import { main as runDevCli } from "../dev-cli.js";
 import { buildToolListMetadata, createServer } from "../index.js";
 import { startMcpStdioServer } from "../mcp-stdio-server.js";
 import { parseToolsetFlag } from "../toolsets.js";
+import { executeAudit } from "./audit-command.js";
+import { executeDiff } from "./diff-command.js";
 import { executeDoctor } from "./doctor-command.js";
 import { executeInit } from "./init-command.js";
 import { loadProjectConfig, type ProjectE2EConfig } from "./project-config.js";
@@ -22,6 +24,8 @@ Usage:
   mobile-e2e-mcp init [options]                   Generate .e2e/config.yaml in current project
   mobile-e2e-mcp explore [options]                Run automatic page exploration
   mobile-e2e-mcp run [flowPath] [options]         Run a deterministic flow with session governance
+  mobile-e2e-mcp audit [options]                  Run a governed UI-surface audit with baseline gating
+  mobile-e2e-mcp diff <baseDir> <headDir> [opts]  Diff two Explorer runs (Markdown + self-contained HTML)
 
 Toolsets:
   --toolset core    Expose ${coreCount} high-frequency core tools (default; lowest context overhead)
@@ -34,7 +38,9 @@ Examples:
   mobile-e2e-mcp doctor                           Check host environment & booted devices
   mobile-e2e-mcp init --platform ios --app-id com.example.app --no-prompt
   mobile-e2e-mcp explore --app-id com.example.app --platform android --output ./explore-report
-  mobile-e2e-mcp run flows/smoke.yaml --dry-run`);
+  mobile-e2e-mcp run flows/smoke.yaml --dry-run
+  mobile-e2e-mcp audit --baseline-path .e2e/ui-baseline.json --fail-on-regression
+  mobile-e2e-mcp diff ./explore-report/base ./explore-report/head --markdown diff.md --html diff.html`);
 }
 
 function printStdioHelp(): void {
@@ -122,6 +128,8 @@ export interface UnifiedCliDependencies {
   executeDoctor: typeof executeDoctor;
   executeInit: typeof executeInit;
   executeRun: typeof executeRun;
+  executeAudit: typeof executeAudit;
+  executeDiff: typeof executeDiff;
   runDevCli: typeof runDevCli;
   createServer: typeof createServer;
   loadProjectConfig: typeof loadProjectConfig;
@@ -133,6 +141,8 @@ const defaultDeps: UnifiedCliDependencies = {
   executeDoctor,
   executeInit,
   executeRun,
+  executeAudit,
+  executeDiff,
   runDevCli,
   createServer,
   loadProjectConfig,
@@ -208,6 +218,14 @@ export async function runUnifiedCli(
 
   if (first === "run") {
     return resolvedDeps.executeRun(resolvedDeps.createServer(), rest, cwd);
+  }
+
+  if (first === "audit") {
+    return resolvedDeps.executeAudit(resolvedDeps.createServer(), rest, cwd);
+  }
+
+  if (first === "diff") {
+    return resolvedDeps.executeDiff(rest, {}, cwd);
   }
 
   if (first.startsWith("-")) {

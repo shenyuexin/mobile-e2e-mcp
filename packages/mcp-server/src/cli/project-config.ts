@@ -22,6 +22,13 @@ export interface ProjectE2EExplorerConfig {
   output?: string;
 }
 
+export interface ProjectE2EAuditConfig {
+  baselinePath?: string;
+  baselineMode?: "compare" | "update";
+  output?: string;
+  failOnRegression?: boolean;
+}
+
 export interface ProjectE2EConfig {
   version: 1;
   appId?: string;
@@ -35,6 +42,7 @@ export interface ProjectE2EConfig {
   launchEnv?: Record<string, string>;
   hooks?: ProjectE2EHooksConfig;
   explorer?: ProjectE2EExplorerConfig;
+  audit?: ProjectE2EAuditConfig;
 }
 
 const VALID_RUNNER_PROFILES = new Set<RunnerProfile>([
@@ -158,6 +166,26 @@ function coerceParsedRecord(rawObj: Record<string, unknown>): ProjectE2EConfig {
     if (Object.keys(explorer).length > 0) config.explorer = explorer;
   }
 
+  if (rawObj.audit && typeof rawObj.audit === "object" && !Array.isArray(rawObj.audit)) {
+    const auditObj = rawObj.audit as Record<string, unknown>;
+    const audit: ProjectE2EAuditConfig = {};
+    if (typeof auditObj.baselinePath === "string" && auditObj.baselinePath.length > 0) {
+      audit.baselinePath = auditObj.baselinePath;
+    }
+    if (auditObj.baselineMode === "compare" || auditObj.baselineMode === "update") {
+      audit.baselineMode = auditObj.baselineMode;
+    }
+    if (typeof auditObj.output === "string" && auditObj.output.length > 0) {
+      audit.output = auditObj.output;
+    }
+    if (typeof auditObj.failOnRegression === "boolean") {
+      audit.failOnRegression = auditObj.failOnRegression;
+    } else if (auditObj.failOnRegression === "true" || auditObj.failOnRegression === "false") {
+      audit.failOnRegression = auditObj.failOnRegression === "true";
+    }
+    if (Object.keys(audit).length > 0) config.audit = audit;
+  }
+
   return config;
 }
 
@@ -209,6 +237,16 @@ export function serializeProjectConfigYaml(config: ProjectE2EConfig): string {
     lines.push("  output: ./explorer-reports");
   }
 
+  if (config.audit && Object.keys(config.audit).length > 0) {
+    lines.push("audit:");
+    if (config.audit.baselinePath) lines.push(`  baselinePath: ${formatYamlScalar(config.audit.baselinePath)}`);
+    if (config.audit.baselineMode) lines.push(`  baselineMode: ${config.audit.baselineMode}`);
+    if (config.audit.output) lines.push(`  output: ${formatYamlScalar(config.audit.output)}`);
+    if (config.audit.failOnRegression !== undefined) {
+      lines.push(`  failOnRegression: ${config.audit.failOnRegression}`);
+    }
+  }
+
   lines.push("");
   return lines.join("\n");
 }
@@ -224,7 +262,7 @@ export function parseProjectConfigYaml(raw: string): ProjectE2EConfig {
   }
 
   const root: Record<string, unknown> = { version: 1 };
-  let activeSection: "launchEnv" | "hooks" | "explorer" | undefined;
+  let activeSection: "launchEnv" | "hooks" | "explorer" | "audit" | undefined;
 
   for (const rawLine of raw.split(/\r?\n/)) {
     const withoutComment = stripInlineComment(rawLine);
@@ -242,7 +280,7 @@ export function parseProjectConfigYaml(raw: string): ProjectE2EConfig {
     if (indent === 0) {
       activeSection = undefined;
       if (kv.value.length === 0) {
-        if (kv.key === "launchEnv" || kv.key === "hooks" || kv.key === "explorer") {
+        if (kv.key === "launchEnv" || kv.key === "hooks" || kv.key === "explorer" || kv.key === "audit") {
           activeSection = kv.key;
           if (!root[kv.key]) {
             root[kv.key] = {};
@@ -268,6 +306,8 @@ export function parseProjectConfigYaml(raw: string): ProjectE2EConfig {
         if (Number.isFinite(parsedDepth) && parsedDepth > 0) {
           sectionObj.maxDepth = Math.floor(parsedDepth);
         }
+      } else if (activeSection === "audit" && kv.key === "failOnRegression") {
+        sectionObj.failOnRegression = unquoted === "true";
       } else {
         sectionObj[kv.key] = unquoted;
       }

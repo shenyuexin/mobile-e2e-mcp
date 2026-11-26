@@ -126,6 +126,24 @@ export { normalizeScrollState } from "./types.js";
 
 // Report
 export { generateReport } from "./report.js";
+export {
+  compareRunArtifacts,
+  computeRunDiff,
+  createRunComparison,
+  formatDiffMarkdown,
+  loadRunArtifacts,
+  parseAuditArtifact,
+} from "./report/diff-report.js";
+export type {
+  AuditArtifactSnapshot,
+  DiffFailureExample,
+  FailurePatternDelta,
+  RunArtifacts,
+  RunComparison,
+  UiAuditDelta,
+} from "./report/diff-report.js";
+export { escapeHtml, formatHtmlReport, generateHtmlReport } from "./report/html-report.js";
+export type { HtmlReportOptions } from "./report/html-report.js";
 
 // Config & CLI (25-03)
 export {

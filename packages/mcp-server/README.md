@@ -22,7 +22,7 @@ npx -y @shenyuexin/mobile-e2e-mcp@latest --toolset full
 
 ## Unified CLI Commands
 
-The single package binary supports both MCP stdio serving and local CLI workflows (`stdio`, `doctor`, `init`, `explore`, `run`):
+The single package binary supports both MCP stdio serving and local CLI workflows (`stdio`, `doctor`, `init`, `explore`, `run`, `audit`, `diff`):
 
 ```bash
 # Check Android/iOS host tools and connected devices
@@ -36,7 +36,19 @@ npx -y @shenyuexin/mobile-e2e-mcp@latest explore --app-id com.example.app --plat
 
 # Run a deterministic flow inside a governed session
 npx -y @shenyuexin/mobile-e2e-mcp@latest run flows/smoke.yaml --dry-run
+
+# Governed UI audit (inherits .e2e/config.yaml; gate on regressions)
+npx -y @shenyuexin/mobile-e2e-mcp@latest audit \
+  --baseline-path .e2e/ui-baseline.json --baseline-mode compare --fail-on-regression --json
+
+# Diff two Explorer runs and emit PR-ready Markdown + self-contained HTML
+npx -y @shenyuexin/mobile-e2e-mcp@latest diff <baseDir> <headDir> \
+  --markdown diff.md --html diff.html --json --fail-on-regression
 ```
+
+`audit` options: `--platform`, `--device-id`, `--app-id`, `--baseline-path`, `--baseline-mode <compare|update>`, `--output`, `--config`, `--dry-run`, `--json`, `--fail-on-regression`, `--help`. It invokes `start_session` → `audit_ui_surface` → `end_session` and exits non-zero on regression/failure.
+
+`diff` options: `--markdown <path>`, `--html <path>`, `--json`, `--fail-on-regression`, `--help`. It reads `summary.json`, `failure-review.json`, and optional `audit*.json` from both run directories, computes page/status/path/failure/UI-audit deltas, and exits non-zero when `hasRegressions === true` and `--fail-on-regression` is set. Both commands reuse existing MCP tools — the registry remains 68 tools / 20 core tools.
 
 ## OpenCode MCP config
 

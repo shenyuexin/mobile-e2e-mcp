@@ -39,7 +39,7 @@
 
 ### 统一单入口 CLI
 
-单包二进制入口同时提供 MCP stdio 服务与本地 CLI 工作流（`stdio`、`doctor`、`init`、`explore`、`run`）：
+单包二进制入口同时提供 MCP stdio 服务与本地 CLI 工作流（`stdio`、`doctor`、`init`、`explore`、`run`、`audit`、`diff`）：
 
 ```bash
 # 检查本地 Android/iOS 工具链与已连接设备
@@ -50,7 +50,17 @@ npx -y @shenyuexin/mobile-e2e-mcp@latest init --platform ios --app-id com.exampl
 
 # 在受治理 session 内运行确定性 flow
 npx -y @shenyuexin/mobile-e2e-mcp@latest run flows/smoke.yaml --dry-run
+
+# 在受治理 session 内执行 UI 体检，并用基线回归作为 PR 门禁
+npx -y @shenyuexin/mobile-e2e-mcp@latest audit \
+  --baseline-path .e2e/ui-baseline.json --fail-on-regression
+
+# 对比两次 Explorer 运行，输出 PR Markdown 与自包含 HTML 报告
+npx -y @shenyuexin/mobile-e2e-mcp@latest diff ./explore-report/base ./explore-report/head \
+  --markdown diff.md --html diff.html --fail-on-regression
 ```
+
+`audit` 通过 `start_session` → `audit_ui_surface` → `end_session` 调用现有工具，默认从 `.e2e/config.yaml`（含 `audit:` 段）继承配置；设置 `--fail-on-regression` 后，一旦检测到基线回归即以非零码退出。`diff` 读取两次运行的 `summary.json`、`failure-review.json` 与可选的 `audit*.json`，配合 `--fail-on-regression` 即可作为零脚本 CI 质量门禁。两个命令都不新增 MCP 工具——注册表仍为 68 个工具 / 20 个核心工具。
 
 ## Explorer：核心产品面
 
@@ -88,6 +98,7 @@ Explorer 会生成一个包含结构化产物的目录：
 |------|-------------|
 | `tree.txt` | 所有已发现页面与导航路径的 ASCII 树 |
 | `report.md` | 人类可读的覆盖率报告，按模块分组 |
+| `report.html` | 自包含单文件 HTML 报告（内联 CSS/JS，无外部 CDN 依赖） |
 | `failure-review.md` | 人类可读的失败复盘，按失败模式分组并给出下一步建议 |
 | `failure-review.json` | 机器可消费的失败复盘摘要 |
 | `summary.json` | 机器可消费的指标与页面元数据 |

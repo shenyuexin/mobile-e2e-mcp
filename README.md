@@ -39,7 +39,7 @@ By default, the MCP stdio server exposes the **`core` toolset (20 high-frequency
 
 ### Unified CLI Commands
 
-The single package entrypoint supports both MCP stdio serving and local CLI workflows (`stdio`, `doctor`, `init`, `explore`, `run`):
+The single package entrypoint supports both MCP stdio serving and local CLI workflows (`stdio`, `doctor`, `init`, `explore`, `run`, `audit`, `diff`):
 
 ```bash
 # Check Android/iOS host tools and connected devices
@@ -50,7 +50,17 @@ npx -y @shenyuexin/mobile-e2e-mcp@latest init --platform ios --app-id com.exampl
 
 # Run a deterministic flow inside a governed session
 npx -y @shenyuexin/mobile-e2e-mcp@latest run flows/smoke.yaml --dry-run
+
+# Governed UI-surface audit with baseline ratcheting; gate a PR on regressions
+npx -y @shenyuexin/mobile-e2e-mcp@latest audit \
+  --baseline-path .e2e/ui-baseline.json --fail-on-regression
+
+# Diff two Explorer runs into PR Markdown + a self-contained HTML report
+npx -y @shenyuexin/mobile-e2e-mcp@latest diff ./explore-report/base ./explore-report/head \
+  --markdown diff.md --html diff.html --fail-on-regression
 ```
+
+`audit` wraps `audit_ui_surface` in `start_session` → `audit_ui_surface` → `end_session`, inherits defaults from `.e2e/config.yaml` (including an `audit:` section), and exits non-zero on a detected regression when `--fail-on-regression` is set. `diff` reads `summary.json`, `failure-review.json`, and optional `audit*.json` from both run directories; add `--fail-on-regression` for a zero-script CI quality gate. Neither command adds a new MCP tool — the registry stays at 68 tools / 20 core tools.
 
 ## Explorer: Primary Product Surface
 
@@ -88,6 +98,7 @@ Explorer writes fixed, reviewable artifacts:
 |------|-------------|
 | `tree.txt` | ASCII tree of all discovered pages and navigation paths |
 | `report.md` | Human-readable coverage report with module breakdown |
+| `report.html` | Self-contained single-file HTML report (inline CSS/JS, no CDN dependencies) |
 | `failure-review.md` | Human-readable failure triage with grouped patterns and suggested next actions |
 | `failure-review.json` | Machine-consumable failure triage summary |
 | `summary.json` | Machine-consumable metrics and page metadata |
