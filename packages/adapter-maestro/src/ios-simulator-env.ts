@@ -11,7 +11,7 @@ const DEFAULT_ENV_PROBE_TIMEOUT_MS = 3000;
 const DEFAULT_DISPLAYS_PROBE_TIMEOUT_MS = 2500;
 const IOS_SIMULATOR_UDID_PATTERN = /^[A-F0-9]{8}-[A-F0-9]{4}-[A-F0-9]{4}-[A-F0-9]{4}-[A-F0-9]{12}$/i;
 
-function isIosSimulatorUdid(deviceId: string): boolean {
+export function isIosSimulatorUdid(deviceId: string): boolean {
   return IOS_SIMULATOR_UDID_PATTERN.test(deviceId);
 }
 

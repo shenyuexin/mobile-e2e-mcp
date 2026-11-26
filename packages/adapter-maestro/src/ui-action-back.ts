@@ -17,7 +17,7 @@ import {
   loadHarnessSelection,
   resolveRepoPath,
 } from "./harness-config.js";
-import { parseUiBounds } from "./ui-model.js";
+import { parseIosInspectNodes, parseUiBounds, findIosBackButtonCandidate } from "./ui-model.js";
 import {
   captureIosUiRuntimeSnapshot,
   executeUiActionCommand,
@@ -46,6 +46,7 @@ export interface NavigateBackTestHooks {
     viewportHeight: number;
     navBarCenterY?: number;
   }>;
+  iosInspectNodes?: () => Promise<InspectUiNode[]>;
   tapBackButton?: () => Promise<ToolResult<TapElementData>>;
 }
 
@@ -263,6 +264,8 @@ interface IosBackTapContext {
   selector: NonNullable<NavigateBackInput["selector"]>;
   startTime: number;
   dryRun?: boolean;
+  executedStrategyOverride?: BackExecutionPath;
+  matchedBackLabel?: string;
 }
 
 async function navigateBackIosWithSelector(
@@ -292,7 +295,7 @@ async function navigateBackIosWithSelector(
       ...ctx.selector,
     });
 
-  const executedStrategy: BackExecutionPath = "ios_selector_tap";
+  const executedStrategy: BackExecutionPath = ctx.executedStrategyOverride ?? "ios_selector_tap";
 
   let postBackVerified = false;
   let postBackStableAfterMs: number | undefined;
@@ -341,6 +344,8 @@ async function navigateBackIosWithSelector(
       executedStrategy,
       supportLevel: tapResult.data?.supportLevel ?? "conditional",
       fallbackUsed: false,
+      ...(ctx.matchedBackLabel ? { matchedBackLabel: ctx.matchedBackLabel } : {}),
+      ...(executedStrategy === "ios_auto_nav_bar" ? { discoveredSelector: ctx.selector } : {}),
       command: Array.isArray(tapResult.data?.command)
         ? tapResult.data.command.join(" ")
         : undefined,
@@ -348,7 +353,10 @@ async function navigateBackIosWithSelector(
         ? tapResult.data.exitCode
         : null,
       stateChanged: "unknown",
-      capabilityNote: "iOS app back via selector-based back button tap.",
+      capabilityNote:
+        executedStrategy === "ios_auto_nav_bar"
+          ? `iOS app back via auto-discovered header button (${ctx.matchedBackLabel ?? "selector"}).`
+          : "iOS app back via selector-based back button tap.",
       postBackVerified,
       postBackStableAfterMs,
       postBackPageIdentity,
@@ -440,6 +448,7 @@ export async function navigateBackWithMaestroTool(
       nextSuggestions: ["Provide a deviceId or update the harness configuration."],
     };
   }
+  const resolvedDeviceId: string = deviceId;
 
   if (platform === "android") {
     const runtimeHooks = resolveUiRuntimePlatformHooks("android");
@@ -565,9 +574,11 @@ export async function navigateBackWithMaestroTool(
     });
   }
 
-  const iosStrategy = input.iosStrategy ?? "selector_tap";
-
-  if (iosStrategy === "edge_swipe") {
+  async function executeIosEdgeSwipeBack(options: {
+    fallbackUsed: boolean;
+    extraAttempts?: number;
+    fallbackReasonNote?: string;
+  }): Promise<ToolResult<NavigateBackData>> {
     const runtimeHooks = resolveUiRuntimePlatformHooks("ios");
     const executedStrategy: BackExecutionPath = "ios_edge_swipe";
     const waitForStable = input.postBackWaitForStable !== false;
@@ -579,7 +590,7 @@ export async function navigateBackWithMaestroTool(
         sessionId: input.sessionId,
         platform: "ios",
         runnerProfile,
-        deviceId,
+        deviceId: resolvedDeviceId,
       });
       preBackTreeHash = preBackState.data.screenSummary?.pageIdentity?.treeHash;
     }
@@ -592,7 +603,7 @@ export async function navigateBackWithMaestroTool(
       }
       : await resolveIosEdgeSwipeProbe({
         repoRoot,
-        deviceId,
+        deviceId: resolvedDeviceId,
         sessionId: input.sessionId,
         runnerProfile,
       });
@@ -601,7 +612,7 @@ export async function navigateBackWithMaestroTool(
     const commands: string[][] = [];
     try {
       for (const gesture of gestures) {
-        commands.push(runtimeHooks.buildSwipeCommand(deviceId, gesture));
+        commands.push(runtimeHooks.buildSwipeCommand(resolvedDeviceId, gesture));
       }
     } catch (error) {
       return {
@@ -609,14 +620,14 @@ export async function navigateBackWithMaestroTool(
         reasonCode: REASON_CODES.unsupportedOperation,
         sessionId: input.sessionId,
         durationMs: Date.now() - startTime,
-        attempts: 1,
+        attempts: 1 + (options.extraAttempts ?? 0),
         artifacts: [],
         data: {
           dryRun,
           target,
           executedStrategy,
           supportLevel: "conditional",
-          fallbackUsed: false,
+          fallbackUsed: options.fallbackUsed,
           stateChanged: false,
           capabilityNote: "iOS edge swipe back is unavailable with the current backend. Install axe (simulator) or use WDA (physical device) to enable swipe.",
         },
@@ -639,7 +650,7 @@ export async function navigateBackWithMaestroTool(
           target,
           executedStrategy,
           supportLevel: "conditional",
-          fallbackUsed: false,
+          fallbackUsed: options.fallbackUsed,
           command: commands[0]?.join(" "),
           exitCode: 0,
           stateChanged: "unknown",
@@ -689,7 +700,7 @@ export async function navigateBackWithMaestroTool(
         sessionId: input.sessionId,
         platform: "ios",
         runnerProfile,
-        deviceId,
+        deviceId: resolvedDeviceId,
         timeoutMs: input.verificationTimeoutMs ?? 5000,
       });
 
@@ -704,7 +715,7 @@ export async function navigateBackWithMaestroTool(
         sessionId: input.sessionId,
         platform: "ios",
         runnerProfile,
-        deviceId,
+        deviceId: resolvedDeviceId,
       });
       postBackTreeHash = postBackState.data.screenSummary?.pageIdentity?.treeHash;
       postBackPageIdentity = postBackState.data.screenSummary?.pageIdentity;
@@ -719,6 +730,11 @@ export async function navigateBackWithMaestroTool(
     }
 
     const noStateChange = stateChanged === false;
+    const baseNote = commandSucceeded
+      ? (noStateChange
+        ? "iOS left-edge swipe commands executed, but the page did not change; simulator CLI gesture injection is backend-limited."
+        : "iOS app back via left-edge swipe gesture.")
+      : "iOS edge swipe command failed to execute.";
 
     return {
       status: commandSucceeded ? (noStateChange ? "partial" : "success") : "failed",
@@ -727,23 +743,19 @@ export async function navigateBackWithMaestroTool(
         : REASON_CODES.adapterError,
       sessionId: input.sessionId,
       durationMs: Date.now() - startTime,
-      attempts: commandSucceeded && noStateChange ? commands.length : commands.indexOf(finalCommand) + 1,
+      attempts: (commandSucceeded && noStateChange ? commands.length : commands.indexOf(finalCommand) + 1) + (options.extraAttempts ?? 0),
       artifacts: [],
       data: {
         dryRun,
         target,
         executedStrategy,
         supportLevel: "conditional",
-        fallbackUsed: false,
+        fallbackUsed: options.fallbackUsed,
         command: finalCommand.join(" "),
         commandHistory: commands.map((command) => command.join(" ")),
         exitCode: outcome.exitCode,
         stateChanged,
-        capabilityNote: commandSucceeded
-          ? (noStateChange
-            ? "iOS left-edge swipe commands executed, but the page did not change; simulator CLI gesture injection is backend-limited."
-            : "iOS app back via left-edge swipe gesture.")
-          : "iOS edge swipe command failed to execute.",
+        capabilityNote: options.fallbackReasonNote ? `${options.fallbackReasonNote} ${baseNote}` : baseNote,
         postBackVerified,
         postBackStableAfterMs,
         postBackPageIdentity,
@@ -759,6 +771,91 @@ export async function navigateBackWithMaestroTool(
           : ["Verify the expected iOS screen transition with get_screen_summary or inspect_ui."])
         : [buildFailureReason(outcome.stderr, outcome.exitCode ?? -1)],
     };
+  }
+
+  const iosStrategy = input.iosStrategy ?? "selector_tap";
+
+  if (iosStrategy === "auto") {
+    if (dryRun) {
+      return {
+        status: "success",
+        reasonCode: REASON_CODES.ok,
+        sessionId: input.sessionId,
+        durationMs: Date.now() - startTime,
+        attempts: 1,
+        artifacts: [],
+        data: {
+          dryRun: true,
+          target,
+          executedStrategy: "ios_auto_nav_bar",
+          supportLevel: "conditional",
+          fallbackUsed: false,
+          stateChanged: "unknown",
+          capabilityNote: "iOS app back via auto-discovery (dry run): inspects top header for back/dismiss control and falls back once to edge swipe if unavailable.",
+        },
+        nextSuggestions: [
+          "Run navigate_back without dryRun to execute iOS auto-discovery back navigation.",
+        ],
+      };
+    }
+
+    let inspectNodes: InspectUiNode[] = [];
+    if (navigateBackTestHooks?.iosInspectNodes) {
+      inspectNodes = await navigateBackTestHooks.iosInspectNodes();
+    } else {
+      const snapshot = await captureIosUiRuntimeSnapshot(
+        repoRoot,
+        resolvedDeviceId,
+        input.sessionId,
+        runnerProfile,
+        undefined,
+        {
+          sessionId: input.sessionId,
+          platform: "ios",
+          runnerProfile,
+          deviceId: resolvedDeviceId,
+        },
+      );
+      if ("nodes" in snapshot) {
+        inspectNodes = snapshot.nodes;
+      }
+    }
+
+    const candidate = findIosBackButtonCandidate(inspectNodes);
+    if (candidate) {
+      const tapBackResult = await navigateBackIosWithSelector({
+        sessionId: input.sessionId,
+        deviceId: resolvedDeviceId,
+        runnerProfile,
+        startTime,
+        selector: candidate.selector,
+        dryRun: false,
+        postBackWaitForStable: input.postBackWaitForStable,
+        verificationTimeoutMs: input.verificationTimeoutMs,
+        executedStrategyOverride: "ios_auto_nav_bar",
+        matchedBackLabel: candidate.label,
+      });
+
+      const unchanged = tapBackResult.data.pageTreeHashUnchanged === true && input.postBackWaitForStable !== false;
+      if (tapBackResult.status === "success" && !unchanged) {
+        return tapBackResult;
+      }
+
+      return executeIosEdgeSwipeBack({
+        fallbackUsed: true,
+        extraAttempts: tapBackResult.attempts,
+        fallbackReasonNote: `Auto-discovered header control "${candidate.label}" did not transition screen; fell back to ios_edge_swipe.`,
+      });
+    }
+
+    return executeIosEdgeSwipeBack({
+      fallbackUsed: true,
+      fallbackReasonNote: "No unambiguous top-bar back or dismiss button was discovered; fell back to ios_edge_swipe.",
+    });
+  }
+
+  if (iosStrategy === "edge_swipe") {
+    return executeIosEdgeSwipeBack({ fallbackUsed: false });
   }
 
   return {
@@ -777,7 +874,7 @@ export async function navigateBackWithMaestroTool(
       capabilityNote: "iOS app back via selector_tap requires a selector to identify the back button.",
     },
     nextSuggestions: [
-      "Provide a selector for the iOS back button (e.g., contentDesc containing 'Back' or a known resourceId).",
+      "Provide a selector for the iOS back button (e.g., contentDesc containing 'Back' or a known resourceId), or set iosStrategy='auto'.",
       "Use inspect_ui to discover available back button selectors.",
     ],
   };

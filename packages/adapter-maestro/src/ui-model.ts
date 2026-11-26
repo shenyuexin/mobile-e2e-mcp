@@ -1102,3 +1102,130 @@ export function buildScrollOnlySwipeCoordinates(
     }
   }
 }
+
+export interface IosBackButtonCandidate {
+  node: InspectUiNode;
+  label: string;
+  selector: QueryUiSelector;
+  matchKind: "explicit_back" | "modal_dismiss" | "navbar_left_button";
+}
+
+function buildSelectorFromIosNode(node: InspectUiNode): { label: string; selector: QueryUiSelector } | undefined {
+  const resourceId = node.resourceId?.trim();
+  const contentDesc = node.contentDesc?.trim();
+  const text = node.text?.trim();
+  const label = text || contentDesc || resourceId;
+  if (!label) {
+    return undefined;
+  }
+  if (resourceId) {
+    return { label, selector: { resourceId } };
+  }
+  if (contentDesc) {
+    return { label, selector: { contentDesc } };
+  }
+  return { label, selector: { text } };
+}
+
+function isIosButtonLikeNode(node: InspectUiNode): boolean {
+  const classLower = (node.className ?? "").toLowerCase();
+  return node.clickable === true || classLower.includes("button");
+}
+
+function matchesExplicitBackLabel(candidateText: string): boolean {
+  const trimmed = candidateText.trim().toLowerCase();
+  if (!trimmed) {
+    return false;
+  }
+  if (/^(back|返回|chevron\.left|navigationbar\.back|backbutton)$/.test(trimmed)) {
+    return true;
+  }
+  return /(backbutton|back_button|nav_back|chevron\.left|navigationbar\.back)/.test(trimmed);
+}
+
+function matchesModalDismissLabel(candidateText: string): boolean {
+  return /^(close|dismiss|done|cancel|关闭|完成|取消)$/.test(candidateText.trim().toLowerCase());
+}
+
+/** Discover a deterministic top-bar back/dismiss button from parsed iOS UI nodes. */
+export function findIosBackButtonCandidate(nodes: InspectUiNode[]): IosBackButtonCandidate | undefined {
+  if (nodes.length === 0) {
+    return undefined;
+  }
+
+  const parsedEntries = nodes
+    .map((node) => ({ node, bounds: parseUiBounds(node.bounds) }))
+    .filter((entry): entry is { node: InspectUiNode; bounds: UiBounds } => entry.bounds !== undefined);
+
+  const viewportWidth = Math.max(
+    320,
+    parsedEntries.reduce((max, entry) => Math.max(max, entry.bounds.right), 390),
+  );
+  const viewportHeight = Math.max(
+    640,
+    parsedEntries.reduce((max, entry) => Math.max(max, entry.bounds.bottom), 844),
+  );
+
+  const headerMaxY = viewportHeight * 0.22;
+  const leftMaxX = viewportWidth * 0.45;
+  const headerButtons = parsedEntries.filter(
+    (entry) =>
+      entry.node.enabled !== false &&
+      isIosButtonLikeNode(entry.node) &&
+      entry.bounds.top <= headerMaxY,
+  );
+
+  for (const entry of headerButtons) {
+    if (entry.bounds.left > leftMaxX) {
+      continue;
+    }
+    const labels = [entry.node.text, entry.node.contentDesc, entry.node.resourceId].filter(
+      (value): value is string => Boolean(value && value.trim()),
+    );
+    if (labels.some(matchesExplicitBackLabel)) {
+      const built = buildSelectorFromIosNode(entry.node);
+      if (built) {
+        return { node: entry.node, ...built, matchKind: "explicit_back" };
+      }
+    }
+  }
+
+  for (const entry of headerButtons) {
+    const labels = [entry.node.text, entry.node.contentDesc, entry.node.resourceId].filter(
+      (value): value is string => Boolean(value && value.trim()),
+    );
+    if (labels.some(matchesModalDismissLabel)) {
+      const built = buildSelectorFromIosNode(entry.node);
+      if (built) {
+        return { node: entry.node, ...built, matchKind: "modal_dismiss" };
+      }
+    }
+  }
+
+  const navBars = parsedEntries.filter((entry) => {
+    const classLower = (entry.node.className ?? "").toLowerCase();
+    return (
+      (classLower.includes("navigationbar") || classLower.includes("nav bar") || classLower.includes("navigation bar")) &&
+      entry.bounds.top <= headerMaxY
+    );
+  });
+
+  if (navBars.length > 0) {
+    const navLeftButtons = headerButtons.filter((entry) =>
+      navBars.some(
+        (nav) =>
+          entry.bounds.top >= nav.bounds.top - 4 &&
+          entry.bounds.bottom <= nav.bounds.bottom + 4 &&
+          entry.bounds.left <= nav.bounds.left + nav.bounds.width * 0.35,
+      ),
+    );
+    if (navLeftButtons.length === 1) {
+      const built = buildSelectorFromIosNode(navLeftButtons[0].node);
+      if (built) {
+        return { node: navLeftButtons[0].node, ...built, matchKind: "navbar_left_button" };
+      }
+    }
+  }
+
+  return undefined;
+}

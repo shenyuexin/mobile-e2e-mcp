@@ -693,3 +693,237 @@ test("navigate_back iOS edge-swipe retries bounded gesture variants before no-st
   assert.equal(result.attempts, 4);
   assert.deepEqual(result.data.commandHistory, commands);
 });
+
+test("navigate_back iOS auto strategy supports dryRun", async () => {
+  const result = await navigateBackWithMaestro({
+    sessionId: "test-session",
+    platform: "ios",
+    deviceId: "ios-sim-1",
+    iosStrategy: "auto",
+    dryRun: true,
+  });
+
+  assert.equal(result.status, "success");
+  assert.equal(result.reasonCode, REASON_CODES.ok);
+  assert.equal(result.data.executedStrategy, "ios_auto_nav_bar");
+  assert.equal(result.data.supportLevel, "conditional");
+  assert.equal(result.data.fallbackUsed, false);
+});
+
+test("navigate_back iOS auto strategy discovers top-left back button deterministically", async () => {
+  let summaryCalls = 0;
+  let swipeCalled = false;
+  const hooks: NavigateBackTestHooks = {
+    iosInspectNodes: async () => [
+      {
+        className: "NavigationBar",
+        bounds: "[0,44][390,96]",
+        clickable: false,
+        enabled: true,
+        scrollable: false,
+      },
+      {
+        className: "Button",
+        text: "Back",
+        contentDesc: "Back",
+        resourceId: "nav.backButton",
+        bounds: "[8,48][64,92]",
+        clickable: true,
+        enabled: true,
+        scrollable: false,
+      },
+    ],
+    getScreenSummary: async (input) => {
+      summaryCalls += 1;
+      const pre = summaryCalls === 1;
+      return {
+        status: "success",
+        reasonCode: REASON_CODES.ok,
+        sessionId: input.sessionId,
+        durationMs: 1,
+        attempts: 1,
+        artifacts: [],
+        data: {
+          dryRun: false,
+          runnerProfile: input.runnerProfile,
+          outputPath: "/tmp/test.json",
+          command: [],
+          exitCode: 0,
+          supportLevel: "full",
+          summarySource: "ui_only",
+          screenSummary: {
+            appPhase: "catalog",
+            readiness: "ready",
+            blockingSignals: [],
+            pageIdentity: {
+              treeHash: pre ? "detail-hash" : "root-hash",
+              visibleElementCount: 12,
+              identityConfidence: 0.9,
+            },
+          },
+        },
+        nextSuggestions: [],
+      };
+    },
+    waitForUiStable: async () => ({
+      status: "success",
+      reasonCode: REASON_CODES.ok,
+      sessionId: "test-session",
+      durationMs: 50,
+      attempts: 1,
+      artifacts: [],
+      data: {
+        dryRun: false,
+        runnerProfile: "phase1",
+        stable: true,
+        polls: 1,
+        stableAfterMs: 100,
+        stableFingerprint: "fp",
+        confidence: 0.9,
+        stabilityBasis: "visible-tree",
+        timeoutMs: 5000,
+        intervalMs: 250,
+        consecutiveStable: 2,
+      },
+      nextSuggestions: [],
+    }),
+    tapBackButton: async () => ({
+      status: "success",
+      reasonCode: REASON_CODES.ok,
+      sessionId: "test-session",
+      durationMs: 20,
+      attempts: 1,
+      artifacts: [],
+      data: {
+        dryRun: false,
+        runnerProfile: "phase1",
+        query: { resourceId: "nav.backButton" },
+        matchCount: 1,
+        resolution: {} as any,
+        matchedNode: {} as any,
+        resolvedBounds: {} as any,
+        resolvedX: 36,
+        resolvedY: 70,
+        command: ["axe", "tap", "--point", "36,70"],
+        exitCode: 0,
+        supportLevel: "conditional",
+      },
+      nextSuggestions: [],
+    }),
+    executeSwipeCommand: async () => {
+      swipeCalled = true;
+      return { exitCode: 0, stderr: "", stdout: "" };
+    },
+  };
+
+  setNavigateBackTestHooksForTesting(hooks);
+
+  const result = await navigateBackWithMaestro({
+    sessionId: "test-session",
+    platform: "ios",
+    deviceId: "ios-sim-1",
+    iosStrategy: "auto",
+  });
+
+  assert.equal(swipeCalled, false, "should not edge-swipe when auto back tap succeeded");
+  assert.equal(result.status, "success");
+  assert.equal(result.data.executedStrategy, "ios_auto_nav_bar");
+  assert.equal(result.data.fallbackUsed, false);
+  assert.equal(result.data.matchedBackLabel, "Back");
+  assert.deepEqual(result.data.discoveredSelector, { resourceId: "nav.backButton" });
+});
+
+test("navigate_back iOS auto strategy falls back once to edge_swipe when no back button exists", async () => {
+  let swipeCalls = 0;
+  let summaryCalls = 0;
+  const hooks: NavigateBackTestHooks = {
+    iosInspectNodes: async () => [
+      {
+        className: "StaticText",
+        text: "Fullscreen Canvas",
+        bounds: "[20,200][370,240]",
+        clickable: false,
+        enabled: true,
+        scrollable: false,
+      },
+    ],
+    iosEdgeSwipeProbe: async () => ({
+      viewportWidth: 390,
+      viewportHeight: 844,
+      navBarCenterY: undefined,
+    }),
+    executeSwipeCommand: async () => {
+      swipeCalls += 1;
+      return { exitCode: 0, stderr: "", stdout: "" };
+    },
+    waitForUiStable: async () => ({
+      status: "success",
+      reasonCode: REASON_CODES.ok,
+      sessionId: "test-session",
+      durationMs: 50,
+      attempts: 1,
+      artifacts: [],
+      data: {
+        dryRun: false,
+        runnerProfile: "phase1",
+        stable: true,
+        polls: 1,
+        stableAfterMs: 100,
+        stableFingerprint: "fp",
+        confidence: 0.9,
+        stabilityBasis: "visible-tree",
+        timeoutMs: 5000,
+        intervalMs: 250,
+        consecutiveStable: 2,
+      },
+      nextSuggestions: [],
+    }),
+    getScreenSummary: async (input) => {
+      summaryCalls += 1;
+      const pre = summaryCalls === 1;
+      return {
+        status: "success",
+        reasonCode: REASON_CODES.ok,
+        sessionId: input.sessionId,
+        durationMs: 1,
+        attempts: 1,
+        artifacts: [],
+        data: {
+          dryRun: false,
+          runnerProfile: input.runnerProfile,
+          outputPath: "/tmp/test.json",
+          command: [],
+          exitCode: 0,
+          supportLevel: "full",
+          summarySource: "ui_only",
+          screenSummary: {
+            appPhase: "catalog",
+            readiness: "ready",
+            blockingSignals: [],
+            pageIdentity: {
+              treeHash: pre ? "page-a" : "page-b",
+              visibleElementCount: 10,
+              identityConfidence: 0.9,
+            },
+          },
+        },
+        nextSuggestions: [],
+      };
+    },
+  };
+
+  setNavigateBackTestHooksForTesting(hooks);
+
+  const result = await navigateBackWithMaestro({
+    sessionId: "test-session",
+    platform: "ios",
+    deviceId: "ios-sim-1",
+    iosStrategy: "auto",
+  });
+
+  assert.equal(swipeCalls, 1);
+  assert.equal(result.status, "success");
+  assert.equal(result.data.executedStrategy, "ios_edge_swipe");
+  assert.equal(result.data.fallbackUsed, true);
+  assert.match(result.data.capabilityNote ?? "", /fell back to ios_edge_swipe/);
+});

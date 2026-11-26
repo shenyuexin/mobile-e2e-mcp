@@ -1,14 +1,85 @@
 import { ACTION_TYPES } from "@mobile-e2e-mcp/contracts";
 import { CLI_COMMANDS } from "./constants/cli-commands.js";
 import { REASON_CODES } from "@mobile-e2e-mcp/contracts";
-import type { UiRuntimePlatformHooks } from "./ui-runtime-platform.js";
+import { executeRunnerWithTestHooks } from "./runtime-shared.js";
+import type { UiKeyboardStateProbe, UiKeyboardVisibility, UiRuntimePlatformHooks } from "./ui-runtime-platform.js";
 import { buildAndroidUiDumpCommands } from "./ui-runtime.js";
+
+const ANDROID_KEYBOARD_PROBE_TIMEOUT_MS = 3000;
+
+export function buildAndroidKeyboardStateCommand(deviceId: string): string[] {
+  return [CLI_COMMANDS.adb, "-s", deviceId, "shell", "dumpsys", "input_method"];
+}
+
+export function classifyAndroidKeyboardState(inputMethodDump: string): {
+  visibility: UiKeyboardVisibility;
+  reason: string;
+} {
+  const normalized = inputMethodDump.toLowerCase();
+  if (
+    /\bminputshown\s*=\s*true\b/i.test(inputMethodDump) ||
+    /\bmisinputviewshown\s*=\s*true\b/i.test(inputMethodDump) ||
+    /\binputshown\s*=\s*true\b/i.test(inputMethodDump) ||
+    /\bimewindowvis\s*=\s*0x[1-9a-f]/i.test(inputMethodDump)
+  ) {
+    return { visibility: "visible", reason: "input_method_visible" };
+  }
+  if (
+    /\bminputshown\s*=\s*false\b/i.test(inputMethodDump) ||
+    /\bmisinputviewshown\s*=\s*false\b/i.test(inputMethodDump) ||
+    /\binputshown\s*=\s*false\b/i.test(inputMethodDump) ||
+    /\bimewindowvis\s*=\s*0x0\b/i.test(inputMethodDump)
+  ) {
+    return { visibility: "hidden", reason: "input_method_hidden" };
+  }
+  if (normalized.includes("input method") || normalized.includes("ime")) {
+    return { visibility: "unknown", reason: "input_method_state_ambiguous" };
+  }
+  return { visibility: "unknown", reason: "input_method_state_unavailable" };
+}
+
+export function extractAndroidImeType(inputMethodDump: string): string | undefined {
+  const match = /\bmCurId=([^\s]+)/i.exec(inputMethodDump);
+  return match?.[1]?.trim() || undefined;
+}
+
+export async function probeAndroidKeyboardState(params: {
+  repoRoot: string;
+  deviceId: string;
+}): Promise<UiKeyboardStateProbe> {
+  const command = buildAndroidKeyboardStateCommand(params.deviceId);
+  const execution = await executeRunnerWithTestHooks(
+    command,
+    params.repoRoot,
+    process.env,
+    { timeoutMs: ANDROID_KEYBOARD_PROBE_TIMEOUT_MS },
+  );
+  const classification =
+    execution.exitCode === 0
+      ? classifyAndroidKeyboardState(execution.stdout)
+      : { visibility: "unknown" as const, reason: "input_method_probe_failed" };
+  const imeType = execution.exitCode === 0 ? extractAndroidImeType(execution.stdout) : undefined;
+  return {
+    checked: true,
+    platform: "android",
+    command,
+    exitCode: execution.exitCode,
+    ...(imeType ? { imeType } : {}),
+    ...classification,
+  };
+}
+
+export async function settleBeforeAndroidKeyboardRecheck(): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, 300));
+}
 
 export function createAndroidUiRuntimeHooks(): UiRuntimePlatformHooks {
   return {
     platform: "android",
     requiresProbe: false,
     probeFailureReasonCode: REASON_CODES.configurationError,
+    probeKeyboardState: probeAndroidKeyboardState,
+    settleBeforeKeyboardRecheck: settleBeforeAndroidKeyboardRecheck,
     buildTapCommand: (deviceId, x, y) => [CLI_COMMANDS.adb, "-s", deviceId, "shell", "input", ACTION_TYPES.tap, String(x), String(y)],
     buildBackPressedCommand: (deviceId) => [CLI_COMMANDS.adb, "-s", deviceId, "shell", "input", "keyevent", "4"],
     buildTypeTextCommand: (deviceId, text) => [CLI_COMMANDS.adb, "-s", deviceId, "shell", "input", "text", text.replaceAll(" ", "%s")],

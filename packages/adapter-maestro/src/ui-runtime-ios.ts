@@ -1,7 +1,9 @@
 import type { InspectUiNode } from "@mobile-e2e-mcp/contracts";
 import { ACTION_TYPES, REASON_CODES } from "@mobile-e2e-mcp/contracts";
+import { CLI_COMMANDS } from "./constants/cli-commands.js";
 import { getIosBackendRouter } from "./ios-backend-router.js";
-import { buildFailureReason } from "./runtime-shared.js";
+import { isIosSimulatorUdid, parseAppleKeyboardsOutput } from "./ios-simulator-env.js";
+import { buildFailureReason, executeRunnerWithTestHooks } from "./runtime-shared.js";
 import {
 	buildIosNativeLocatorCandidate,
 	extractIosEditableNodeValue,
@@ -11,6 +13,8 @@ import {
 } from "./ui-model.js";
 import { executeUiActionCommand } from "./ui-runtime.js";
 import type {
+	UiKeyboardStateProbe,
+	UiKeyboardVisibility,
 	UiResolvedPointVerificationParams,
 	UiResolvedPointVerificationResult,
 	UiRuntimePlatformHooks,
@@ -371,6 +375,105 @@ export async function verifyTypedIosPostconditionWithHooks(
 	};
 }
 
+const IOS_KEYBOARD_PROBE_TIMEOUT_MS = 3000;
+const IOS_APPLE_KEYBOARDS_TIMEOUT_MS = 1500;
+
+export function classifyIosKeyboardStateFromNodes(
+	nodes: InspectUiNode[],
+	primaryKeyboard?: string,
+): { visibility: UiKeyboardVisibility; reason: string; imeType?: string } {
+	if (nodes.length === 0) {
+		return {
+			visibility: "unknown",
+			reason: "ios_keyboard_hierarchy_unavailable",
+			...(primaryKeyboard ? { imeType: primaryKeyboard } : {}),
+		};
+	}
+
+	const hasKeyboardNode = nodes.some((node) => {
+		const classLower = (node.className ?? "").toLowerCase();
+		if (classLower.includes("keyboard")) {
+			return true;
+		}
+		const labelLower = (node.text ?? node.contentDesc ?? "").trim().toLowerCase();
+		return (
+			labelLower === "next keyboard" ||
+			labelLower === "dismiss keyboard" ||
+			labelLower === "dictation" ||
+			labelLower === "emoji"
+		);
+	});
+
+	if (hasKeyboardNode) {
+		return {
+			visibility: "visible",
+			reason: "ios_keyboard_hierarchy_visible",
+			...(primaryKeyboard ? { imeType: primaryKeyboard } : {}),
+		};
+	}
+
+	return {
+		visibility: "hidden",
+		reason: "ios_keyboard_hierarchy_hidden",
+		...(primaryKeyboard ? { imeType: primaryKeyboard } : {}),
+	};
+}
+
+export async function probeIosKeyboardState(params: {
+	repoRoot: string;
+	deviceId: string;
+}): Promise<UiKeyboardStateProbe> {
+	const router = getIosBackendRouter();
+	const backend = router.selectBackend(params.deviceId);
+	const command = backend.buildHierarchyCaptureCommand(params.deviceId);
+
+	const hierarchyExec = await executeRunnerWithTestHooks(
+		command,
+		params.repoRoot,
+		process.env,
+		{ timeoutMs: IOS_KEYBOARD_PROBE_TIMEOUT_MS },
+	);
+
+	let primaryKeyboard: string | undefined;
+	if (isIosSimulatorUdid(params.deviceId)) {
+		try {
+			const imeExec = await executeRunnerWithTestHooks(
+				[CLI_COMMANDS.xcrun, "simctl", "spawn", params.deviceId, "defaults", "read", "-g", "AppleKeyboards"],
+				params.repoRoot,
+				process.env,
+				{ timeoutMs: IOS_APPLE_KEYBOARDS_TIMEOUT_MS },
+			);
+			if (imeExec.exitCode === 0) {
+				primaryKeyboard = parseAppleKeyboardsOutput(imeExec.stdout)[0];
+			}
+		} catch {
+			// Best-effort IME metadata; never block typing on simulator defaults query.
+		}
+	}
+
+	if (hierarchyExec.exitCode !== 0) {
+		return {
+			checked: true,
+			platform: "ios",
+			visibility: "unknown",
+			reason: "ios_keyboard_probe_failed",
+			...(primaryKeyboard ? { imeType: primaryKeyboard } : {}),
+			command,
+			exitCode: hierarchyExec.exitCode,
+		};
+	}
+
+	const nodes = parseIosInspectNodes(hierarchyExec.stdout);
+	const classification = classifyIosKeyboardStateFromNodes(nodes, primaryKeyboard);
+	return {
+		checked: true,
+		platform: "ios",
+		...classification,
+		command,
+		exitCode: hierarchyExec.exitCode,
+	};
+}
+
 export function createIosUiRuntimeHooks(): UiRuntimePlatformHooks {
 	const router = getIosBackendRouter();
 
@@ -378,6 +481,7 @@ export function createIosUiRuntimeHooks(): UiRuntimePlatformHooks {
 		platform: "ios",
 		requiresProbe: true,
 		probeFailureReasonCode: REASON_CODES.configurationError,
+		probeKeyboardState: probeIosKeyboardState,
 		buildTapCommand: (deviceId, x, y) => {
 			const backend = router.selectBackend(deviceId);
 			return backend.buildTapCommand(deviceId, x, y);

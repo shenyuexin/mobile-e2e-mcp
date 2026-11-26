@@ -10,13 +10,15 @@
     "target": { "type": "string", "enum": ["app", "system"] },
     "executedStrategy": {
       "type": "string",
-      "enum": ["android_keyevent", "ios_selector_tap", "ios_edge_swipe", "unsupported"]
+      "enum": ["android_keyevent", "ios_selector_tap", "ios_auto_nav_bar", "ios_edge_swipe", "unsupported"]
     },
     "supportLevel": {
       "type": "string",
       "enum": ["full", "conditional", "partial", "unsupported"]
     },
     "fallbackUsed": { "type": "boolean" },
+    "matchedBackLabel": { "type": ["string", "null"] },
+    "discoveredSelector": { "type": "object" },
     "command": { "type": ["string", "null"] },
     "commandHistory": {
       "type": "array",

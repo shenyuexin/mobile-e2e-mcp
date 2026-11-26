@@ -44,6 +44,18 @@ export interface UiTypedPostconditionVerificationParams extends UiResolvedPointV
   typedValue: string;
 }
 
+export type UiKeyboardVisibility = "visible" | "hidden" | "unknown";
+
+export interface UiKeyboardStateProbe {
+  checked: boolean;
+  platform: Platform;
+  visibility: UiKeyboardVisibility;
+  reason: string;
+  imeType?: string;
+  command: string[];
+  exitCode: number | null;
+}
+
 export interface UiRuntimePlatformHooks {
   platform: Platform;
   requiresProbe: boolean;
@@ -54,6 +66,8 @@ export interface UiRuntimePlatformHooks {
   verifyResolvedPoint?: (params: UiResolvedPointVerificationParams) => Promise<UiResolvedPointVerificationResult>;
   verifyTypedPostcondition?: (params: UiTypedPostconditionVerificationParams) => Promise<UiResolvedPointVerificationResult>;
   settleAfterFocus?: (params: { repoRoot: string; deviceId: string; settleDelayMs?: number }) => Promise<void>;
+  probeKeyboardState?: (params: { repoRoot: string; deviceId: string }) => Promise<UiKeyboardStateProbe>;
+  settleBeforeKeyboardRecheck?: () => Promise<void>;
   buildTypeTextCommand: (deviceId: string, text: string) => string[];
   buildSwipeCommand: (deviceId: string, swipe: { start: { x: number; y: number }; end: { x: number; y: number }; durationMs: number; delta?: number; preDelaySec?: number; postDelaySec?: number }) => string[];
   buildGestureCommands?: (deviceId: string, gesture: ResolvedPerformGesture) => UiGestureCommandPlan;

@@ -12,6 +12,7 @@ import {
 } from "../src/runtime-shared.js";
 import {
 	tapWithMaestroTool,
+	typeIntoElementWithMaestroTool,
 	typeTextWithMaestroTool,
 	uiActionToolInternals,
 } from "../src/ui-action-tools.ts";
@@ -21,6 +22,7 @@ import {
 } from "../src/ui-action-tools-ios-physical.ts";
 import {
 	buildIosPhysicalActionExecutionPlan,
+	classifyIosKeyboardStateFromNodes,
 	detectIosImeInputMismatch,
 	isIosSimulatorOnlyIdbActionError,
 	verifyTypedIosPostconditionWithHooks,
@@ -1195,4 +1197,94 @@ test("detectIosImeInputMismatch flags Pinyin U+2006 candidate corruption and non
 	assert.match(cjkHint, /non-ASCII IME/);
 
 	assert.equal(detectIosImeInputMismatch("Notes", "Notes"), undefined);
+});
+
+test("classifyIosKeyboardStateFromNodes detects visible, hidden, and unknown keyboard states", () => {
+	assert.deepEqual(
+		classifyIosKeyboardStateFromNodes(
+			[{ className: "Keyboard", clickable: false, enabled: true, scrollable: false }],
+			"en_US@sw=QWERTY;hw=Automatic",
+		),
+		{
+			visibility: "visible",
+			reason: "ios_keyboard_hierarchy_visible",
+			imeType: "en_US@sw=QWERTY;hw=Automatic",
+		},
+	);
+	assert.deepEqual(
+		classifyIosKeyboardStateFromNodes(
+			[{ className: "TextField", clickable: true, enabled: true, scrollable: false }],
+			"en_US@sw=QWERTY",
+		),
+		{
+			visibility: "hidden",
+			reason: "ios_keyboard_hierarchy_hidden",
+			imeType: "en_US@sw=QWERTY",
+		},
+	);
+	assert.deepEqual(classifyIosKeyboardStateFromNodes([]), {
+		visibility: "unknown",
+		reason: "ios_keyboard_hierarchy_unavailable",
+	});
+});
+
+test("typeIntoElementWithMaestroTool records iOS keyboardState and IME focusCause without aborting when hardware keyboard keeps software keyboard hidden", async () => {
+	let typedCount = 0;
+	setExecuteRunnerForTesting(async (command) => {
+		const joined = command.join(" ");
+		if (joined.includes("defaults read -g AppleKeyboards")) {
+			return {
+				exitCode: 0,
+				stdout: "(\n    \"zh_Hans-Pinyin@sw=Pinyin-Simplified;hw=Automatic\",\n    \"en_US@sw=QWERTY;hw=Automatic\"\n)\n",
+				stderr: "",
+			};
+		}
+		if (joined.includes("describe-ui")) {
+			const val = typedCount > 0 ? "Note\u20061" : "";
+			return {
+				exitCode: 0,
+				stdout: JSON.stringify([
+					{
+						type: "Application",
+						frame: { x: 0, y: 0, width: 390, height: 844 },
+						children: [
+							{
+								type: "TextField",
+								AXUniqueId: "note-title",
+								AXValue: val,
+								frame: { x: 20, y: 120, width: 300, height: 44 },
+							},
+						],
+					},
+				]),
+				stderr: "",
+			};
+		}
+		if (joined.includes(" type ")) {
+			typedCount += 1;
+			return { exitCode: 0, stdout: "", stderr: "" };
+		}
+		return { exitCode: 0, stdout: "ok", stderr: "" };
+	});
+
+	const result = await typeIntoElementWithMaestroTool({
+		sessionId: "ios-type-kb-ime",
+		platform: "ios",
+		deviceId: "11111111-1111-1111-1111-111111111111",
+		resourceId: "note-title",
+		value: "Note1",
+		focusSettleDelayMs: 0,
+	});
+
+	assert.equal(typedCount, 1, "iOS must not abort typing just because software keyboard is hidden");
+	assert.equal(result.status, "partial");
+	assert.equal(result.reasonCode, REASON_CODES.actionTypeFailed);
+	assert.equal(result.data.keyboardState?.platform, "ios");
+	assert.equal(result.data.keyboardState?.beforeFocus, "hidden");
+	assert.equal(result.data.keyboardState?.afterFocus, "hidden");
+	assert.equal(
+		result.data.keyboardState?.imeType,
+		"zh_Hans-Pinyin@sw=Pinyin-Simplified;hw=Automatic",
+	);
+	assert.equal(result.data.keyboardState?.focusCause, "ios_non_latin_ime_interference");
 });

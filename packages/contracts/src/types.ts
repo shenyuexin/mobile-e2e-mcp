@@ -1808,6 +1808,8 @@ export interface TypeIntoElementData {
     beforeFocus?: "visible" | "hidden" | "unknown";
     afterFocus?: "visible" | "hidden" | "unknown";
     reason?: string;
+    imeType?: string;
+    focusCause?: string;
     command?: string[];
     exitCode?: number | null;
   };
@@ -2493,12 +2495,13 @@ export interface DiagnoseNetworkFailureData {
 export type BackTarget = "app" | "system";
 
 /** iOS app-back strategy when no explicit selector is provided. */
-export type IosBackStrategy = "selector_tap" | "edge_swipe";
+export type IosBackStrategy = "selector_tap" | "edge_swipe" | "auto";
 
 /** Concrete execution path taken for a back navigation attempt. */
 export type BackExecutionPath =
   | "android_keyevent"
   | "ios_selector_tap"
+  | "ios_auto_nav_bar"
   | "ios_edge_swipe"
   | "unsupported";
 
@@ -2532,6 +2535,10 @@ export interface NavigateBackData {
   supportLevel: CapabilitySupportLevel;
   /** Whether a fallback path was used (e.g., edge_swipe after selector_tap). */
   fallbackUsed: boolean;
+  /** Back button label matched when iosStrategy="auto" discovers a header control. */
+  matchedBackLabel?: string;
+  /** Selector constructed by iosStrategy="auto" when targeting an explicit back button. */
+  discoveredSelector?: QueryUiSelector;
   /** The raw command that was executed (if applicable). */
   command?: string;
   /** Raw commands attempted when the tool uses a bounded internal retry ladder. */
