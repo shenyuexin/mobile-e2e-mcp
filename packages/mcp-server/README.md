@@ -37,6 +37,10 @@ npx -y @shenyuexin/mobile-e2e-mcp@latest explore --app-id com.example.app --plat
 # Run a deterministic flow inside a governed session
 npx -y @shenyuexin/mobile-e2e-mcp@latest run flows/smoke.yaml --dry-run
 
+# Record only failures; on failure emit a proposal-only selector heal diff
+npx -y @shenyuexin/mobile-e2e-mcp@latest run flows/smoke.yaml \
+  --record-on-failure --record-output artifacts/run.mp4 --suggest-heal
+
 # Governed UI audit (inherits .e2e/config.yaml; gate on regressions)
 npx -y @shenyuexin/mobile-e2e-mcp@latest audit \
   --baseline-path .e2e/ui-baseline.json --baseline-mode compare --fail-on-regression --json
@@ -45,6 +49,10 @@ npx -y @shenyuexin/mobile-e2e-mcp@latest audit \
 npx -y @shenyuexin/mobile-e2e-mcp@latest diff <baseDir> <headDir> \
   --markdown diff.md --html diff.html --json --fail-on-regression
 ```
+
+`run` recovery options: `--record-on-failure` starts `record_screen` before the flow and stops it in `finally` with `discardOnStop: true` on pass / `false` on failure; `--record-output <path>` sets the video path; `--suggest-heal` produces a proposal-only structured selector heal suggestion plus unified diff on failure using `explain_last_failure`, `suggest_known_remediation`, and read-only `inspect_ui`. Flow files are never edited. Recording is skipped under `--dry-run`.
+
+`explore --export-flows <dir>` writes deterministic Maestro-compatible smoke flows from the deepest reachable, non-failed, non-blocked paths, including `appId` launch and explicit settle delays.
 
 `audit` options: `--platform`, `--device-id`, `--app-id`, `--baseline-path`, `--baseline-mode <compare|update>`, `--output`, `--config`, `--dry-run`, `--json`, `--fail-on-regression`, `--help`. It invokes `start_session` → `audit_ui_surface` → `end_session` and exits non-zero on regression/failure.
 

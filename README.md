@@ -51,6 +51,10 @@ npx -y @shenyuexin/mobile-e2e-mcp@latest init --platform ios --app-id com.exampl
 # Run a deterministic flow inside a governed session
 npx -y @shenyuexin/mobile-e2e-mcp@latest run flows/smoke.yaml --dry-run
 
+# Record only failures and get a proposal-only selector heal diff when a flow breaks
+npx -y @shenyuexin/mobile-e2e-mcp@latest run flows/smoke.yaml \
+  --record-on-failure --record-output artifacts/run.mp4 --suggest-heal
+
 # Governed UI-surface audit with baseline ratcheting; gate a PR on regressions
 npx -y @shenyuexin/mobile-e2e-mcp@latest audit \
   --baseline-path .e2e/ui-baseline.json --fail-on-regression
@@ -60,7 +64,9 @@ npx -y @shenyuexin/mobile-e2e-mcp@latest diff ./explore-report/base ./explore-re
   --markdown diff.md --html diff.html --fail-on-regression
 ```
 
-`audit` wraps `audit_ui_surface` in `start_session` → `audit_ui_surface` → `end_session`, inherits defaults from `.e2e/config.yaml` (including an `audit:` section), and exits non-zero on a detected regression when `--fail-on-regression` is set. `diff` reads `summary.json`, `failure-review.json`, and optional `audit*.json` from both run directories; add `--fail-on-regression` for a zero-script CI quality gate. Neither command adds a new MCP tool — the registry stays at 68 tools / 20 core tools.
+`audit` wraps `audit_ui_surface` in `start_session` → `audit_ui_surface` → `end_session`, inherits defaults from `.e2e/config.yaml` (including an `audit:` section), and exits non-zero on a detected regression when `--fail-on-regression` is set. `diff` reads `summary.json`, `failure-review.json`, and optional `audit*.json` from both run directories; add `--fail-on-regression` for a zero-script CI quality gate.
+
+`run --record-on-failure` starts `record_screen` before `run_flow` and stops it in a `finally` block: the video is discarded on pass and preserved on failure (reported as a path in text and `--json`). Live recording is skipped under `--dry-run`. `run --suggest-heal` combines `explain_last_failure`, `suggest_known_remediation`, and read-only `inspect_ui` into a structured proposal plus a unified diff snippet on failure — it is strictly proposal-only and never edits flow YAML files. None of these flags add MCP tools — the registry stays at 68 tools / 20 core tools.
 
 ## Explorer: Primary Product Surface
 
@@ -77,7 +83,8 @@ Use Explorer to answer product questions such as:
 npx -y @shenyuexin/mobile-e2e-mcp@latest explore \
   --app-id com.example.app \
   --platform android \
-  --output ./explore-report
+  --output ./explore-report \
+  --export-flows ./flows/generated
 ```
 
 Key features:
@@ -89,6 +96,7 @@ Key features:
 - **Interruption-aware evidence**: records blocked, interrupted, skipped, and failed traversal decisions with explicit reasons
 - **Experimental horizontal fallback**: after vertical segments are exhausted, Explorer can probe horizontally scrollable content with bounded page-identity checks
 - **iOS/iPad hardening & project config**: SplitView/Popover presentation scoping, foreground pre-flight guard against SpringBoard/Dock/Spotlight drift, repeatable `--launch-env KEY=VALUE` injection, `.e2e/config.yaml` auto-loading, and read-only `--no-prompt --config` protection
+- **Deterministic flow export**: `--export-flows <dir>` turns the deepest reachable, non-failed, non-blocked paths into Maestro-compatible YAML smoke flows with explicit settle delays
 
 ### Output
 

@@ -37,7 +37,7 @@ Examples:
   mobile-e2e-mcp --toolset full                   Start MCP stdio server with all ${fullCount} tools
   mobile-e2e-mcp doctor                           Check host environment & booted devices
   mobile-e2e-mcp init --platform ios --app-id com.example.app --no-prompt
-  mobile-e2e-mcp explore --app-id com.example.app --platform android --output ./explore-report
+  mobile-e2e-mcp explore --app-id com.example.app --platform android --output ./explore-report --export-flows ./flows/generated
   mobile-e2e-mcp run flows/smoke.yaml --dry-run
   mobile-e2e-mcp audit --baseline-path .e2e/ui-baseline.json --fail-on-regression
   mobile-e2e-mcp diff ./explore-report/base ./explore-report/head --markdown diff.md --html diff.html`);

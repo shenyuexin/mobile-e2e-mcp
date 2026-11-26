@@ -51,6 +51,10 @@ npx -y @shenyuexin/mobile-e2e-mcp@latest init --platform ios --app-id com.exampl
 # 在受治理 session 内运行确定性 flow
 npx -y @shenyuexin/mobile-e2e-mcp@latest run flows/smoke.yaml --dry-run
 
+# 仅保留失败录屏，并在 flow 失败时给出只供审阅的选择器修复 diff
+npx -y @shenyuexin/mobile-e2e-mcp@latest run flows/smoke.yaml \
+  --record-on-failure --record-output artifacts/run.mp4 --suggest-heal
+
 # 在受治理 session 内执行 UI 体检，并用基线回归作为 PR 门禁
 npx -y @shenyuexin/mobile-e2e-mcp@latest audit \
   --baseline-path .e2e/ui-baseline.json --fail-on-regression
@@ -60,7 +64,9 @@ npx -y @shenyuexin/mobile-e2e-mcp@latest diff ./explore-report/base ./explore-re
   --markdown diff.md --html diff.html --fail-on-regression
 ```
 
-`audit` 通过 `start_session` → `audit_ui_surface` → `end_session` 调用现有工具，默认从 `.e2e/config.yaml`（含 `audit:` 段）继承配置；设置 `--fail-on-regression` 后，一旦检测到基线回归即以非零码退出。`diff` 读取两次运行的 `summary.json`、`failure-review.json` 与可选的 `audit*.json`，配合 `--fail-on-regression` 即可作为零脚本 CI 质量门禁。两个命令都不新增 MCP 工具——注册表仍为 68 个工具 / 20 个核心工具。
+`audit` 通过 `start_session` → `audit_ui_surface` → `end_session` 调用现有工具，默认从 `.e2e/config.yaml`（含 `audit:` 段）继承配置；设置 `--fail-on-regression` 后，一旦检测到基线回归即以非零码退出。`diff` 读取两次运行的 `summary.json`、`failure-review.json` 与可选的 `audit*.json`，配合 `--fail-on-regression` 即可作为零脚本 CI 质量门禁。
+
+`run --record-on-failure` 在 `run_flow` 前启动 `record_screen`，并在 `finally` 中停止：通过时丢弃录像，失败时保留为证据，文本输出与 `--json` 都会带上保存路径（或丢弃状态）；`--dry-run` 下跳过真实录屏。`run --suggest-heal` 在失败时组合 `explain_last_failure`、`suggest_known_remediation` 与只读 `inspect_ui`，生成结构化建议和 unified diff 片段——严格只做提案，绝不修改用户的 flow YAML。以上都不新增 MCP 工具——注册表仍为 68 个工具 / 20 个核心工具。
 
 ## Explorer：核心产品面
 
@@ -77,7 +83,8 @@ Explorer 是这个仓库最核心的对外产品能力——一个内置于 MCP 
 npx -y @shenyuexin/mobile-e2e-mcp@latest explore \
   --app-id com.example.app \
   --platform android \
-  --output ./explore-report
+  --output ./explore-report \
+  --export-flows ./flows/generated
 ```
 
 核心特性：
@@ -89,6 +96,7 @@ npx -y @shenyuexin/mobile-e2e-mcp@latest explore \
 - **中断感知证据**：被阻塞、被跳过、被外部边界截断或失败的遍历决策都会带原因，方便复盘而不是只看原始日志
 - **实验性横向滚动兜底**：垂直分段遍历结束后，可通过有边界的页面身份校验探测横向可滚动区域
 - **iOS/iPad 加固与工程配置**：支持 SplitView/Popover 作用域识别、防止跑偏到 SpringBoard/Dock/Spotlight 的前台预检、可重复 `--launch-env KEY=VALUE` 注入、`.e2e/config.yaml` 自动加载以及 `--no-prompt --config` 只读保护
+- **确定性 flow 导出**：`--export-flows <dir>` 将最深的可达、未失败、未被阻断路径导出为 Maestro 兼容 YAML smoke flow，并写入显式 settle 等待
 
 ### 输出产物
 

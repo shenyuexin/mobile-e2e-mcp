@@ -208,3 +208,18 @@ export type {
 } from './diff-report.js';
 export { escapeHtml, formatHtmlReport, generateHtmlReport } from './html-report.js';
 export type { HtmlReportOptions } from './html-report.js';
+export {
+  buildFlows,
+  DEFAULT_LAUNCH_SETTLE_MS,
+  DEFAULT_TAP_SETTLE_MS,
+  exportFlows,
+  exportFlowsFromSummary,
+  formatFlowYaml,
+  isExportablePage,
+  selectExportPaths,
+} from './flow-exporter.js';
+export type {
+  ExportedFlow,
+  FlowExportOptions,
+  FlowExportPage,
+} from './flow-exporter.js';

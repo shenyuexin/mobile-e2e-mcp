@@ -4,6 +4,7 @@
  * Flow: create session -> load config -> pre-flight auth -> create MCP adapter -> run explore engine -> generate report -> cleanup
  */
 
+import { resolve } from "node:path";
 import type { Platform, RunnerProfile } from "@mobile-e2e-mcp/contracts";
 import { checkAuth } from "./auth-preflight.js";
 import { ConfigStore } from "./config-store.js";
@@ -12,6 +13,7 @@ import { explore } from "./engine.js";
 import type { InvokableServer } from "./mcp-adapter.js";
 import { createMcpAdapter, type SessionContext } from "./mcp-adapter.js";
 import { generateReport } from "./report.js";
+import { exportFlows } from "./report/flow-exporter.js";
 import type {
   AuthConfig,
   DestructiveActionPolicy,
@@ -51,6 +53,8 @@ export interface RunnerInput {
   skipInterview?: boolean;
   deviceId?: string;
   launchEnv?: Record<string, string>;
+  /** Export deterministic Maestro smoke flows to this directory. */
+  exportFlows?: string;
 }
 
 function parseLaunchEnvFromProcessEnv(): Record<string, string> | undefined {
@@ -80,6 +84,8 @@ export interface ExplorerResult {
   reportPath: string | null;
   stage: string;
   error?: string;
+  /** Paths of exported deterministic smoke flows, when --export-flows was used. */
+  exportedFlows?: string[];
 }
 
 /**
@@ -158,9 +164,9 @@ export async function runExplore(
 
   // --- Stage 5: Generate report ---
   console.log("[RUNNER] Stage 5/6: Generating report...");
+  const entries = explorationResult.visited.getEntries();
+  const failures = explorationResult.failed.getEntries();
   try {
-    const entries = explorationResult.visited.getEntries();
-    const failures = explorationResult.failed.getEntries();
     const durationMs = Date.now() - startTime;
     await generateReport(entries, failures, config, {
       partial: explorationResult.aborted ?? false,
@@ -174,6 +180,18 @@ export async function runExplore(
   } catch (err) {
     console.error(`[RUNNER] Report generation failed: ${err}`);
     // Non-fatal — exploration data is still valid
+  }
+
+  let exportedFlows: string[] | undefined;
+  if (input.exportFlows) {
+    try {
+      const flows = exportFlows(entries, config.appId, resolve(process.cwd(), input.exportFlows));
+      exportedFlows = flows.map((flow) => flow.filePath);
+      console.log(`[RUNNER]   Exported ${flows.length} deterministic flow(s) to ${input.exportFlows}`);
+    } catch (err) {
+      console.error(`[RUNNER] Flow export failed: ${err}`);
+      // Non-fatal — exploration data is still valid
+    }
   }
 
   // --- Stage 6: Cleanup ---
@@ -206,6 +224,7 @@ export async function runExplore(
     durationMs,
     reportPath: `${config.reportDir}/index.json`,
     stage: "complete",
+    ...(exportedFlows ? { exportedFlows } : {}),
   };
 }
 

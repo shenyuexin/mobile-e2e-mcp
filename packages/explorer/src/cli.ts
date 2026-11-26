@@ -31,6 +31,7 @@ interface ExploreFlags {
   destructiveActionPolicy?: DestructiveActionPolicy;
   deviceId?: string;
   launchEnv?: Record<string, string>;
+  exportFlows?: string;
 }
 
 const VALID_MODES: ExplorationMode[] = ["smoke", "scoped", "full"];
@@ -54,6 +55,7 @@ Options:
   --config <path>           Path to config file (default: .explorer-config.json)
   --output <dir>            Output directory for reports (default: ./explorer-reports)
   --compare <runId>         Run ID to compare against
+  --export-flows <dir>      Export deterministic Maestro smoke flows for reachable paths
   --help                    Show this help message
 
 Examples:
@@ -61,6 +63,7 @@ Examples:
   mobile-e2e-mcp explore --mode smoke --app-id com.apple.Preferences
   mobile-e2e-mcp explore --platform android-emulator --app-id com.example.app
   mobile-e2e-mcp explore --config ./my-config.json
+  mobile-e2e-mcp explore --no-prompt --app-id com.example.app --export-flows ./flows/generated
 `);
 }
 
@@ -119,6 +122,9 @@ function parseFlags(argv: string[]): ExploreFlags {
       i++;
     } else if (arg === "--compare" && next) {
       flags.compare = next;
+      i++;
+    } else if (arg === "--export-flows" && next) {
+      flags.exportFlows = next;
       i++;
     } else if (arg === "--device-id" && next) {
       flags.deviceId = next;
@@ -201,6 +207,7 @@ export async function explore(argv: string[], server: InvokableServer): Promise<
     launchEnv: flags.launchEnv,
     configPath: flags.configPath,
     skipInterview: flags.noPrompt,
+    exportFlows: flags.exportFlows,
   });
 
   // Print summary
@@ -219,6 +226,9 @@ function printSummary(result: ExplorerResult): void {
   console.log(`  Duration:     ${(result.durationMs / 1000).toFixed(1)}s`);
   if (result.reportPath) {
     console.log(`  Report:       ${result.reportPath}`);
+  }
+  if (result.exportedFlows) {
+    console.log(`  Flows:        ${result.exportedFlows.length} exported (${result.exportedFlows.join(", ")})`);
   }
   if (result.error) {
     console.log(`  Error:        ${result.error}`);

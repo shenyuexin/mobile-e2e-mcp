@@ -1,13 +1,25 @@
+import { readFileSync } from "node:fs";
 import process from "node:process";
+import { resolve } from "node:path";
 import {
   TOOL_NAMES,
+  type ExplainLastFailureData,
+  type ExplainLastFailureInput,
+  type InspectUiData,
   type Platform,
+  type RecordScreenData,
+  type RecordScreenInput,
+  type RunFlowData,
   type RunFlowInput,
   type RunnerProfile,
   type StartSessionInput,
+  type SuggestKnownRemediationData,
+  type SuggestKnownRemediationInput,
+  type ToolResult,
 } from "@mobile-e2e-mcp/contracts";
 import type { MobileE2EMcpServer } from "../server.js";
 import { loadProjectConfig } from "./project-config.js";
+import { buildSelectorHealProposal, type SelectorHealProposal } from "./selector-heal.js";
 
 export interface RunCommandOptions {
   flowPath?: string;
@@ -23,6 +35,12 @@ export interface RunCommandOptions {
   dryRun: boolean;
   json: boolean;
   help: boolean;
+  /** Record the run and discard the video on pass, keep it on failure. */
+  recordOnFailure: boolean;
+  /** Output path used by record_screen start/stop. */
+  recordOutput?: string;
+  /** Produce proposal-only selector heal suggestions when run_flow fails. */
+  suggestHeal: boolean;
   error?: string;
 }
 
@@ -51,6 +69,9 @@ Options:
   --run-count <n>               Number of runs (default: 1)
   --session-id <id>             Explicit session ID
   --dry-run                     Validate & build flow command without device side effects
+  --record-on-failure           Record the run; discard on pass, preserve video on failure
+  --record-output <path>        Output path passed to record_screen start/stop
+  --suggest-heal                On failure, emit proposal-only selector heal diff (never edits flow files)
   --json                        Print full structured JSON payload
   --help, -h                    Show this help message`);
 }
@@ -61,6 +82,8 @@ export function parseRunArgs(argv: string[]): RunCommandOptions {
     dryRun: false,
     json: false,
     help: false,
+    recordOnFailure: false,
+    suggestHeal: false,
   };
 
   for (let i = 0; i < argv.length; i += 1) {
@@ -73,6 +96,13 @@ export function parseRunArgs(argv: string[]): RunCommandOptions {
       options.dryRun = true;
     } else if (arg === "--json") {
       options.json = true;
+    } else if (arg === "--record-on-failure") {
+      options.recordOnFailure = true;
+    } else if (arg === "--record-output" && next) {
+      options.recordOutput = next;
+      i += 1;
+    } else if (arg === "--suggest-heal") {
+      options.suggestHeal = true;
     } else if (arg === "--flow-path" && next) {
       options.flowPath = next;
       i += 1;
@@ -181,14 +211,113 @@ export async function executeRun(
     harnessConfigPath,
   };
 
-  const runResult = await server.invoke(TOOL_NAMES.runFlow, runInput);
+  // Failure-only recording: start before run_flow, stop in a finally block.
+  // A pass discards the video; a failure preserves it as evidence.
+  const recordStartResult: ToolResult<RecordScreenData> | undefined =
+    options.recordOnFailure && !options.dryRun
+      ? await server.invoke(TOOL_NAMES.recordScreen, {
+          sessionId,
+          platform,
+          mode: "start",
+          ...(options.recordOutput ? { outputPath: options.recordOutput } : {}),
+          ...(deviceId ? { deviceId } : {}),
+        } satisfies RecordScreenInput)
+      : undefined;
+  const recordingId = recordStartResult?.data?.recordingId;
+
+  let recordStopResult: ToolResult<RecordScreenData> | undefined;
+  let runResult: ToolResult<RunFlowData> | undefined;
+  try {
+    runResult = await server.invoke(TOOL_NAMES.runFlow, runInput);
+  } finally {
+    if (recordStartResult) {
+      recordStopResult = await server.invoke(TOOL_NAMES.recordScreen, {
+        sessionId,
+        platform,
+        mode: "stop",
+        discardOnStop: runResult?.status !== "failed",
+        ...(recordingId ? { recordingId } : {}),
+        ...(options.recordOutput ? { outputPath: options.recordOutput } : {}),
+      } satisfies RecordScreenInput);
+    }
+  }
+
+  if (!runResult) {
+    // run_flow threw; the recording was stopped in finally and preserved.
+    return 1;
+  }
+
+  const failed = runResult.status === "failed";
+  let healProposal: SelectorHealProposal | undefined;
+  if (failed && options.suggestHeal) {
+    const explainResult: ToolResult<ExplainLastFailureData> = await server.invoke(
+      TOOL_NAMES.explainLastFailure,
+      { sessionId } satisfies ExplainLastFailureInput,
+    );
+    const remediationResult: ToolResult<SuggestKnownRemediationData> = await server.invoke(
+      TOOL_NAMES.suggestKnownRemediation,
+      {
+        sessionId,
+        platform,
+        ...(explainResult.data?.actionId ? { actionId: explainResult.data.actionId } : {}),
+      } satisfies SuggestKnownRemediationInput,
+    );
+    let originalFlowText: string | undefined;
+    if (flowPath) {
+      try {
+        originalFlowText = readFileSync(resolve(cwd, flowPath), "utf-8");
+      } catch {
+        // The proposal is still useful when the flow file is unavailable.
+      }
+    }
+
+    // inspect_ui is a read-only query; failures are tolerated (best-effort evidence).
+    let inspectResult: ToolResult<InspectUiData> | undefined;
+    try {
+      inspectResult = await server.invoke(TOOL_NAMES.inspectUi, {
+        sessionId,
+        platform,
+        ...(deviceId ? { deviceId } : {}),
+        ...(appId ? { appId } : {}),
+      });
+    } catch {
+      inspectResult = undefined;
+    }
+
+    healProposal = buildSelectorHealProposal({
+      flowPath,
+      originalFlowText,
+      explainResult,
+      remediationResult,
+      inspectResult,
+    });
+  }
+
+  const recordingArtifacts = recordStopResult?.artifacts ?? [];
   const endResult = await server.invoke(TOOL_NAMES.endSession, {
     sessionId,
-    artifacts: runResult.artifacts,
+    artifacts: Array.from(new Set([...runResult.artifacts, ...recordingArtifacts])),
   });
 
+  const recording = {
+    enabled: Boolean(recordStartResult),
+    dryRunSkipped: options.recordOnFailure && options.dryRun,
+    recordingId,
+    discarded: recordStopResult?.data?.discarded ?? false,
+    outputPath: recordStopResult?.data?.outputPath ?? options.recordOutput ?? null,
+    status: recordStopResult?.status ?? "not_started",
+  };
+
   if (options.json) {
-    console.log(JSON.stringify({ startResult, runResult, endResult }, null, 2));
+    console.log(JSON.stringify({
+      startResult,
+      runResult,
+      recordStartResult,
+      recordStopResult,
+      recording,
+      ...(healProposal ? { healProposal } : {}),
+      endResult,
+    }, null, 2));
   } else {
     console.log(`mobile-e2e-mcp run — status: ${runResult.status} (${runResult.reasonCode})`);
     console.log(`  sessionId: ${sessionId}`);
@@ -200,6 +329,17 @@ export async function executeRun(
     if (runResult.artifacts.length > 0) {
       console.log(`  artifacts: ${runResult.artifacts.join(", ")}`);
     }
+    if (recordStartResult) {
+      console.log(
+        `  recording: ${recording.discarded ? "discarded (pass)" : `saved: ${recording.outputPath ?? "unknown"}`}`,
+      );
+    } else if (recording.dryRunSkipped) {
+      console.log("  recording: skipped under --dry-run");
+    }
+    if (healProposal) {
+      console.log("  heal proposal: PROPOSAL ONLY — no flow file was modified");
+      console.log(healProposal.unifiedDiff);
+    }
     if (runResult.nextSuggestions.length > 0) {
       console.log("  nextSuggestions:");
       for (const suggestion of runResult.nextSuggestions) {
@@ -208,5 +348,5 @@ export async function executeRun(
     }
   }
 
-  return runResult.status === "failed" ? 1 : 0;
+  return failed ? 1 : 0;
 }

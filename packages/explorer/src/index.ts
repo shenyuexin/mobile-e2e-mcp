@@ -144,6 +144,21 @@ export type {
 } from "./report/diff-report.js";
 export { escapeHtml, formatHtmlReport, generateHtmlReport } from "./report/html-report.js";
 export type { HtmlReportOptions } from "./report/html-report.js";
+export {
+  buildFlows,
+  DEFAULT_LAUNCH_SETTLE_MS,
+  DEFAULT_TAP_SETTLE_MS,
+  exportFlows,
+  exportFlowsFromSummary,
+  formatFlowYaml,
+  isExportablePage,
+  selectExportPaths,
+} from "./report/flow-exporter.js";
+export type {
+  ExportedFlow,
+  FlowExportOptions,
+  FlowExportPage,
+} from "./report/flow-exporter.js";
 
 // Config & CLI (25-03)
 export {
