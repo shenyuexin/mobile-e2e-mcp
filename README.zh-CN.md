@@ -177,6 +177,9 @@ pnpm run proof:governed-agent-mobile-control
   - `pnpm run proof:governed-agent-mobile-control` / `pnpm run proof:governed-policy-escalation`
   - `pnpm run verify:mobile-change`（一条命令跑移动变更验证；contract 模式可用 `-- --live --contract=configs/readiness/mobile-change.android.json`）
   - `pnpm run verify:react-native-change`（实验性 RN lane，编排 readiness 与 evidence-pack；只有接入设备、Metro/调试目标并完成 intake 才算 live 成功证据，blocked 输出不代表成功）
+- **开箱即用的 CI 门禁与真开源 App 演示**：
+  - [可复用 GitHub Action](.github/actions/mobile-e2e-gate/action.yml) — `audit` / `explore` / `run` / `diff` 门禁，使用 `actions/upload-artifact@v4` 与可选 `gh pr comment`；输入仅通过 `env:` 传入 shell 步骤
+  - [真开源 App Killer Demo](docs/showcase/killer-demo-real-app.md) — Wikipedia/Mastodon 两个 60 秒流程，明确标注 `reproducible-demo`（模板，不是真机证明）
 - **完整证据索引与 AI 调用指南**：
   - [演示与证据总索引](docs/showcase/README.md) — 完整收录全部 `generate:*` / `validate:*` 命令、失败归因/交接包及跟踪证据报告
   - [CI 证据与边界说明](docs/showcase/ci-evidence.md)、[CI 运行记录](https://github.com/shenyuexin/mobile-e2e-mcp/actions/workflows/ci.yml)、[Platform Smoke](https://github.com/shenyuexin/mobile-e2e-mcp/actions/workflows/platform-smoke.yml)、[Real Device Acceptance](https://github.com/shenyuexin/mobile-e2e-mcp/actions/workflows/real-device-acceptance.yml)
@@ -388,6 +391,8 @@ Source-of-truth 说明：
 - [docs/delivery/roadmap.md](docs/delivery/roadmap.md) — 分阶段交付路线
 - [docs/delivery/npm-release-and-git-tagging.zh-CN.md](docs/delivery/npm-release-and-git-tagging.zh-CN.md) — npm 发版与 Git tag 一体化规范（含 PR/pre-tag/tag 分层 doc-sync 规则）
 - [docs/showcase/README.md](docs/showcase/README.md) — 真机 Demo 证据与复现脚本
+- [.github/actions/mobile-e2e-gate/action.yml](.github/actions/mobile-e2e-gate/action.yml) — 可复用 CI 门禁（不新增 MCP 工具；仍为 68 / 20）
+- [docs/showcase/killer-demo-real-app.md](docs/showcase/killer-demo-real-app.md) — 两个 60 秒真开源 App 演示与证明等级边界
 - [tests/README.md](tests/README.md) — 测试层与 CI 范围
 
 ## 路线图快照（简版）

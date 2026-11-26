@@ -1,0 +1,199 @@
+name: Mobile E2E Gate
+description: >-
+  Drop-in CI gate for mobile-e2e-mcp audit/explore/run/diff with artifact
+  upload and an optional PR comment. Every input reaches a shell step through
+  an env var; action expressions are never interpolated into shell source.
+author: shenyuexin
+
+inputs:
+  mode:
+    description: "Gate mode: audit | explore | run | diff"
+    required: true
+    default: audit
+  platform:
+    description: "Target platform: android | ios"
+    required: false
+    default: android
+  app-id:
+    description: "Application id used by audit / explore / run modes"
+    required: false
+    default: ""
+  device-id:
+    description: "Optional device id to target"
+    required: false
+    default: ""
+  flow-path:
+    description: "Flow YAML path (required for run mode)"
+    required: false
+    default: ""
+  baseline-path:
+    description: "UI baseline JSON path used by audit mode"
+    required: false
+    default: ""
+  base-report-dir:
+    description: "Base run directory (required for diff mode)"
+    required: false
+    default: ""
+  head-report-dir:
+    description: "Head run directory (required for diff mode)"
+    required: false
+    default: ""
+  output-dir:
+    description: "Directory for generated gate reports and CLI output"
+    required: false
+    default: mobile-e2e-gate-output
+  fail-on-regression:
+    description: "Exit non-zero when audit / diff reports a regression"
+    required: false
+    default: "false"
+  upload-artifacts:
+    description: "Upload output-dir with actions/upload-artifact@v4"
+    required: false
+    default: "true"
+  comment-pr:
+    description: "Post a gate summary comment on the triggering PR"
+    required: false
+    default: "false"
+  package-version:
+    description: "npm version or tag of @shenyuexin/mobile-e2e-mcp"
+    required: false
+    default: latest
+  artifact-name:
+    description: "Artifact name used when upload-artifacts is true"
+    required: false
+    default: mobile-e2e-gate-report
+
+runs:
+  using: composite
+  steps:
+    - name: Validate gate inputs
+      shell: bash
+      env:
+        GATE_MODE: "${{ inputs.mode }}"
+        GATE_PLATFORM: "${{ inputs.platform }}"
+        GATE_FLOW_PATH: "${{ inputs['flow-path'] }}"
+        GATE_BASE_DIR: "${{ inputs['base-report-dir'] }}"
+        GATE_HEAD_DIR: "${{ inputs['head-report-dir'] }}"
+      run: |
+        set -euo pipefail
+        case "$GATE_MODE" in
+          audit|explore|run|diff) ;;
+          *)
+            echo "::error::Unsupported mode '$GATE_MODE' (expected audit|explore|run|diff)" >&2
+            exit 2
+            ;;
+        esac
+        case "$GATE_PLATFORM" in
+          android|ios) ;;
+          *)
+            echo "::error::Unsupported platform '$GATE_PLATFORM' (expected android|ios)" >&2
+            exit 2
+            ;;
+        esac
+        if [ "$GATE_MODE" = "run" ] && [ -z "$GATE_FLOW_PATH" ]; then
+          echo "::error::flow-path is required for run mode" >&2
+          exit 2
+        fi
+        if [ "$GATE_MODE" = "diff" ] && { [ -z "$GATE_BASE_DIR" ] || [ -z "$GATE_HEAD_DIR" ]; }; then
+          echo "::error::base-report-dir and head-report-dir are required for diff mode" >&2
+          exit 2
+        fi
+
+    - name: Run mobile-e2e-mcp gate
+      id: gate
+      shell: bash
+      env:
+        GATE_MODE: "${{ inputs.mode }}"
+        GATE_PLATFORM: "${{ inputs.platform }}"
+        GATE_APP_ID: "${{ inputs['app-id'] }}"
+        GATE_DEVICE_ID: "${{ inputs['device-id'] }}"
+        GATE_FLOW_PATH: "${{ inputs['flow-path'] }}"
+        GATE_BASELINE_PATH: "${{ inputs['baseline-path'] }}"
+        GATE_BASE_DIR: "${{ inputs['base-report-dir'] }}"
+        GATE_HEAD_DIR: "${{ inputs['head-report-dir'] }}"
+        GATE_OUTPUT_DIR: "${{ inputs['output-dir'] }}"
+        GATE_FAIL_ON_REGRESSION: "${{ inputs['fail-on-regression'] }}"
+        GATE_PACKAGE_VERSION: "${{ inputs['package-version'] }}"
+      run: |
+        set -uo pipefail
+        mkdir -p "$GATE_OUTPUT_DIR"
+        CLI_PACKAGE="@shenyuexin/mobile-e2e-mcp@${GATE_PACKAGE_VERSION}"
+        args=()
+        case "$GATE_MODE" in
+          audit)
+            args+=(audit --platform "$GATE_PLATFORM" --output "$GATE_OUTPUT_DIR/audit" --json)
+            if [ -n "$GATE_APP_ID" ]; then args+=(--app-id "$GATE_APP_ID"); fi
+            if [ -n "$GATE_DEVICE_ID" ]; then args+=(--device-id "$GATE_DEVICE_ID"); fi
+            if [ -n "$GATE_BASELINE_PATH" ]; then args+=(--baseline-path "$GATE_BASELINE_PATH"); fi
+            if [ "$GATE_FAIL_ON_REGRESSION" = "true" ]; then args+=(--fail-on-regression); fi
+            ;;
+          explore)
+            args+=(explore --platform "$GATE_PLATFORM" --output "$GATE_OUTPUT_DIR/explore")
+            if [ -n "$GATE_APP_ID" ]; then args+=(--app-id "$GATE_APP_ID"); fi
+            if [ -n "$GATE_DEVICE_ID" ]; then args+=(--device-id "$GATE_DEVICE_ID"); fi
+            ;;
+          run)
+            args+=(run "$GATE_FLOW_PATH" --platform "$GATE_PLATFORM")
+            if [ -n "$GATE_DEVICE_ID" ]; then args+=(--device-id "$GATE_DEVICE_ID"); fi
+            ;;
+          diff)
+            args+=(diff "$GATE_BASE_DIR" "$GATE_HEAD_DIR" --markdown "$GATE_OUTPUT_DIR/diff.md" --html "$GATE_OUTPUT_DIR/diff.html" --json)
+            if [ "$GATE_FAIL_ON_REGRESSION" = "true" ]; then args+=(--fail-on-regression); fi
+            ;;
+        esac
+        echo "Running: npx -y $CLI_PACKAGE ${args[*]}"
+        set +e
+        npx -y "$CLI_PACKAGE" "${args[@]}" 2>&1 | tee "$GATE_OUTPUT_DIR/cli-output.txt"
+        CLI_STATUS=${PIPESTATUS[0]}
+        set -e
+        echo "$CLI_STATUS" > "$GATE_OUTPUT_DIR/cli-exit-code.txt"
+        echo "exit_code=$CLI_STATUS" >> "$GITHUB_OUTPUT"
+        if [ "$CLI_STATUS" -ne 0 ]; then
+          echo "::warning::mobile-e2e-mcp $GATE_MODE exited with status $CLI_STATUS" >&2
+        fi
+
+    - name: Upload gate artifacts
+      if: "${{ inputs['upload-artifacts'] == 'true' }}"
+      uses: actions/upload-artifact@v4
+      with:
+        name: "${{ inputs['artifact-name'] }}"
+        path: "${{ inputs['output-dir'] }}/"
+        if-no-files-found: warn
+
+    - name: Comment gate summary on PR
+      if: "${{ inputs['comment-pr'] == 'true' && github.event_name == 'pull_request' }}"
+      shell: bash
+      env:
+        GH_TOKEN: "${{ github.token }}"
+        PR_NUMBER: "${{ github.event.pull_request.number }}"
+        REPOSITORY: "${{ github.repository }}"
+        GATE_MODE: "${{ inputs.mode }}"
+        GATE_OUTPUT_DIR: "${{ inputs['output-dir'] }}"
+        GATE_ARTIFACT_NAME: "${{ inputs['artifact-name'] }}"
+        CLI_EXIT_CODE: "${{ steps.gate.outputs.exit_code }}"
+      run: |
+        set -euo pipefail
+        BODY_FILE="$GATE_OUTPUT_DIR/pr-comment.md"
+        {
+          echo "## mobile-e2e-mcp gate: $GATE_MODE"
+          echo
+          echo "- Exit code: \`$CLI_EXIT_CODE\`"
+          echo "- Artifact: \`$GATE_ARTIFACT_NAME\`"
+          echo
+          echo "Output captured by this gate (last 40 lines):"
+          echo '```text'
+          tail -n 40 "$GATE_OUTPUT_DIR/cli-output.txt" || true
+          echo '```'
+        } > "$BODY_FILE"
+        gh pr comment "$PR_NUMBER" --repo "$REPOSITORY" --body-file "$BODY_FILE"
+
+    - name: Propagate gate status
+      shell: bash
+      env:
+        CLI_EXIT_CODE: "${{ steps.gate.outputs.exit_code }}"
+      run: |
+        set -euo pipefail
+        if [ "$CLI_EXIT_CODE" != "0" ]; then
+          echo "::error::mobile-e2e-mcp gate failed with exit code $CLI_EXIT_CODE" >&2
+          exit "$CLI_EXIT_CODE"
+        fi

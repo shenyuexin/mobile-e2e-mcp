@@ -2,6 +2,12 @@
 
 This folder contains reproducible, real-device demo evidence used by README.
 
+## Reusable CI gate & real open-source app killer demo
+
+- [Reusable composite GitHub Action](../../.github/actions/mobile-e2e-gate/action.yml) — `audit` / `explore` / `run` / `diff` gate with `actions/upload-artifact@v4` and optional PR comment; inputs reach shell steps only via `env:` variables, and no MCP tool is added.
+- [Real open-source app killer demo](killer-demo-real-app.md) — two 60s workflows (Wikipedia `org.wikipedia`, Mastodon `org.joinmastodon.android`) with explicit `reproducible-demo` / not-live-proof boundaries.
+- Dry-run checks: `pnpm run validate:github-gate-assets`, `pnpm run test:github-gate-assets`, `pnpm run validate:killer-demo-real-app`, `pnpm run test:killer-demo-real-app`.
+
 ## Failure-intelligence demo
 
 - `docs/showcase/failure-intelligence-demo.md`

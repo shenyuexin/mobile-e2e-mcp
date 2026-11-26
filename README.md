@@ -177,6 +177,9 @@ Start here for runnable demos, real-device verification, and tracked CI proof:
   - `pnpm run proof:governed-agent-mobile-control` / `pnpm run proof:governed-policy-escalation`
   - `pnpm run verify:mobile-change` (one-command mobile change verification; use `-- --live --contract=configs/readiness/mobile-change.android.json` for contract-backed live mode)
   - `pnpm run verify:react-native-change` (experimental RN lane with readiness + evidence-pack orchestration; blocked output is not live success evidence until a connected device, Metro/debug target, and intake pass)
+- **Drop-in CI gate & real-app showcase**:
+  - [Reusable GitHub Action](.github/actions/mobile-e2e-gate/action.yml) — `audit` / `explore` / `run` / `diff` gate with `actions/upload-artifact@v4` and optional `gh pr comment`; inputs reach shell steps only via `env:` variables
+  - [Real Open-Source App Killer Demo](docs/showcase/killer-demo-real-app.md) — two 60s workflows on Wikipedia/Mastodon, explicitly labeled `reproducible-demo` (a template, not live-device proof)
 - **Full evidence index & AI agent guides**:
   - [Showcase & Evidence Index](docs/showcase/README.md) — complete catalog of `generate:*` / `validate:*` commands, failure-memory/handoff packets, and tracked evidence reports
   - [CI Evidence and Boundary Guide](docs/showcase/ci-evidence.md), [CI runs](https://github.com/shenyuexin/mobile-e2e-mcp/actions/workflows/ci.yml), [Platform Smoke](https://github.com/shenyuexin/mobile-e2e-mcp/actions/workflows/platform-smoke.yml), [Real-Device Acceptance](https://github.com/shenyuexin/mobile-e2e-mcp/actions/workflows/real-device-acceptance.yml)
@@ -388,6 +391,8 @@ Key policy/config locations:
 - [docs/delivery/roadmap.md](docs/delivery/roadmap.md) — delivery phases
 - [docs/delivery/npm-release-and-git-tagging.zh-CN.md](docs/delivery/npm-release-and-git-tagging.zh-CN.md) — npm release and Git tagging integration guide (includes layered doc-sync rules for PR/pre-tag/tag stages)
 - [docs/showcase/README.md](docs/showcase/README.md) — real-device demo evidence and repro scripts
+- [.github/actions/mobile-e2e-gate/action.yml](.github/actions/mobile-e2e-gate/action.yml) — drop-in CI gate (no new MCP tools; 68 total / 20 core)
+- [docs/showcase/killer-demo-real-app.md](docs/showcase/killer-demo-real-app.md) — two 60s real open-source app demos with proof-level boundaries
 - [tests/README.md](tests/README.md) — test layers and CI scope
 
 ## Roadmap Snapshot (Short)

@@ -14,7 +14,7 @@
 
 ## Page Map
 
-See [graph.mmd](./graph.mmd) and [tree.txt](./tree.txt)
+See [tree.txt](./tree.txt) for the full page hierarchy (a Mermaid graph is generated only for local, non-committed runs)
 
 ## Module Breakdown
 
