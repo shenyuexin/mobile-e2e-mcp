@@ -184,7 +184,7 @@ pnpm release:mcp:sync-changelog -- --tag mcp-server-v0.1.5
 - **Repository name**：`mobile-e2e-mcp`
 - **Workflow filename**：`release-mcp.yml`
 
-工作流通过 `permissions: id-token: write` 直接获取 OIDC 临时凭证并携带 `--provenance` 发布；**不要**在 `setup-node` 中配置 `registry-url` 或向发布步骤传递 `NODE_AUTH_TOKEN`（避免覆盖 OIDC 鉴权）。
+工作流通过 `permissions: id-token: write` 直接获取 OIDC 临时凭证，将 `pnpm pack` 产物解包到干净目录后执行 `npm publish --access public --provenance --loglevel verbose`；因未配置 GitHub `environment:`，npmjs 侧 **Environment name** 需留空，且**不要**在 `setup-node` 中配置 `registry-url` 或向发布步骤传递 `NODE_AUTH_TOKEN`（避免覆盖 OIDC 鉴权）。
 
 ## 回滚与应急
 

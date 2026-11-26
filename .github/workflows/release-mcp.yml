@@ -78,7 +78,9 @@ jobs:
           PACK_DIR="$(mktemp -d)"
           TARBALL="$(pnpm --filter @shenyuexin/mobile-e2e-mcp pack --pack-destination "$PACK_DIR" | tail -n 1)"
           test -f "$TARBALL"
-          npm publish "$TARBALL" --access public --provenance
+          PUBLISH_DIR="$(mktemp -d)"
+          tar -xzf "$TARBALL" -C "$PUBLISH_DIR" --strip-components=1
+          (cd "$PUBLISH_DIR" && npm publish --access public --provenance --loglevel verbose)
 
       - name: Create GitHub release
         env:

@@ -36,7 +36,7 @@ test("release workflow uses pure npm OIDC trusted publishing without NODE_AUTH_T
   const workflow = readFileSync(resolve(repoRoot, ".github/workflows/release-mcp.yml"), "utf8");
 
   assert.match(workflow, /id-token:\s*write/);
-  assert.match(workflow, /npm publish "\$TARBALL" --access public --provenance/);
+  assert.match(workflow, /npm publish --access public --provenance --loglevel verbose/);
   assert.doesNotMatch(workflow, /NODE_AUTH_TOKEN/);
   assert.doesNotMatch(workflow, /secrets\.NPM_TOKEN/);
   assert.doesNotMatch(workflow, /registry-url:/);
