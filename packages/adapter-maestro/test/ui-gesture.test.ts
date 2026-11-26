@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { REASON_CODES } from "@mobile-e2e-mcp/contracts";
 import { AxeSimulatorBackend } from "../src/ios-backend-axe.ts";
+import { setExecuteRunnerForTesting } from "../src/runtime-shared.ts";
 import { performGestureWithMaestroTool } from "../src/ui-action-gesture.ts";
 import { normalizePerformGesture, resolveGestureCoordinates } from "../src/ui-gesture-model.ts";
 import { createAndroidUiRuntimeHooks } from "../src/ui-runtime-android.ts";
@@ -266,4 +267,98 @@ test("sequence gesture validates limits and handles Android partial support clea
   });
   assert.equal(androidPinchSeq.status, "failed");
   assert.equal(androidPinchSeq.reasonCode, REASON_CODES.unsupportedOperation);
+});
+
+test("performGestureWithMaestroTool retries transient AXe Input stopped once and exposes failed subcommand stderr and index", async () => {
+  try {
+    let transientCalls = 0;
+    setExecuteRunnerForTesting(async () => {
+      transientCalls += 1;
+      if (transientCalls === 1) {
+        return { exitCode: 1, stdout: "", stderr: "Error: Input stopped unexpectedly" };
+      }
+      return { exitCode: 0, stdout: "ok", stderr: "" };
+    });
+
+    const recovered = await performGestureWithMaestroTool({
+      sessionId: "gesture-retry-recover",
+      platform: "ios",
+      deviceId: "FB1859DD-41E1-4DAC-8031-6E831DC5CB04",
+      settleDelayMs: 0,
+      gesture: {
+        type: "draw",
+        coordinateMode: "absolute",
+        points: [{ x: 100, y: 200 }, { x: 200, y: 240 }],
+        durationMs: 200,
+      },
+    });
+    assert.equal(recovered.status, "success");
+    assert.equal(recovered.reasonCode, REASON_CODES.ok);
+    assert.equal(recovered.attempts, 2);
+    assert.equal(recovered.data.commandHistory.length, 2);
+    assert.equal(recovered.data.failedCommandIndex, undefined);
+    assert.equal(recovered.data.stderrSummary, undefined);
+
+    let repeatedCalls = 0;
+    setExecuteRunnerForTesting(async () => {
+      repeatedCalls += 1;
+      return { exitCode: 1, stdout: "", stderr: "Error: Input stopped persistently" };
+    });
+
+    const cappedRetry = await performGestureWithMaestroTool({
+      sessionId: "gesture-retry-cap",
+      platform: "ios",
+      deviceId: "FB1859DD-41E1-4DAC-8031-6E831DC5CB04",
+      settleDelayMs: 0,
+      gesture: {
+        type: "draw",
+        coordinateMode: "absolute",
+        points: [{ x: 100, y: 200 }, { x: 200, y: 240 }],
+        durationMs: 200,
+      },
+    });
+    assert.equal(repeatedCalls, 2);
+    assert.equal(cappedRetry.status, "failed");
+    assert.equal(cappedRetry.attempts, 2);
+    assert.equal(cappedRetry.data.failedCommandIndex, 0);
+    assert.equal(cappedRetry.data.stderrSummary, "Error: Input stopped persistently");
+    assert.match(cappedRetry.nextSuggestions[0] ?? "", /command 1\/1 \(axe draw\)/);
+    assert.match(cappedRetry.nextSuggestions[0] ?? "", /Input stopped persistently/);
+
+    let seqCalls = 0;
+    setExecuteRunnerForTesting(async () => {
+      seqCalls += 1;
+      if (seqCalls === 1) {
+        return { exitCode: 0, stdout: "", stderr: "" };
+      }
+      return { exitCode: 1, stdout: "", stderr: "Error: Step 1 failed\n  [gesture] pinch rejected" };
+    });
+
+    const seqFailed = await performGestureWithMaestroTool({
+      sessionId: "gesture-seq-stderr",
+      platform: "ios",
+      deviceId: "FB1859DD-41E1-4DAC-8031-6E831DC5CB04",
+      settleDelayMs: 0,
+      gesture: {
+        type: "sequence",
+        coordinateMode: "absolute",
+        steps: [
+          { type: "draw", points: [{ x: 10, y: 20 }, { x: 30, y: 40 }], durationMs: 200 },
+          { type: "pinch", scale: 1.4, center: { x: 300, y: 400 }, durationMs: 200 },
+          { type: "drag", start: { x: 50, y: 60 }, end: { x: 150, y: 160 }, durationMs: 200 },
+        ],
+      },
+    });
+    assert.equal(seqCalls, 2);
+    assert.equal(seqFailed.status, "failed");
+    assert.equal(seqFailed.attempts, 1);
+    assert.equal(seqFailed.data.commandHistory.length, 2);
+    assert.equal(seqFailed.data.failedCommandIndex, 1);
+    assert.equal(seqFailed.data.stderrSummary, "Error: Step 1 failed [gesture] pinch rejected");
+    assert.match(seqFailed.nextSuggestions[0] ?? "", /command 2\/3 \(axe gesture pinch\)/);
+    assert.match(seqFailed.nextSuggestions[0] ?? "", /exitCode=1/);
+    assert.match(seqFailed.nextSuggestions[0] ?? "", /Error: Step 1 failed \[gesture\] pinch rejected/);
+  } finally {
+    setExecuteRunnerForTesting(null);
+  }
 });

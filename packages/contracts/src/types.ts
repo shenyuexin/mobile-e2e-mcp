@@ -2200,6 +2200,8 @@ export interface PerformGestureData {
   exitCode: number | null;
   supportLevel: "full" | "partial";
   backendId?: string;
+  failedCommandIndex?: number;
+  stderrSummary?: string;
 }
 export type AndroidTextInputStrategy = "auto" | "maestro" | "oem_fallback";
 export interface AndroidReplayOptions {

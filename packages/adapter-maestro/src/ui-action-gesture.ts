@@ -28,6 +28,55 @@ import {
   resolveGestureCoordinates,
 } from "./ui-gesture-model.js";
 
+const AXE_INPUT_STOPPED_RETRY_DELAY_MS = 250;
+const MAX_FAILED_STDERR_SUMMARY_CHARS = 240;
+
+function isTransientAxeInputStopped(
+  command: string[],
+  execution: { exitCode: number | null; stderr?: string; stdout?: string } | undefined,
+): boolean {
+  if (command[0] !== "axe" || !execution || execution.exitCode === 0) {
+    return false;
+  }
+  const combined = `${execution.stderr ?? ""}\n${execution.stdout ?? ""}`;
+  if (/quarantined|rejectedBeforeInput/i.test(combined)) {
+    return false;
+  }
+  return /input stopped/i.test(combined);
+}
+
+function formatGestureSubcommandLabel(command: string[]): string {
+  if (command[0] === "axe") {
+    if (command[1] === "gesture" && command[2]) {
+      return `axe gesture ${command[2]}`;
+    }
+    return command[1] ? `axe ${command[1]}` : "axe";
+  }
+  if (command[0] === "adb" && command[1] === "-s") {
+    return command.slice(3, 6).join(" ") || "adb";
+  }
+  return command.slice(0, 3).join(" ");
+}
+
+function summarizeCommandFailureOutput(
+  stderr: string,
+  stdout: string,
+  maxChars: number = MAX_FAILED_STDERR_SUMMARY_CHARS,
+): string | undefined {
+  const raw = stderr.trim() || stdout.trim();
+  if (!raw) {
+    return undefined;
+  }
+  const collapsed = raw.replace(/\s+/g, " ").trim();
+  if (!collapsed) {
+    return undefined;
+  }
+  if (collapsed.length <= maxChars) {
+    return collapsed;
+  }
+  return `${collapsed.slice(0, Math.max(1, maxChars - 3))}...`;
+}
+
 /**
  * Executes canvas polyline draw, drag, pinch, double-tap, or two-finger tap gestures.
  * Full simulator support on iOS via AXe v2.2+; partial support on Android via adb.
@@ -220,19 +269,43 @@ export async function performGestureWithMaestroTool(
 
   const commandHistory: string[][] = [];
   let lastExitCode: number | null = plan.commands.length === 0 ? 0 : null;
+  let retryCount = 0;
+  let failedCommandIndex: number | undefined;
+  let failedSubcommand: string | undefined;
+  let stderrSummary: string | undefined;
 
   for (let i = 0; i < plan.commands.length; i += 1) {
     const command = plan.commands[i];
     if (!command) continue;
-    const execution = await executeUiActionCommand({
+
+    let execution = await executeUiActionCommand({
       repoRoot,
       command,
       requiresProbe: false,
       timeoutMs: plan.commandTimeoutMs,
     });
-    lastExitCode = execution.execution?.exitCode ?? null;
     commandHistory.push([...command]);
+
+    if (isTransientAxeInputStopped(command, execution.execution)) {
+      retryCount += 1;
+      await new Promise((r) => setTimeout(r, AXE_INPUT_STOPPED_RETRY_DELAY_MS));
+      execution = await executeUiActionCommand({
+        repoRoot,
+        command,
+        requiresProbe: false,
+        timeoutMs: plan.commandTimeoutMs,
+      });
+      commandHistory.push([...command]);
+    }
+
+    lastExitCode = execution.execution?.exitCode ?? null;
     if (lastExitCode !== 0) {
+      failedCommandIndex = i;
+      failedSubcommand = formatGestureSubcommandLabel(command);
+      stderrSummary = summarizeCommandFailureOutput(
+        execution.execution?.stderr ?? "",
+        execution.execution?.stdout ?? "",
+      );
       break;
     }
     const stepDelay = plan.stepDelaysMs?.[i] ?? plan.interCommandDelayMs ?? 0;
@@ -250,12 +323,18 @@ export async function performGestureWithMaestroTool(
       ? REASON_CODES.actionTapFailed
       : REASON_CODES.actionScrollFailed;
 
+  const failureLocation =
+    failedCommandIndex !== undefined
+      ? ` at command ${String(failedCommandIndex + 1)}/${String(plan.commands.length)}${failedSubcommand ? ` (${failedSubcommand})` : ""}`
+      : "";
+  const failureDetail = stderrSummary ? `: ${stderrSummary}` : "";
+
   return {
     status: lastExitCode === 0 ? "success" : "failed",
     reasonCode: lastExitCode === 0 ? REASON_CODES.ok : failedReasonCode,
     sessionId: input.sessionId,
     durationMs: Date.now() - startTime,
-    attempts: 1,
+    attempts: 1 + retryCount,
     artifacts: [],
     data: {
       dryRun: false,
@@ -271,6 +350,8 @@ export async function performGestureWithMaestroTool(
       exitCode: lastExitCode,
       supportLevel: plan.supportLevel,
       ...(plan.backendId ? { backendId: plan.backendId } : {}),
+      ...(lastExitCode !== 0 && failedCommandIndex !== undefined ? { failedCommandIndex } : {}),
+      ...(lastExitCode !== 0 && stderrSummary ? { stderrSummary } : {}),
     },
     nextSuggestions:
       lastExitCode === 0
@@ -279,7 +360,7 @@ export async function performGestureWithMaestroTool(
             ...(plan.caveat ? [plan.caveat] : []),
           ]
         : [
-            `Gesture ${resolved.type} failed (exitCode=${String(lastExitCode)}). Check screen bounds, device orientation, and backend readiness.`,
+            `Gesture ${resolved.type} failed${failureLocation} (exitCode=${String(lastExitCode)})${failureDetail}. Check screen bounds, device orientation, and backend readiness.`,
           ],
   };
 }
