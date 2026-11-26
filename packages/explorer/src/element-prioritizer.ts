@@ -17,6 +17,10 @@ import type {
   ExplorerConfig,
   UiHierarchy,
 } from "./types.js";
+import {
+  inspectIosPresentationScope,
+  isPopoverDismissRegion,
+} from "./ios-presentation-scope.js";
 
 // ---------------------------------------------------------------------------
 // Type classification sets (iOS 26.0 spike data)
@@ -166,6 +170,8 @@ const NAVIGATION_CONTROL_PATTERNS = [
   /^cancel$/i,
   /^done$/i,
   /^close$/i,
+  /^dismiss$/i,
+  /^dismiss popup$/i,
   /^xmark$/i,
 ];
 
@@ -520,9 +526,16 @@ export function findClickableElements(
   uiTree: UiHierarchy,
   config: ExplorerConfig,
 ): ClickableTarget[] {
-  const allElements = flattenTree(uiTree);
+  const isIosPlatform =
+    config.platform === "ios-simulator" || config.platform === "ios-device";
+  const effectiveRoot = isIosPlatform
+    ? inspectIosPresentationScope(uiTree).activeRoot
+    : uiTree;
+  const allElements = flattenTree(effectiveRoot);
   return allElements
     .filter((el) => {
+      // Exclude UIKit/SwiftUI popover dismissal backdrop
+      if (isPopoverDismissRegion(el)) return false;
       // Must be interactive
       if (!isInteractive(el)) return false;
       // Exclude toggles (SPEC §4.4)

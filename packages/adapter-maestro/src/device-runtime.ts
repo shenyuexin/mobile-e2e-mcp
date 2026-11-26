@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { buildCrashAttribution } from "./crash-attribution.js";
 import type {
@@ -28,6 +28,10 @@ import type {
 import { REASON_CODES } from "@mobile-e2e-mcp/contracts";
 import { buildCapabilityProfile } from "./capability-model.js";
 import { evidencePaths } from "./artifact-paths.js";
+import {
+  startBackgroundScreenRecording,
+  stopBackgroundScreenRecording,
+} from "./screen-recording-manager.js";
 import { buildDefaultDeviceId, DEFAULT_FLOWS, DEFAULT_HARNESS_CONFIG_PATH, DEFAULT_RUNNER_PROFILE, isRecord, loadHarnessSelection, parseHarnessConfig, readNonEmptyString, readStringArray, resolveRepoPath } from "./harness-config.js";
 import {
   type CollectDiagnosticsCapturePlan,
@@ -721,6 +725,41 @@ export async function takeScreenshotWithRuntime(input: ScreenshotInput): Promise
 
 export async function recordScreenWithRuntime(input: RecordScreenInput): Promise<ToolResult<RecordScreenData>> {
   const startTime = Date.now();
+  const mode = input.mode ?? "fixed";
+  const runnerProfile = input.runnerProfile ?? DEFAULT_RUNNER_PROFILE;
+
+  if (mode !== "fixed" && mode !== "start" && mode !== "stop") {
+    return {
+      status: "failed",
+      reasonCode: REASON_CODES.configurationError,
+      sessionId: input.sessionId,
+      durationMs: Date.now() - startTime,
+      attempts: 1,
+      artifacts: [],
+      data: {
+        dryRun: Boolean(input.dryRun),
+        runnerProfile,
+        outputPath: input.outputPath ?? "",
+        durationMs: 0,
+        commandLabels: [],
+        commands: [],
+        exitCode: null,
+        supportLevel: "partial",
+      },
+      nextSuggestions: [`Invalid record_screen mode '${String(mode)}'. Expected 'fixed', 'start', or 'stop'.`],
+    };
+  }
+
+  if (mode === "stop") {
+    return stopBackgroundScreenRecording({
+      input,
+      runnerProfile,
+      platform: input.platform,
+      deviceId: input.deviceId,
+      startTime,
+    });
+  }
+
   if (!input.platform) {
     return {
       status: "failed",
@@ -731,7 +770,7 @@ export async function recordScreenWithRuntime(input: RecordScreenInput): Promise
       artifacts: [],
       data: {
         dryRun: Boolean(input.dryRun),
-        runnerProfile: input.runnerProfile ?? DEFAULT_RUNNER_PROFILE,
+        runnerProfile,
         outputPath: input.outputPath ?? path.posix.join(evidencePaths.recordVideos(), input.sessionId, "unknown.mp4"),
         durationMs: normalizeRecordDurationMs(input.durationMs, "android"),
         bitrateMbps: normalizeRecordBitrateMbps(input.bitrateMbps),
@@ -739,20 +778,62 @@ export async function recordScreenWithRuntime(input: RecordScreenInput): Promise
         commands: [],
         exitCode: null,
         supportLevel: "partial",
+        mode,
       },
       nextSuggestions: ["Provide platform explicitly, or call record_screen with an active sessionId so MCP can resolve platform from session context."],
     };
   }
 
   const repoRoot = resolveRepoPath();
-  const runnerProfile = input.runnerProfile ?? DEFAULT_RUNNER_PROFILE;
   const hooks = resolveDeviceRuntimePlatformHooks(input.platform);
   const selection = await loadHarnessSelection(repoRoot, input.platform, runnerProfile, input.harnessConfigPath ?? DEFAULT_HARNESS_CONFIG_PATH);
   const deviceId = input.deviceId ?? selection.deviceId ?? buildDefaultDeviceId(input.platform);
-  const durationMs = normalizeRecordDurationMs(input.durationMs, input.platform);
   const bitrateMbps = normalizeRecordBitrateMbps(input.bitrateMbps);
   const relativeOutputPath = input.outputPath ?? path.posix.join(evidencePaths.recordVideos(), input.sessionId, `${input.platform}-${runnerProfile}.mp4`);
   const absoluteOutputPath = path.resolve(repoRoot, relativeOutputPath);
+
+  if (mode === "start") {
+    return startBackgroundScreenRecording({
+      input,
+      repoRoot,
+      platform: input.platform,
+      runnerProfile,
+      deviceId,
+      relativeOutputPath,
+      absoluteOutputPath,
+      bitrateMbps,
+      startTime,
+    });
+  }
+
+  const durationMs = normalizeRecordDurationMs(input.durationMs, input.platform);
+
+  if (input.platform === "ios" && isIosPhysicalDeviceId(deviceId) && !input.dryRun) {
+    return {
+      status: "failed",
+      reasonCode: REASON_CODES.unsupportedOperation,
+      sessionId: input.sessionId,
+      durationMs: Date.now() - startTime,
+      attempts: 1,
+      artifacts: [],
+      data: {
+        dryRun: false,
+        runnerProfile,
+        outputPath: relativeOutputPath,
+        durationMs,
+        bitrateMbps,
+        commandLabels: ["record_unsupported_physical_ios"],
+        commands: [],
+        exitCode: null,
+        supportLevel: "partial",
+        mode: "fixed",
+      },
+      nextSuggestions: [
+        "iOS physical-device screen recording is not supported in this adapter path. Use an iOS simulator for automated MP4 capture.",
+      ],
+    };
+  }
+
   await mkdir(path.dirname(absoluteOutputPath), { recursive: true });
 
   const plan = hooks.buildRecordScreenPlan({
@@ -781,6 +862,8 @@ export async function recordScreenWithRuntime(input: RecordScreenInput): Promise
         commands: plan.commands,
         exitCode: 0,
         supportLevel: plan.supportLevel,
+        mode: "fixed",
+        backend: input.platform === "android" ? "adb" : "simctl",
         evidence: [buildExecutionEvidence("screen_recording", relativeOutputPath, plan.supportLevel, `Planned ${input.platform === "android" ? "Android" : "iOS simulator"} screen recording artifact path.`)],
       },
       nextSuggestions: [plan.dryRunSuggestion],
@@ -804,6 +887,8 @@ export async function recordScreenWithRuntime(input: RecordScreenInput): Promise
     usedFallback = fallbackExecution.exitCode === 0;
   }
 
+  const backend = input.platform === "android" ? "adb" : usedFallback ? "axe" : "simctl";
+
   if (recordExecution.exitCode !== 0) {
     if (cleanupCommand) {
       await executeRunner(cleanupCommand, repoRoot, process.env).catch(() => undefined);
@@ -825,6 +910,8 @@ export async function recordScreenWithRuntime(input: RecordScreenInput): Promise
         commands: effectiveCommands,
         exitCode: recordExecution.exitCode,
         supportLevel: plan.supportLevel,
+        mode: "fixed",
+        backend,
       },
       nextSuggestions: [plan.failureSuggestion],
     };
@@ -834,6 +921,8 @@ export async function recordScreenWithRuntime(input: RecordScreenInput): Promise
   if (cleanupCommand) {
     await executeRunner(cleanupCommand, repoRoot, process.env).catch(() => undefined);
   }
+  const fileStat = finalizeExecution.exitCode === 0 ? await stat(absoluteOutputPath).catch(() => null) : null;
+  const sizeBytes = fileStat?.size;
 
   return {
     status: finalizeExecution.exitCode === 0 ? "success" : "failed",
@@ -852,6 +941,9 @@ export async function recordScreenWithRuntime(input: RecordScreenInput): Promise
       commands: effectiveCommands,
       exitCode: finalizeExecution.exitCode,
       supportLevel: plan.supportLevel,
+      mode: "fixed",
+      backend,
+      ...(typeof sizeBytes === "number" ? { sizeBytes } : {}),
       evidence: finalizeExecution.exitCode === 0
         ? [buildExecutionEvidence("screen_recording", relativeOutputPath, plan.supportLevel, `Captured ${input.platform === "android" ? "Android" : "iOS simulator"} screen recording artifact${usedFallback ? " (AXe fallback)" : ""}.`)]
         : undefined,

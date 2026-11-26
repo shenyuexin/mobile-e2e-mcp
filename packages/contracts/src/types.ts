@@ -1687,6 +1687,9 @@ export interface ResetAppStateData {
   exitCode: number | null;
   supportLevel: "full" | "partial";
 }
+export type RecordScreenMode = "fixed" | "start" | "stop";
+export type RecordScreenBackend = "axe" | "simctl" | "adb";
+
 export interface RecordScreenInput {
   sessionId: string;
   platform?: Platform;
@@ -1697,6 +1700,11 @@ export interface RecordScreenInput {
   durationMs?: number;
   bitrateMbps?: number;
   dryRun?: boolean;
+  mode?: RecordScreenMode;
+  recordingId?: string;
+  discardOnStop?: boolean;
+  fps?: number;
+  scale?: number;
 }
 export interface RecordScreenData {
   dryRun: boolean;
@@ -1709,6 +1717,14 @@ export interface RecordScreenData {
   exitCode: number | null;
   supportLevel: "full" | "partial";
   evidence?: ExecutionEvidence[];
+  mode?: RecordScreenMode;
+  recordingId?: string;
+  recordingActive?: boolean;
+  discarded?: boolean;
+  backend?: RecordScreenBackend;
+  fps?: number;
+  scale?: number;
+  sizeBytes?: number;
 }
 export interface TapInput { sessionId: string; platform?: Platform; runnerProfile?: RunnerProfile; harnessConfigPath?: string; deviceId?: string; x: number; y: number; dryRun?: boolean; }
 export interface TapData {
@@ -1829,6 +1845,53 @@ export interface InspectUiData {
   pageContext?: import("./page-context.js").PageContext;
   summary?: InspectUiSummary;
 }
+export type UiAuditBaselineCategory =
+  | "edgeClipping"
+  | "siblingOverlaps"
+  | "severeSmallTargets"
+  | "missingA11yId"
+  | "duplicateA11yIds"
+  | "rawI18nKeys"
+  | "zeroSize";
+export type UiAuditBaselineMode = "compare" | "update";
+export interface UiAuditBaselineCategoryCounts {
+  edgeClipping: number;
+  siblingOverlaps: number;
+  severeSmallTargets: number;
+  missingA11yId: number;
+  duplicateA11yIds: number;
+  rawI18nKeys: number;
+  zeroSize: number;
+  total: number;
+}
+export interface UiAuditBaselineSurfaceEntry {
+  counts: Omit<UiAuditBaselineCategoryCounts, "total">;
+  fingerprints: Record<UiAuditBaselineCategory, Record<string, number>>;
+}
+export interface UiAuditBaselineFile {
+  schemaVersion: 1;
+  updatedAt: string;
+  surfaces: Record<string, UiAuditBaselineSurfaceEntry>;
+}
+export interface UiAuditBaselineRegressionItem {
+  category: UiAuditBaselineCategory;
+  fingerprint: string;
+  delta: number;
+  baselineCount: number;
+  currentCount: number;
+}
+export interface UiAuditBaselineDiff {
+  baselinePath: string;
+  mode: UiAuditBaselineMode;
+  baselineFound: boolean;
+  matchedSurface: boolean;
+  baselineUpdated: boolean;
+  newIssueCounts: UiAuditBaselineCategoryCounts;
+  preExistingIssueCounts: UiAuditBaselineCategoryCounts;
+  resolvedIssueCounts: UiAuditBaselineCategoryCounts;
+  newRegressions: UiAuditBaselineRegressionItem[];
+  resolvedItems: UiAuditBaselineRegressionItem[];
+}
 export interface AuditUiSurfaceInput {
   sessionId: string;
   platform?: Platform;
@@ -1845,6 +1908,8 @@ export interface AuditUiSurfaceInput {
   minVisibleRatio?: number;
   i18nKeyPrefixes?: string[];
   nodes?: InspectUiNode[];
+  baselinePath?: string;
+  baselineMode?: UiAuditBaselineMode;
   dryRun?: boolean;
 }
 export interface UiAuditFindingNode {
@@ -1914,6 +1979,7 @@ export interface AuditUiSurfaceData {
   duplicateA11yIds: UiAuditDuplicateIdFinding[];
   rawI18nKeys: UiAuditRawI18nFinding[];
   zeroSize: UiAuditZeroSizeFinding[];
+  baselineDiff?: UiAuditBaselineDiff;
 }
 export type WaitForUiMode = "visible" | "gone" | "unique";
 export interface WaitForUiInput extends InspectUiQueryInput {
@@ -2021,6 +2087,100 @@ export interface ScrollOnlyData {
     coordinateScope?: "viewport" | "container";
     containerBoundsApplied?: ScrollOnlyContainerBounds;
   };
+}
+
+/** Supported canvas/multi-touch gesture kinds for `perform_gesture`. */
+export type PerformGestureKind = "draw" | "drag" | "pinch" | "double_tap" | "two_finger_tap";
+export type PerformGestureCoordinateMode = "absolute" | "normalized";
+
+export interface DrawGestureSpec {
+  type: "draw";
+  points: UiPoint[];
+  coordinateMode?: PerformGestureCoordinateMode;
+  containerBounds?: ScrollOnlyContainerBounds;
+  durationMs?: number;
+  close?: boolean;
+  preDelayMs?: number;
+  postDelayMs?: number;
+}
+
+export interface DragGestureSpec {
+  type: "drag";
+  start: UiPoint;
+  end: UiPoint;
+  coordinateMode?: PerformGestureCoordinateMode;
+  containerBounds?: ScrollOnlyContainerBounds;
+  durationMs?: number;
+  steps?: number;
+  holdMs?: number;
+  preDelayMs?: number;
+  postDelayMs?: number;
+}
+
+export interface PinchGestureSpec {
+  type: "pinch";
+  scale: number;
+  center?: UiPoint;
+  coordinateMode?: PerformGestureCoordinateMode;
+  containerBounds?: ScrollOnlyContainerBounds;
+  radius?: number;
+  durationMs?: number;
+  delta?: number;
+  preDelayMs?: number;
+  postDelayMs?: number;
+}
+
+export interface DoubleTapGestureSpec {
+  type: "double_tap";
+  point: UiPoint;
+  coordinateMode?: PerformGestureCoordinateMode;
+  containerBounds?: ScrollOnlyContainerBounds;
+  intervalMs?: number;
+  preDelayMs?: number;
+  postDelayMs?: number;
+}
+
+export interface TwoFingerTapGestureSpec {
+  type: "two_finger_tap";
+  point1: UiPoint;
+  point2: UiPoint;
+  coordinateMode?: PerformGestureCoordinateMode;
+  containerBounds?: ScrollOnlyContainerBounds;
+  preDelayMs?: number;
+  postDelayMs?: number;
+}
+
+export type PerformGestureSpec =
+  | DrawGestureSpec
+  | DragGestureSpec
+  | PinchGestureSpec
+  | DoubleTapGestureSpec
+  | TwoFingerTapGestureSpec;
+
+export interface PerformGestureInput {
+  sessionId: string;
+  platform?: Platform;
+  runnerProfile?: RunnerProfile;
+  deviceId?: string;
+  harnessConfigPath?: string;
+  dryRun?: boolean;
+  gesture: PerformGestureSpec;
+  settleDelayMs?: number;
+}
+
+export interface PerformGestureData {
+  dryRun: boolean;
+  runnerProfile: RunnerProfile;
+  gestureType: PerformGestureKind;
+  coordinateMode: PerformGestureCoordinateMode;
+  coordinateScope: "viewport" | "container";
+  containerBoundsApplied?: ScrollOnlyContainerBounds;
+  resolvedPoints?: UiPoint[];
+  durationMs?: number;
+  commandHistory: string[][];
+  exitCode: number | null;
+  supportLevel: "full" | "partial";
+  backendId?: string;
 }
 export type AndroidTextInputStrategy = "auto" | "maestro" | "oem_fallback";
 export interface AndroidReplayOptions {

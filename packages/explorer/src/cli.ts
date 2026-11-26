@@ -185,10 +185,14 @@ export async function explore(argv: string[], server: InvokableServer): Promise<
     process.exit(2);
   }
 
-  // Save the config for future reuse (never persist transient launchEnv secrets)
-  const { launchEnv: _omitLaunchEnv, ...persistableConfig } = finalConfig;
-  const store = new ConfigStore(flags.configPath);
-  store.save(persistableConfig);
+  // Save the config for future reuse only for interactive runs or default local config.
+  // Never overwrite an explicitly provided --config file during --no-prompt runs
+  // (e.g. checked-in project rule registry configs).
+  if (!(flags.noPrompt && flags.configPath)) {
+    const { launchEnv: _omitLaunchEnv, ...persistableConfig } = finalConfig;
+    const store = new ConfigStore(flags.configPath);
+    store.save(persistableConfig);
+  }
 
   // Run the exploration
   const result = await runExplore(server, {

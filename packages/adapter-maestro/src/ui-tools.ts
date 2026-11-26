@@ -6,6 +6,12 @@ export {
 } from "./ui-inspection-tools.js";
 export { auditUiSurfaceWithMaestroTool } from "./ui-audit-tool.js";
 export {
+  buildUiAuditBaselineSurface,
+  diffUiAuditAgainstBaseline,
+  mergeUiAuditBaselineFile,
+  parseUiAuditBaselineFile,
+} from "./ui-audit-baseline.js";
+export {
   tapWithMaestroTool,
   tapElementWithMaestroTool,
   typeTextWithMaestroTool,
@@ -14,6 +20,7 @@ export {
   scrollOnlyWithMaestroTool,
   scrollAndTapElementWithMaestroTool,
 } from "./ui-action-tools.js";
+export { performGestureWithMaestroTool } from "./ui-action-gesture.js";
 export {
   navigateBackWithMaestroTool,
   setNavigateBackTestHooksForTesting,

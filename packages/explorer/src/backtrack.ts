@@ -11,6 +11,11 @@ import type { BackAffordance, BacktrackLadderContext, BacktrackTapSelector, Cach
 import { runAndroidBacktrackLadder } from "./backtrack-android.js";
 import { runIosBacktrackLadder } from "./backtrack-ios.js";
 import { resolveExplorerPlatformHooks } from "./explorer-platform.js";
+import {
+  computeOutsidePopoverTapPoints,
+  extractOverlayDismissButtonLabels,
+  inspectIosPresentationScope,
+} from "./ios-presentation-scope.js";
 import { generateScreenId } from "./snapshot.js";
 import { hashUiStructure } from "./page-registry.js";
 
@@ -196,7 +201,10 @@ export function createBacktracker(
           return { status: "not_detected", selectorLabels: [] };
         }
 
-        const nodes = flattenUiTree(uiTree);
+        const isIos = platform === "ios-simulator" || platform === "ios-device";
+        const presentationScope = isIos ? inspectIosPresentationScope(uiTree) : undefined;
+        const scopedTree = presentationScope?.isModalOverlay ? presentationScope.activeRoot : uiTree;
+        const nodes = flattenUiTree(scopedTree);
         const navBarNode = nodes.find((node) => {
           const role = (node.accessibilityRole ?? "").toLowerCase();
           const className = (node.className ?? "").toLowerCase();
@@ -248,7 +256,7 @@ export function createBacktracker(
           const role = (node.accessibilityRole ?? "").toLowerCase();
           const className = (node.className ?? "").toLowerCase();
           const isButtonLike = node.clickable || role.includes("button") || className.includes("button");
-          return isButtonLike && ["cancel", "close", "ok", "done", "allow"].includes(label);
+          return isButtonLike && ["cancel", "close", "dismiss", "ok", "done", "allow"].includes(label);
         });
         const hasDialogTitle = nodes.some((node) => {
           const label = normalizeLabel(node.contentDesc ?? node.text ?? node.accessibilityLabel ?? "").toLowerCase();
@@ -273,10 +281,15 @@ export function createBacktracker(
           && selectorCandidates.length === 0
           && (hasSearchField || hasTopCancelButton);
         const isDialogLike = hasDialogTitle || dialogButtons.length >= 2;
+        const isPopoverLike = Boolean(presentationScope?.isModalOverlay);
+        const dismissButtonLabels = isPopoverLike && presentationScope
+          ? extractOverlayDismissButtonLabels(presentationScope.activeRoot)
+          : undefined;
 
         logTrace(
           `affordance status=${status}, selectorCandidates=${JSON.stringify(selectorCandidates.slice(0, 3))}, ` +
-          `navBarFrame=${JSON.stringify(navBarNode?.frame ?? null)}, searchActiveLike=${String(isSearchActiveLike)}, dialogLike=${String(isDialogLike)}`,
+          `navBarFrame=${JSON.stringify(navBarNode?.frame ?? null)}, searchActiveLike=${String(isSearchActiveLike)}, ` +
+          `dialogLike=${String(isDialogLike)}, popoverLike=${String(isPopoverLike)}, dismissButtons=${JSON.stringify(dismissButtonLabels ?? [])}`,
         );
 
         return {
@@ -285,6 +298,11 @@ export function createBacktracker(
           selectorLabels,
           isSearchActiveLike,
           isDialogLike,
+          isPopoverLike,
+          popoverFrame: presentationScope?.overlayFrame,
+          screenFrame: presentationScope?.screenFrame,
+          hasDismissBackdrop: presentationScope?.hasDismissBackdrop,
+          dismissButtonLabels,
         };
       };
 
@@ -790,6 +808,77 @@ export function createBacktracker(
         return false;
       };
 
+      const tryPopoverDismissButtons = async (labels: string[]): Promise<boolean> => {
+        for (const label of dedupeLabels(labels)) {
+          if (
+            await tryTapBackControl("tap_popover_dismiss_button:contentDesc", {
+              contentDesc: label,
+              className: "Button",
+              clickable: true,
+            }) ||
+            await tryTapBackControl("tap_popover_dismiss_button:text", {
+              text: label,
+              className: "Button",
+              clickable: true,
+            }) ||
+            await tryTapBackControl("tap_popover_dismiss_button:any_contentDesc", {
+              contentDesc: label,
+            }) ||
+            await tryTapBackControl("tap_popover_dismiss_button:any_text", {
+              text: label,
+            })
+          ) {
+            return true;
+          }
+        }
+        return false;
+      };
+
+      const tryPopoverDismissTap = async (affordance: BackAffordance): Promise<boolean> => {
+        if (!affordance.hasDismissBackdrop || !affordance.popoverFrame) {
+          return false;
+        }
+        const points = computeOutsidePopoverTapPoints(
+          affordance.popoverFrame,
+          affordance.screenFrame,
+        );
+        for (const point of points) {
+          const before = await captureCurrentPageContext();
+          const tapResult = await mcp.tap({ x: point.x, y: point.y });
+          const detail =
+            `method=tap_popover_outside_dismiss, point=${point.name}, x=${point.x}, y=${point.y}, ` +
+            `status=${tapResult.status}, reason=${tapResult.reasonCode}`;
+
+          if (tapResult.status !== "success" && tapResult.status !== "partial") {
+            logWarn(`${detail} => tap failed`);
+            continue;
+          }
+
+          if (!(await waitForSettle())) {
+            logWarn(`${detail} => settle failed`);
+            continue;
+          }
+
+          const after = await captureCurrentPageContext();
+          if (!verifyBackTransition(before, after, parentTitle)) {
+            logWarn(
+              `${detail} => transition rejected (before=${before.title ?? "unknown"}[${before.screenId ?? "n/a"}], ` +
+              `after=${after.title ?? "unknown"}[${after.screenId ?? "n/a"}], ` +
+              `expectedParent=${parentTitle ?? "<none>"})`,
+            );
+            continue;
+          }
+
+          logTrace(
+            `${detail} => success (before=${before.title ?? "unknown"}[${before.screenId ?? "n/a"}], ` +
+            `after=${after.title ?? "unknown"}[${after.screenId ?? "n/a"}], ` +
+            `expectedParent=${parentTitle ?? "<none>"})`,
+          );
+          return true;
+        }
+        return false;
+      };
+
       const ladderContext: BacktrackLadderContext = {
         parentTitle,
         detectBackAffordance,
@@ -799,6 +888,8 @@ export function createBacktracker(
         tryTopBarBackCandidates,
         tryScreenSummaryBackAffordance,
         tryNavBarCoordinateBack,
+        tryPopoverDismissButtons,
+        tryPopoverDismissTap,
         logWarn,
         logBackFailureEvidence,
       };

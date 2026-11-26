@@ -91,6 +91,7 @@ test("requiredPolicyScopesForTool returns correct scopes for action tools", () =
   assert.deepEqual(requiredPolicyScopesForTool("scroll_only"), ["swipe"]);
   assert.deepEqual(requiredPolicyScopesForTool("scroll_and_resolve_ui_target"), ["swipe"]);
   assert.deepEqual(requiredPolicyScopesForTool("scroll_and_tap_element"), ["swipe"]);
+  assert.deepEqual(requiredPolicyScopesForTool("perform_gesture"), ["swipe"]);
 });
 
 test("requiredPolicyScopesForTool returns correct scopes for multi-scope tools", () => {
@@ -126,6 +127,7 @@ test("isToolAllowedByProfile denies when scope is missing from allow list", () =
   // tap_element requires ["tap"], but "tap" is not in allow
   assert.equal(isToolAllowedByProfile(profile, "tap_element"), false);
   assert.equal(isToolAllowedByProfile(profile, "scroll_only"), false);
+  assert.equal(isToolAllowedByProfile(profile, "perform_gesture"), false);
 });
 
 test("isToolAllowedByProfile defaults to true for unknown tools (no scopes required)", () => {

@@ -37,6 +37,12 @@ export interface IosExecutionBackend {
     deviceId: string,
     swipe: { start: { x: number; y: number }; end: { x: number; y: number }; durationMs: number; delta?: number; preDelaySec?: number; postDelaySec?: number },
   ): string[];
+  /** Optional canvas polyline draw builder (simulator AXe v2.2+). */
+  buildDrawCommand?: (deviceId: string, draw: IosDrawGestureParams) => string[];
+  /** Optional explicit drag builder (with optional hold/steps). */
+  buildDragCommand?: (deviceId: string, drag: IosDragGestureParams) => string[];
+  /** Optional multi-touch gesture builder (pinch / double-tap / two-finger-tap). */
+  buildMultiTouchGestureCommand?: (deviceId: string, gesture: IosMultiTouchGestureParams) => string[];
   /** Build a hierarchy capture command that returns JSON/XML hierarchy data. */
   buildHierarchyCaptureCommand(deviceId: string): string[];
   /**
@@ -64,3 +70,47 @@ export interface BackendProbeSummary {
   /** Deprecated backend; only present when explicitly requested. */
   idb?: BackendProbeResult;
 }
+
+export interface IosDrawGestureParams {
+  points: Array<{ x: number; y: number }>;
+  durationMs: number;
+  close?: boolean;
+  preDelayMs?: number;
+  postDelayMs?: number;
+}
+
+export interface IosDragGestureParams {
+  start: { x: number; y: number };
+  end: { x: number; y: number };
+  durationMs: number;
+  steps?: number;
+  holdMs?: number;
+  preDelayMs?: number;
+  postDelayMs?: number;
+}
+
+export type IosMultiTouchGestureParams =
+  | {
+      type: "pinch";
+      scale: number;
+      center?: { x: number; y: number };
+      radius?: number;
+      durationMs: number;
+      delta?: number;
+      preDelayMs?: number;
+      postDelayMs?: number;
+    }
+  | {
+      type: "double_tap";
+      point: { x: number; y: number };
+      intervalMs?: number;
+      preDelayMs?: number;
+      postDelayMs?: number;
+    }
+  | {
+      type: "two_finger_tap";
+      point1: { x: number; y: number };
+      point2: { x: number; y: number };
+      preDelayMs?: number;
+      postDelayMs?: number;
+    };

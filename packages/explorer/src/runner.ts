@@ -185,6 +185,13 @@ export async function runExplore(
       // Best-effort cleanup for isolated UITesting launches
     }
   }
+  if (typeof server?.invoke === "function") {
+    try {
+      await server.invoke("end_session", { sessionId });
+    } catch {
+      // Best-effort cleanup of session leases/recordings/pool handles
+    }
+  }
 
   const durationMs = Date.now() - startTime;
   const visitedCount = explorationResult.visited.count;

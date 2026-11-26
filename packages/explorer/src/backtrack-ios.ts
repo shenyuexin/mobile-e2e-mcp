@@ -4,20 +4,44 @@ import { tryCancelCloseFamily, tryDialogControlFamily, trySelectorFamily } from 
 export async function runIosBacktrackLadder(ctx: BacktrackLadderContext): Promise<boolean> {
   const affordance = await ctx.detectBackAffordance();
   const isDialogLike = affordance.isDialogLike === true;
+  const isPopoverLike = affordance.isPopoverLike === true;
+
+  if (isPopoverLike) {
+    if (
+      affordance.dismissButtonLabels &&
+      affordance.dismissButtonLabels.length > 0 &&
+      ctx.tryPopoverDismissButtons &&
+      await ctx.tryPopoverDismissButtons(affordance.dismissButtonLabels)
+    ) {
+      return true;
+    }
+
+    if (await tryCancelCloseFamily(ctx)) {
+      return true;
+    }
+
+    if (await tryDialogControlFamily(ctx)) {
+      return true;
+    }
+
+    if (ctx.tryPopoverDismissTap && await ctx.tryPopoverDismissTap(affordance)) {
+      return true;
+    }
+  }
 
   if (await trySelectorFamily(ctx, affordance)) {
     return true;
   }
 
-  if (!isDialogLike && await ctx.tryPointBandBack(affordance.navBarFrame)) {
+  if (!isDialogLike && !isPopoverLike && await ctx.tryPointBandBack(affordance.navBarFrame)) {
     return true;
   }
 
-  if (await tryCancelCloseFamily(ctx)) {
+  if (!isPopoverLike && await tryCancelCloseFamily(ctx)) {
     return true;
   }
 
-  if (await tryDialogControlFamily(ctx)) {
+  if (!isPopoverLike && await tryDialogControlFamily(ctx)) {
     return true;
   }
 
@@ -33,7 +57,7 @@ export async function runIosBacktrackLadder(ctx: BacktrackLadderContext): Promis
     return true;
   }
 
-  if (isDialogLike && await ctx.tryPointBandBack(affordance.navBarFrame)) {
+  if ((isDialogLike || isPopoverLike) && await ctx.tryPointBandBack(affordance.navBarFrame)) {
     return true;
   }
 
@@ -44,7 +68,7 @@ export async function runIosBacktrackLadder(ctx: BacktrackLadderContext): Promis
   await ctx.logBackFailureEvidence();
   ctx.logWarn(
     `all iOS strategies failed for parentTitle="${ctx.parentTitle ?? "<none>"}" ` +
-    `(${isDialogLike ? "selector -> cancel/dialog -> topbar/summary -> edge_swipe -> point-band" : "selector -> point-band -> cancel/dialog -> topbar/summary -> edge_swipe -> nav points"})`,
+    `(${isPopoverLike ? "popover-dismiss -> cancel/close/dismiss -> outside-tap -> selector -> topbar/summary -> edge_swipe -> point-band" : isDialogLike ? "selector -> cancel/dialog -> topbar/summary -> edge_swipe -> point-band" : "selector -> point-band -> cancel/dialog -> topbar/summary -> edge_swipe -> nav points"})`,
   );
   return false;
 }

@@ -25,6 +25,74 @@ export function createAndroidUiRuntimeHooks(): UiRuntimePlatformHooks {
       String(swipe.end.y),
       String(swipe.durationMs),
     ],
+    buildGestureCommands: (deviceId, gesture) => {
+      if (gesture.type === "drag") {
+        const hasCaveat = gesture.holdMs !== undefined || gesture.steps !== undefined;
+        return {
+          supported: true,
+          commands: [
+            [
+              CLI_COMMANDS.adb,
+              "-s",
+              deviceId,
+              "shell",
+              "input",
+              ACTION_TYPES.swipe,
+              String(Math.round(gesture.start.x)),
+              String(Math.round(gesture.start.y)),
+              String(Math.round(gesture.end.x)),
+              String(Math.round(gesture.end.y)),
+              String(gesture.durationMs),
+            ],
+          ],
+          supportLevel: hasCaveat ? "partial" : "full",
+          backendId: "adb",
+          ...(hasCaveat ? { caveat: "Android adb swipe ignores holdMs/steps parameters." } : {}),
+        };
+      }
+      if (gesture.type === "draw" && gesture.points.length === 2 && !gesture.close) {
+        return {
+          supported: true,
+          commands: [
+            [
+              CLI_COMMANDS.adb,
+              "-s",
+              deviceId,
+              "shell",
+              "input",
+              ACTION_TYPES.swipe,
+              String(Math.round(gesture.points[0].x)),
+              String(Math.round(gesture.points[0].y)),
+              String(Math.round(gesture.points[1].x)),
+              String(Math.round(gesture.points[1].y)),
+              String(gesture.durationMs),
+            ],
+          ],
+          supportLevel: "partial",
+          backendId: "adb",
+          caveat: "2-point Android draw executes via adb input swipe.",
+        };
+      }
+      if (gesture.type === "double_tap") {
+        const x = String(Math.round(gesture.point.x));
+        const y = String(Math.round(gesture.point.y));
+        const tapCmd = [CLI_COMMANDS.adb, "-s", deviceId, "shell", "input", ACTION_TYPES.tap, x, y];
+        return {
+          supported: true,
+          commands: [tapCmd, [...tapCmd]],
+          interCommandDelayMs: gesture.intervalMs,
+          supportLevel: "partial",
+          backendId: "adb",
+          caveat: "Android double_tap dispatches two sequential adb input tap commands.",
+        };
+      }
+      return {
+        supported: false,
+        backendId: "adb",
+        reason: `Android adb input does not natively support '${gesture.type}' (${gesture.type === "draw" ? `${gesture.points.length} points` : "multi-touch"}).`,
+        suggestion: "Use drag, 2-point draw, or double_tap on Android; multi-point draw, pinch, and two_finger_tap require iOS simulator with AXe.",
+      };
+    },
     buildHierarchyCapturePreviewCommand: (deviceId) => {
       const { dumpCommand, readCommand } = buildAndroidUiDumpCommands(deviceId);
       return [...dumpCommand, ...readCommand];

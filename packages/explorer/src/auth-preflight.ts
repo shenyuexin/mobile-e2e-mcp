@@ -10,6 +10,24 @@
  */
 
 import type { ExplorerConfig, McpToolInterface, UiHierarchy } from "./types.js";
+import { createExplorerPlatformIosHooks } from "./explorer-platform-ios.js";
+import { parseUiTreeFromInspectData } from "./ui-tree-parser.js";
+
+const IOS_SYSTEM_SHELL_IDENTITIES = new Set([
+  "springboard",
+  "com.apple.springboard",
+  "dockfolderviewservice",
+  "com.apple.dockfolderviewservice",
+  "spotlight",
+  "com.apple.spotlight",
+]);
+
+function isIosSystemShellIdentity(identity: string): boolean {
+  return IOS_SYSTEM_SHELL_IDENTITIES.has(identity.trim().toLowerCase());
+}
+
+const DEFAULT_IOS_FOREGROUND_POLL_ATTEMPTS = 4;
+const DEFAULT_IOS_FOREGROUND_POLL_DELAY_MS = 500;
 
 function collectTexts(node: UiHierarchy, result: string[] = []): string[] {
   const value = node.text || node.contentDesc || node.accessibilityLabel || node.label;
@@ -51,6 +69,7 @@ function looksLikeSettingsHome(texts: string[]): boolean {
 export async function checkAuth(
   config: Pick<ExplorerConfig, "auth" | "appId" | "platform" | "launchEnv">,
   mcp: McpToolInterface,
+  options: { iosForegroundPollAttempts?: number; iosForegroundPollDelayMs?: number } = {},
 ): Promise<{ success: boolean; reason?: string }> {
   const auth = config.auth;
 
@@ -112,6 +131,41 @@ export async function checkAuth(
           };
         }
       }
+    }
+  }
+
+  if (config.platform.startsWith("ios") && !isIosSystemShellIdentity(config.appId)) {
+    const iosHooks = createExplorerPlatformIosHooks();
+    const maxAttempts = Math.max(1, options.iosForegroundPollAttempts ?? DEFAULT_IOS_FOREGROUND_POLL_ATTEMPTS);
+    const pollDelayMs = Math.max(0, options.iosForegroundPollDelayMs ?? DEFAULT_IOS_FOREGROUND_POLL_DELAY_MS);
+    let lastShellIdentity: string | undefined;
+    let settledInTargetOrUnknown = false;
+
+    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+      const inspectResult = await mcp.inspectUi();
+      if (inspectResult.status !== "success" && inspectResult.status !== "partial") {
+        settledInTargetOrUnknown = true;
+        break;
+      }
+      const uiTree = inspectResult.data
+        ? parseUiTreeFromInspectData({ content: inspectResult.data.content }, { fallbackToDataRoot: false })
+        : null;
+      const foregroundIdentity = uiTree ? iosHooks.extractAppId(uiTree) : undefined;
+      if (!foregroundIdentity || !isIosSystemShellIdentity(foregroundIdentity)) {
+        settledInTargetOrUnknown = true;
+        break;
+      }
+      lastShellIdentity = foregroundIdentity;
+      if (attempt + 1 < maxAttempts && pollDelayMs > 0) {
+        await new Promise((r) => setTimeout(r, pollDelayMs));
+      }
+    }
+
+    if (!settledInTargetOrUnknown && lastShellIdentity) {
+      return {
+        success: false,
+        reason: `Foreground app remained iOS system shell (${lastShellIdentity}) instead of ${config.appId} after launch (app may have crashed on launch or failed to enter foreground)`,
+      };
     }
   }
 

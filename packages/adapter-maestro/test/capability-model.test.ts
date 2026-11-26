@@ -40,3 +40,15 @@ test("Android and iOS capability profiles expose audit_ui_surface as full in ui_
     assert.ok(group?.toolNames.includes("audit_ui_surface"), `ui_inspection missing audit_ui_surface on ${platform}`);
   }
 });
+
+test("Android and iOS capability profiles expose perform_gesture honestly in ui_actions", () => {
+  const androidProfile = buildCapabilityProfile("android");
+  const androidGesture = androidProfile.toolCapabilities.find((t) => t.toolName === "perform_gesture");
+  assert.equal(androidGesture?.supportLevel, "partial");
+  assert.ok(androidProfile.groups.find((g) => g.groupName === "ui_actions")?.toolNames.includes("perform_gesture"));
+
+  const iosProfile = buildCapabilityProfile("ios");
+  const iosGesture = iosProfile.toolCapabilities.find((t) => t.toolName === "perform_gesture");
+  assert.equal(iosGesture?.supportLevel, "conditional");
+  assert.ok(iosProfile.groups.find((g) => g.groupName === "ui_actions")?.toolNames.includes("perform_gesture"));
+});

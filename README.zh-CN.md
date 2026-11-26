@@ -21,7 +21,7 @@
 }
 ```
 
-默认情况下，MCP stdio 服务启用 **`core` 工具集（18 个高频核心工具，含 `audit_ui_surface` 结构体检）**，可显著降低 Agent 上下文 schema 开销（减少约 73%）。如需暴露全部 **67 个 MCP 工具**（录制回放、失败归因、网络策略诊断、性能采集、JS 调试目标等），可传入 `--toolset full` 或设置环境变量 `MOBILE_E2E_TOOLSET=full`：
+默认情况下，MCP stdio 服务启用 **`core` 工具集（20 个高频核心工具，含 `audit_ui_surface` 结构体检、`perform_gesture` 画布/多点手势与 `record_screen` 录屏证据）**，可显著降低 Agent 上下文 schema 开销（减少约 71%）。如需暴露全部 **68 个 MCP 工具**（录制回放、失败归因、网络策略诊断、性能采集、JS 调试目标等），可传入 `--toolset full` 或设置环境变量 `MOBILE_E2E_TOOLSET=full`：
 
 ```json
 {
@@ -303,7 +303,7 @@ Source-of-truth 说明：
 
 ## 完整 MCP 工具目录（当前）
 
-当前服务共暴露 **66 个工具**。对于 AI Agent，这是最快建立"可做什么"的入口。
+当前服务共暴露 **68 个工具**。对于 AI Agent，这是最快建立"可做什么"的入口。
 
 ### 1）会话与生命周期
 
@@ -319,11 +319,11 @@ Source-of-truth 说明：
 
 ### 4）UI 感知、定位与交互
 
-`inspect_ui`、`query_ui`、`resolve_ui_target`、`scroll_only`、`scroll_and_resolve_ui_target`、`wait_for_ui`、`wait_for_ui_stable`、`tap`、`tap_element`、`scroll_and_tap_element`、`type_text`、`type_into_element`、`navigate_back`
+`inspect_ui`、`query_ui`、`resolve_ui_target`、`audit_ui_surface`（支持通过 `baselinePath` / `baselineMode` 做结构基线增量门禁比对）、`scroll_only`、`perform_gesture`（iOS 模拟器通过 AXe 完整支持 `draw` / `drag` / `pinch` / `double_tap` / `two_finger_tap`；Android 通过 `adb` 部分支持 `drag` / 两点 `draw` / `double_tap`）、`scroll_and_resolve_ui_target`、`wait_for_ui`、`wait_for_ui_stable`、`tap`、`tap_element`、`scroll_and_tap_element`、`type_text`、`type_into_element`、`navigate_back`（iOS 模拟器 AXe 只读/采集命令 `describe-ui` / `displays` / `screenshot` / `ping` 默认复用按 UDID 维护的常驻 `axe serve` 传输池，空闲自动释放，支持 `M2E_DISABLE_AXE_SERVE=1` 关闭；HID 输入命令保持单次调用以避免 `dtuhidd` 虚拟 HID 服务泄漏）
 
 ### 5）证据、可观测与诊断
 
-`take_screenshot`、`record_screen`、`get_logs`、`get_crash_signals`、`collect_diagnostics`、`collect_debug_evidence`、`get_screen_summary`、`get_session_state`、`get_page_context`、`capture_js_console_logs`、`capture_js_network_events`、`list_js_debug_targets`、`capture_element_screenshot`、`compare_visual_baseline`
+`take_screenshot`、`record_screen`（支持固定时长与非阻塞 `start`/`stop` 含 `discardOnStop` 及 180s 上限；iOS 模拟器优先 `axe record-video` 并带 `simctl` 兜底，Android 走 `adb shell screenrecord`，iOS 真机明确返回 `UNSUPPORTED_OPERATION`）、`get_logs`、`get_crash_signals`、`collect_diagnostics`、`collect_debug_evidence`、`get_screen_summary`、`get_session_state`、`get_page_context`、`capture_js_console_logs`、`capture_js_network_events`、`list_js_debug_targets`、`capture_element_screenshot`、`compare_visual_baseline`
 
 ### 6）中断处理
 

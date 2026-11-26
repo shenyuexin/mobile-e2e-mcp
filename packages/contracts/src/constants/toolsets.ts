@@ -2,8 +2,8 @@ import { TOOL_NAMES } from "./tool-names.js";
 
 /**
  * Named MCP toolset presets controlling which tools are exposed over MCP stdio.
- * - "core": 18 high-frequency tools for daily automation (~73% less schema context).
- * - "full": all registered MCP tools (67 tools).
+ * - "core": 20 high-frequency tools for daily automation (~71% less schema context).
+ * - "full": all registered MCP tools (68 tools).
  */
 export const TOOLSET_NAMES = {
   core: "core",
@@ -28,8 +28,10 @@ export const CORE_TOOL_NAMES = [
   TOOL_NAMES.tap,
   TOOL_NAMES.typeIntoElement,
   TOOL_NAMES.scrollOnly,
+  TOOL_NAMES.performGesture,
   TOOL_NAMES.navigateBack,
   TOOL_NAMES.takeScreenshot,
+  TOOL_NAMES.recordScreen,
   TOOL_NAMES.getLogs,
 ] as const;
 
