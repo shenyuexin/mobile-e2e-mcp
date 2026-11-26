@@ -76,6 +76,7 @@ test("createServer lists newly added UI tools", () => {
   assert.ok(tools.includes("wait_for_ui_stable"));
   assert.ok(tools.includes("audit_ui_surface"));
   assert.ok(tools.includes("scroll_only"));
+  assert.ok(tools.includes("perform_gesture"));
   assert.ok(tools.includes("scroll_and_resolve_ui_target"));
   assert.ok(tools.includes("scroll_and_tap_element"));
   assert.ok(tools.includes("tap_element"));
@@ -225,10 +226,98 @@ test("server invoke supports audit_ui_surface with inline nodes and dryRun", asy
     assert.equal(dryRunAudit.status, "success");
     assert.equal(dryRunAudit.data.dryRun, true);
     assert.equal(dryRunAudit.data.command[0], "__wda_http__");
+
+    const baselinePath = path.join(repoRoot, "artifacts", "test-fixtures", sessionId, "ui-baseline.json");
+    const baseNodes = [
+      { className: "Application", clickable: false, enabled: true, scrollable: false, depth: 0, bounds: "[0,0][400,800]" },
+      { className: "Button", contentDesc: "subscription.paywall.buy", clickable: true, enabled: true, scrollable: false, depth: 1, bounds: "[20,40][50,70]" },
+    ];
+    const baselineUpdate = await server.invoke("audit_ui_surface", {
+      sessionId,
+      platform: "ios",
+      surfaceName: "paywall",
+      screenWidth: 400,
+      screenHeight: 800,
+      baselinePath,
+      baselineMode: "update",
+      nodes: baseNodes,
+    });
+    assert.equal(baselineUpdate.status, "success");
+    assert.equal(baselineUpdate.data.baselineDiff?.baselineUpdated, true);
+
+    const baselineCompareClean = await server.invoke("audit_ui_surface", {
+      sessionId,
+      platform: "ios",
+      surfaceName: "paywall",
+      screenWidth: 400,
+      screenHeight: 800,
+      baselinePath,
+      baselineMode: "compare",
+      nodes: baseNodes,
+    });
+    assert.equal(baselineCompareClean.status, "success");
+    assert.equal(baselineCompareClean.data.baselineDiff?.newIssueCounts.total, 0);
+
+    const baselineCompareRegressed = await server.invoke("audit_ui_surface", {
+      sessionId,
+      platform: "ios",
+      surfaceName: "paywall",
+      screenWidth: 400,
+      screenHeight: 800,
+      baselinePath,
+      baselineMode: "compare",
+      nodes: [
+        ...baseNodes,
+        { className: "Button", resourceId: "paywall.cta", contentDesc: "paywall.cta.subscribe", clickable: true, enabled: true, scrollable: false, depth: 1, bounds: "[40,120][200,168]" },
+      ],
+    });
+    assert.equal(baselineCompareRegressed.status, "success");
+    assert.equal(baselineCompareRegressed.data.baselineDiff?.newIssueCounts.rawI18nKeys, 1);
   } finally {
+    await rm(path.join(repoRoot, "artifacts", "test-fixtures", sessionId), { recursive: true, force: true });
     await rm(path.resolve(repoRoot, buildSessionRecordRelativePath(sessionId)), { force: true });
     await rm(path.resolve(repoRoot, buildSessionAuditRelativePath(sessionId)), { force: true });
     await rm(path.resolve(repoRoot, buildDeviceLeaseRecordRelativePath("ios", buildTestDeviceId(sessionId))), { force: true });
+  }
+});
+
+test("server invoke supports perform_gesture dryRun on iOS simulator session", async () => {
+  const server = createServer();
+  const sessionId = `server-gesture-${Date.now()}`;
+  const simUdid = "FB1859DD-41E1-4DAC-8031-6E831DC5CB04";
+  try {
+    const started = await server.invoke("start_session", {
+      sessionId,
+      platform: "ios",
+      deviceId: simUdid,
+      appId: "com.example.app",
+      profile: "native_ios",
+    });
+    assert.equal(started.status, "success");
+
+    const gesturePreview = await server.invoke("perform_gesture", {
+      sessionId,
+      platform: "ios",
+      dryRun: true,
+      gesture: {
+        type: "draw",
+        coordinateMode: "normalized",
+        containerBounds: { x: 100, y: 200, width: 400, height: 400 },
+        points: [{ x: 0.25, y: 0.25 }, { x: 0.75, y: 0.75 }],
+        durationMs: 700,
+      },
+    });
+    assert.equal(gesturePreview.status, "success");
+    assert.equal(gesturePreview.data.gestureType, "draw");
+    assert.equal(gesturePreview.data.coordinateScope, "container");
+    assert.deepEqual(gesturePreview.data.resolvedPoints, [{ x: 200, y: 300 }, { x: 400, y: 500 }]);
+    assert.deepEqual(gesturePreview.data.commandHistory[0], [
+      "axe", "draw", "200,300", "400,500", "--duration", "0.7", "--udid", simUdid,
+    ]);
+  } finally {
+    await rm(path.resolve(repoRoot, buildSessionRecordRelativePath(sessionId)), { force: true });
+    await rm(path.resolve(repoRoot, buildSessionAuditRelativePath(sessionId)), { force: true });
+    await rm(path.resolve(repoRoot, buildDeviceLeaseRecordRelativePath("ios", simUdid)), { force: true });
   }
 });
 

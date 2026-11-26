@@ -156,6 +156,11 @@ export function resetExecuteRunnerForTesting(): void {
   _testExecuteRunner = null;
 }
 
+/** Whether a test override is currently active for executeRunner. */
+export function hasExecuteRunnerTestOverride(): boolean {
+  return _testExecuteRunner !== null;
+}
+
 /** Internal executeRunner wrapper that respects test overrides. */
 export async function executeRunnerWithTestHooks(
   command: string[],

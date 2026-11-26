@@ -2871,3 +2871,35 @@ test("buildUiTargetResolution resolves nested Group->Group->TextField but keeps 
   const peerRes = buildUiTargetResolution(peerQuery, { query: peerQuery, ...queryUiNodes(peerButtons, peerQuery) }, "full");
   assert.equal(peerRes.status, "ambiguous");
 });
+
+test("buildUiTargetResolution resolves unique exact resourceId over prefix sibling matches", () => {
+  const toolbarNodes = parseIosInspectNodes(JSON.stringify([
+    {
+      type: "Application",
+      enabled: true,
+      frame: { x: 0, y: 0, width: 1032, height: 1376 },
+      children: [
+        { type: "Button", identifier: "reader.toolRow.pen", AXLabel: "Pen", enabled: true, frame: { x: 484, y: 86, width: 40, height: 40 }, children: [] },
+        { type: "Button", identifier: "reader.toolRow.pencil", AXLabel: "Pencil", enabled: true, frame: { x: 568, y: 86, width: 40, height: 40 }, children: [] },
+      ],
+    },
+  ]));
+  const penQuery = normalizeQueryUiSelector({ resourceId: "reader.toolRow.pen" });
+  const penRes = buildUiTargetResolution(penQuery, { query: penQuery, ...queryUiNodes(toolbarNodes, penQuery) }, "full");
+  assert.equal(penRes.status, "resolved");
+  assert.equal(penRes.matchedNode?.resourceId, "reader.toolRow.pen");
+
+  const dupExactNodes = parseIosInspectNodes(JSON.stringify([
+    {
+      type: "Application",
+      enabled: true,
+      frame: { x: 0, y: 0, width: 1032, height: 1376 },
+      children: [
+        { type: "Button", identifier: "reader.toolRow.pen", AXLabel: "Pen A", enabled: true, frame: { x: 484, y: 86, width: 40, height: 40 }, children: [] },
+        { type: "Button", identifier: "reader.toolRow.pen", AXLabel: "Pen B", enabled: true, frame: { x: 526, y: 86, width: 40, height: 40 }, children: [] },
+      ],
+    },
+  ]));
+  const dupRes = buildUiTargetResolution(penQuery, { query: penQuery, ...queryUiNodes(dupExactNodes, penQuery) }, "full");
+  assert.equal(dupRes.status, "ambiguous");
+});

@@ -25,6 +25,7 @@ export const IOS_CONDITIONAL_TOOL_FRONTIER = [
   TOOL_NAMES.navigateBack,
   TOOL_NAMES.typeText,
   TOOL_NAMES.typeIntoElement,
+  TOOL_NAMES.performGesture,
 ] as const;
 
 export const IOS_CONDITIONAL_GROUP_FRONTIER = [
@@ -67,6 +68,7 @@ function buildAndroidToolCapabilities(): ToolCapability[] {
     buildToolCapability(TOOL_NAMES.queryUi, FULL, "Android UI query filtering is fully supported."),
     buildToolCapability(TOOL_NAMES.resolveUiTarget, FULL, "Android target resolution is fully supported."),
     buildToolCapability(TOOL_NAMES.scrollOnly, FULL, "Android standalone scroll gestures are fully supported when you want explicit control before wait_for_ui or resolve_ui_target."),
+    buildToolCapability(TOOL_NAMES.performGesture, PARTIAL, "Android perform_gesture supports drag, 2-point draw, and double_tap via adb; multi-point draw, pinch, and two_finger_tap are unsupported on plain adb."),
     buildToolCapability(TOOL_NAMES.scrollAndResolveUiTarget, FULL, "Android scroll-assisted target resolution is fully supported."),
     buildToolCapability(TOOL_NAMES.installApp, FULL, "Android app installation is supported."),
     buildToolCapability(TOOL_NAMES.launchApp, FULL, "Android app launch is supported."),
@@ -79,7 +81,7 @@ function buildAndroidToolCapabilities(): ToolCapability[] {
     buildToolCapability(TOOL_NAMES.startSession, FULL, "Android session initialization is supported.", false),
     buildToolCapability(TOOL_NAMES.runFlow, FULL, "Android flow execution uses owned-adb primary backend for physical-device replay (no helper-app install required for all common commands: launchApp, tapOn with selector or coordinates, inputText, assertVisible, assertNotVisible, swipe, back, home, hideKeyboard, stopApp, clearState). Maestro helper-app lane is fallback only for edge-case commands (runFlow with complex sub-flows, extendedWaitUntil, setClipboard, openLink)."),
     buildToolCapability(TOOL_NAMES.takeScreenshot, FULL, "Android screenshot capture is supported."),
-    buildToolCapability(TOOL_NAMES.recordScreen, FULL, "Android screen recording is supported through adb shell screenrecord."),
+    buildToolCapability(TOOL_NAMES.recordScreen, FULL, "Android screen recording supports fixed-duration and non-blocking start/stop (with discardOnStop) through adb shell screenrecord (180s cap)."),
     buildToolCapability(TOOL_NAMES.tap, FULL, "Android coordinate tap is supported."),
     buildToolCapability(TOOL_NAMES.tapElement, FULL, "Android element tap is supported after resolution."),
     buildToolCapability(TOOL_NAMES.navigateBack, FULL, "Android back navigation uses deterministic adb keyevent 4 dispatch. May navigate page-back or exit the current app depending on app state; verify screen transition separately."),
@@ -112,6 +114,7 @@ function buildIosToolCapabilities(): ToolCapability[] {
     buildToolCapability(TOOL_NAMES.queryUi, FULL, "iOS query_ui filters captured hierarchy nodes through axe-backed hierarchy (simulators) or WDA /source (physical devices)."),
     buildToolCapability(TOOL_NAMES.resolveUiTarget, FULL, "iOS target resolution uses axe-backed hierarchy for simulators and WDA /source for physical devices."),
     buildToolCapability(TOOL_NAMES.scrollOnly, FULL, "iOS standalone scroll gestures are supported for explicit swipe control before wait_for_ui or resolve_ui_target."),
+    buildToolCapability(TOOL_NAMES.performGesture, CONDITIONAL, `iOS perform_gesture supports draw, drag, pinch, double_tap, and two_finger_tap via AXe v2.2+ on simulators. ${IOS_CONDITIONAL_NOTE}`, true, undefined, IOS_CONDITIONAL_NOTE),
     buildToolCapability(TOOL_NAMES.scrollAndResolveUiTarget, UNSUPPORTED, "scroll_and_resolve_ui_target is Android-only. On iOS, use scroll_only → wait_for_ui → resolve_ui_target instead."),
     buildToolCapability(TOOL_NAMES.scrollAndTapElement, UNSUPPORTED, "scroll_and_tap_element is Android-only. On iOS, use scroll_only → wait_for_ui → resolve_ui_target → tap_element instead."),
     buildToolCapability(TOOL_NAMES.installApp, FULL, "iOS simulator app installation is supported."),
@@ -125,7 +128,7 @@ function buildIosToolCapabilities(): ToolCapability[] {
     buildToolCapability(TOOL_NAMES.startSession, FULL, "iOS session initialization is supported.", false),
     buildToolCapability(TOOL_NAMES.runFlow, FULL, "iOS flow execution is supported, subject to current runner-profile constraints."),
     buildToolCapability(TOOL_NAMES.takeScreenshot, FULL, "iOS simulator screenshot capture is supported."),
-    buildToolCapability(TOOL_NAMES.recordScreen, CONDITIONAL, `iOS simulator screen recording is supported through simctl io recordVideo. ${IOS_CONDITIONAL_NOTE}`, true, undefined, IOS_CONDITIONAL_NOTE),
+    buildToolCapability(TOOL_NAMES.recordScreen, CONDITIONAL, `iOS simulator screen recording supports fixed-duration and non-blocking start/stop (with discardOnStop, 180s cap) via axe record-video with simctl io recordVideo fallback; physical devices return UNSUPPORTED_OPERATION. ${IOS_CONDITIONAL_NOTE}`, true, undefined, IOS_CONDITIONAL_NOTE),
   buildToolCapability(TOOL_NAMES.tap, CONDITIONAL, `Direct iOS coordinate tap uses axe (simulators) or WDA HTTP API (physical devices). Physical-device execution remains signing-dependent and platform-dependent. ${IOS_CONDITIONAL_NOTE}`, true, undefined, IOS_CONDITIONAL_NOTE),
   buildToolCapability(TOOL_NAMES.tapElement, CONDITIONAL, `iOS element tap resolves targets through axe-backed hierarchy (simulators) or WDA HTTP API (physical devices), then executes tap. Physical-device execution remains platform-dependent. ${IOS_CONDITIONAL_NOTE}`, true, undefined, IOS_CONDITIONAL_NOTE),
   buildToolCapability(TOOL_NAMES.navigateBack, CONDITIONAL, `iOS app-level back via selector-based back button tap is supported. iOS system back is unsupported (no universal OS back primitive). Provide a selector for deterministic back, or use inspect_ui to discover back button selectors. ${IOS_CONDITIONAL_NOTE}`, true, undefined, IOS_CONDITIONAL_NOTE),
@@ -193,7 +196,7 @@ export function buildCapabilityProfile(platform: Platform, runnerProfile: Runner
       summarizeGroup(toolCapabilities, CAPABILITY_GROUPS.appLifecycle, [TOOL_NAMES.installApp, TOOL_NAMES.launchApp, TOOL_NAMES.terminateApp, TOOL_NAMES.resetAppState], "Install, launch, terminate, and reset application workflows."),
       summarizeGroup(toolCapabilities, CAPABILITY_GROUPS.artifactsAndDiagnostics, [TOOL_NAMES.takeScreenshot, TOOL_NAMES.recordScreen, TOOL_NAMES.getLogs, TOOL_NAMES.getCrashSignals, TOOL_NAMES.collectDebugEvidence, TOOL_NAMES.collectDiagnostics, TOOL_NAMES.diagnoseNetworkFailure, TOOL_NAMES.inspectNetworkPolicy, TOOL_NAMES.measureAndroidPerformance, TOOL_NAMES.measureIosPerformance], "Evidence capture, diagnostics collection, release policy diagnosis/inspection, and lightweight performance analysis tools."),
       summarizeGroup(toolCapabilities, CAPABILITY_GROUPS.uiInspection, [TOOL_NAMES.inspectUi, TOOL_NAMES.queryUi, TOOL_NAMES.resolveUiTarget, TOOL_NAMES.waitForUi, TOOL_NAMES.waitForUiStable, TOOL_NAMES.auditUiSurface, TOOL_NAMES.scrollAndResolveUiTarget], "Hierarchy capture, querying, target resolution, wait logic, UI stabilization polling, and structural/HIG UI audits."),
-      summarizeGroup(toolCapabilities, CAPABILITY_GROUPS.uiActions, [TOOL_NAMES.tap, TOOL_NAMES.tapElement, TOOL_NAMES.typeText, TOOL_NAMES.typeIntoElement, TOOL_NAMES.scrollOnly, TOOL_NAMES.navigateBack], "Coordinate, text, and standalone scroll action tooling including back navigation."),
+      summarizeGroup(toolCapabilities, CAPABILITY_GROUPS.uiActions, [TOOL_NAMES.tap, TOOL_NAMES.tapElement, TOOL_NAMES.typeText, TOOL_NAMES.typeIntoElement, TOOL_NAMES.scrollOnly, TOOL_NAMES.performGesture, TOOL_NAMES.navigateBack], "Coordinate, text, scroll, and multi-touch/canvas gesture action tooling including back navigation."),
     ],
   };
 }

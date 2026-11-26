@@ -203,9 +203,11 @@ export function createTapExecutor(mcp: McpToolInterface) {
 
         const tapResult = await mcp.tapElement(tapArgs);
         if (tapResult.status !== "success" && tapResult.status !== "partial") {
+          const stderrDetail = tapResult.nextSuggestions?.find((s) => s.startsWith("Command stderr:"));
+          const suffix = stderrDetail ? ` (${stderrDetail})` : "";
           return {
             success: false,
-            error: new Error(`TAP_FAILED: ${tapResult.reasonCode}: ${element.label}`),
+            error: new Error(`TAP_FAILED: ${tapResult.reasonCode}: ${element.label}${suffix}`),
           };
         }
 

@@ -3,6 +3,23 @@ import type { InspectUiNode, Platform, QueryUiSelector, ReasonCode, UiPoint } fr
 import type { CommandExecution } from "./runtime-shared.js";
 import { createAndroidUiRuntimeHooks } from "./ui-runtime-android.js";
 import { createIosUiRuntimeHooks } from "./ui-runtime-ios.js";
+import type { ResolvedPerformGesture } from "./ui-gesture-model.js";
+
+export type UiGestureCommandPlan =
+  | {
+      supported: true;
+      commands: string[][];
+      interCommandDelayMs?: number;
+      supportLevel: "full" | "partial";
+      backendId?: string;
+      caveat?: string;
+    }
+  | {
+      supported: false;
+      reason: string;
+      suggestion: string;
+      backendId?: string;
+    };
 
 export type UiRuntimeProbeAction = "inspect_ui" | "tap" | "type_text";
 
@@ -39,6 +56,7 @@ export interface UiRuntimePlatformHooks {
   settleAfterFocus?: (params: { repoRoot: string; deviceId: string; settleDelayMs?: number }) => Promise<void>;
   buildTypeTextCommand: (deviceId: string, text: string) => string[];
   buildSwipeCommand: (deviceId: string, swipe: { start: { x: number; y: number }; end: { x: number; y: number }; durationMs: number; delta?: number; preDelaySec?: number; postDelaySec?: number }) => string[];
+  buildGestureCommands?: (deviceId: string, gesture: ResolvedPerformGesture) => UiGestureCommandPlan;
   buildHierarchyCapturePreviewCommand: (deviceId: string) => string[];
   probeRuntimeAvailability?: (repoRoot: string) => Promise<CommandExecution | undefined>;
   probeUnavailableSuggestion: (action: UiRuntimeProbeAction) => string;

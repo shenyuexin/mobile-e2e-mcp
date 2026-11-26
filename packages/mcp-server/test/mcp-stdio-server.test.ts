@@ -74,15 +74,17 @@ async function withMcpStdioClient<T>(
   }
 }
 
-test("mcp stdio entrypoint defaults to core toolset (18 tools), blocks hidden tools, and invokes core tools", async () => {
+test("mcp stdio entrypoint defaults to core toolset (20 tools), blocks hidden tools, and invokes core tools", async () => {
   await withMcpStdioClient({}, async ({ send }) => {
     const listResponse = await send(2, "tools/list", {});
     assert.equal(listResponse?.error, undefined);
     const tools = listResponse?.result?.tools as Array<{ name: string }>;
     assert.equal(Array.isArray(tools), true);
-    assert.equal(tools.length, 18);
+    assert.equal(tools.length, 20);
     assert.equal(tools.some((tool) => tool.name === "describe_capabilities"), true);
     assert.equal(tools.some((tool) => tool.name === "audit_ui_surface"), true);
+    assert.equal(tools.some((tool) => tool.name === "perform_gesture"), true);
+    assert.equal(tools.some((tool) => tool.name === "record_screen"), true);
     assert.equal(tools.some((tool) => tool.name === "collect_diagnostics"), false);
 
     const callResponse = await send(3, "tools/call", {
@@ -112,20 +114,20 @@ test("mcp stdio entrypoint defaults to core toolset (18 tools), blocks hidden to
   });
 });
 
-test("mcp stdio entrypoint exposes all 67 tools with --toolset full", async () => {
+test("mcp stdio entrypoint exposes all 68 tools with --toolset full", async () => {
   await withMcpStdioClient({ args: ["--toolset", "full"] }, async ({ send }) => {
     const listResponse = await send(2, "tools/list", {});
     const tools = listResponse?.result?.tools as Array<{ name: string }>;
-    assert.equal(tools.length, 67);
+    assert.equal(tools.length, 68);
     assert.equal(tools.some((tool) => tool.name === "collect_diagnostics"), true);
     assert.equal(tools.some((tool) => tool.name === "run_flow"), true);
   });
 });
 
-test("mcp stdio entrypoint exposes all 67 tools with MOBILE_E2E_TOOLSET=full", async () => {
+test("mcp stdio entrypoint exposes all 68 tools with MOBILE_E2E_TOOLSET=full", async () => {
   await withMcpStdioClient({ env: { MOBILE_E2E_TOOLSET: "full" } }, async ({ send }) => {
     const listResponse = await send(2, "tools/list", {});
     const tools = listResponse?.result?.tools as Array<{ name: string }>;
-    assert.equal(tools.length, 67);
+    assert.equal(tools.length, 68);
   });
 });
