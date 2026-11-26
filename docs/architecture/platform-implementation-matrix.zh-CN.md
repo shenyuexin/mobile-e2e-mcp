@@ -22,6 +22,9 @@
 | UI inspect/query/resolve | Supported | Partial（AXe hierarchy 基线，真机 WDA Phase 15+） | 复用平台 + debug 补充（Partial+） | 依赖语义质量（Partial） | app foreground + inspect permission | D0 | D1（OCR） | inspect/screenshot | ui tree snapshot, query traces | iOS 与 Flutter 语义覆盖不均 |
 | tap/type/wait/flow | Supported | Partial（AXe / WDA 路径） | 复用平台执行 lane（Partial） | Android Partial，iOS Partial | resolved target + write scope | D0 | D1/D2（有界） | tap/type/swipe | action outcome, attempts, timeline | post-condition 校验必须开启 |
 | interruption handling | Supported（规则基线） | Supported（规则基线） | 复用平台 interruption flow | 复用平台 interruption flow | pre/post guard enabled | D0 | D1（未知中断仅证据化） | interrupt / interrupt-high-risk | interruption events, screenshot/tree bundle | 高风险自动处置默认禁用 |
+| UI 结构体检与基线门禁（`audit_ui_surface`） | Supported | Supported（AXe / WDA UI tree） | 复用平台能力 | 复用平台能力 | app foreground + inspect permission | D0 | 无 | inspect | structured audit + baseline ratchet diff | `baselinePath` / `baselineMode` 为纯确定性树对比 |
+| 画布/多点手势（`perform_gesture`） | Partial（`adb` `drag` / 2-point `draw` / `double_tap`） | Simulator Supported（AXe `draw`/`drag`/`pinch`/`double_tap`/`two_finger_tap`）；真机 Unsupported | 复用平台能力 | 复用平台能力 | resolved bounds / canvas coordinates + write scope | D0 | 无 | tap/swipe | gesture outcome, attempts, timeline | 常规控件仍优先 `tap_element` / `scroll_only` |
+| 录屏证据（`record_screen`） | Supported（`adb shell screenrecord`） | Simulator Supported（`axe record-video` + `simctl` 兜底）；真机 `UNSUPPORTED_OPERATION` | 复用平台能力 | 复用平台能力 | valid session / target + evidence scope | D0 | `simctl` 兜底 | evidence / inspect | MP4 artifact / `discardOnStop` | 单段 180s 上限；支持 `start`/`stop` 与 `SIGINT`/`SIGTERM` 同步清理 |
 | OCR fallback | 有界支持 | 有界支持 | 有界支持 | 有界支持（更常见） | deterministic fail + policy allow + confidence gate | D1 | D2（仅显式放行） | ocr-action（目标） | OCR output, confidence, fallback trace | 当前 scope 粒度仍在演进 |
 | JS debug observability | N/A | N/A | Supported（snapshot 模式） | N/A | Metro inspector reachable + read scope | D0（只读观测） | 无 | js-debug-read（目标） | console/network snapshots | 非 full debugger，不替代执行面 |
 | governance/policy guard | Supported | Supported | Supported | Supported | policy profile loaded | N/A | N/A | read-only/interactive/full-control | policy decision logs, audit records | 策略失败需 fail-closed |
@@ -38,6 +41,7 @@
 ### iOS
 
 - 当前仓库 iOS 模拟器使用 AXe CLI，真机使用 WDA（Phase 15+）；`idb` 已废弃。
+- iOS 模拟器 AXe 只读/采集命令（`describe-ui` / `displays` / `screenshot` / `ping`）默认复用按 UDID 维护的常驻 `axe serve` 传输池（支持 `M2E_DISABLE_AXE_SERVE=1` 关闭），HID 输入命令保持单次调用以规避 `dtuhidd` 虚拟 HID 服务积累。
 - selector 能力边界需对调用方显式暴露。
 
 ### React Native
@@ -66,5 +70,5 @@
 ## 5. 维护机制
 
 1. 每次工具能力变化同步更新矩阵。
-2. 与 `framework-coverage.md`、`capability-map.md` 保持术语一致。
+2. 与 `framework-coverage.md`、`03-capability-model.md` 保持术语一致。
 3. 在 PR 中要求“能力变更 -> 文档矩阵变更”联动。

@@ -44,6 +44,11 @@
 
 优先使用能返回结构化 outcome、`reasonCode`、`artifacts`、`nextSuggestions` 的链路，而不是只看某个底层命令有没有发出去。
 
+### 1.4 工具集选择（core vs full）
+
+- **默认 `core` 工具集（20 个高频核心工具）**：MCP stdio 服务默认只暴露 `core`（含 `audit_ui_surface`、`perform_gesture`、`record_screen` 等高频工具），减少约 71% 的上下文 schema 开销。
+- **`full` 工具集（全部 68 个工具）**：当需要录制/回放、失败归因记忆、网络策略诊断、性能采集或 React Native JS 调试目标工具时，通过 `--toolset full` 或环境变量 `MOBILE_E2E_TOOLSET=full` 启用。
+
 ## 2. 默认决策阶梯
 
 ### Step 1：确认环境与平台边界
@@ -156,9 +161,30 @@
 
 建议：Android flow 中可直接使用；iOS flow 中优先用 `inspect_ui` 发现返回按钮 selector 后再调用。
 
+### 3.4.2 画布绘制 / 拖拽 / 缩放手势
+
+`perform_gesture`
+
+- 常规控件交互仍优先使用 `tap_element` / `scroll_only`；仅在画布绘制、拖拽排序、双指缩放、双击等场景使用 `perform_gesture`。
+- **iOS 模拟器**：通过 AXe 完整支持 `draw` / `drag` / `pinch` / `double_tap` / `two_finger_tap`。
+- **Android**：通过 `adb` 部分支持 `drag` / 两点 `draw` / `double_tap`。
+
 ### 3.5 执行关键动作并拿到可解释证据
 
 `perform_action_with_evidence`
+
+### 3.5.1 UI 结构体检与基线增量门禁
+
+`audit_ui_surface`
+
+- 用于在关键页面做结构化布局/无障碍体检；传入 `baselinePath` 与 `baselineMode` 可与历史基线做增量回归门禁（ratchet diffing）。
+
+### 3.5.2 录制关键链路视频证据
+
+`record_screen`
+
+- 支持固定时长（`mode: "fixed"`）以及不阻塞动作执行的 `mode: "start"` / `mode: "stop"`（配合 `recordingId`、180s 上限，以及在绿灯通过时自动丢弃视频的 `discardOnStop`）。
+- **iOS 模拟器**：优先走 `axe record-video` 并带 `simctl` 兜底；**Android**：`adb shell screenrecord`；**iOS 真机**：明确返回 `UNSUPPORTED_OPERATION`。
 
 ### 3.6 让系统帮你规划高层目标
 
@@ -265,6 +291,7 @@
 - `tap_element`
 - `type_into_element`
 - `navigate_back` — Android: `adb keyevent 4`（full）；iOS: selector-based app back button tap 或 edge swipe（conditional），system back 不支持
+- `perform_gesture` — 画布/多点手势专用（iOS Simulator full via AXe；Android partial via `adb`）
 
 滚动辅助（Android only）：
 
@@ -285,6 +312,7 @@
 - `query_ui`
 - `resolve_ui_target`
 - `wait_for_ui`
+- `audit_ui_surface` — 页面结构体检与基线门禁（支持 `baselinePath` / `baselineMode`）
 
 后备：重度日志与诊断工具。
 
@@ -295,6 +323,7 @@
 - `perform_action_with_evidence`
 - `explain_last_failure`
 - `collect_debug_evidence`
+- `record_screen` — 链路视频证据（非阻塞 `start`/`stop`，建议绿灯路径开启 `discardOnStop` 控制产物占用）
 
 后备：`collect_diagnostics`
 
@@ -360,6 +389,12 @@
 - 不要假设 Android / iOS / simulator / real device 完全对称
 
 ## 8. 版本变更
+
+### Unreleased (PR #20) — 工具集/统一 CLI、手势/体检/非阻塞录屏与 iOS 运行时加固
+
+- **MCP 工具集与统一 CLI**：默认暴露 20 个高频核心工具（`core`），通过 `--toolset full` 或 `MOBILE_E2E_TOOLSET=full` 暴露全部 68 个工具；单入口支持 `stdio` / `doctor` / `init` / `explore` / `run`。
+- **新增能力工具**：`audit_ui_surface`（支持 `baselinePath`/`baselineMode` 基线门禁）、`perform_gesture`（iOS 模拟器 AXe / Android 部分 `adb`）、非阻塞 `record_screen`（`fixed` / `start` / `stop`，`discardOnStop`，180s 上限）。
+- **iOS 模拟器与 Explorer 加固**：`AxeServePool` 常驻只读池（`M2E_DISABLE_AXE_SERVE=1` 可关闭）规避 `dtuhidd` 泄漏；`launch_app` 支持 `launchEnv`/`launchArgs`/`terminateRunning`；多屏模拟器截图兜底；iPad SplitView/Popover 作用域识别与前台防跑偏预检；`SIGINT`/`SIGTERM` 同步清理录屏与 `axe serve` 子进程。
 
 ### v0.1.13 — iOS 真机 WDA 支持 + tap_element/type_into_element 验证修复
 

@@ -100,6 +100,7 @@ npx -y @shenyuexin/mobile-e2e-mcp@latest explore \
 - **结构化覆盖率报告**：输出机器可消费的报告，展示已发现的页面与元素
 - **规则门控**：遵循跳过页面、跳过元素、采样与风险门控规则，确保安全探索
 - **中断感知证据**：被阻塞、被跳过、被外部边界截断或失败的遍历决策都会带原因，方便复盘而不是只看原始日志
+- **iOS/iPad 加固与工程配置**：支持 SplitView/Popover 作用域识别、防止跑偏到 SpringBoard/Dock/Spotlight 的前台预检、可重复 `--launch-env KEY=VALUE` 注入、`.e2e/config.yaml` 自动加载以及 `--no-prompt --config` 只读保护
 
 ### 输出产物
 
@@ -315,7 +316,7 @@ Source-of-truth 说明：
 
 ### 3）设备与应用控制
 
-`list_devices`、`install_app`、`launch_app`、`terminate_app`、`describe_capabilities`、`doctor`
+`list_devices`、`install_app`、`launch_app`（支持 iOS 模拟器 `launchEnv` / `launchArgs` / `terminateRunning`）、`terminate_app`、`describe_capabilities`、`doctor`
 
 ### 4）UI 感知、定位与交互
 
@@ -395,10 +396,11 @@ Source-of-truth 说明：
 - [docs/guides/ai-agent-invocation.zh-CN.md](docs/guides/ai-agent-invocation.zh-CN.md) — AI Agent 调用真相源与默认工具链
 - [docs/guides/policy-profiles.zh-CN.md](docs/guides/policy-profiles.zh-CN.md) — policy profile 使用方式与权限升级边界
 - [docs/engineering/ai-first-capability-expansion-guideline.md](docs/engineering/ai-first-capability-expansion-guideline.md) — AI-first harness 能力扩展规则
-- [docs/architecture/overview.md](docs/architecture/overview.md) — 目标/范围/原则
-- [docs/architecture/architecture.md](docs/architecture/architecture.md) — 参考架构
-- [docs/architecture/capability-map.md](docs/architecture/capability-map.md) — 能力域与成熟度
-- [docs/architecture/governance-security.md](docs/architecture/governance-security.md) — 治理与安全
+- [docs/architecture/01-system-architecture.md](docs/architecture/01-system-architecture.md) — 系统拓扑、契约与可靠性
+- [docs/architecture/02-platform-adapters.md](docs/architecture/02-platform-adapters.md) — Android/iOS 执行后端
+- [docs/architecture/03-capability-model.md](docs/architecture/03-capability-model.md) — 能力域与成熟度
+- [docs/architecture/04-runtime-architecture.md](docs/architecture/04-runtime-architecture.md) — 执行协调、兜底与恢复
+- [docs/architecture/05-governance-security.md](docs/architecture/05-governance-security.md) — 治理、策略与安全模型
 - [docs/architecture/README.zh-CN.md](docs/architecture/README.zh-CN.md) — 架构导航索引（中文版）
 - [docs/architecture/session-orchestration-architecture.zh-CN.md](docs/architecture/session-orchestration-architecture.zh-CN.md) — 会话租约/调度/运行时编排
 - [docs/architecture/policy-engine-runtime-architecture.zh-CN.md](docs/architecture/policy-engine-runtime-architecture.zh-CN.md) — 策略运行时/守卫/范围映射
