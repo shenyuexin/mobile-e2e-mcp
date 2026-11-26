@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
+import { EventEmitter } from "node:events";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
+import { installRuntimeSignalCleanupHandlers } from "../src/runtime-signal-cleanup.js";
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -130,4 +132,113 @@ test("mcp stdio entrypoint exposes all 68 tools with MOBILE_E2E_TOOLSET=full", a
     const tools = listResponse?.result?.tools as Array<{ name: string }>;
     assert.equal(tools.length, 68);
   });
+});
+
+test("installRuntimeSignalCleanupHandlers cleans up once and exits with 130/143", () => {
+  for (const [signal, expectedCode] of [["SIGINT", 130], ["SIGTERM", 143]] as const) {
+    const targetProcess = new EventEmitter();
+    let cleanupCalls = 0;
+    const exitCodes: number[] = [];
+    const uninstall = installRuntimeSignalCleanupHandlers({
+      targetProcess,
+      cleanup: () => {
+        cleanupCalls += 1;
+      },
+      exit: (code) => {
+        exitCodes.push(code);
+      },
+    });
+    targetProcess.emit(signal);
+    targetProcess.emit(signal);
+    assert.equal(cleanupCalls, 1);
+    assert.deepEqual(exitCodes, [expectedCode]);
+    uninstall();
+  }
+});
+
+async function assertDirectEntrypointSignalExit(
+  entrypointRelPath: string,
+  signal: "SIGINT" | "SIGTERM",
+  expectedCode: number,
+): Promise<void> {
+  const child = spawn(
+    process.execPath,
+    ["--import", "tsx", entrypointRelPath, "--toolset", "core"],
+    {
+      cwd: packageRoot,
+      env: { ...process.env },
+      stdio: ["pipe", "pipe", "pipe"],
+    },
+  );
+
+  let stdoutBuffer = "";
+  let initResolved = false;
+  const stderrChunks: string[] = [];
+  child.stderr.setEncoding("utf8");
+  child.stderr.on("data", (chunk: string) => stderrChunks.push(chunk));
+
+  const waitInit = new Promise<void>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error(`Timed out waiting for initialize from ${entrypointRelPath}. stderr=${stderrChunks.join("")}`));
+    }, 15_000);
+    child.stdout.setEncoding("utf8");
+    child.stdout.on("data", (chunk: string) => {
+      stdoutBuffer += chunk;
+      while (true) {
+        const idx = stdoutBuffer.indexOf("\n");
+        if (idx === -1) break;
+        const line = stdoutBuffer.slice(0, idx).trim();
+        stdoutBuffer = stdoutBuffer.slice(idx + 1);
+        if (!line) continue;
+        const parsed = JSON.parse(line) as { id?: number; error?: unknown };
+        if (parsed.id === 1) {
+          clearTimeout(timer);
+          initResolved = true;
+          resolve();
+          return;
+        }
+      }
+    });
+    child.once("exit", (code, sig) => {
+      if (!initResolved) {
+        clearTimeout(timer);
+        reject(new Error(`${entrypointRelPath} exited early (code=${String(code)}, signal=${String(sig)}). stderr=${stderrChunks.join("")}`));
+      }
+    });
+  });
+
+  child.stdin.write(
+    `${JSON.stringify({
+      jsonrpc: "2.0",
+      id: 1,
+      method: "initialize",
+      params: {
+        protocolVersion: "2024-11-05",
+        capabilities: {},
+        clientInfo: { name: "signal-test-client", version: "1.0.0" },
+      },
+    })}\n`,
+  );
+  await waitInit;
+
+  const exitPromise = new Promise<{ code: number | null; signal: NodeJS.Signals | null }>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      child.kill("SIGKILL");
+      reject(new Error(`Timed out waiting for ${entrypointRelPath} exit after ${signal}`));
+    }, 5_000);
+    child.once("exit", (code, sig) => {
+      clearTimeout(timer);
+      resolve({ code, signal: sig });
+    });
+  });
+
+  child.kill(signal);
+  const exitResult = await exitPromise;
+  assert.equal(exitResult.code, expectedCode, `Expected ${entrypointRelPath} to exit with ${expectedCode} on ${signal}, got code=${String(exitResult.code)}, signal=${String(exitResult.signal)}`);
+  assert.equal(exitResult.signal, null);
+}
+
+test("mcp stdio entrypoints handle SIGTERM (143) and SIGINT (130) cleanly", async () => {
+  await assertDirectEntrypointSignalExit("src/mcp-stdio-server.ts", "SIGTERM", 143);
+  await assertDirectEntrypointSignalExit("src/bin-stdio.ts", "SIGINT", 130);
 });

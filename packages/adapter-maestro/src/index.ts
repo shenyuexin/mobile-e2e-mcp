@@ -867,10 +867,12 @@ export { validateFlow } from "./flow-validation.js";
 export {
   closeAxeServeForDevice,
   closeAllAxeServeSessions,
+  forceKillAllAxeServeSessionsSync,
 } from "./axe-serve-pool.js";
 export {
   cleanupActiveRecordingsForSession,
   cleanupAllActiveRecordings,
   cleanupSessionRuntimeResources,
+  forceCleanupAllRuntimeResourcesSync,
 } from "./screen-recording-manager.js";
 export { OUTPUT_ROOT, EVIDENCE_ROOT, REPORTS_ROOT, TMP_ROOT, LEGACY_ARTIFACTS_ROOT, LEGACY_REPORTS_ROOT, evidencePaths, reportPaths, tmpPaths } from "./artifact-paths.js";

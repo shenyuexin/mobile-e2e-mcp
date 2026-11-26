@@ -7,6 +7,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import { resolveMcpServerVersion } from "./constants/version.js";
 import { createServer } from "./index.js";
+import { installRuntimeSignalCleanupHandlers } from "./runtime-signal-cleanup.js";
 import { buildToolList } from "./stdio-server.js";
 import {
   buildToolsetDeniedResult,
@@ -97,6 +98,7 @@ export async function startMcpStdioServer(options: StartMcpStdioServerOptions = 
     };
   });
 
+  installRuntimeSignalCleanupHandlers();
   const transport = new StdioServerTransport();
   await server.connect(transport);
 }

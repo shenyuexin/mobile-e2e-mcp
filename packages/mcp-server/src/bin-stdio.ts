@@ -2,6 +2,9 @@
 
 import process from "node:process";
 import { runUnifiedCli } from "./cli/unified-cli.js";
+import { installRuntimeSignalCleanupHandlers } from "./runtime-signal-cleanup.js";
+
+installRuntimeSignalCleanupHandlers();
 
 runUnifiedCli(process.argv.slice(2))
   .then((exitCode) => {

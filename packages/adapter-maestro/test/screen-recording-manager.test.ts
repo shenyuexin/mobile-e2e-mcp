@@ -10,6 +10,7 @@ import { REASON_CODES } from "@mobile-e2e-mcp/contracts";
 import { recordScreenWithRuntime } from "../src/device-runtime.js";
 import {
   cleanupActiveRecordingsForSession,
+  forceCleanupAllRuntimeResourcesSync,
   listActiveRecordingsForTesting,
   resetScreenRecordingForTesting,
   setScreenRecordingSpawnForTesting,
@@ -33,6 +34,7 @@ function createFakeRecorderChild(options: {
   const child = new EventEmitter() as ChildProcess & {
     signals: string[];
     exitCode: number | null;
+    signalCode: NodeJS.Signals | null;
     killed: boolean;
   };
   const stdout = new PassThrough();
@@ -40,6 +42,7 @@ function createFakeRecorderChild(options: {
   child.stdout = stdout;
   child.stderr = stderr;
   child.exitCode = null;
+  child.signalCode = null;
   child.killed = false;
   child.signals = [];
   child.kill = ((signal?: NodeJS.Signals | number) => {
@@ -331,6 +334,38 @@ test("iOS physical device returns UNSUPPORTED_OPERATION and cleanupActiveRecordi
     await cleanupActiveRecordingsForSession("sess-leak-clean");
     assert.equal(listActiveRecordingsForTesting().length, 0);
     await assert.rejects(() => stat(leakPath));
+  } finally {
+    resetScreenRecordingForTesting();
+  }
+});
+
+test("forceCleanupAllRuntimeResourcesSync synchronously SIGKILLs active recordings", async () => {
+  const workDir = await mkdtemp(path.join(tmpdir(), "m2e-rec-sigkill-"));
+  const activePath = path.join(workDir, "active.mp4");
+  let spawnedChild: (ChildProcess & { signals: string[] }) | undefined;
+  setScreenRecordingTimingsForTesting({ minAxeWarmupMs: 0, startupProbeMs: 40 });
+  setScreenRecordingSpawnForTesting((_cmd, args) => {
+    const outIdx = args.indexOf("--output");
+    spawnedChild = createFakeRecorderChild({
+      outputPath: outIdx >= 0 ? args[outIdx + 1] : undefined,
+      stderrOnStart: "Recording started\n",
+    });
+    return spawnedChild;
+  });
+  try {
+    const started = await recordScreenWithRuntime({
+      sessionId: "sess-sync-kill",
+      platform: "ios",
+      deviceId: SIM_UDID,
+      mode: "start",
+      outputPath: activePath,
+    });
+    assert.equal(started.status, "success");
+    assert.equal(listActiveRecordingsForTesting().length, 1);
+
+    forceCleanupAllRuntimeResourcesSync();
+    assert.equal(listActiveRecordingsForTesting().length, 0);
+    assert.deepEqual(spawnedChild?.signals, ["SIGKILL"]);
   } finally {
     resetScreenRecordingForTesting();
   }
