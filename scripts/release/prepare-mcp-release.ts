@@ -57,13 +57,13 @@ runWithOutput(`pnpm tsx scripts/release/validate-mcp-release.ts --version ${vers
 runWithOutput(`npx repomix@latest --output ${repomixOutputPath} --quiet --compress`);
 runWithOutput('npx gitnexus analyze');
 
-runWithOutput('pnpm build');
+runWithOutput(`pnpm --filter ${pkgName} run bundle`);
 runWithOutput('pnpm typecheck');
 runWithOutput('pnpm test:mcp-server');
 
 // .gitnexus may be gitignored in some setups — only add if tracked
 const gitnexusTracked = run('git ls-files --cached --error-unmatch .gitnexus 2>/dev/null && echo yes || echo no').includes('yes');
-const addPaths = `packages/mcp-server/package.json pnpm-lock.yaml CHANGELOG.md ${repomixOutputPath}${gitnexusTracked ? ` ${gitnexusIndexPath}` : ''}`;
+const addPaths = `packages/mcp-server/package.json pnpm-lock.yaml CHANGELOG.md ${repomixOutputPath} AGENTS.md${gitnexusTracked ? ` ${gitnexusIndexPath}` : ''}`;
 runWithOutput(`git add ${addPaths}`);
 runWithOutput(`git commit -m "release(mcp-server): v${version}"`);
 

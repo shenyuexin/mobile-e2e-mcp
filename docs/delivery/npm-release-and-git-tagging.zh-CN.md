@@ -46,10 +46,12 @@
 3. 根据“上一个 MCP tag -> 当前 tag”的 commit diff 自动生成/更新 `CHANGELOG.md` 中该版本节
 4. 再次校验 tag / package version / changelog 三者一致
 5. 将同步后的 `CHANGELOG.md` 回写到默认分支
-6. 同步生成最新 `repomix-output.xml` 并与 release 元数据一起回写默认分支
+6. 同步生成最新 `repomix-output.xml`，并将 GitNexus 刷新可能更新的 `AGENTS.md` 与 release 元数据一起回写默认分支
 7. 构建打包
 8. 发布到 npm（使用 `NPM_TOKEN`）
 9. 创建 GitHub Release
+
+发布打包使用 `@shenyuexin/mobile-e2e-mcp` 的 `bundle` 脚本作为最终路径。该脚本必须先构建所有被 MCP server 源码直接导入的 workspace 包，包括 `@mobile-e2e-mcp/explorer`，再执行 MCP server 的 TypeScript 编译与 tsup bundle；否则 fresh CI checkout 会因为缺少 workspace 包的 `dist/*.d.ts` 而在 npm publish 前失败。
 
 ### 3) Public Docs 漂移检查（非阻塞）
 
@@ -83,6 +85,9 @@
 - `docs/architecture/**`（对外架构叙事变化）
 - `.github/workflows/release-mcp.yml`、`scripts/release/**`（发版自动化流程变化）
 - `packages/mcp-server/package.json` 中影响安装/发布/仓库关联的元数据字段
+
+> npm Trusted Publishing / OIDC 发布会校验包元数据与 GitHub 发布来源。`packages/mcp-server/package.json` 的
+> `repository.url` 必须精确指向当前发布仓库 `shenyuexin/mobile-e2e-mcp`，不要保留旧仓库 URL。
 
 常见可豁免场景：
 
