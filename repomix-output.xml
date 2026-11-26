@@ -200653,6 +200653,338 @@ If you are unsure where to place changes, read:
 - `docs/architecture/01-system-architecture.md`
 </file>
 
+<file path=".github/workflows/ci.yml">
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  unit-and-typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.30.3
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: pnpm typecheck
+      - run: pnpm test:unit
+      - name: Prepare CI metadata artifact (unit-and-typecheck)
+        if: always()
+        run: |
+          mkdir -p ci-metadata
+          cat > ci-metadata/unit-and-typecheck.txt <<'EOF'
+          job: unit-and-typecheck
+          workflow: CI
+          run_id: ${{ github.run_id }}
+          run_attempt: ${{ github.run_attempt }}
+          ref: ${{ github.ref }}
+          sha: ${{ github.sha }}
+          status: ${{ job.status }}
+          EOF
+      - name: Upload CI metadata artifact (unit-and-typecheck)
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ci-unit-typecheck-metadata
+          path: ci-metadata/unit-and-typecheck.txt
+          if-no-files-found: error
+      - name: Append job summary (unit-and-typecheck)
+        if: always()
+        run: |
+          {
+            echo "## CI Job Summary: unit-and-typecheck"
+            echo "- Status: **${{ job.status }}**"
+            echo "- Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            echo "- Artifact: \`ci-unit-typecheck-metadata\`"
+            echo "- Evidence guide: docs/showcase/ci-evidence.md"
+            echo "- Boundary: Ubuntu CI validates build/typecheck/unit-scope signals and is not real-device proof."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  dry-run-smoke:
+    runs-on: ubuntu-latest
+    needs: unit-and-typecheck
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.30.3
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: pnpm test:smoke
+      - name: Generate mobile change CI/PR evidence
+        if: always()
+        run: pnpm run generate:mobile-change-ci-pr-evidence -- --run-id=${{ github.run_id }} --output-dir=output/reports/mobile-change-ci-pr-evidence
+      - name: Upload mobile change CI/PR evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ci-mobile-change-pr-evidence-${{ github.run_id }}
+          path: output/reports/mobile-change-ci-pr-evidence/
+          if-no-files-found: warn
+      - name: Prepare CI metadata artifact (dry-run-smoke)
+        if: always()
+        run: |
+          mkdir -p ci-metadata
+          cat > ci-metadata/dry-run-smoke.txt <<'EOF'
+          job: dry-run-smoke
+          workflow: CI
+          run_id: ${{ github.run_id }}
+          run_attempt: ${{ github.run_attempt }}
+          ref: ${{ github.ref }}
+          sha: ${{ github.sha }}
+          status: ${{ job.status }}
+          EOF
+      - name: Upload CI metadata artifact (dry-run-smoke)
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ci-dry-run-smoke-metadata
+          path: ci-metadata/dry-run-smoke.txt
+          if-no-files-found: error
+      - name: Append job summary (dry-run-smoke)
+        if: always()
+        run: |
+          {
+            echo "## CI Job Summary: dry-run-smoke"
+            echo "- Status: **${{ job.status }}**"
+            echo "- Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            echo "- Artifact: \`ci-dry-run-smoke-metadata\`"
+            echo "- Mobile change evidence: \`ci-mobile-change-pr-evidence-${{ github.run_id }}\`"
+            echo "- Evidence guide: docs/showcase/ci-evidence.md"
+            echo "- Boundary: Ubuntu CI does not validate physical-device behavior; use showcase real-device evidence for that."
+            if [ -f output/reports/mobile-change-ci-pr-evidence/pr-summary.md ]; then
+              echo ""
+              cat output/reports/mobile-change-ci-pr-evidence/pr-summary.md
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  explorer-evidence:
+    runs-on: ubuntu-latest
+    needs: unit-and-typecheck
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.30.3
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Validate Android Explorer evidence contract
+        run: |
+          set -o pipefail
+          mkdir -p output/reports
+          pnpm --silent run validate:explorer-android-evidence -- --min-pages 45 --min-depth 4 | tee output/reports/android-explorer-evidence.json
+      - name: Upload Android Explorer evidence report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ci-android-explorer-evidence-${{ github.run_id }}
+          path: output/reports/android-explorer-evidence.json
+          if-no-files-found: warn
+      - name: Prepare CI metadata artifact (explorer-evidence)
+        if: always()
+        run: |
+          mkdir -p ci-metadata
+          cat > ci-metadata/explorer-evidence.txt <<'EOF'
+          job: explorer-evidence
+          workflow: CI
+          run_id: ${{ github.run_id }}
+          run_attempt: ${{ github.run_attempt }}
+          ref: ${{ github.ref }}
+          sha: ${{ github.sha }}
+          status: ${{ job.status }}
+          command: pnpm --silent run validate:explorer-android-evidence -- --min-pages 45 --min-depth 4
+          EOF
+      - name: Upload CI metadata artifact (explorer-evidence)
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ci-explorer-evidence-metadata
+          path: ci-metadata/explorer-evidence.txt
+          if-no-files-found: error
+      - name: Append job summary (explorer-evidence)
+        if: always()
+        run: |
+          {
+            echo "## CI Job Summary: explorer-evidence"
+            echo "- Status: **${{ job.status }}**"
+            echo "- Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            echo "- Evidence report: \`ci-android-explorer-evidence-${{ github.run_id }}\`"
+            echo "- Metadata artifact: \`ci-explorer-evidence-metadata\`"
+            echo "- Checks: Android Explorer artifact files, app/platform/mode, pages/depth/failures, entry probe, app-switch detection, app-switch recovery"
+            echo "- Boundary: offline contract check for the committed physical-device artifact; it detects Explorer evidence drift but does not rerun a physical device."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  probe-dry-run:
+    runs-on: ubuntu-latest
+    needs: unit-and-typecheck
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.30.3
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: pnpm run validate:probe-dry-run
+      - name: Prepare CI metadata artifact (probe-dry-run)
+        if: always()
+        run: |
+          mkdir -p ci-metadata
+          cat > ci-metadata/probe-dry-run.txt <<'EOF'
+          job: probe-dry-run
+          workflow: CI
+          run_id: ${{ github.run_id }}
+          run_attempt: ${{ github.run_attempt }}
+          ref: ${{ github.ref }}
+          sha: ${{ github.sha }}
+          status: ${{ job.status }}
+          EOF
+      - name: Upload CI metadata artifact (probe-dry-run)
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ci-probe-dry-run-metadata
+          path: ci-metadata/probe-dry-run.txt
+          if-no-files-found: error
+      - name: Append job summary (probe-dry-run)
+        if: always()
+        run: |
+          {
+            echo "## CI Job Summary: probe-dry-run"
+            echo "- Status: **${{ job.status }}**"
+            echo "- Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            echo "- Artifact: \`ci-probe-dry-run-metadata\`"
+            echo "- Checks: Android + iOS simulator probe dry-run contracts"
+            echo "- Boundary: validates probe structure without requiring devices, simulators, or physical real-device proof."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  architecture-guardrails:
+    runs-on: ubuntu-latest
+    needs: unit-and-typecheck
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.30.3
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm validate:architecture-guardrails
+      - name: Prepare CI metadata artifact (architecture-guardrails)
+        if: always()
+        run: |
+          mkdir -p ci-metadata
+          cat > ci-metadata/architecture-guardrails.txt <<'EOF'
+          job: architecture-guardrails
+          workflow: CI
+          run_id: ${{ github.run_id }}
+          run_attempt: ${{ github.run_attempt }}
+          ref: ${{ github.ref }}
+          sha: ${{ github.sha }}
+          status: ${{ job.status }}
+          EOF
+      - name: Upload CI metadata artifact (architecture-guardrails)
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ci-architecture-guardrails-metadata
+          path: ci-metadata/architecture-guardrails.txt
+          if-no-files-found: error
+      - name: Append job summary (architecture-guardrails)
+        if: always()
+        run: |
+          {
+            echo "## CI Job Summary: architecture-guardrails"
+            echo "- Status: **${{ job.status }}**"
+            echo "- Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            echo "- Artifact: \`ci-architecture-guardrails-metadata\`"
+            echo "- Checks: hotspot sizes, thin-facade boundary, platform leakage, dependency direction, tool catalog drift"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  tool-output-contracts:
+    runs-on: ubuntu-latest
+    needs: unit-and-typecheck
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.30.3
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm validate:tool-output-contracts
+      - name: Prepare CI metadata artifact (tool-output-contracts)
+        if: always()
+        run: |
+          mkdir -p ci-metadata
+          cat > ci-metadata/tool-output-contracts.txt <<'EOF'
+          job: tool-output-contracts
+          workflow: CI
+          run_id: ${{ github.run_id }}
+          run_attempt: ${{ github.run_attempt }}
+          ref: ${{ github.ref }}
+          sha: ${{ github.sha }}
+          status: ${{ job.status }}
+          EOF
+      - name: Upload CI metadata artifact (tool-output-contracts)
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ci-tool-output-contracts-metadata
+          path: ci-metadata/tool-output-contracts.txt
+          if-no-files-found: error
+      - name: Append job summary (tool-output-contracts)
+        if: always()
+        run: |
+          {
+            echo "## CI Job Summary: tool-output-contracts"
+            echo "- Status: **${{ job.status }}**"
+            echo "- Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            echo "- Artifact: \`ci-tool-output-contracts-metadata\`"
+            echo "- Checks: ToolResult envelope, Tier 1 tool schemas, registry completeness"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  package-tarball-smoke:
+    runs-on: ubuntu-latest
+    needs: unit-and-typecheck
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.30.3
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @shenyuexin/mobile-e2e-mcp run bundle
+      - run: pnpm run test:mcp-tarball-smoke
+</file>
+
 <file path=".planning/phases/36-governed-agent-mobile-control-proof/36-01-SUMMARY.md">
 # Phase 36 Summary: Governed Agent Mobile Control Proof
 
@@ -206418,338 +206750,6 @@ export async function validateMobileChangeDeviceReadiness(): Promise<void>
 function isCliEntrypoint(): boolean
 </file>
 
-<file path=".github/workflows/ci.yml">
-name: CI
-
-on:
-  push:
-    branches:
-      - main
-  pull_request:
-
-jobs:
-  unit-and-typecheck:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 10.30.3
-      - uses: actions/setup-node@v5
-        with:
-          node-version: 24
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm build
-      - run: pnpm typecheck
-      - run: pnpm test:unit
-      - name: Prepare CI metadata artifact (unit-and-typecheck)
-        if: always()
-        run: |
-          mkdir -p ci-metadata
-          cat > ci-metadata/unit-and-typecheck.txt <<'EOF'
-          job: unit-and-typecheck
-          workflow: CI
-          run_id: ${{ github.run_id }}
-          run_attempt: ${{ github.run_attempt }}
-          ref: ${{ github.ref }}
-          sha: ${{ github.sha }}
-          status: ${{ job.status }}
-          EOF
-      - name: Upload CI metadata artifact (unit-and-typecheck)
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: ci-unit-typecheck-metadata
-          path: ci-metadata/unit-and-typecheck.txt
-          if-no-files-found: error
-      - name: Append job summary (unit-and-typecheck)
-        if: always()
-        run: |
-          {
-            echo "## CI Job Summary: unit-and-typecheck"
-            echo "- Status: **${{ job.status }}**"
-            echo "- Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-            echo "- Artifact: \`ci-unit-typecheck-metadata\`"
-            echo "- Evidence guide: docs/showcase/ci-evidence.md"
-            echo "- Boundary: Ubuntu CI validates build/typecheck/unit-scope signals and is not real-device proof."
-          } >> "$GITHUB_STEP_SUMMARY"
-
-  dry-run-smoke:
-    runs-on: ubuntu-latest
-    needs: unit-and-typecheck
-    steps:
-      - uses: actions/checkout@v5
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 10.30.3
-      - uses: actions/setup-node@v5
-        with:
-          node-version: 24
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm build
-      - run: pnpm test:smoke
-      - name: Generate mobile change CI/PR evidence
-        if: always()
-        run: pnpm run generate:mobile-change-ci-pr-evidence -- --run-id=${{ github.run_id }} --output-dir=output/reports/mobile-change-ci-pr-evidence
-      - name: Upload mobile change CI/PR evidence
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: ci-mobile-change-pr-evidence-${{ github.run_id }}
-          path: output/reports/mobile-change-ci-pr-evidence/
-          if-no-files-found: warn
-      - name: Prepare CI metadata artifact (dry-run-smoke)
-        if: always()
-        run: |
-          mkdir -p ci-metadata
-          cat > ci-metadata/dry-run-smoke.txt <<'EOF'
-          job: dry-run-smoke
-          workflow: CI
-          run_id: ${{ github.run_id }}
-          run_attempt: ${{ github.run_attempt }}
-          ref: ${{ github.ref }}
-          sha: ${{ github.sha }}
-          status: ${{ job.status }}
-          EOF
-      - name: Upload CI metadata artifact (dry-run-smoke)
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: ci-dry-run-smoke-metadata
-          path: ci-metadata/dry-run-smoke.txt
-          if-no-files-found: error
-      - name: Append job summary (dry-run-smoke)
-        if: always()
-        run: |
-          {
-            echo "## CI Job Summary: dry-run-smoke"
-            echo "- Status: **${{ job.status }}**"
-            echo "- Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-            echo "- Artifact: \`ci-dry-run-smoke-metadata\`"
-            echo "- Mobile change evidence: \`ci-mobile-change-pr-evidence-${{ github.run_id }}\`"
-            echo "- Evidence guide: docs/showcase/ci-evidence.md"
-            echo "- Boundary: Ubuntu CI does not validate physical-device behavior; use showcase real-device evidence for that."
-            if [ -f output/reports/mobile-change-ci-pr-evidence/pr-summary.md ]; then
-              echo ""
-              cat output/reports/mobile-change-ci-pr-evidence/pr-summary.md
-            fi
-          } >> "$GITHUB_STEP_SUMMARY"
-
-  explorer-evidence:
-    runs-on: ubuntu-latest
-    needs: unit-and-typecheck
-    steps:
-      - uses: actions/checkout@v5
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 10.30.3
-      - uses: actions/setup-node@v5
-        with:
-          node-version: 24
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - name: Validate Android Explorer evidence contract
-        run: |
-          set -o pipefail
-          mkdir -p output/reports
-          pnpm --silent run validate:explorer-android-evidence -- --min-pages 45 --min-depth 4 | tee output/reports/android-explorer-evidence.json
-      - name: Upload Android Explorer evidence report
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: ci-android-explorer-evidence-${{ github.run_id }}
-          path: output/reports/android-explorer-evidence.json
-          if-no-files-found: warn
-      - name: Prepare CI metadata artifact (explorer-evidence)
-        if: always()
-        run: |
-          mkdir -p ci-metadata
-          cat > ci-metadata/explorer-evidence.txt <<'EOF'
-          job: explorer-evidence
-          workflow: CI
-          run_id: ${{ github.run_id }}
-          run_attempt: ${{ github.run_attempt }}
-          ref: ${{ github.ref }}
-          sha: ${{ github.sha }}
-          status: ${{ job.status }}
-          command: pnpm --silent run validate:explorer-android-evidence -- --min-pages 45 --min-depth 4
-          EOF
-      - name: Upload CI metadata artifact (explorer-evidence)
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: ci-explorer-evidence-metadata
-          path: ci-metadata/explorer-evidence.txt
-          if-no-files-found: error
-      - name: Append job summary (explorer-evidence)
-        if: always()
-        run: |
-          {
-            echo "## CI Job Summary: explorer-evidence"
-            echo "- Status: **${{ job.status }}**"
-            echo "- Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-            echo "- Evidence report: \`ci-android-explorer-evidence-${{ github.run_id }}\`"
-            echo "- Metadata artifact: \`ci-explorer-evidence-metadata\`"
-            echo "- Checks: Android Explorer artifact files, app/platform/mode, pages/depth/failures, entry probe, app-switch detection, app-switch recovery"
-            echo "- Boundary: offline contract check for the committed physical-device artifact; it detects Explorer evidence drift but does not rerun a physical device."
-          } >> "$GITHUB_STEP_SUMMARY"
-
-  probe-dry-run:
-    runs-on: ubuntu-latest
-    needs: unit-and-typecheck
-    steps:
-      - uses: actions/checkout@v5
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 10.30.3
-      - uses: actions/setup-node@v5
-        with:
-          node-version: 24
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm build
-      - run: pnpm run validate:probe-dry-run
-      - name: Prepare CI metadata artifact (probe-dry-run)
-        if: always()
-        run: |
-          mkdir -p ci-metadata
-          cat > ci-metadata/probe-dry-run.txt <<'EOF'
-          job: probe-dry-run
-          workflow: CI
-          run_id: ${{ github.run_id }}
-          run_attempt: ${{ github.run_attempt }}
-          ref: ${{ github.ref }}
-          sha: ${{ github.sha }}
-          status: ${{ job.status }}
-          EOF
-      - name: Upload CI metadata artifact (probe-dry-run)
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: ci-probe-dry-run-metadata
-          path: ci-metadata/probe-dry-run.txt
-          if-no-files-found: error
-      - name: Append job summary (probe-dry-run)
-        if: always()
-        run: |
-          {
-            echo "## CI Job Summary: probe-dry-run"
-            echo "- Status: **${{ job.status }}**"
-            echo "- Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-            echo "- Artifact: \`ci-probe-dry-run-metadata\`"
-            echo "- Checks: Android + iOS simulator probe dry-run contracts"
-            echo "- Boundary: validates probe structure without requiring devices, simulators, or physical real-device proof."
-          } >> "$GITHUB_STEP_SUMMARY"
-
-  architecture-guardrails:
-    runs-on: ubuntu-latest
-    needs: unit-and-typecheck
-    steps:
-      - uses: actions/checkout@v5
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 10.30.3
-      - uses: actions/setup-node@v5
-        with:
-          node-version: 24
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm validate:architecture-guardrails
-      - name: Prepare CI metadata artifact (architecture-guardrails)
-        if: always()
-        run: |
-          mkdir -p ci-metadata
-          cat > ci-metadata/architecture-guardrails.txt <<'EOF'
-          job: architecture-guardrails
-          workflow: CI
-          run_id: ${{ github.run_id }}
-          run_attempt: ${{ github.run_attempt }}
-          ref: ${{ github.ref }}
-          sha: ${{ github.sha }}
-          status: ${{ job.status }}
-          EOF
-      - name: Upload CI metadata artifact (architecture-guardrails)
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: ci-architecture-guardrails-metadata
-          path: ci-metadata/architecture-guardrails.txt
-          if-no-files-found: error
-      - name: Append job summary (architecture-guardrails)
-        if: always()
-        run: |
-          {
-            echo "## CI Job Summary: architecture-guardrails"
-            echo "- Status: **${{ job.status }}**"
-            echo "- Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-            echo "- Artifact: \`ci-architecture-guardrails-metadata\`"
-            echo "- Checks: hotspot sizes, thin-facade boundary, platform leakage, dependency direction, tool catalog drift"
-          } >> "$GITHUB_STEP_SUMMARY"
-
-  tool-output-contracts:
-    runs-on: ubuntu-latest
-    needs: unit-and-typecheck
-    steps:
-      - uses: actions/checkout@v5
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 10.30.3
-      - uses: actions/setup-node@v5
-        with:
-          node-version: 24
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm validate:tool-output-contracts
-      - name: Prepare CI metadata artifact (tool-output-contracts)
-        if: always()
-        run: |
-          mkdir -p ci-metadata
-          cat > ci-metadata/tool-output-contracts.txt <<'EOF'
-          job: tool-output-contracts
-          workflow: CI
-          run_id: ${{ github.run_id }}
-          run_attempt: ${{ github.run_attempt }}
-          ref: ${{ github.ref }}
-          sha: ${{ github.sha }}
-          status: ${{ job.status }}
-          EOF
-      - name: Upload CI metadata artifact (tool-output-contracts)
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: ci-tool-output-contracts-metadata
-          path: ci-metadata/tool-output-contracts.txt
-          if-no-files-found: error
-      - name: Append job summary (tool-output-contracts)
-        if: always()
-        run: |
-          {
-            echo "## CI Job Summary: tool-output-contracts"
-            echo "- Status: **${{ job.status }}**"
-            echo "- Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-            echo "- Artifact: \`ci-tool-output-contracts-metadata\`"
-            echo "- Checks: ToolResult envelope, Tier 1 tool schemas, registry completeness"
-          } >> "$GITHUB_STEP_SUMMARY"
-
-  package-tarball-smoke:
-    runs-on: ubuntu-latest
-    needs: unit-and-typecheck
-    steps:
-      - uses: actions/checkout@v5
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 10.30.3
-      - uses: actions/setup-node@v5
-        with:
-          node-version: 24
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter @shenyuexin/mobile-e2e-mcp run bundle
-      - run: pnpm run test:mcp-tarball-smoke
-</file>
-
 <file path="docs/delivery/npm-release-and-git-tagging.zh-CN.md">
 # NPM 发版与 Git Tag 关联规范（@shenyuexin/mobile-e2e-mcp）
 
@@ -210615,65 +210615,6 @@ async function cleanupRecordSessionArtifacts(recordSessionId: string): Promise<v
 // Conditional tools do not have promotion gates — they are platform-dependent, not blocked.
 </file>
 
-<file path="packages/mcp-server/package.json">
-{
-  "name": "@shenyuexin/mobile-e2e-mcp",
-  "private": false,
-  "version": "0.1.23",
-  "description": "AI-first Mobile E2E MCP server for Android/iOS/React Native/Flutter",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/shenyuexin/mobile-e2e-mcp.git",
-    "directory": "packages/mcp-server"
-  },
-  "homepage": "https://github.com/shenyuexin/mobile-e2e-mcp/tree/main/packages/mcp-server#readme",
-  "bugs": {
-    "url": "https://github.com/shenyuexin/mobile-e2e-mcp/issues"
-  },
-  "type": "module",
-  "main": "./bundle/index.cjs",
-  "types": "./dist/index.d.ts",
-  "bin": {
-    "mobile-e2e-mcp": "./bundle/bin-stdio.cjs"
-  },
-  "files": [
-    "bundle",
-    "dist"
-  ],
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "default": "./bundle/index.cjs"
-    }
-  },
-  "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.17.5"
-  },
-  "devDependencies": {
-    "@mobile-e2e-mcp/adapter-maestro": "workspace:*",
-    "@mobile-e2e-mcp/adapter-vision": "workspace:*",
-    "@mobile-e2e-mcp/contracts": "workspace:*",
-    "@mobile-e2e-mcp/core": "workspace:*",
-    "@mobile-e2e-mcp/explorer": "workspace:*",
-    "tsup": "^8.5.0"
-  },
-  "scripts": {
-    "build": "pnpm --filter @mobile-e2e-mcp/contracts build && pnpm --filter @mobile-e2e-mcp/core build && pnpm --filter @mobile-e2e-mcp/adapter-vision build && pnpm --filter @mobile-e2e-mcp/adapter-maestro build && pnpm --filter @mobile-e2e-mcp/explorer build && tsc -p tsconfig.json",
-    "bundle": "pnpm run build && tsup --config tsup.config.ts",
-    "test": "tsx --test test/*.test.ts",
-    "test:coverage": "bash ../../scripts/coverage.sh src",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
-    "dev": "tsx src/dev-cli.ts",
-    "stdio": "tsx src/mcp-stdio-server.ts",
-    "stdio:minimal": "tsx src/stdio-server.ts",
-    "release:publish": "pnpm run bundle && pnpm publish --access public",
-    "release:publish:ci": "pnpm run bundle && pnpm publish --access public --no-git-checks",
-    "release:publish:dry-run": "pnpm run bundle && pnpm publish --access public --dry-run --no-git-checks",
-    "release:patch": "pnpm version patch && pnpm run release:publish"
-  }
-}
-</file>
-
 <file path="scripts/showcase/react-native-one-command.ts">
 import assert from "node:assert/strict";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
@@ -213920,6 +213861,65 @@ export async function runUnifiedCli(
   deps: Partial<UnifiedCliDependencies> = {},
   cwd: string = process.cwd(),
 ): Promise<number>
+</file>
+
+<file path="packages/mcp-server/package.json">
+{
+  "name": "@shenyuexin/mobile-e2e-mcp",
+  "private": false,
+  "version": "0.1.23",
+  "description": "AI-first Mobile E2E MCP server for Android/iOS/React Native/Flutter",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shenyuexin/mobile-e2e-mcp.git",
+    "directory": "packages/mcp-server"
+  },
+  "homepage": "https://github.com/shenyuexin/mobile-e2e-mcp/tree/main/packages/mcp-server#readme",
+  "bugs": {
+    "url": "https://github.com/shenyuexin/mobile-e2e-mcp/issues"
+  },
+  "type": "module",
+  "main": "./bundle/index.cjs",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "mobile-e2e-mcp": "./bundle/bin-stdio.cjs"
+  },
+  "files": [
+    "bundle",
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./bundle/index.cjs"
+    }
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.17.5"
+  },
+  "devDependencies": {
+    "@mobile-e2e-mcp/adapter-maestro": "workspace:*",
+    "@mobile-e2e-mcp/adapter-vision": "workspace:*",
+    "@mobile-e2e-mcp/contracts": "workspace:*",
+    "@mobile-e2e-mcp/core": "workspace:*",
+    "@mobile-e2e-mcp/explorer": "workspace:*",
+    "tsup": "^8.5.0"
+  },
+  "scripts": {
+    "build": "pnpm --filter @mobile-e2e-mcp/contracts build && pnpm --filter @mobile-e2e-mcp/core build && pnpm --filter @mobile-e2e-mcp/adapter-vision build && pnpm --filter @mobile-e2e-mcp/adapter-maestro build && pnpm --filter @mobile-e2e-mcp/explorer build && tsc -p tsconfig.json",
+    "bundle": "pnpm run build && tsup --config tsup.config.ts",
+    "test": "tsx --test test/*.test.ts",
+    "test:coverage": "bash ../../scripts/coverage.sh src",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "dev": "tsx src/dev-cli.ts",
+    "stdio": "tsx src/mcp-stdio-server.ts",
+    "stdio:minimal": "tsx src/stdio-server.ts",
+    "release:publish": "pnpm run bundle && pnpm publish --access public",
+    "release:publish:ci": "pnpm run bundle && pnpm publish --access public --no-git-checks",
+    "release:publish:dry-run": "pnpm run bundle && pnpm publish --access public --dry-run --no-git-checks",
+    "release:patch": "pnpm version patch && pnpm run release:publish"
+  }
+}
 </file>
 
 <file path="packages/mcp-server/README.md">
