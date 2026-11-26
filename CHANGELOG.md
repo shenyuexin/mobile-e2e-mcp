@@ -10,16 +10,19 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 ## [0.1.23] - 2026-11-26
 
 ### Added
-- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
-- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
+- Unified `mobile-e2e-mcp verify` acceptance suite (`packages/mcp-server/src/cli/verify-command.ts`, `verify-report.ts`) orchestrating deterministic flows (files/directories), `audit_ui_surface`, and bounded `explore` into unified `summary.json`, `report.md`, and self-contained zero-CDN `report.html` outputs configured via `.e2e/config.yaml` (`verify:` section).
+- `mobile-e2e-mcp run <dir>` sorted directory flow execution, `--output <dir>` (`summary.json` + automatic per-flow failure video paths), and `--fail-fast`.
+- Explorer `--run-id <id>`, `--json`, `-h`, and `<output>/latest.json` pointer (`htmlReportPath` also added to `index.json` entries).
+- iOS `navigate_back` `iosStrategy: "auto"` (`ios_auto_nav_bar` top-bar back/dismiss discovery with single bounded `ios_edge_swipe` fallback, `matchedBackLabel`, and `discoveredSelector`) and iOS `type_into_element` `keyboardState` / `AppleKeyboards` IME / `focusCause` diagnostics via `UiRuntimePlatformHooks` (hardware-keyboard-safe).
+- External packed-tarball CLI smoke test (`scripts/release/smoke-test-mcp-tarball.mjs`, `pnpm run test:mcp-tarball-smoke`) wired into both `.github/workflows/ci.yml` (`package-tarball-smoke`) and `.github/workflows/release-mcp.yml`.
 
 ### Changed
-- Improved diagnostics, evidence capture, and performance analysis workflows for mobile automation runs.
-- Refined operator documentation, governance guidance, and architecture references around the release.
-- Release scope includes 5 merged commits between mcp-server-v0.1.22 and the target tag.
+- Consolidated Explorer report generation into a single canonical write per run from `packages/explorer/src/runner.ts` (passing `{ skipReport: true }` to `engine.ts` while preserving `transitionLifecycle` and `stateGraph` metrics in `summary.json`).
+- Extracted Android keyboard probe helpers out of `packages/adapter-maestro/src/ui-action-tools.ts` into `ui-runtime-android.ts` (reducing `ui-action-tools.ts` from 1416 to 1334 lines) while keeping the MCP registry at 68 total / 20 core tools.
+- Synced `README.md`, `README.zh-CN.md`, `packages/mcp-server/README.md`, `.planning/ROADMAP.md`, and `.planning/STATE.md` for Phase 71–72 and `0.1.23`.
 
 ### Fixed
-- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
+- Hardened CLI argument parsers (`run`, `audit`, `diff`, `doctor`, `init`, `setup-agent`, `explore`) to fail fast with exit code `2` on unknown options, unexpected positional args, and missing flag values instead of silently ignoring them.
 
 ## [0.1.22] - 2026-11-26
 
