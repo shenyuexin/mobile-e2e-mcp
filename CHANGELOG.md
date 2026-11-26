@@ -10,16 +10,18 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 ## [0.1.22] - 2026-11-26
 
 ### Added
-- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
-- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
+- `mobile-e2e-mcp audit` (`packages/mcp-server/src/cli/audit-command.ts`) for zero-script governed UI quality audits with `.e2e/config.yaml` inheritance and `--fail-on-regression` (#21).
+- `mobile-e2e-mcp diff <baseDir> <headDir>` (`packages/mcp-server/src/cli/diff-command.ts`, `packages/explorer/src/report/diff-report.ts`) with PR-ready Markdown, JSON, and `--fail-on-regression`, plus self-contained zero-CDN `report.html` emission in Explorer reports (`packages/explorer/src/report/html-report.ts`) (#21).
+- `mobile-e2e-mcp run --record-on-failure` / `--record-output` (retain video only on failure, auto-discard on pass) and read-only proposal-only `--suggest-heal` (`packages/mcp-server/src/cli/selector-heal.ts`) (#22).
+- `mobile-e2e-mcp explore --export-flows <dir>` (`packages/explorer/src/report/flow-exporter.ts`) exporting deterministic Maestro YAML smoke flows with explicit settle delays (`waitForAnimationToEnd`) (#22).
+- Project auto-detection (`packages/mcp-server/src/cli/project-detector.ts`) in `init` with `--with-smoke-flow` / `--no-smoke-flow` scaffolding, `mobile-e2e-mcp setup-agent` (`packages/mcp-server/src/cli/setup-agent-command.ts`) for `claude`/`cursor`/`opencode`/`codex`, and AXe `< 2.2.0` upgrade warnings in `doctor` (#23).
+- Reusable composite GitHub Action `.github/actions/mobile-e2e-gate/action.yml` (`audit`/`explore`/`run`/`diff` modes with `env:`-isolated inputs, artifact upload, and PR comment gating) and reproducible real-app showcase guide `docs/showcase/killer-demo-real-app.md` (#24).
 
 ### Changed
-- Improved diagnostics, evidence capture, and performance analysis workflows for mobile automation runs.
-- Refined operator documentation, governance guidance, and architecture references around the release.
-- Release scope includes 6 merged commits between mcp-server-v0.1.21 and the target tag.
+- Refreshed `README.md`, `README.zh-CN.md`, `packages/mcp-server/README.md`, `docs/guides/golden-path.md`, `docs/guides/external-tools.md`, `docs/architecture/02-platform-adapters.md`, and `CHANGELOG.md` for `0.1.20`–`0.1.22` while preserving the 68-tool / 20-core MCP registry.
 
 ### Fixed
-- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
+- Fixed broken architecture/release links across root docs, `AGENTS.md`, `CONTRIBUTING.md`, `docs/engineering/probe-ci-gate-proposal.md`, and `docs/showcase/evidence/android-explorer-full-2026-04-28T03-38-20/report.md` (verified 0 broken links via `validate:github-gate-assets`).
 
 ## [0.1.21] - 2026-11-26
 
