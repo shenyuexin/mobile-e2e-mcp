@@ -20083,6 +20083,118 @@ export function parseAnrTraceMetadata(content: string): {
 // Signal: "Input dispatching timed out" or "Key dispatching timed out"
 </file>
 
+<file path="packages/adapter-maestro/src/diagnostics-tools.ts">
+import type {
+  CollectDebugEvidenceData,
+  CollectDebugEvidenceInput,
+  DiagnosisPacket,
+  DebugSignalSummary,
+  JsConsoleLogEntry,
+  JsConsoleLogSummary,
+  JsNetworkFailureSummary,
+  LogSummary,
+  PerformActionWithEvidenceData,
+  ReasonCode,
+  ToolResult,
+} from "@mobile-e2e-mcp/contracts";
+import { REASON_CODES } from "@mobile-e2e-mcp/contracts";
+import { mkdir, readFile, readdir, stat, writeFile } from "node:fs/promises";
+import path from "node:path";
+import {
+  DEFAULT_HARNESS_CONFIG_PATH,
+  DEFAULT_RUNNER_PROFILE,
+  loadHarnessSelection,
+  resolveRepoPath,
+} from "./harness-config.js";
+import {
+  captureJsConsoleLogsWithMaestro,
+  captureJsNetworkEventsWithMaestro,
+  buildJsDebugTargetSelectionNarrativeLine,
+  buildJsNetworkSuspectSentences,
+  formatJsConsoleEntry,
+  listJsDebugTargetsWithMaestro,
+  normalizeMetroBaseUrl,
+  selectPreferredJsDebugTargetWithReason,
+} from "./js-debug.js";
+import {
+  collectDiagnosticsWithRuntime,
+  getCrashSignalsWithRuntime,
+  getLogsWithRuntime,
+} from "./device-runtime.js";
+import { buildExecutionEvidence, normalizePositiveInteger } from "./runtime-shared.js";
+import { evidencePaths as artifactEvidencePaths } from "./artifact-paths.js";
+⋮----
+interface IosPhysicalStartupEvidenceSummary {
+  artifactPath: string;
+  attemptedBackend?: string;
+  executedBackend?: string;
+  fallbackUsed?: boolean;
+  primaryFailurePhase?: string;
+  startupPhase?: string;
+  reasonCode?: ReasonCode;
+  summaryLine?: string;
+}
+⋮----
+function parseIosPhysicalExecutionEvidenceMarkdown(markdown: string): IosPhysicalStartupEvidenceSummary
+⋮----
+async function loadLatestIosPhysicalStartupEvidence(repoRoot: string, sessionId: string): Promise<IosPhysicalStartupEvidenceSummary | undefined>
+⋮----
+function buildDiagnosisPacket(params: {
+  reasonCode: ReasonCode;
+  suspectAreas: string[];
+  environmentIssue?: string;
+  logSummary?: LogSummary;
+  crashSummary?: LogSummary;
+  jsConsoleSummary?: JsConsoleLogSummary;
+  jsNetworkSummary?: JsNetworkFailureSummary;
+}): DiagnosisPacket | undefined
+⋮----
+function mergeSignalSummaries(...summaries: Array<LogSummary | undefined>): DebugSignalSummary[]
+⋮----
+function buildDebugNarrative(params: {
+  appId?: string;
+  appFilterApplied: boolean;
+  logSummary?: LogSummary;
+  crashSummary?: LogSummary;
+  jsNetworkSummary?: JsNetworkFailureSummary;
+  includeDiagnostics: boolean;
+  diagnosticsArtifacts: number;
+}): string[]
+⋮----
+function buildSuspectAreas(params: {
+  crashSummary?: LogSummary;
+  logSummary?: LogSummary;
+  jsConsoleSummary?: JsConsoleLogSummary;
+  jsNetworkSummary?: JsNetworkFailureSummary;
+  jsConsoleLogs?: JsConsoleLogEntry[];
+  environmentIssue?: string;
+}): string[]
+⋮----
+export function buildDiagnosisBriefing(params: {
+  status: ToolResult["status"];
+  reasonCode: ReasonCode;
+  appId?: string;
+  suspectAreas: string[];
+  jsDebugTargetId?: string;
+  jsConsoleLogCount?: number;
+  jsNetworkEventCount?: number;
+  retryRecommendationTier?: PerformActionWithEvidenceData["retryRecommendationTier"];
+  retryRecommendation?: PerformActionWithEvidenceData["retryRecommendation"];
+}): string[]
+⋮----
+function buildDebugNextSuggestions(params: {
+  reasonCode: ReasonCode;
+  suspectAreas: string[];
+  includeDiagnostics: boolean;
+  jsDebugTargetId?: string;
+  jsConsoleLogCount?: number;
+  jsNetworkEventCount?: number;
+  iosStartupEvidence?: IosPhysicalStartupEvidenceSummary;
+}): string[]
+⋮----
+export async function collectDebugEvidenceWithRuntime(input: CollectDebugEvidenceInput): Promise<ToolResult<CollectDebugEvidenceData>>
+</file>
+
 <file path="packages/adapter-maestro/src/element-screenshot.ts">
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
@@ -20909,6 +21021,41 @@ export async function captureJsNetworkEventsWithMaestro(input: CaptureJsNetworkE
 const snapshot = () =>
 ⋮----
 export function classifyDebugSignal(line: string): DebugSignalSummary["category"]
+</file>
+
+<file path="packages/adapter-maestro/src/network-failure-diagnosis.ts">
+import type {
+  DiagnoseNetworkFailureData,
+  DiagnoseNetworkFailureInput,
+  JsNetworkEvent,
+  NetworkFailureDiagnosisClassification,
+  NetworkFailureDiagnosisConfidence,
+  NetworkFailureRequest,
+  NetworkFailureReleaseAssessment,
+  ToolResult,
+} from "@mobile-e2e-mcp/contracts";
+import { REASON_CODES } from "@mobile-e2e-mcp/contracts";
+import { inspectNetworkPolicyWithMaestro } from "./network-policy-inspection.js";
+⋮----
+function isFailedNetworkEvent(event: JsNetworkEvent): boolean
+⋮----
+function selectFailedRequest(input: DiagnoseNetworkFailureInput): NetworkFailureRequest | undefined
+⋮----
+function buildReleaseAssessment(input: DiagnoseNetworkFailureInput): NetworkFailureReleaseAssessment
+⋮----
+function classifyInvalidRequest(): NetworkFailureDiagnosisClassification
+⋮----
+function classifyHttps(): NetworkFailureDiagnosisClassification
+⋮----
+function classifyStatusError(status: number): NetworkFailureDiagnosisClassification
+⋮----
+function classifyPolicyAllowed(request: NetworkFailureRequest): NetworkFailureDiagnosisClassification
+⋮----
+function confidenceFor(classification: NetworkFailureDiagnosisClassification, releaseAssessment: NetworkFailureReleaseAssessment): NetworkFailureDiagnosisConfidence
+⋮----
+function suggestionsFor(classification: NetworkFailureDiagnosisClassification): string[]
+⋮----
+export async function diagnoseNetworkFailureWithMaestro(input: DiagnoseNetworkFailureInput): Promise<ToolResult<DiagnoseNetworkFailureData>>
 </file>
 
 <file path="packages/adapter-maestro/src/network-policy-inspection.ts">
@@ -23404,6 +23551,17 @@ import {
   selectPreferredJsDebugTarget,
   selectPreferredJsDebugTargetWithReason,
 } from "../src/js-debug.ts";
+</file>
+
+<file path="packages/adapter-maestro/test/network-failure-diagnosis.test.ts">
+import assert from "node:assert/strict";
+import { mkdir, rm, writeFile } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+import test from "node:test";
+import { diagnoseNetworkFailureWithMaestro } from "../src/network-failure-diagnosis.ts";
+⋮----
+async function withTempDir(fn: (dir: string) => Promise<void>): Promise<void>
 </file>
 
 <file path="packages/adapter-maestro/test/network-policy-inspection.test.ts">
@@ -28874,6 +29032,13 @@ import type { DetectInterruptionData, DetectInterruptionInput, ToolResult } from
 import { detectInterruptionWithMaestro } from "@mobile-e2e-mcp/adapter-maestro";
 ⋮----
 export async function detectInterruption(input: DetectInterruptionInput): Promise<ToolResult<DetectInterruptionData>>
+</file>
+
+<file path="packages/mcp-server/src/tools/diagnose-network-failure.ts">
+import type { DiagnoseNetworkFailureData, DiagnoseNetworkFailureInput, ToolResult } from "@mobile-e2e-mcp/contracts";
+import { diagnoseNetworkFailureWithMaestro } from "@mobile-e2e-mcp/adapter-maestro";
+⋮----
+export async function diagnoseNetworkFailure(input: DiagnoseNetworkFailureInput): Promise<ToolResult<DiagnoseNetworkFailureData>>
 </file>
 
 <file path="packages/mcp-server/src/tools/doctor.ts">
@@ -188624,118 +188789,6 @@ export function createAndroidDeviceRuntimeHooks(): DeviceRuntimePlatformHooks
 // Use filtered set for signal count
 </file>
 
-<file path="packages/adapter-maestro/src/diagnostics-tools.ts">
-import type {
-  CollectDebugEvidenceData,
-  CollectDebugEvidenceInput,
-  DiagnosisPacket,
-  DebugSignalSummary,
-  JsConsoleLogEntry,
-  JsConsoleLogSummary,
-  JsNetworkFailureSummary,
-  LogSummary,
-  PerformActionWithEvidenceData,
-  ReasonCode,
-  ToolResult,
-} from "@mobile-e2e-mcp/contracts";
-import { REASON_CODES } from "@mobile-e2e-mcp/contracts";
-import { mkdir, readFile, readdir, stat, writeFile } from "node:fs/promises";
-import path from "node:path";
-import {
-  DEFAULT_HARNESS_CONFIG_PATH,
-  DEFAULT_RUNNER_PROFILE,
-  loadHarnessSelection,
-  resolveRepoPath,
-} from "./harness-config.js";
-import {
-  captureJsConsoleLogsWithMaestro,
-  captureJsNetworkEventsWithMaestro,
-  buildJsDebugTargetSelectionNarrativeLine,
-  buildJsNetworkSuspectSentences,
-  formatJsConsoleEntry,
-  listJsDebugTargetsWithMaestro,
-  normalizeMetroBaseUrl,
-  selectPreferredJsDebugTargetWithReason,
-} from "./js-debug.js";
-import {
-  collectDiagnosticsWithRuntime,
-  getCrashSignalsWithRuntime,
-  getLogsWithRuntime,
-} from "./device-runtime.js";
-import { buildExecutionEvidence, normalizePositiveInteger } from "./runtime-shared.js";
-import { evidencePaths as artifactEvidencePaths } from "./artifact-paths.js";
-⋮----
-interface IosPhysicalStartupEvidenceSummary {
-  artifactPath: string;
-  attemptedBackend?: string;
-  executedBackend?: string;
-  fallbackUsed?: boolean;
-  primaryFailurePhase?: string;
-  startupPhase?: string;
-  reasonCode?: ReasonCode;
-  summaryLine?: string;
-}
-⋮----
-function parseIosPhysicalExecutionEvidenceMarkdown(markdown: string): IosPhysicalStartupEvidenceSummary
-⋮----
-async function loadLatestIosPhysicalStartupEvidence(repoRoot: string, sessionId: string): Promise<IosPhysicalStartupEvidenceSummary | undefined>
-⋮----
-function buildDiagnosisPacket(params: {
-  reasonCode: ReasonCode;
-  suspectAreas: string[];
-  environmentIssue?: string;
-  logSummary?: LogSummary;
-  crashSummary?: LogSummary;
-  jsConsoleSummary?: JsConsoleLogSummary;
-  jsNetworkSummary?: JsNetworkFailureSummary;
-}): DiagnosisPacket | undefined
-⋮----
-function mergeSignalSummaries(...summaries: Array<LogSummary | undefined>): DebugSignalSummary[]
-⋮----
-function buildDebugNarrative(params: {
-  appId?: string;
-  appFilterApplied: boolean;
-  logSummary?: LogSummary;
-  crashSummary?: LogSummary;
-  jsNetworkSummary?: JsNetworkFailureSummary;
-  includeDiagnostics: boolean;
-  diagnosticsArtifacts: number;
-}): string[]
-⋮----
-function buildSuspectAreas(params: {
-  crashSummary?: LogSummary;
-  logSummary?: LogSummary;
-  jsConsoleSummary?: JsConsoleLogSummary;
-  jsNetworkSummary?: JsNetworkFailureSummary;
-  jsConsoleLogs?: JsConsoleLogEntry[];
-  environmentIssue?: string;
-}): string[]
-⋮----
-export function buildDiagnosisBriefing(params: {
-  status: ToolResult["status"];
-  reasonCode: ReasonCode;
-  appId?: string;
-  suspectAreas: string[];
-  jsDebugTargetId?: string;
-  jsConsoleLogCount?: number;
-  jsNetworkEventCount?: number;
-  retryRecommendationTier?: PerformActionWithEvidenceData["retryRecommendationTier"];
-  retryRecommendation?: PerformActionWithEvidenceData["retryRecommendation"];
-}): string[]
-⋮----
-function buildDebugNextSuggestions(params: {
-  reasonCode: ReasonCode;
-  suspectAreas: string[];
-  includeDiagnostics: boolean;
-  jsDebugTargetId?: string;
-  jsConsoleLogCount?: number;
-  jsNetworkEventCount?: number;
-  iosStartupEvidence?: IosPhysicalStartupEvidenceSummary;
-}): string[]
-⋮----
-export async function collectDebugEvidenceWithRuntime(input: CollectDebugEvidenceInput): Promise<ToolResult<CollectDebugEvidenceData>>
-</file>
-
 <file path="packages/adapter-maestro/src/doctor-guidance.ts">
 import type { DoctorCheck } from "@mobile-e2e-mcp/contracts";
 import { isDarwinHost } from "./host-runtime.js";
@@ -189055,41 +189108,6 @@ export async function enrichIosSimulatorDisplayMetadata(
   iosDevices: DeviceInfo[],
   deps: IosSimulatorEnvDeps = {},
 ): Promise<DeviceInfo[]>
-</file>
-
-<file path="packages/adapter-maestro/src/network-failure-diagnosis.ts">
-import type {
-  DiagnoseNetworkFailureData,
-  DiagnoseNetworkFailureInput,
-  JsNetworkEvent,
-  NetworkFailureDiagnosisClassification,
-  NetworkFailureDiagnosisConfidence,
-  NetworkFailureRequest,
-  NetworkFailureReleaseAssessment,
-  ToolResult,
-} from "@mobile-e2e-mcp/contracts";
-import { REASON_CODES } from "@mobile-e2e-mcp/contracts";
-import { inspectNetworkPolicyWithMaestro } from "./network-policy-inspection.js";
-⋮----
-function isFailedNetworkEvent(event: JsNetworkEvent): boolean
-⋮----
-function selectFailedRequest(input: DiagnoseNetworkFailureInput): NetworkFailureRequest | undefined
-⋮----
-function buildReleaseAssessment(input: DiagnoseNetworkFailureInput): NetworkFailureReleaseAssessment
-⋮----
-function classifyInvalidRequest(): NetworkFailureDiagnosisClassification
-⋮----
-function classifyHttps(): NetworkFailureDiagnosisClassification
-⋮----
-function classifyStatusError(status: number): NetworkFailureDiagnosisClassification
-⋮----
-function classifyPolicyAllowed(request: NetworkFailureRequest): NetworkFailureDiagnosisClassification
-⋮----
-function confidenceFor(classification: NetworkFailureDiagnosisClassification, releaseAssessment: NetworkFailureReleaseAssessment): NetworkFailureDiagnosisConfidence
-⋮----
-function suggestionsFor(classification: NetworkFailureDiagnosisClassification): string[]
-⋮----
-export async function diagnoseNetworkFailureWithMaestro(input: DiagnoseNetworkFailureInput): Promise<ToolResult<DiagnoseNetworkFailureData>>
 </file>
 
 <file path="packages/adapter-maestro/src/ui-action-back.ts">
@@ -190145,17 +190163,6 @@ treeHash: "same-hash", // same for both pre and post
 // Verify pageTreeHashUnchanged is false (different hashes)
 ⋮----
 // Verify postBackPageIdentity derives from StateSummary.pageIdentity
-</file>
-
-<file path="packages/adapter-maestro/test/network-failure-diagnosis.test.ts">
-import assert from "node:assert/strict";
-import { mkdir, rm, writeFile } from "node:fs/promises";
-import os from "node:os";
-import path from "node:path";
-import test from "node:test";
-import { diagnoseNetworkFailureWithMaestro } from "../src/network-failure-diagnosis.ts";
-⋮----
-async function withTempDir(fn: (dir: string) => Promise<void>): Promise<void>
 </file>
 
 <file path="packages/adapter-maestro/test/performance.test.ts">
@@ -191951,13 +191958,6 @@ import { auditUiSurfaceWithMaestro } from "@mobile-e2e-mcp/adapter-maestro";
 export async function auditUiSurface(input: AuditUiSurfaceInput): Promise<ToolResult<AuditUiSurfaceData>>
 </file>
 
-<file path="packages/mcp-server/src/tools/diagnose-network-failure.ts">
-import type { DiagnoseNetworkFailureData, DiagnoseNetworkFailureInput, ToolResult } from "@mobile-e2e-mcp/contracts";
-import { diagnoseNetworkFailureWithMaestro } from "@mobile-e2e-mcp/adapter-maestro";
-⋮----
-export async function diagnoseNetworkFailure(input: DiagnoseNetworkFailureInput): Promise<ToolResult<DiagnoseNetworkFailureData>>
-</file>
-
 <file path="packages/mcp-server/src/tools/end-session.ts">
 import { cleanupSessionRuntimeResources, resolveRepoPath } from "@mobile-e2e-mcp/adapter-maestro";
 import { appendSessionTimelineEvent, loadSessionRecord, persistEndedSession, releaseLease } from "@mobile-e2e-mcp/core";
@@ -192134,6 +192134,32 @@ import { buildSessionRecordRelativePath } from "@mobile-e2e-mcp/core";
 import { createServer } from "../src/index.ts";
 </file>
 
+<file path="packages/mcp-server/test/stdio-server.test.ts">
+import assert from "node:assert/strict";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import path from "node:path";
+import test from "node:test";
+import { fileURLToPath } from "node:url";
+import { buildActionRecordRelativePath, buildDeviceLeaseRecordRelativePath, buildRecordEventsRelativePath, buildRecordedStepsRelativePath, buildRecordSessionRelativePath, buildSessionAuditRelativePath, buildSessionRecordRelativePath, legacyCoreEvidencePaths, persistActionRecord } from "@mobile-e2e-mcp/core";
+import { buildToolList, handleRequest } from "../src/stdio-server.ts";
+⋮----
+function buildTestDeviceId(sessionId: string): string
+⋮----
+async function cleanupSessionArtifact(sessionId: string): Promise<void>
+⋮----
+async function writeLegacySessionArtifact(sessionId: string, platform: "android" | "ios" = "android"): Promise<void>
+⋮----
+async function cleanupActionArtifact(actionId: string): Promise<void>
+⋮----
+async function cleanupRecordSessionArtifacts(recordSessionId: string): Promise<void>
+⋮----
+// Conditional tools do not have promotion gates — they are platform-dependent, not blocked.
+⋮----
+// AXe CLI format: ["axe", "tap", "-x", "12", "-y", "34", "--udid", "..."]
+⋮----
+// AXe CLI format: ["axe", "type", "hello", "--udid", "..."]
+</file>
+
 <file path="packages/mcp-server/test/unified-cli.test.ts">
 import assert from "node:assert/strict";
 import { existsSync } from "node:fs";
@@ -192155,65 +192181,6 @@ import { normalizeExploreArgs, runUnifiedCli } from "../src/cli/unified-cli.ts";
 import { resolveMcpServerVersion } from "../src/constants/version.ts";
 ⋮----
 async function captureConsole<T>(fn: () => Promise<T>): Promise<{ result: T; stdout: string; stderr: string }>
-</file>
-
-<file path="packages/mcp-server/package.json">
-{
-  "name": "@shenyuexin/mobile-e2e-mcp",
-  "private": false,
-  "version": "0.1.20",
-  "description": "AI-first Mobile E2E MCP server for Android/iOS/React Native/Flutter",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/shenyuexin/mobile-e2e-mcp.git",
-    "directory": "packages/mcp-server"
-  },
-  "homepage": "https://github.com/shenyuexin/mobile-e2e-mcp/tree/main/packages/mcp-server#readme",
-  "bugs": {
-    "url": "https://github.com/shenyuexin/mobile-e2e-mcp/issues"
-  },
-  "type": "module",
-  "main": "./bundle/index.cjs",
-  "types": "./dist/index.d.ts",
-  "bin": {
-    "mobile-e2e-mcp": "./bundle/bin-stdio.cjs"
-  },
-  "files": [
-    "bundle",
-    "dist"
-  ],
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "default": "./bundle/index.cjs"
-    }
-  },
-  "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.17.5"
-  },
-  "devDependencies": {
-    "@mobile-e2e-mcp/adapter-maestro": "workspace:*",
-    "@mobile-e2e-mcp/adapter-vision": "workspace:*",
-    "@mobile-e2e-mcp/contracts": "workspace:*",
-    "@mobile-e2e-mcp/core": "workspace:*",
-    "@mobile-e2e-mcp/explorer": "workspace:*",
-    "tsup": "^8.5.0"
-  },
-  "scripts": {
-    "build": "pnpm --filter @mobile-e2e-mcp/contracts build && pnpm --filter @mobile-e2e-mcp/core build && pnpm --filter @mobile-e2e-mcp/adapter-vision build && pnpm --filter @mobile-e2e-mcp/adapter-maestro build && pnpm --filter @mobile-e2e-mcp/explorer build && tsc -p tsconfig.json",
-    "bundle": "pnpm run build && tsup --config tsup.config.ts",
-    "test": "tsx --test test/*.test.ts",
-    "test:coverage": "bash ../../scripts/coverage.sh src",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
-    "dev": "tsx src/dev-cli.ts",
-    "stdio": "tsx src/mcp-stdio-server.ts",
-    "stdio:minimal": "tsx src/stdio-server.ts",
-    "release:publish": "pnpm run bundle && pnpm publish --access public",
-    "release:publish:ci": "pnpm run bundle && pnpm publish --access public --no-git-checks",
-    "release:publish:dry-run": "pnpm run bundle && pnpm publish --access public --dry-run --no-git-checks",
-    "release:patch": "pnpm version patch && pnpm run release:publish"
-  }
-}
 </file>
 
 <file path="packages/mcp-server/README.md">
@@ -200392,6 +200359,42 @@ export async function main(argv = process.argv.slice(2))
 
 </file>
 
+<file path="packages/contracts/src/constants/tool-names.ts">
+/**
+ * Canonical tool name constants for the mobile-e2e-mcp server.
+ *
+ * Values must match MobileE2EMcpToolName (keyof MobileE2EMcpToolContractMap
+ * in server.ts) exactly. MobileE2EMcpToolName is the authoritative source;
+ * this constant provides consumer-friendly camelCase keys.
+ *
+ * If a tool is added to MobileE2EMcpToolContractMap, add it here too.
+ */
+⋮----
+// Session lifecycle
+⋮----
+// Recording & replay
+⋮----
+// Action & intent execution
+⋮----
+// Failure intelligence
+⋮----
+// Interruption handling
+⋮----
+// UI inspection
+⋮----
+// UI actions
+⋮----
+// App lifecycle
+⋮----
+// Diagnostics & evidence
+⋮----
+// JS debug targets (React Native / Expo)
+⋮----
+// Validation & network
+⋮----
+// Device discovery
+</file>
+
 <file path="packages/contracts/src/constants/toolsets.ts">
 import { TOOL_NAMES } from "./tool-names.js";
 ⋮----
@@ -201989,30 +201992,340 @@ function buildUnknownToolResult(toolName: string, sessionId?: string): ToolResul
 export async function startMcpStdioServer(options: StartMcpStdioServerOptions = {}): Promise<void>
 </file>
 
-<file path="packages/mcp-server/test/stdio-server.test.ts">
-import assert from "node:assert/strict";
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
-import path from "node:path";
-import test from "node:test";
-import { fileURLToPath } from "node:url";
-import { buildActionRecordRelativePath, buildDeviceLeaseRecordRelativePath, buildRecordEventsRelativePath, buildRecordedStepsRelativePath, buildRecordSessionRelativePath, buildSessionAuditRelativePath, buildSessionRecordRelativePath, legacyCoreEvidencePaths, persistActionRecord } from "@mobile-e2e-mcp/core";
-import { buildToolList, handleRequest } from "../src/stdio-server.ts";
+<file path="packages/mcp-server/src/server.ts">
+import type {
+	AuditUiSurfaceData,
+	AuditUiSurfaceInput,
+	CancelRecordSessionData,
+	CancelRecordSessionInput,
+	CaptureJsConsoleLogsData,
+	CaptureJsConsoleLogsInput,
+	CaptureJsNetworkEventsData,
+	CaptureJsNetworkEventsInput,
+	ClassifyInterruptionData,
+	ClassifyInterruptionInput,
+	CollectDebugEvidenceData,
+	CollectDebugEvidenceInput,
+	CollectDiagnosticsData,
+	CollectDiagnosticsInput,
+	CompareAgainstBaselineData,
+	CompareAgainstBaselineInput,
+	CompleteTaskData,
+	CompleteTaskInput,
+	DiagnoseNetworkFailureData,
+	DiagnoseNetworkFailureInput,
+	DescribeCapabilitiesData,
+	DescribeCapabilitiesInput,
+  DetectInterruptionData,
+  DetectInterruptionInput,
+  DoctorData,
+  DoctorInput,
+	ElementScreenshotData,
+	ElementScreenshotInput,
+	EndRecordSessionData,
+	EndRecordSessionInput,
+	EndSessionData,
+	EndSessionInput,
+	ExecuteIntentData,
+	ExecuteIntentInput,
+	ExplainLastFailureData,
+	ExplainLastFailureInput,
+	ExportSessionFlowData,
+	ExportSessionFlowInput,
+	FindSimilarFailuresData,
+	FindSimilarFailuresInput,
+	GetActionOutcomeData,
+	GetActionOutcomeInput,
+	GetCrashSignalsData,
+	GetCrashSignalsInput,
+	GetLogsData,
+	GetLogsInput,
+	GetPageContextData,
+	GetPageContextInput,
+	GetRecordSessionStatusInput,
+	GetScreenSummaryData,
+	GetScreenSummaryInput,
+	GetSessionStateData,
+	GetSessionStateInput,
+	InspectUiData,
+	InspectUiInput,
+	InspectNetworkPolicyData,
+	InspectNetworkPolicyInput,
+	InstallAppData,
+	InstallAppInput,
+	LaunchAppData,
+	LaunchAppInput,
+	ListDevicesData,
+	ListDevicesInput,
+	ListJsDebugTargetsData,
+	ListJsDebugTargetsInput,
+	MeasureAndroidPerformanceData,
+	MeasureAndroidPerformanceInput,
+	MeasureIosPerformanceData,
+	MeasureIosPerformanceInput,
+	NavigateBackData,
+	NavigateBackInput,
+	NetworkProbeData,
+	NetworkProbeInput,
+	PerformActionWithEvidenceData,
+	PerformActionWithEvidenceInput,
+	PerformGestureData,
+	PerformGestureInput,
+	QueryUiData,
+	QueryUiInput,
+	RankFailureCandidatesData,
+	RankFailureCandidatesInput,
+	RecordScreenData,
+	RecordScreenInput,
+	RecordSessionStatusData,
+	RecordTaskFlowData,
+	RecordTaskFlowInput,
+	RecoverToKnownStateData,
+	RecoverToKnownStateInput,
+	ReplayCheckpointChainData,
+	ReplayCheckpointChainInput,
+	ReplayLastStablePathData,
+	ReplayLastStablePathInput,
+	RequestManualHandoffData,
+	RequestManualHandoffInput,
+	ResetAppStateData,
+	ResetAppStateInput,
+	ResolveInterruptionData,
+	ResolveInterruptionInput,
+	ResolveUiTargetData,
+	ResolveUiTargetInput,
+	ResumeInterruptedActionData,
+	ResumeInterruptedActionInput,
+	RunFlowData,
+	RunFlowInput,
+	ScreenshotData,
+	ScreenshotInput,
+	ScrollAndResolveUiTargetData,
+	ScrollAndResolveUiTargetInput,
+	ScrollAndTapElementData,
+	ScrollAndTapElementInput,
+	ScrollOnlyData,
+	ScrollOnlyInput,
+	Session,
+	StartRecordSessionData,
+	StartRecordSessionInput,
+	StartSessionInput,
+	SuggestKnownRemediationData,
+	SuggestKnownRemediationInput,
+	TapData,
+	TapElementData,
+	TapElementInput,
+	TapInput,
+	TerminateAppData,
+	TerminateAppInput,
+	ToolResult,
+	TypeIntoElementData,
+	TypeIntoElementInput,
+	TypeTextData,
+	TypeTextInput,
+	ValidateFlowData,
+	ValidateFlowInput,
+	VisualDiffData,
+	VisualDiffInput,
+	WaitForUiData,
+	WaitForUiInput,
+	WaitForUiStableData,
+	WaitForUiStableInput,
+} from "@mobile-e2e-mcp/contracts";
 ⋮----
-function buildTestDeviceId(sessionId: string): string
+interface ToolContract<TInput, TOutputData> {
+	input: TInput;
+	outputData: TOutputData;
+}
 ⋮----
-async function cleanupSessionArtifact(sessionId: string): Promise<void>
+export interface MobileE2EMcpToolContractMap {
+	capture_js_console_logs: ToolContract<
+		CaptureJsConsoleLogsInput,
+		CaptureJsConsoleLogsData
+	>;
+	capture_js_network_events: ToolContract<
+		CaptureJsNetworkEventsInput,
+		CaptureJsNetworkEventsData
+	>;
+	capture_element_screenshot: ToolContract<
+		ElementScreenshotInput,
+		ElementScreenshotData
+	>;
+	compare_against_baseline: ToolContract<
+		CompareAgainstBaselineInput,
+		CompareAgainstBaselineData
+	>;
+	compare_visual_baseline: ToolContract<VisualDiffInput, VisualDiffData>;
+	collect_debug_evidence: ToolContract<
+		CollectDebugEvidenceInput,
+		CollectDebugEvidenceData
+	>;
+	collect_diagnostics: ToolContract<
+		CollectDiagnosticsInput,
+		CollectDiagnosticsData
+	>;
+	detect_interruption: ToolContract<
+		DetectInterruptionInput,
+		DetectInterruptionData
+	>;
+	classify_interruption: ToolContract<
+		ClassifyInterruptionInput,
+		ClassifyInterruptionData
+	>;
+	describe_capabilities: ToolContract<
+		DescribeCapabilitiesInput,
+		DescribeCapabilitiesData
+	>;
+	doctor: ToolContract<DoctorInput, DoctorData>;
+	execute_intent: ToolContract<ExecuteIntentInput, ExecuteIntentData>;
+	complete_task: ToolContract<CompleteTaskInput, CompleteTaskData>;
+	start_record_session: ToolContract<
+		StartRecordSessionInput,
+		StartRecordSessionData
+	>;
+	get_record_session_status: ToolContract<
+		GetRecordSessionStatusInput,
+		RecordSessionStatusData
+	>;
+	end_record_session: ToolContract<EndRecordSessionInput, EndRecordSessionData>;
+	cancel_record_session: ToolContract<
+		CancelRecordSessionInput,
+		CancelRecordSessionData
+	>;
+	export_session_flow: ToolContract<
+		ExportSessionFlowInput,
+		ExportSessionFlowData
+	>;
+	record_task_flow: ToolContract<RecordTaskFlowInput, RecordTaskFlowData>;
+	request_manual_handoff: ToolContract<
+		RequestManualHandoffInput,
+		RequestManualHandoffData
+	>;
+	explain_last_failure: ToolContract<
+		ExplainLastFailureInput,
+		ExplainLastFailureData
+	>;
+	find_similar_failures: ToolContract<
+		FindSimilarFailuresInput,
+		FindSimilarFailuresData
+	>;
+	get_action_outcome: ToolContract<GetActionOutcomeInput, GetActionOutcomeData>;
+	get_crash_signals: ToolContract<GetCrashSignalsInput, GetCrashSignalsData>;
+	get_logs: ToolContract<GetLogsInput, GetLogsData>;
+	get_page_context: ToolContract<GetPageContextInput, GetPageContextData>;
+	get_screen_summary: ToolContract<GetScreenSummaryInput, GetScreenSummaryData>;
+	get_session_state: ToolContract<GetSessionStateInput, GetSessionStateData>;
+	diagnose_network_failure: ToolContract<
+		DiagnoseNetworkFailureInput,
+		DiagnoseNetworkFailureData
+	>;
+	inspect_network_policy: ToolContract<
+		InspectNetworkPolicyInput,
+		InspectNetworkPolicyData
+	>;
+	inspect_ui: ToolContract<InspectUiInput, InspectUiData>;
+	query_ui: ToolContract<QueryUiInput, QueryUiData>;
+	audit_ui_surface: ToolContract<AuditUiSurfaceInput, AuditUiSurfaceData>;
+	recover_to_known_state: ToolContract<
+		RecoverToKnownStateInput,
+		RecoverToKnownStateData
+	>;
+	resolve_interruption: ToolContract<
+		ResolveInterruptionInput,
+		ResolveInterruptionData
+	>;
+	resume_interrupted_action: ToolContract<
+		ResumeInterruptedActionInput,
+		ResumeInterruptedActionData
+	>;
+	resolve_ui_target: ToolContract<ResolveUiTargetInput, ResolveUiTargetData>;
+	replay_last_stable_path: ToolContract<
+		ReplayLastStablePathInput,
+		ReplayLastStablePathData
+	>;
+	replay_checkpoint_chain: ToolContract<
+		ReplayCheckpointChainInput,
+		ReplayCheckpointChainData
+	>;
+	scroll_and_resolve_ui_target: ToolContract<
+		ScrollAndResolveUiTargetInput,
+		ScrollAndResolveUiTargetData
+	>;
+	scroll_only: ToolContract<ScrollOnlyInput, ScrollOnlyData>;
+	perform_gesture: ToolContract<PerformGestureInput, PerformGestureData>;
+	scroll_and_tap_element: ToolContract<
+		ScrollAndTapElementInput,
+		ScrollAndTapElementData
+	>;
+	install_app: ToolContract<InstallAppInput, InstallAppData>;
+	list_js_debug_targets: ToolContract<
+		ListJsDebugTargetsInput,
+		ListJsDebugTargetsData
+	>;
+	launch_app: ToolContract<LaunchAppInput, LaunchAppData>;
+	list_devices: ToolContract<ListDevicesInput, ListDevicesData>;
+	measure_android_performance: ToolContract<
+		MeasureAndroidPerformanceInput,
+		MeasureAndroidPerformanceData
+	>;
+	measure_ios_performance: ToolContract<
+		MeasureIosPerformanceInput,
+		MeasureIosPerformanceData
+	>;
+	navigate_back: ToolContract<NavigateBackInput, NavigateBackData>;
+	perform_action_with_evidence: ToolContract<
+		PerformActionWithEvidenceInput,
+		PerformActionWithEvidenceData
+	>;
+	rank_failure_candidates: ToolContract<
+		RankFailureCandidatesInput,
+		RankFailureCandidatesData
+	>;
+	record_screen: ToolContract<RecordScreenInput, RecordScreenData>;
+	start_session: ToolContract<StartSessionInput, Session>;
+	reset_app_state: ToolContract<ResetAppStateInput, ResetAppStateData>;
+	run_flow: ToolContract<RunFlowInput, RunFlowData>;
+	take_screenshot: ToolContract<ScreenshotInput, ScreenshotData>;
+	suggest_known_remediation: ToolContract<
+		SuggestKnownRemediationInput,
+		SuggestKnownRemediationData
+	>;
+	tap: ToolContract<TapInput, TapData>;
+	tap_element: ToolContract<TapElementInput, TapElementData>;
+	terminate_app: ToolContract<TerminateAppInput, TerminateAppData>;
+	type_text: ToolContract<TypeTextInput, TypeTextData>;
+	type_into_element: ToolContract<TypeIntoElementInput, TypeIntoElementData>;
+	validate_flow: ToolContract<ValidateFlowInput, ValidateFlowData>;
+	wait_for_ui: ToolContract<WaitForUiInput, WaitForUiData>;
+	wait_for_ui_stable: ToolContract<WaitForUiStableInput, WaitForUiStableData>;
+	end_session: ToolContract<EndSessionInput, EndSessionData>;
+	probe_network_readiness: ToolContract<NetworkProbeInput, NetworkProbeData>;
+}
 ⋮----
-async function writeLegacySessionArtifact(sessionId: string, platform: "android" | "ios" = "android"): Promise<void>
+export type MobileE2EMcpToolName = keyof MobileE2EMcpToolContractMap;
 ⋮----
-async function cleanupActionArtifact(actionId: string): Promise<void>
+type ToolInput<TName extends MobileE2EMcpToolName> =
+	MobileE2EMcpToolContractMap[TName]["input"];
+type ToolOutputData<TName extends MobileE2EMcpToolName> =
+	MobileE2EMcpToolContractMap[TName]["outputData"];
+type ToolHandler<TName extends MobileE2EMcpToolName> = (
+	input: ToolInput<TName>,
+) => Promise<ToolResult<ToolOutputData<TName>>>;
 ⋮----
-async function cleanupRecordSessionArtifacts(recordSessionId: string): Promise<void>
+export type MobileE2EMcpToolRegistry = {
+	[TName in MobileE2EMcpToolName]: ToolHandler<TName>;
+};
 ⋮----
-// Conditional tools do not have promotion gates — they are platform-dependent, not blocked.
+export class MobileE2EMcpServer
 ⋮----
-// AXe CLI format: ["axe", "tap", "-x", "12", "-y", "34", "--udid", "..."]
+constructor(private readonly tools: MobileE2EMcpToolRegistry)
 ⋮----
-// AXe CLI format: ["axe", "type", "hello", "--udid", "..."]
+listTools(): MobileE2EMcpToolName[]
+⋮----
+async invoke<TName extends MobileE2EMcpToolName>(
+		toolName: TName,
+		input: ToolInput<TName>,
+	): Promise<ToolResult<ToolOutputData<TName>>>
 </file>
 
 <file path="packages/mcp-server/test/toolsets.test.ts">
@@ -202033,6 +202346,65 @@ import {
   parseToolsetFlag,
   resolveMcpToolset,
 } from "../src/index.ts";
+</file>
+
+<file path="packages/mcp-server/package.json">
+{
+  "name": "@shenyuexin/mobile-e2e-mcp",
+  "private": false,
+  "version": "0.1.20",
+  "description": "AI-first Mobile E2E MCP server for Android/iOS/React Native/Flutter",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shenyuexin/mobile-e2e-mcp.git",
+    "directory": "packages/mcp-server"
+  },
+  "homepage": "https://github.com/shenyuexin/mobile-e2e-mcp/tree/main/packages/mcp-server#readme",
+  "bugs": {
+    "url": "https://github.com/shenyuexin/mobile-e2e-mcp/issues"
+  },
+  "type": "module",
+  "main": "./bundle/index.cjs",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "mobile-e2e-mcp": "./bundle/bin-stdio.cjs"
+  },
+  "files": [
+    "bundle",
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./bundle/index.cjs"
+    }
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.17.5"
+  },
+  "devDependencies": {
+    "@mobile-e2e-mcp/adapter-maestro": "workspace:*",
+    "@mobile-e2e-mcp/adapter-vision": "workspace:*",
+    "@mobile-e2e-mcp/contracts": "workspace:*",
+    "@mobile-e2e-mcp/core": "workspace:*",
+    "@mobile-e2e-mcp/explorer": "workspace:*",
+    "tsup": "^8.5.0"
+  },
+  "scripts": {
+    "build": "pnpm --filter @mobile-e2e-mcp/contracts build && pnpm --filter @mobile-e2e-mcp/core build && pnpm --filter @mobile-e2e-mcp/adapter-vision build && pnpm --filter @mobile-e2e-mcp/adapter-maestro build && pnpm --filter @mobile-e2e-mcp/explorer build && tsc -p tsconfig.json",
+    "bundle": "pnpm run build && tsup --config tsup.config.ts",
+    "test": "tsx --test test/*.test.ts",
+    "test:coverage": "bash ../../scripts/coverage.sh src",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "dev": "tsx src/dev-cli.ts",
+    "stdio": "tsx src/mcp-stdio-server.ts",
+    "stdio:minimal": "tsx src/stdio-server.ts",
+    "release:publish": "pnpm run bundle && pnpm publish --access public",
+    "release:publish:ci": "pnpm run bundle && pnpm publish --access public --no-git-checks",
+    "release:publish:dry-run": "pnpm run bundle && pnpm publish --access public --dry-run --no-git-checks",
+    "release:patch": "pnpm version patch && pnpm run release:publish"
+  }
+}
 </file>
 
 <file path="scripts/dev/ios-simulator-tool-probe.ts">
@@ -203791,6 +204163,424 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 </file>
 
+<file path="docs/guides/ai-agent-invocation.zh-CN.md">
+# AI Agent Invocation Guide（mobile-e2e-mcp）
+
+这份文档是 **AI Agent / MCP client 集成方的调用真相源**。
+
+它只回答一类问题：
+
+1. 什么时候先调用哪个工具；
+2. 默认应该如何串联 session / action / evidence / recovery；
+3. 出现失败、中断、歧义时如何分流；
+4. 哪些调用方式应该优先，哪些属于 fallback 或反模式。
+
+> 这不是完整工具目录，也不是架构总览。
+>
+> - 工具注册与签名真相源：`packages/mcp-server/src/server.ts`
+> - 契约与类型真相源：`packages/contracts/src/*`
+> - 首跑前门闭环：[`golden-path.md`](./golden-path.md)
+> - 录制 / 导出 / 回放专题：[`flow-generation.md`](./flow-generation.md)
+
+## 1. 默认调用原则
+
+### 1.1 Deterministic-first
+
+默认优先级始终是：
+
+1. 稳定 selector / UI 树定位
+2. 结构化 session 上下文
+3. 有边界 action + evidence
+4. 失败归因 / 恢复
+5. 更重的 diagnostics
+
+不要把 OCR / CV / 坐标点击 / 全量诊断当作默认入口。
+
+### 1.2 Session-first for write actions
+
+凡是会改动设备、应用或 UI 状态的工具，优先放在同一个 `sessionId` 下执行。
+
+最低推荐顺序：
+
+`doctor -> describe_capabilities -> start_session -> action tools -> failure/recovery tools -> end_session`
+
+### 1.3 Outcome-first, not transport-first
+
+对 AI Agent 来说，**命令发出** 不等于 **目标达成**。
+
+优先使用能返回结构化 outcome、`reasonCode`、`artifacts`、`nextSuggestions` 的链路，而不是只看某个底层命令有没有发出去。
+
+### 1.4 工具集选择（core vs full）
+
+- **默认 `core` 工具集（20 个高频核心工具）**：MCP stdio 服务默认只暴露 `core`（含 `audit_ui_surface`、`perform_gesture`、`record_screen` 等高频工具），减少约 71% 的上下文 schema 开销。
+- **`full` 工具集（全部 68 个工具）**：当需要录制/回放、失败归因记忆、网络策略诊断、性能采集或 React Native JS 调试目标工具时，通过 `--toolset full` 或环境变量 `MOBILE_E2E_TOOLSET=full` 启用。
+
+## 2. 默认决策阶梯
+
+### Step 1：确认环境与平台边界
+
+优先工具：
+
+- `doctor`
+- `describe_capabilities`
+- `list_devices`（需要枚举目标设备时）
+
+### Step 2：建立会话上下文
+
+优先工具：
+
+- `start_session`
+- `get_session_state`（已有 session 时）
+
+### Step 3：优先走确定性 UI 感知与定位
+
+优先工具：
+
+- `get_screen_summary`
+- `inspect_ui`
+- `query_ui`
+- `resolve_ui_target`
+- `wait_for_ui`
+
+建议顺序：先确认当前页面是否 ready / blocked，再定位目标元素，最后执行动作。
+
+### Step 4：执行有边界动作
+
+优先工具：
+
+- `tap_element`
+- `type_into_element`
+- `scroll_and_tap_element`
+- `perform_action_with_evidence`
+- `execute_intent`
+- `complete_task`
+
+默认建议：
+
+- 单个关键动作、需要前后证据时，优先 `perform_action_with_evidence`
+- 高层 goal 明确、希望让系统规划 bounded action 时，优先 `execute_intent`
+- 多步但边界清楚的任务，优先 `complete_task`
+- 仅执行一个低层确定性动作时，再直接用 `tap_element` / `type_into_element`
+
+### Step 5：失败后先归因，再恢复，再升级诊断
+
+优先顺序：
+
+1. `explain_last_failure`
+2. `rank_failure_candidates`
+3. `suggest_known_remediation`
+4. `recover_to_known_state` / `resolve_interruption` / `resume_interrupted_action`
+5. `collect_debug_evidence`
+6. `get_logs` / `get_crash_signals`
+7. `collect_diagnostics`
+
+原则：先拿 **AI 可消费摘要**，再拿更重原始证据。
+
+补充：`suggest_known_remediation` 现在会在本地 failure memory / baseline 之外，默认给出一层 **readiness-skill 路由式建议**，包括：
+
+- `route`：推荐先走 baseline / Android / iOS 哪条 readiness 诊断链
+- `mostLikelyGap`：当前最可能的 contract / readiness 缺口
+- `askForNext`：下一步最值得补的证据
+- `firstFix`：先改哪一层，而不是先加 retry
+- `handoffSkill`：当 contract gap 已明确时，应该切到哪个实现型 skill
+
+## 3. 常见意图 → 推荐工具链
+
+### 3.1 确认环境是否可跑
+
+`doctor -> describe_capabilities -> list_devices`
+
+### 3.2 启动一次可审计执行
+
+`start_session -> launch_app -> get_screen_summary`
+
+### 3.3 找元素并点击
+
+`wait_for_ui -> resolve_ui_target -> tap_element`
+
+如果目标可能在滚动容器中：
+
+`scroll_only -> wait_for_ui -> resolve_ui_target`
+
+如果你已经确认"滚动直到目标出现并立即点击"更适合当前场景：
+
+- **Android**: `scroll_and_resolve_ui_target` / `scroll_and_tap_element`
+- **iOS**: 不支持 `scroll_and_resolve_ui_target` / `scroll_and_tap_element`。请使用 `scroll_only → wait_for_ui → resolve_ui_target → tap_element` 分步组合。
+
+### 3.4 对表单或输入框填值
+
+`wait_for_ui -> type_into_element`
+
+仅当焦点已明确、且没有更好的 selector 时，才考虑 `type_text`。
+
+### 3.4.1 返回上一页 / 后退导航
+
+`navigate_back`
+
+平台差异显著：
+
+- **Android**：确定性路径，通过 `adb shell input keyevent 4` 发送 KEYEVENT_BACK。支持级别 `full`。注意：在首页连续调用可能退出当前 app。
+- **iOS**：无系统级后退原语。支持两种策略：
+  - `selector_tap`（默认）：提供返回按钮 selector，通过点击 app 内返回按钮实现。支持级别 `conditional`。
+  - `edge_swipe`：从屏幕左边缘向右滑动。支持级别 `conditional`，依赖 axe（模拟器）或 WDA（真机）后端。
+- **iOS `target: "system"` 不支持**：会返回 `unsupportedOperation` 错误。
+
+建议：Android flow 中可直接使用；iOS flow 中优先用 `inspect_ui` 发现返回按钮 selector 后再调用。
+
+### 3.4.2 画布绘制 / 拖拽 / 缩放手势
+
+`perform_gesture`
+
+- 常规控件交互仍优先使用 `tap_element` / `scroll_only`；仅在画布绘制、拖拽排序、双指缩放、双击等场景使用 `perform_gesture`。
+- **iOS 模拟器**：通过 AXe 完整支持 `draw` / `drag` / `pinch` / `double_tap` / `two_finger_tap`。
+- **Android**：通过 `adb` 部分支持 `drag` / 两点 `draw` / `double_tap`。
+
+### 3.5 执行关键动作并拿到可解释证据
+
+`perform_action_with_evidence`
+
+### 3.5.1 UI 结构体检与基线增量门禁
+
+`audit_ui_surface`
+
+- 用于在关键页面做结构化布局/无障碍体检；传入 `baselinePath` 与 `baselineMode` 可与历史基线做增量回归门禁（ratchet diffing）。
+
+### 3.5.2 录制关键链路视频证据
+
+`record_screen`
+
+- 支持固定时长（`mode: "fixed"`）以及不阻塞动作执行的 `mode: "start"` / `mode: "stop"`（配合 `recordingId`、180s 上限，以及在绿灯通过时自动丢弃视频的 `discardOnStop`）。
+- **iOS 模拟器**：优先走 `axe record-video` 并带 `simctl` 兜底；**Android**：`adb shell screenrecord`；**iOS 真机**：明确返回 `UNSUPPORTED_OPERATION`。
+
+### 3.6 让系统帮你规划高层目标
+
+- `execute_intent`：单个高层意图
+- `complete_task`：多步有限任务
+
+### 3.7 处理失败或 flaky 行为
+
+`explain_last_failure -> rank_failure_candidates -> suggest_known_remediation`
+
+推荐理解：
+
+- `explain_last_failure` = 先看失败归因
+- `rank_failure_candidates` = 再看最可疑层
+- `suggest_known_remediation` = 默认给出 **skill-guided 下一步动作**，把问题分流到 baseline / Android / iOS readiness 逻辑，再决定是否切到实现型 skill
+
+如果怀疑是重复模式：
+
+- `find_similar_failures`
+- `compare_against_baseline`
+
+### 3.8 处理中断
+
+`detect_interruption -> classify_interruption -> resolve_interruption -> resume_interrupted_action`
+
+如果只是想回到可继续执行状态：
+
+- `recover_to_known_state`
+
+### 3.9 处理 OTP / 验证码 / 受保护页面
+
+`get_screen_summary -> get_session_state -> request_manual_handoff`
+
+建议分流：
+
+- 当 `screenSummary.manualHandoff.required=true` 时，不要继续假装全自动完成；
+- 如果是通过 `perform_action_with_evidence` 触达到 OTP / 验证码页，结果现在会显式返回：
+  - `reasonCode=MANUAL_HANDOFF_REQUIRED`
+  - `retryRecommendationTier=handoff_required`
+  - 开启 `autoRemediate` 时，`autoRemediation.stopReason=manual_handoff_required`
+- 对 OTP / 验证码 / 人机挑战，调用 `request_manual_handoff` 把人工接管点写入 session timeline；
+- 人工完成后，再重新调用 `get_screen_summary` 或 `get_session_state` 确认页面是否已退出受保护边界。
+
+### 3.10 录制、导出与回放
+
+这条链路只在专题文档维护：[`flow-generation.md`](./flow-generation.md)
+
+当前迁移状态：
+
+- `run_flow` 已支持对导出的 recorded flow 执行 **step-aware dry-run preview**
+- 该 preview 会返回 `executionMode`、`replayProgress`、`stepOutcomes`
+- Android 真机 replay 对常用命令走 `owned-adb` 主路径；`launchApp`、`tapOn`（selector/coordinate）、`inputText`、`assertVisible`、`assertNotVisible`、`swipe`、`back`、`home`、`hideKeyboard`、`stopApp`、`clearState` 不再要求 Maestro helper app
+- Maestro / `runner_compat` 仅作为 Android edge-case 命令 fallback，或用于尚未迁移的平台/路径；不要把 Android common-command replay 描述成仍以 helper app 为主
+- Android 真机 Explorer 已有完整实跑证据：`docs/showcase/evidence/android-explorer-full-2026-04-28T03-38-20/` 覆盖 45 页、0 failures
+
+### 3.11 抓 React Native / Expo JS 调试信号
+
+`list_js_debug_targets -> capture_js_console_logs` 或 `capture_js_network_events`
+
+### 3.12 诊断 release HTTP 策略风险
+
+优先入口：`diagnose_network_failure`
+
+底层静态检查：`inspect_network_policy`
+
+适用场景：
+
+- release 包中普通 `http://` 请求失败，但设备网络和后端可达性看起来正常；
+- 已经从 `capture_js_network_events`、日志或人工观察中拿到了失败请求 URL；
+- 需要自动判断 Android `usesCleartextTraffic` / `network_security_config` 或 iOS ATS 是否是失败原因。
+
+推荐调用：
+
+```json
+{
+  "tool": "diagnose_network_failure",
+  "arguments": {
+    "sessionId": "network-failure-demo",
+    "platform": "android",
+    "releaseHint": "release",
+    "artifactPath": "/path/to/app-release.apk",
+    "failedRequest": {
+      "url": "http://api.example.com/login",
+      "errorText": "CLEARTEXT communication to api.example.com not permitted"
+    }
+  }
+}
+```
+
+当只想静态确认某个 domain 是否在白名单中时，再直接调用 `inspect_network_policy`。
+
+边界：
+
+- 这是失败归因 + 静态 release policy 检查，不是抓包或代理；
+- 可以提供已解码的 `AndroidManifest.xml`、`network_security_config.xml`、`Info.plist`，也可以直接提供 ZIP-based APK/IPA artifact；
+- 如果 artifact 内是不可读的二进制 AXML / bplist，结果应视为 `unknown`，不能当作已放行。
+
+## 4. 推荐工具 vs fallback 工具
+
+### 4.1 交互类
+
+优先：
+
+- `tap_element`
+- `type_into_element`
+- `navigate_back` — Android: `adb keyevent 4`（full）；iOS: selector-based app back button tap 或 edge swipe（conditional），system back 不支持
+- `perform_gesture` — 画布/多点手势专用（iOS Simulator full via AXe；Android partial via `adb`）
+
+滚动辅助（Android only）：
+
+- `scroll_and_resolve_ui_target` — Android-only
+- `scroll_and_tap_element` — Android-only
+- iOS 回退：`scroll_only → wait_for_ui → resolve_ui_target → tap_element`
+
+后备：
+
+- `tap`
+- `type_text`
+
+### 4.2 感知类
+
+优先：
+
+- `get_screen_summary`
+- `query_ui`
+- `resolve_ui_target`
+- `wait_for_ui`
+- `audit_ui_surface` — 页面结构体检与基线门禁（支持 `baselinePath` / `baselineMode`）
+
+后备：重度日志与诊断工具。
+
+### 4.3 调试类
+
+优先：
+
+- `perform_action_with_evidence`
+- `explain_last_failure`
+- `collect_debug_evidence`
+- `record_screen` — 链路视频证据（非阻塞 `start`/`stop`，建议绿灯路径开启 `discardOnStop` 控制产物占用）
+
+后备：`collect_diagnostics`
+
+## 5. Session 规则
+
+### 5.1 什么时候必须显式传 `sessionId`
+
+以下情况建议显式传：
+
+- 已经存在多个活动会话
+- 执行 write / diagnostics / recovery 类工具
+- 想确保动作绑定到特定设备 / app / profile
+
+### 5.2 不传 `sessionId` 会发生什么
+
+当前仓库支持一定程度的隐式会话解析，但它不是推荐默认路径：
+
+- 只有一个活动会话时，工具可能自动绑定该会话
+- 同时有多个活动会话时，可能返回歧义错误
+
+所以对 AI Agent 来说，**显式 `sessionId` 比猜测更可靠**。
+
+### 5.3 同设备互斥，多设备可并发
+
+执行模型可以理解为：
+
+- 同一个 `platform + deviceId` 的写操作互斥
+- 不同设备可并行
+
+## 6. 常见失败分流
+
+### 6.1 目标元素找不到
+
+`get_screen_summary -> wait_for_ui -> query_ui -> resolve_ui_target`
+
+### 6.2 目标元素不唯一 / 存在歧义
+
+`query_ui -> resolve_ui_target`
+
+不要在歧义未消除时直接点击。
+
+### 6.3 动作执行了，但目标状态没变化
+
+`perform_action_with_evidence -> explain_last_failure`
+
+### 6.4 怀疑是中断或系统弹窗
+
+`detect_interruption -> classify_interruption -> resolve_interruption`
+
+### 6.5 怀疑 app 崩溃 / ANR / runtime 级异常
+
+`get_crash_signals -> collect_debug_evidence -> get_logs`
+
+必要时再升级到 `collect_diagnostics`。
+
+## 7. 反模式
+
+- 不要默认坐标点击；`tap` 是低层 fallback
+- 不要默认焦点输入；优先 `type_into_element`
+- 不要跳过 session 做长链路任务
+- 不要一失败就抓最重 diagnostics
+- 不要把 transport success 当成 business success
+- 不要假设 Android / iOS / simulator / real device 完全对称
+
+## 8. 版本变更
+
+### Unreleased (PR #20) — 工具集/统一 CLI、手势/体检/非阻塞录屏与 iOS 运行时加固
+
+- **MCP 工具集与统一 CLI**：默认暴露 20 个高频核心工具（`core`），通过 `--toolset full` 或 `MOBILE_E2E_TOOLSET=full` 暴露全部 68 个工具；单入口支持 `stdio` / `doctor` / `init` / `explore` / `run`。
+- **新增能力工具**：`audit_ui_surface`（支持 `baselinePath`/`baselineMode` 基线门禁）、`perform_gesture`（iOS 模拟器 AXe / Android 部分 `adb`）、非阻塞 `record_screen`（`fixed` / `start` / `stop`，`discardOnStop`，180s 上限）。
+- **iOS 模拟器与 Explorer 加固**：`AxeServePool` 常驻只读池（`M2E_DISABLE_AXE_SERVE=1` 可关闭）规避 `dtuhidd` 泄漏；`launch_app` 支持 `launchEnv`/`launchArgs`/`terminateRunning`；多屏模拟器截图兜底；iPad SplitView/Popover 作用域识别与前台防跑偏预检；`SIGINT`/`SIGTERM` 同步清理录屏与 `axe serve` 子进程。
+
+### v0.1.13 — iOS 真机 WDA 支持 + tap_element/type_into_element 验证修复
+
+- **iOS 真机 WebDriverAgent (WDA) 后端**：`tap_element`、`type_into_element`、`resolve_ui_target` 现在支持通过 WDA HTTP API 在 iOS 物理设备上执行。WDA 必须通过 `iproxy 8100 8100 --udid <udid>` 端口转发。
+- **tap_element/type_into_element 验证修复**：`verifyResolvedIosPointWithHooks` 和 `verifyTypedIosPostconditionWithHooks` 此前错误地用 UI 层级根节点（Application）与预期元素比较，导致模拟器/真机上总是返回 `NO_MATCH`。现在使用 `findNodeAtPoint` 在解析坐标处查找最深节点进行验证。
+- **WDA `/source` 格式兼容**：`parseIosInspectNodes` 现在同时支持 axe/idb 的数组格式和 WDA 的单对象格式。WDA 原始 XCUIElementType 格式会通过 `transformWdaElement` 归一化为兼容格式。
+- **调用方式不变**：AI Agent 无需改变任何调用逻辑。`tap_element` 和 `type_into_element` 会根据 session 中的 `runnerProfile`（`native_ios` = 模拟器, `native_ios_real_device` = 真机）自动选择 axe 或 WDA 后端。
+
+## 9. 与其它文档的关系
+
+- 想快速首跑闭环：看 [`golden-path.md`](./golden-path.md)
+- 想做录制、导出、回放：看 [`flow-generation.md`](./flow-generation.md)
+- 想看 demo 证据与复现素材：看 `docs/showcase/README.md`
+- 想确认架构边界与支持范围：看 `README.md`、`docs/architecture/*`
+
+如果你只记住一句话：
+
+> 先确认 readiness 与 capability，再建立 session；优先确定性定位与结构化 evidence，失败后先归因和恢复，最后才升级重诊断。
+</file>
+
 <file path="docs/showcase/evidence/governed-control-brief/brief.json">
 {
   "schema": "governed-control-brief/v1",
@@ -204208,6 +204998,643 @@ Boundaries:
 }
 </file>
 
+<file path="packages/adapter-maestro/src/capability-model.ts">
+import { TOOL_NAMES } from "@mobile-e2e-mcp/contracts";
+import { CAPABILITY_GROUPS } from "./constants/capability-groups.js";
+import { DEFAULT_OCR_FALLBACK_POLICY } from "@mobile-e2e-mcp/adapter-vision";
+import type { CapabilityGroup, CapabilityProfile, CapabilitySupportLevel, Platform, RunnerProfile, SupportPromotionGate, ToolCapability } from "@mobile-e2e-mcp/contracts";
+import { buildOcrHostSupportSummary } from "./toolchain-runtime.js";
+⋮----
+function buildToolCapability(toolName: string, supportLevel: CapabilitySupportLevel, note: string, requiresSession = true, promotionGate?: SupportPromotionGate, condition?: string): ToolCapability
+⋮----
+function buildAndroidToolCapabilities(): ToolCapability[]
+⋮----
+function buildIosToolCapabilities(): ToolCapability[]
+⋮----
+function summarizeGroup(toolCapabilities: ToolCapability[], groupName: string, toolNames: string[], note?: string): CapabilityGroup
+⋮----
+export function buildCapabilityProfile(platform: Platform, runnerProfile: RunnerProfile | null = null): CapabilityProfile
+</file>
+
+<file path="packages/adapter-maestro/src/index.ts">
+import {
+  type ActionIntent,
+  type ActionOutcomeSummary,
+  type AndroidPerformancePreset,
+  type CollectDebugEvidenceData,
+  type CollectDebugEvidenceInput,
+  type CompareAgainstBaselineData,
+  type CompareAgainstBaselineInput,
+  type CompleteTaskData,
+  type CompleteTaskInput,
+  type CaptureJsConsoleLogsData,
+  type CaptureJsConsoleLogsInput,
+  type JsConsoleLogSummary,
+  type CaptureJsNetworkEventsData,
+  type CaptureJsNetworkEventsInput,
+  type DescribeCapabilitiesData,
+  type DescribeCapabilitiesInput,
+  type DetectInterruptionData,
+  type DetectInterruptionInput,
+  type CollectDiagnosticsData,
+  type CollectDiagnosticsInput,
+  type DebugSignalSummary,
+  type EvidenceDeltaSummary,
+  type ExplainLastFailureData,
+  type ExplainLastFailureInput,
+  type FailureAttribution,
+  type FailureSignature,
+  type FindSimilarFailuresData,
+  type FindSimilarFailuresInput,
+  type GetCrashSignalsData,
+  type GetCrashSignalsInput,
+  type ExecutionEvidence,
+  type GetActionOutcomeData,
+  type GetActionOutcomeInput,
+  type GetScreenSummaryData,
+  type GetScreenSummaryInput,
+  type GetSessionStateData,
+  type GetSessionStateInput,
+  type GetLogsData,
+  type GetLogsInput,
+  type GetPageContextData,
+  type GetPageContextInput,
+  type InspectUiData,
+  type InspectNetworkPolicyData,
+  type InspectNetworkPolicyInput,
+  type ResolveUiTargetData,
+  type ResolveUiTargetInput,
+  type DeviceInfo,
+  type DoctorCheck,
+  type DoctorInput,
+  type ExecuteIntentData,
+  type ExecuteIntentInput,
+  type ExecuteIntentStepInput,
+  type InspectUiInput,
+  type InspectUiNode,
+  type InspectUiSummary,
+  type InstallAppInput,
+  type InstallAppData,
+  type LaunchAppInput,
+  type LaunchAppData,
+  type ListJsDebugTargetsData,
+  type ListJsDebugTargetsInput,
+  type JsDebugTarget,
+  type JsFailureGroup,
+  type JsConsoleLogEntry,
+  type JsNetworkEvent,
+  type JsNetworkFailureSummary,
+  type JsStackFrame,
+  type ListDevicesInput,
+  type LogSummary,
+  type MeasureAndroidPerformanceData,
+  type MeasureAndroidPerformanceInput,
+  type MeasureIosPerformanceData,
+  type MeasureIosPerformanceInput,
+  type OcrEvidence,
+  type Platform,
+  type PerformActionWithEvidenceData,
+  type PerformActionWithEvidenceInput,
+  type PerformGestureData,
+  type PerformGestureInput,
+  type QueryUiData,
+  type QueryUiInput,
+  type QueryUiMatch,
+  type RankFailureCandidatesData,
+  type RankFailureCandidatesInput,
+  type RecoverToKnownStateData,
+  type RecoverToKnownStateInput,
+  type RecordScreenData,
+  type RecordScreenInput,
+  type ResetAppStateData,
+  type ResetAppStateInput,
+  type ResetAppStateStrategy,
+  type RecoverySummary,
+  type ReplayCheckpointChainData,
+  type ReplayCheckpointChainInput,
+  type ReplayLastStablePathData,
+  type ReplayLastStablePathInput,
+  type ReasonCode,
+  type RunFlowInput,
+  type RunFlowData,
+  type RunnerProfile,
+  type SessionTimelineEvent,
+  type SupportedActionType,
+  type ScreenshotInput,
+  type ScreenshotData,
+  type ScrollAndTapElementData,
+  type ScrollAndTapElementInput,
+  type ScrollAndResolveUiTargetData,
+  type ScrollAndResolveUiTargetInput,
+  type ScrollOnlyData,
+  type ScrollOnlyInput,
+  type IosPerformanceTemplate,
+  type InterruptionEvent,
+  type InterruptionPolicyRuleV2,
+  type TapElementData,
+  type TapElementInput,
+  type TapData,
+  type TapInput,
+  type NavigateBackData,
+  type NavigateBackInput,
+  type TerminateAppInput,
+  type TerminateAppData,
+  type ToolResult,
+  type TypeTextData,
+  type TypeTextInput,
+  type ClassifyInterruptionData,
+  type ClassifyInterruptionInput,
+  type TypeIntoElementData,
+  type TypeIntoElementInput,
+  type TaskStepOutcome,
+  type TaskStepPlan,
+  type ResolveInterruptionData,
+  type ResolveInterruptionInput,
+  type ResumeInterruptedActionData,
+  type ResumeInterruptedActionInput,
+  type ResumeCheckpoint,
+  type SimilarFailure,
+  type StateSummary,
+  type SuggestKnownRemediationData,
+  type SuggestKnownRemediationInput,
+  type UiOrchestrationStepResult,
+  type UiScrollDirection,
+  type WaitForUiData,
+  type WaitForUiInput,
+  type WaitForUiStableData,
+  type WaitForUiStableInput,
+  type WaitForUiMode,
+  REASON_CODES,
+} from "@mobile-e2e-mcp/contracts";
+import {
+  DEFAULT_OCR_FALLBACK_POLICY,
+  MacVisionOcrProvider,
+  minimumConfidenceForOcrAction,
+  resolveTextTarget,
+  shouldUseOcrFallback,
+  verifyOcrAction,
+  type OcrFallbackActionType,
+} from "@mobile-e2e-mcp/adapter-vision";
+import {
+  appendSessionTimelineEvent,
+  isHighRiskInterruptionActionAllowed,
+  isToolAllowedByProfile,
+  listActionRecordsForSession,
+  loadAccessProfile,
+  loadActionRecord,
+  loadBaselineIndex,
+  loadFailureIndex,
+  loadInterruptionPolicyConfig,
+  loadLatestActionRecordForSession,
+  loadSessionRecord,
+  persistActionRecord,
+  persistInterruptionEvent,
+  persistSessionState,
+  queryTimelineAroundAction,
+  recordBaselineEntry,
+  recordFailureSignature,
+  resolveInterruptionPlan,
+  type InterruptionPolicyContext,
+  type PersistedActionRecord,
+} from "@mobile-e2e-mcp/core";
+import { spawn } from "node:child_process";
+import { randomUUID } from "node:crypto";
+import { existsSync } from "node:fs";
+import { mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises";
+import path from "node:path";
+import { setTimeout as delay } from "node:timers/promises";
+import { buildCapabilityProfile } from "./capability-model.js";
+import {
+  type ArtifactDirectory,
+  buildArtifactsDir,
+  buildDefaultDeviceId,
+  DEFAULT_ANDROID_DEVICE_ID,
+  DEFAULT_IOS_SIMULATOR_UDID,
+  DEFAULT_FLOWS,
+  DEFAULT_HARNESS_CONFIG_PATH,
+  DEFAULT_RUNNER_PROFILE,
+  isRecord,
+  loadHarnessSelection,
+  parseHarnessConfig,
+  readNonEmptyString,
+  readStringArray,
+  resolveRepoPath,
+  resolveSessionDefaults,
+} from "./harness-config.js";
+import {
+  collectHarnessChecks,
+  collectDiagnosticsWithRuntime,
+  buildInstallCommandWithRuntime,
+  buildLaunchCommandWithRuntime,
+  buildResetPlanWithRuntime,
+  getCrashSignalsWithRuntime,
+  getLogsWithRuntime,
+  getInstallArtifactSpec,
+  listAvailableDevices as listAvailableDevicesRuntime,
+  recordScreenWithRuntime,
+  resolveInstallArtifactPath,
+  summarizeInfoCheck,
+  takeScreenshotWithRuntime,
+  terminateAppWithRuntime,
+} from "./device-runtime.js";
+import {
+  buildNonExecutedUiTargetResolution,
+  buildScrollSwipeCoordinates,
+  buildScrollOnlySwipeCoordinates,
+  buildUiTargetResolution,
+  buildInspectUiSummary,
+  hasQueryUiSelector,
+  isWaitConditionMet,
+  normalizeQueryUiSelector,
+  parseAndroidUiHierarchyNodes,
+  parseInspectUiSummary,
+  parseIosInspectNodes,
+  parseIosInspectSummary,
+  queryUiNodes,
+  reasonCodeForResolutionStatus,
+  shouldAbortWaitForUiAfterReadFailure,
+} from "./ui-model.js";
+import {
+  type AndroidUiSnapshot,
+  type AndroidUiSnapshotFailure,
+  type IosUiSnapshot,
+  type IosUiSnapshotFailure,
+  buildAndroidUiDumpCommands,
+  buildIdbCommand,
+  buildIosSwipeCommand,
+  buildIosUiDescribeCommand,
+  captureAndroidUiSnapshot,
+  captureIosUiSnapshot,
+  isAndroidUiSnapshotFailure,
+  isIosUiSnapshotFailure,
+  probeIdbAvailability,
+  resolveIdbCliPath,
+  resolveIdbCompanionPath,
+} from "./ui-runtime.js";
+import {
+  buildResolutionNextSuggestions,
+  inspectUiWithMaestroTool,
+  normalizeScrollDirection,
+  normalizeWaitForUiMode,
+  queryUiWithMaestroTool,
+  resolveUiTargetWithMaestroTool,
+  reasonCodeForWaitTimeout,
+  scrollAndResolveUiTargetWithMaestroTool,
+  scrollOnlyWithMaestroTool,
+  scrollAndTapElementWithMaestroTool,
+  performGestureWithMaestroTool,
+  tapElementWithMaestroTool,
+  tapWithMaestroTool,
+  typeIntoElementWithMaestroTool,
+  typeTextWithMaestroTool,
+  waitForUiWithMaestroTool,
+  waitForUiStableWithMaestro as waitForUiStableWithMaestroImpl,
+  navigateBackWithMaestroTool,
+  setNavigateBackTestHooksForTesting as setNavigateBackTestHooksForTestingFromUiActionTools,
+  resetNavigateBackTestHooksForTesting as resetNavigateBackTestHooksForTestingFromUiActionTools,
+  type NavigateBackTestHooks,
+} from "./ui-tools.js";
+import { classifyInterruptionFromSignals } from "./interruption-classifier.js";
+import { detectInterruptionFromSummary } from "./interruption-detector.js";
+import { runDoctorWithMaestro } from "./doctor-runtime.js";
+import {
+  type InterruptionGuardTestHooks,
+  type OcrFallbackTestHooks,
+  performActionWithEvidenceWithMaestro as performActionWithEvidenceWithMaestroFromActionOrchestrator,
+  resetInterruptionGuardTestHooksForTesting as resetInterruptionGuardTestHooksForTestingFromActionOrchestrator,
+  resetOcrFallbackTestHooksForTesting as resetOcrFallbackTestHooksForTestingFromActionOrchestrator,
+  setInterruptionGuardTestHooksForTesting as setInterruptionGuardTestHooksForTestingFromActionOrchestrator,
+  setOcrFallbackTestHooksForTesting as setOcrFallbackTestHooksForTestingFromActionOrchestrator,
+} from "./action-orchestrator.js";
+import {
+  installAppWithRuntime,
+  launchAppWithRuntime,
+  resetAppStateWithRuntime,
+} from "./app-lifecycle-tools.js";
+import {
+  compareAgainstBaselineWithMaestro as compareAgainstBaselineWithMaestroFromActionOutcome,
+  explainLastFailureWithMaestro as explainLastFailureWithMaestroFromActionOutcome,
+  findSimilarFailuresWithMaestro as findSimilarFailuresWithMaestroFromActionOutcome,
+  getActionOutcomeWithMaestro as getActionOutcomeWithMaestroFromActionOutcome,
+  rankFailureCandidatesWithMaestro as rankFailureCandidatesWithMaestroFromActionOutcome,
+  suggestKnownRemediationWithMaestro as suggestKnownRemediationWithMaestroFromActionOutcome,
+} from "./action-outcome.js";
+import {
+  buildInterruptionCheckpoint,
+  classifyInterruptionWithMaestro as classifyInterruptionWithMaestroFromInterruptionTools,
+  detectInterruptionWithMaestro as detectInterruptionWithMaestroFromInterruptionTools,
+  resolveInterruptionWithMaestro as resolveInterruptionWithMaestroFromInterruptionTools,
+  resumeInterruptedActionWithMaestro as resumeInterruptedActionWithMaestroFromInterruptionTools,
+} from "./interruption-tools.js";
+import {
+  buildDiagnosisBriefing as buildDiagnosisBriefingFromDiagnosticsTools,
+  collectDebugEvidenceWithRuntime,
+} from "./diagnostics-tools.js";
+import { getPageContextWithMaestro as getPageContextWithMaestroFromPageContextTools } from "./page-context-tools.js";
+import {
+  collectBasicRunResultWithRuntime,
+  runFlowWithRuntime,
+} from "./flow-runtime.js";
+import {
+  buildIosAppScopeNote as buildIosAppScopeNoteFromPerformanceTools,
+  isPerfettoShellProbeAvailable as isPerfettoShellProbeAvailableFromPerformanceTools,
+  measureAndroidPerformanceWithRuntime,
+  measureIosPerformanceWithRuntime,
+  shouldResolveIosAttachTarget as shouldResolveIosAttachTargetFromPerformanceTools,
+} from "./performance-tools.js";
+import {
+  buildLogSummary as buildLogSummaryWithSessionState,
+  buildStateSummaryFromSignals as buildStateSummaryFromSignalsWithSessionState,
+  getScreenSummaryWithMaestro as getScreenSummaryWithMaestroFromSessionState,
+  getSessionStateWithMaestro as getSessionStateWithMaestroFromSessionState,
+  summarizeStateDelta,
+} from "./session-state.js";
+import {
+  recoverToKnownStateWithMaestro as recoverToKnownStateWithMaestroFromRecoveryTools,
+  replayLastStablePathWithMaestro as replayLastStablePathWithMaestroFromRecoveryTools,
+} from "./recovery-tools.js";
+import {
+  replayCheckpointChain as replayCheckpointChainFromReplayChain,
+} from "./replay-chain.js";
+import {
+  completeTaskWithMaestro as completeTaskWithMaestroFromTaskPlanner,
+  executeIntentPlanWithMaestro as executeIntentPlanWithMaestroFromTaskPlanner,
+  executeIntentWithMaestro as executeIntentWithMaestroFromTaskPlanner,
+} from "./task-planner.js";
+import { buildInterruptionEvent, decideInterruptionResolution } from "./interruption-resolver.js";
+import { buildInterruptionTimelineEvent, buildResumeCheckpoint, hasStateDrift, pickEventSource, summarizeInterruptionDetail } from "./interruption-orchestrator.js";
+import {
+  buildInspectorExceptionLogEntry,
+  buildJsConsoleLogSummary,
+  buildJsDebugTargetSelectionNarrativeLine,
+  buildJsNetworkFailureSummary,
+  buildJsNetworkSuspectSentences,
+  captureJsConsoleLogsWithMaestro,
+  captureJsNetworkEventsWithMaestro,
+  classifyDebugSignal,
+  formatJsConsoleEntry,
+  listJsDebugTargetsWithMaestro,
+  normalizeMetroBaseUrl,
+  rankJsDebugTarget,
+  selectPreferredJsDebugTarget,
+  selectPreferredJsDebugTargetWithReason,
+} from "./js-debug.js";
+import {
+  buildAndroidPerformanceData,
+  buildIosPerformanceData,
+  buildPerformanceMarkdownReport,
+  buildPerformanceNextSuggestions,
+  parseTraceProcessorTsv,
+  summarizeAndroidPerformance,
+  summarizeIosPerformance,
+} from "./performance-model.js";
+import {
+  DEFAULT_PERFORMANCE_DURATION_MS,
+  buildAndroidPerformancePlan,
+  buildIosPerformancePlan,
+  buildTraceProcessorScript,
+  buildTraceProcessorShellCommand,
+  resolveAndroidPerformancePlanStrategy,
+  resolveTraceProcessorPath,
+} from "./performance-runtime.js";
+import {
+  buildExecutionEvidence,
+  buildFailureReason,
+  countNonEmptyLines,
+  executeRunner,
+  normalizePositiveInteger,
+  shellEscape,
+  toRelativePath,
+  type CommandExecution,
+  unrefTimer,
+} from "./runtime-shared.js";
+⋮----
+export function buildLogSummary(content: string, query?: string): LogSummary
+⋮----
+export function buildStateSummaryFromSignals(params: {
+  uiSummary?: InspectUiSummary;
+  logSummary?: LogSummary;
+  crashSummary?: LogSummary;
+}): StateSummary
+⋮----
+export function setOcrFallbackTestHooksForTesting(hooks: OcrFallbackTestHooks | undefined): void
+⋮----
+export function resetOcrFallbackTestHooksForTesting(): void
+⋮----
+export function setInterruptionGuardTestHooksForTesting(hooks: InterruptionGuardTestHooks | undefined): void
+⋮----
+export function resetInterruptionGuardTestHooksForTesting(): void
+⋮----
+// ─── Test Hooks ─────────────────────────────────────────────────────────
+// Inject mock implementations for testing without live devices.
+// Each set/reset pair affects only the current process and should be
+// cleaned up in afterEach to prevent test leakage.
+//
+// Available hooks:
+// - setOcrFallbackTestHooksForTesting / resetOcrFallbackTestHooksForTesting
+// - setInterruptionGuardTestHooksForTesting / resetInterruptionGuardTestHooksForTesting
+// - setNavigateBackTestHooksForTesting / resetNavigateBackTestHooksForTesting
+⋮----
+export function setNavigateBackTestHooksForTesting(hooks: NavigateBackTestHooks | undefined): void
+⋮----
+export function resetNavigateBackTestHooksForTesting(): void
+⋮----
+async function executeIntentWithMaestro(
+  params: {
+    sessionId: string;
+    platform: Platform;
+    runnerProfile: RunnerProfile;
+    harnessConfigPath?: string;
+    deviceId?: string;
+    appId?: string;
+    dryRun?: boolean;
+  },
+  action: ActionIntent,
+): Promise<ToolResult<TapElementData | TypeIntoElementData | WaitForUiData | LaunchAppData | TerminateAppData>>
+⋮----
+export async function executeIntentPlanWithMaestro(
+  input: ExecuteIntentInput,
+): Promise<ToolResult<ExecuteIntentData>>
+⋮----
+export async function completeTaskWithMaestro(
+  input: CompleteTaskInput,
+): Promise<ToolResult<CompleteTaskData>>
+⋮----
+export function buildDiagnosisBriefing(params: {
+  status: ToolResult["status"];
+  reasonCode: ReasonCode;
+  appId?: string;
+  suspectAreas: string[];
+  jsDebugTargetId?: string;
+  jsConsoleLogCount?: number;
+  jsNetworkEventCount?: number;
+  retryRecommendationTier?: PerformActionWithEvidenceData["retryRecommendationTier"];
+  retryRecommendation?: PerformActionWithEvidenceData["retryRecommendation"];
+}): string[]
+export async function describeCapabilitiesWithMaestro(
+  input: DescribeCapabilitiesInput,
+): Promise<ToolResult<DescribeCapabilitiesData>>
+⋮----
+export async function getScreenSummaryWithMaestro(
+  input: GetScreenSummaryInput,
+): Promise<ToolResult<GetScreenSummaryData>>
+⋮----
+export async function getSessionStateWithMaestro(
+  input: GetSessionStateInput,
+): Promise<ToolResult<GetSessionStateData>>
+⋮----
+export async function getPageContextWithMaestro(
+  input: GetPageContextInput,
+): Promise<ToolResult<GetPageContextData>>
+⋮----
+export async function detectInterruptionWithMaestro(
+  input: DetectInterruptionInput,
+): Promise<ToolResult<DetectInterruptionData>>
+⋮----
+export async function classifyInterruptionWithMaestro(
+  input: ClassifyInterruptionInput,
+): Promise<ToolResult<ClassifyInterruptionData>>
+⋮----
+export async function resolveInterruptionWithMaestro(
+  input: ResolveInterruptionInput,
+  policyContext?: InterruptionPolicyContext,
+): Promise<ToolResult<ResolveInterruptionData>>
+⋮----
+export async function resumeInterruptedActionWithMaestro(
+  input: ResumeInterruptedActionInput,
+): Promise<ToolResult<ResumeInterruptedActionData>>
+⋮----
+export async function performActionWithEvidenceWithMaestro(
+  input: PerformActionWithEvidenceInput,
+): Promise<ToolResult<PerformActionWithEvidenceData>>
+⋮----
+export async function getActionOutcomeWithMaestro(
+  input: GetActionOutcomeInput,
+): Promise<ToolResult<GetActionOutcomeData>>
+⋮----
+export async function explainLastFailureWithMaestro(
+  input: ExplainLastFailureInput,
+): Promise<ToolResult<ExplainLastFailureData>>
+⋮----
+export async function rankFailureCandidatesWithMaestro(
+  input: RankFailureCandidatesInput,
+): Promise<ToolResult<RankFailureCandidatesData>>
+⋮----
+export async function recoverToKnownStateWithMaestro(
+  input: RecoverToKnownStateInput,
+): Promise<ToolResult<RecoverToKnownStateData>>
+⋮----
+export async function replayLastStablePathWithMaestro(
+  input: ReplayLastStablePathInput,
+): Promise<ToolResult<ReplayLastStablePathData>>
+⋮----
+export async function replayCheckpointChainWithMaestro(
+  input: ReplayCheckpointChainInput,
+): Promise<ToolResult<ReplayCheckpointChainData>>
+⋮----
+export async function findSimilarFailuresWithMaestro(
+  input: FindSimilarFailuresInput,
+): Promise<ToolResult<FindSimilarFailuresData>>
+⋮----
+export async function compareAgainstBaselineWithMaestro(
+  input: CompareAgainstBaselineInput,
+): Promise<ToolResult<CompareAgainstBaselineData>>
+⋮----
+export async function suggestKnownRemediationWithMaestro(
+  input: SuggestKnownRemediationInput,
+): Promise<ToolResult<SuggestKnownRemediationData>>
+⋮----
+export async function collectBasicRunResult(params: {
+  repoRoot: string;
+  sessionId: string;
+  durationMs: number;
+  attempts: number;
+  artifactsDir: ArtifactDirectory;
+  harnessConfigPath: string;
+  runnerProfile: RunnerProfile;
+  runnerScript: string;
+  flowPath: string;
+  requestedFlowPath?: string;
+  configuredFlows: string[];
+  command: string[];
+  dryRun: boolean;
+  execution?: CommandExecution;
+  unsupportedCustomFlow?: boolean;
+}): Promise<ToolResult<RunFlowData>>
+⋮----
+export async function runFlowWithMaestro(input: RunFlowInput): Promise<ToolResult<RunFlowData>>
+⋮----
+export async function listAvailableDevices(
+  input: ListDevicesInput = {},
+): Promise<ToolResult<{ android: DeviceInfo[]; ios: DeviceInfo[] }>>
+⋮----
+export async function typeTextWithMaestro(input: TypeTextInput): Promise<ToolResult<TypeTextData>>
+⋮----
+export async function resolveUiTargetWithMaestro(input: ResolveUiTargetInput): Promise<ToolResult<ResolveUiTargetData>>
+⋮----
+export async function tapElementWithMaestro(input: TapElementInput): Promise<ToolResult<TapElementData>>
+⋮----
+export async function typeIntoElementWithMaestro(input: TypeIntoElementInput): Promise<ToolResult<TypeIntoElementData>>
+⋮----
+export async function scrollAndTapElementWithMaestro(input: ScrollAndTapElementInput): Promise<ToolResult<ScrollAndTapElementData>>
+⋮----
+export async function waitForUiWithMaestro(input: WaitForUiInput): Promise<ToolResult<WaitForUiData>>
+⋮----
+export async function waitForUiStableWithMaestro(input: WaitForUiStableInput): Promise<ToolResult<WaitForUiStableData>>
+⋮----
+export async function scrollAndResolveUiTargetWithMaestro(input: ScrollAndResolveUiTargetInput): Promise<ToolResult<ScrollAndResolveUiTargetData>>
+⋮----
+export async function scrollOnlyWithMaestro(input: ScrollOnlyInput): Promise<ToolResult<ScrollOnlyData>>
+⋮----
+export async function performGestureWithMaestro(input: PerformGestureInput): Promise<ToolResult<PerformGestureData>>
+⋮----
+export async function tapWithMaestro(input: TapInput): Promise<ToolResult<TapData>>
+⋮----
+export async function navigateBackWithMaestro(input: NavigateBackInput): Promise<ToolResult<NavigateBackData>>
+⋮----
+export async function inspectUiWithMaestro(input: InspectUiInput): Promise<ToolResult<InspectUiData>>
+⋮----
+export async function queryUiWithMaestro(input: QueryUiInput): Promise<ToolResult<QueryUiData>>
+⋮----
+export async function terminateAppWithMaestro(input: TerminateAppInput): Promise<ToolResult<TerminateAppData>>
+⋮----
+export async function takeScreenshotWithMaestro(input: ScreenshotInput): Promise<ToolResult<ScreenshotData>>
+⋮----
+export async function recordScreenWithMaestro(input: RecordScreenInput): Promise<ToolResult<RecordScreenData>>
+⋮----
+export async function resetAppStateWithMaestro(input: ResetAppStateInput): Promise<ToolResult<ResetAppStateData>>
+⋮----
+export async function getLogsWithMaestro(input: GetLogsInput): Promise<ToolResult<GetLogsData>>
+⋮----
+export async function getCrashSignalsWithMaestro(input: GetCrashSignalsInput): Promise<ToolResult<GetCrashSignalsData>>
+⋮----
+export async function collectDiagnosticsWithMaestro(input: CollectDiagnosticsInput): Promise<ToolResult<CollectDiagnosticsData>>
+⋮----
+export async function collectDebugEvidenceWithMaestro(input: CollectDebugEvidenceInput): Promise<ToolResult<CollectDebugEvidenceData>>
+⋮----
+export function isPerfettoShellProbeAvailable(execution: CommandExecution): boolean
+⋮----
+export function buildIosAppScopeNote(appId?: string, attachTarget?: string): string
+⋮----
+export function shouldResolveIosAttachTarget(params: {
+  dryRun?: boolean;
+  template: IosPerformanceTemplate;
+  appId?: string;
+}): boolean
+⋮----
+export async function measureAndroidPerformanceWithMaestro(input: MeasureAndroidPerformanceInput): Promise<ToolResult<MeasureAndroidPerformanceData>>
+⋮----
+export async function measureIosPerformanceWithMaestro(input: MeasureIosPerformanceInput): Promise<ToolResult<MeasureIosPerformanceData>>
+⋮----
+export async function launchAppWithMaestro(input: LaunchAppInput): Promise<ToolResult<LaunchAppData>>
+⋮----
+export async function installAppWithMaestro(input: InstallAppInput): Promise<ToolResult<InstallAppData>>
+⋮----
+export async function runDoctor(
+  input: DoctorInput = {},
+): Promise<ToolResult<{ checks: DoctorCheck[]; devices: { android: DeviceInfo[]; ios: DeviceInfo[] }; guidance: Array<{ dependency: string; status: "pass" | "warn" | "fail"; platformScope: "android" | "ios" | "cross"; installCommands: string[]; verifyCommands: string[]; envHints: string[] }> }>>
+</file>
+
 <file path="packages/adapter-maestro/src/ui-action-tools.ts">
 import type {
 	ReasonCode,
@@ -204566,40 +205993,8 @@ import {
 // because nodes[0] (Application root) has no value, so observedValue=undefined.
 </file>
 
-<file path="packages/contracts/src/constants/tool-names.ts">
-/**
- * Canonical tool name constants for the mobile-e2e-mcp server.
- *
- * Values must match MobileE2EMcpToolName (keyof MobileE2EMcpToolContractMap
- * in server.ts) exactly. MobileE2EMcpToolName is the authoritative source;
- * this constant provides consumer-friendly camelCase keys.
- *
- * If a tool is added to MobileE2EMcpToolContractMap, add it here too.
- */
-⋮----
-// Session lifecycle
-⋮----
-// Recording & replay
-⋮----
-// Action & intent execution
-⋮----
-// Failure intelligence
-⋮----
-// Interruption handling
-⋮----
-// UI inspection
-⋮----
-// UI actions
-⋮----
-// App lifecycle
-⋮----
-// Diagnostics & evidence
-⋮----
-// JS debug targets (React Native / Expo)
-⋮----
-// Validation & network
-⋮----
-// Device discovery
+<file path="packages/contracts/src/index.ts">
+
 </file>
 
 <file path="packages/explorer/src/report/markdown.ts">
@@ -204725,340 +206120,223 @@ function makeFailure(pageScreenId: string, elementLabel = 'btn'): FailureEntry
 // Pipes should be escaped in table cells
 </file>
 
-<file path="packages/mcp-server/src/server.ts">
+<file path="packages/mcp-server/src/index.ts">
+import { readdir } from "node:fs/promises";
+import path from "node:path";
+import { resolveRepoPath, evidencePaths } from "@mobile-e2e-mcp/adapter-maestro";
 import type {
-	AuditUiSurfaceData,
-	AuditUiSurfaceInput,
-	CancelRecordSessionData,
-	CancelRecordSessionInput,
-	CaptureJsConsoleLogsData,
-	CaptureJsConsoleLogsInput,
-	CaptureJsNetworkEventsData,
-	CaptureJsNetworkEventsInput,
-	ClassifyInterruptionData,
-	ClassifyInterruptionInput,
-	CollectDebugEvidenceData,
-	CollectDebugEvidenceInput,
-	CollectDiagnosticsData,
-	CollectDiagnosticsInput,
-	CompareAgainstBaselineData,
-	CompareAgainstBaselineInput,
-	CompleteTaskData,
-	CompleteTaskInput,
-	DiagnoseNetworkFailureData,
-	DiagnoseNetworkFailureInput,
-	DescribeCapabilitiesData,
-	DescribeCapabilitiesInput,
-  DetectInterruptionData,
+  ClassifyInterruptionInput,
   DetectInterruptionInput,
-  DoctorData,
-  DoctorInput,
-	ElementScreenshotData,
-	ElementScreenshotInput,
-	EndRecordSessionData,
-	EndRecordSessionInput,
-	EndSessionData,
-	EndSessionInput,
-	ExecuteIntentData,
-	ExecuteIntentInput,
-	ExplainLastFailureData,
-	ExplainLastFailureInput,
-	ExportSessionFlowData,
-	ExportSessionFlowInput,
-	FindSimilarFailuresData,
-	FindSimilarFailuresInput,
-	GetActionOutcomeData,
-	GetActionOutcomeInput,
-	GetCrashSignalsData,
-	GetCrashSignalsInput,
-	GetLogsData,
-	GetLogsInput,
-	GetPageContextData,
-	GetPageContextInput,
-	GetRecordSessionStatusInput,
-	GetScreenSummaryData,
-	GetScreenSummaryInput,
-	GetSessionStateData,
-	GetSessionStateInput,
-	InspectUiData,
-	InspectUiInput,
-	InspectNetworkPolicyData,
-	InspectNetworkPolicyInput,
-	InstallAppData,
-	InstallAppInput,
-	LaunchAppData,
-	LaunchAppInput,
-	ListDevicesData,
-	ListDevicesInput,
-	ListJsDebugTargetsData,
-	ListJsDebugTargetsInput,
-	MeasureAndroidPerformanceData,
-	MeasureAndroidPerformanceInput,
-	MeasureIosPerformanceData,
-	MeasureIosPerformanceInput,
-	NavigateBackData,
-	NavigateBackInput,
-	NetworkProbeData,
-	NetworkProbeInput,
-	PerformActionWithEvidenceData,
-	PerformActionWithEvidenceInput,
-	PerformGestureData,
-	PerformGestureInput,
-	QueryUiData,
-	QueryUiInput,
-	RankFailureCandidatesData,
-	RankFailureCandidatesInput,
-	RecordScreenData,
-	RecordScreenInput,
-	RecordSessionStatusData,
-	RecordTaskFlowData,
-	RecordTaskFlowInput,
-	RecoverToKnownStateData,
-	RecoverToKnownStateInput,
-	ReplayCheckpointChainData,
-	ReplayCheckpointChainInput,
-	ReplayLastStablePathData,
-	ReplayLastStablePathInput,
-	RequestManualHandoffData,
+  PerformActionWithEvidenceInput,
+  Platform,
 	RequestManualHandoffInput,
-	ResetAppStateData,
-	ResetAppStateInput,
-	ResolveInterruptionData,
 	ResolveInterruptionInput,
-	ResolveUiTargetData,
-	ResolveUiTargetInput,
-	ResumeInterruptedActionData,
 	ResumeInterruptedActionInput,
-	RunFlowData,
-	RunFlowInput,
-	ScreenshotData,
-	ScreenshotInput,
-	ScrollAndResolveUiTargetData,
-	ScrollAndResolveUiTargetInput,
-	ScrollAndTapElementData,
-	ScrollAndTapElementInput,
-	ScrollOnlyData,
-	ScrollOnlyInput,
-	Session,
-	StartRecordSessionData,
-	StartRecordSessionInput,
-	StartSessionInput,
-	SuggestKnownRemediationData,
-	SuggestKnownRemediationInput,
-	TapData,
-	TapElementData,
-	TapElementInput,
-	TapInput,
-	TerminateAppData,
-	TerminateAppInput,
 	ToolResult,
-	TypeIntoElementData,
-	TypeIntoElementInput,
-	TypeTextData,
-	TypeTextInput,
-	ValidateFlowData,
-	ValidateFlowInput,
-	VisualDiffData,
-	VisualDiffInput,
-	WaitForUiData,
-	WaitForUiInput,
-	WaitForUiStableData,
-	WaitForUiStableInput,
+	ToolSetName,
 } from "@mobile-e2e-mcp/contracts";
+import { REASON_CODES, TOOL_NAMES, TOOLSET_NAMES } from "@mobile-e2e-mcp/contracts";
+import { filterToolListByToolset } from "./toolsets.js";
+import {
+	appendSessionTimelineEvent,
+	coreEvidencePaths,
+	legacyCoreEvidencePaths,
+	loadSessionRecord,
+	recoverStaleLeases,
+	runExclusive,
+} from "@mobile-e2e-mcp/core";
+import {
+  type ToolPolicyRequirement,
+} from "./constants/policy-scopes.js";
+import { enforcePolicyForTool } from "./policy-guard.js";
+import {
+	MobileE2EMcpServer,
+	type MobileE2EMcpToolContractMap,
+	type MobileE2EMcpToolName,
+	type MobileE2EMcpToolRegistry,
+} from "./server.js";
+import { cancelRecordSession } from "./tools/cancel-record-session.js";
+import { captureElementScreenshot } from "./tools/capture-element-screenshot.js";
+import { auditUiSurface } from "./tools/audit-ui-surface.js";
+import { captureJsConsoleLogs } from "./tools/capture-js-console-logs.js";
+import { captureJsNetworkEvents } from "./tools/capture-js-network-events.js";
+import { classifyInterruption } from "./tools/classify-interruption.js";
+import { collectDebugEvidence } from "./tools/collect-debug-evidence.js";
+import { collectDiagnostics } from "./tools/collect-diagnostics.js";
+import { compareAgainstBaseline } from "./tools/compare-against-baseline.js";
+import { compareVisualBaselineTool } from "./tools/compare-visual-baseline.js";
+import { completeTask } from "./tools/complete-task.js";
+import { describeCapabilities } from "./tools/describe-capabilities.js";
+import { detectInterruption } from "./tools/detect-interruption.js";
+import { diagnoseNetworkFailure } from "./tools/diagnose-network-failure.js";
+import { doctor } from "./tools/doctor.js";
+import { endRecordSession } from "./tools/end-record-session.js";
+import { endSession } from "./tools/end-session.js";
+import { executeIntent } from "./tools/execute-intent.js";
+import { explainLastFailure } from "./tools/explain-last-failure.js";
+import { exportSessionFlow } from "./tools/export-session-flow.js";
+import { findSimilarFailures } from "./tools/find-similar-failures.js";
+import { getActionOutcome } from "./tools/get-action-outcome.js";
+import { getCrashSignals } from "./tools/get-crash-signals.js";
+import { getLogs } from "./tools/get-logs.js";
+import { getPageContext } from "./tools/get-page-context.js";
+import { getRecordSessionStatus } from "./tools/get-record-session-status.js";
+import { getScreenSummary } from "./tools/get-screen-summary.js";
+import { getSessionState } from "./tools/get-session-state.js";
+import { inspectNetworkPolicy } from "./tools/inspect-network-policy.js";
+import { inspectUi } from "./tools/inspect-ui.js";
+import { installApp } from "./tools/install-app.js";
+import { launchApp } from "./tools/launch-app.js";
+import { listDevices } from "./tools/list-devices.js";
+import { listJsDebugTargets } from "./tools/list-js-debug-targets.js";
+import { measureAndroidPerformance } from "./tools/measure-android-performance.js";
+import { measureIosPerformance } from "./tools/measure-ios-performance.js";
+import { navigateBack } from "./tools/navigate-back.js";
+import { performActionWithAutoRemediation } from "./tools/perform-action-with-auto-remediation.js";
+import { performActionWithEvidence } from "./tools/perform-action-with-evidence.js";
+import { performGesture } from "./tools/perform-gesture.js";
+import { persistSessionEvidenceCapture } from "./tools/persist-session-evidence.js";
+import { probeNetworkReadinessTool } from "./tools/probe-network-readiness.js";
+import { queryUi } from "./tools/query-ui.js";
+import { rankFailureCandidates } from "./tools/rank-failure-candidates.js";
+import { recordScreen } from "./tools/record-screen.js";
+import { recordTaskFlow } from "./tools/record-task-flow.js";
+import { recoverToKnownState } from "./tools/recover-to-known-state.js";
+import { replayCheckpointChainTool } from "./tools/replay-checkpoint-chain.js";
+import { replayLastStablePath } from "./tools/replay-last-stable-path.js";
+import { requestManualHandoff } from "./tools/request-manual-handoff.js";
+import { resetAppState } from "./tools/reset-app-state.js";
+import { resolveInterruption } from "./tools/resolve-interruption.js";
+import { resolveUiTarget } from "./tools/resolve-ui-target.js";
+import { resumeInterruptedAction } from "./tools/resume-interrupted-action.js";
+import { runFlow } from "./tools/run-flow.js";
+import { scrollAndResolveUiTarget } from "./tools/scroll-and-resolve-ui-target.js";
+import { scrollAndTapElement } from "./tools/scroll-and-tap-element.js";
+import { scrollOnly } from "./tools/scroll-only.js";
+import { startRecordSession } from "./tools/start-record-session.js";
+import { startSession } from "./tools/start-session.js";
+import { suggestKnownRemediation } from "./tools/suggest-known-remediation.js";
+import { takeScreenshot } from "./tools/take-screenshot.js";
+import { tap } from "./tools/tap.js";
+import { tapElement } from "./tools/tap-element.js";
+import { terminateApp } from "./tools/terminate-app.js";
+import { typeIntoElement } from "./tools/type-into-element.js";
+import { typeText } from "./tools/type-text.js";
+import { validateFlowTool } from "./tools/validate-flow.js";
+import { waitForUi } from "./tools/wait-for-ui.js";
+import { waitForUiStable } from "./tools/wait-for-ui-stable.js";
 ⋮----
-interface ToolContract<TInput, TOutputData> {
-	input: TInput;
-	outputData: TOutputData;
+interface ActiveSessionCandidate {
+	sessionId: string;
+	session: NonNullable<
+		Awaited<ReturnType<typeof loadSessionRecord>>
+	>["session"];
 }
 ⋮----
-export interface MobileE2EMcpToolContractMap {
-	capture_js_console_logs: ToolContract<
-		CaptureJsConsoleLogsInput,
-		CaptureJsConsoleLogsData
-	>;
-	capture_js_network_events: ToolContract<
-		CaptureJsNetworkEventsInput,
-		CaptureJsNetworkEventsData
-	>;
-	capture_element_screenshot: ToolContract<
-		ElementScreenshotInput,
-		ElementScreenshotData
-	>;
-	compare_against_baseline: ToolContract<
-		CompareAgainstBaselineInput,
-		CompareAgainstBaselineData
-	>;
-	compare_visual_baseline: ToolContract<VisualDiffInput, VisualDiffData>;
-	collect_debug_evidence: ToolContract<
-		CollectDebugEvidenceInput,
-		CollectDebugEvidenceData
-	>;
-	collect_diagnostics: ToolContract<
-		CollectDiagnosticsInput,
-		CollectDiagnosticsData
-	>;
-	detect_interruption: ToolContract<
-		DetectInterruptionInput,
-		DetectInterruptionData
-	>;
-	classify_interruption: ToolContract<
-		ClassifyInterruptionInput,
-		ClassifyInterruptionData
-	>;
-	describe_capabilities: ToolContract<
-		DescribeCapabilitiesInput,
-		DescribeCapabilitiesData
-	>;
-	doctor: ToolContract<DoctorInput, DoctorData>;
-	execute_intent: ToolContract<ExecuteIntentInput, ExecuteIntentData>;
-	complete_task: ToolContract<CompleteTaskInput, CompleteTaskData>;
-	start_record_session: ToolContract<
-		StartRecordSessionInput,
-		StartRecordSessionData
-	>;
-	get_record_session_status: ToolContract<
-		GetRecordSessionStatusInput,
-		RecordSessionStatusData
-	>;
-	end_record_session: ToolContract<EndRecordSessionInput, EndRecordSessionData>;
-	cancel_record_session: ToolContract<
-		CancelRecordSessionInput,
-		CancelRecordSessionData
-	>;
-	export_session_flow: ToolContract<
-		ExportSessionFlowInput,
-		ExportSessionFlowData
-	>;
-	record_task_flow: ToolContract<RecordTaskFlowInput, RecordTaskFlowData>;
-	request_manual_handoff: ToolContract<
-		RequestManualHandoffInput,
-		RequestManualHandoffData
-	>;
-	explain_last_failure: ToolContract<
-		ExplainLastFailureInput,
-		ExplainLastFailureData
-	>;
-	find_similar_failures: ToolContract<
-		FindSimilarFailuresInput,
-		FindSimilarFailuresData
-	>;
-	get_action_outcome: ToolContract<GetActionOutcomeInput, GetActionOutcomeData>;
-	get_crash_signals: ToolContract<GetCrashSignalsInput, GetCrashSignalsData>;
-	get_logs: ToolContract<GetLogsInput, GetLogsData>;
-	get_page_context: ToolContract<GetPageContextInput, GetPageContextData>;
-	get_screen_summary: ToolContract<GetScreenSummaryInput, GetScreenSummaryData>;
-	get_session_state: ToolContract<GetSessionStateInput, GetSessionStateData>;
-	diagnose_network_failure: ToolContract<
-		DiagnoseNetworkFailureInput,
-		DiagnoseNetworkFailureData
-	>;
-	inspect_network_policy: ToolContract<
-		InspectNetworkPolicyInput,
-		InspectNetworkPolicyData
-	>;
-	inspect_ui: ToolContract<InspectUiInput, InspectUiData>;
-	query_ui: ToolContract<QueryUiInput, QueryUiData>;
-	audit_ui_surface: ToolContract<AuditUiSurfaceInput, AuditUiSurfaceData>;
-	recover_to_known_state: ToolContract<
-		RecoverToKnownStateInput,
-		RecoverToKnownStateData
-	>;
-	resolve_interruption: ToolContract<
-		ResolveInterruptionInput,
-		ResolveInterruptionData
-	>;
-	resume_interrupted_action: ToolContract<
-		ResumeInterruptedActionInput,
-		ResumeInterruptedActionData
-	>;
-	resolve_ui_target: ToolContract<ResolveUiTargetInput, ResolveUiTargetData>;
-	replay_last_stable_path: ToolContract<
-		ReplayLastStablePathInput,
-		ReplayLastStablePathData
-	>;
-	replay_checkpoint_chain: ToolContract<
-		ReplayCheckpointChainInput,
-		ReplayCheckpointChainData
-	>;
-	scroll_and_resolve_ui_target: ToolContract<
-		ScrollAndResolveUiTargetInput,
-		ScrollAndResolveUiTargetData
-	>;
-	scroll_only: ToolContract<ScrollOnlyInput, ScrollOnlyData>;
-	perform_gesture: ToolContract<PerformGestureInput, PerformGestureData>;
-	scroll_and_tap_element: ToolContract<
-		ScrollAndTapElementInput,
-		ScrollAndTapElementData
-	>;
-	install_app: ToolContract<InstallAppInput, InstallAppData>;
-	list_js_debug_targets: ToolContract<
-		ListJsDebugTargetsInput,
-		ListJsDebugTargetsData
-	>;
-	launch_app: ToolContract<LaunchAppInput, LaunchAppData>;
-	list_devices: ToolContract<ListDevicesInput, ListDevicesData>;
-	measure_android_performance: ToolContract<
-		MeasureAndroidPerformanceInput,
-		MeasureAndroidPerformanceData
-	>;
-	measure_ios_performance: ToolContract<
-		MeasureIosPerformanceInput,
-		MeasureIosPerformanceData
-	>;
-	navigate_back: ToolContract<NavigateBackInput, NavigateBackData>;
-	perform_action_with_evidence: ToolContract<
-		PerformActionWithEvidenceInput,
-		PerformActionWithEvidenceData
-	>;
-	rank_failure_candidates: ToolContract<
-		RankFailureCandidatesInput,
-		RankFailureCandidatesData
-	>;
-	record_screen: ToolContract<RecordScreenInput, RecordScreenData>;
-	start_session: ToolContract<StartSessionInput, Session>;
-	reset_app_state: ToolContract<ResetAppStateInput, ResetAppStateData>;
-	run_flow: ToolContract<RunFlowInput, RunFlowData>;
-	take_screenshot: ToolContract<ScreenshotInput, ScreenshotData>;
-	suggest_known_remediation: ToolContract<
-		SuggestKnownRemediationInput,
-		SuggestKnownRemediationData
-	>;
-	tap: ToolContract<TapInput, TapData>;
-	tap_element: ToolContract<TapElementInput, TapElementData>;
-	terminate_app: ToolContract<TerminateAppInput, TerminateAppData>;
-	type_text: ToolContract<TypeTextInput, TypeTextData>;
-	type_into_element: ToolContract<TypeIntoElementInput, TypeIntoElementData>;
-	validate_flow: ToolContract<ValidateFlowInput, ValidateFlowData>;
-	wait_for_ui: ToolContract<WaitForUiInput, WaitForUiData>;
-	wait_for_ui_stable: ToolContract<WaitForUiStableInput, WaitForUiStableData>;
-	end_session: ToolContract<EndSessionInput, EndSessionData>;
-	probe_network_readiness: ToolContract<NetworkProbeInput, NetworkProbeData>;
-}
-⋮----
-export type MobileE2EMcpToolName = keyof MobileE2EMcpToolContractMap;
-⋮----
-type ToolInput<TName extends MobileE2EMcpToolName> =
+type ToolName = MobileE2EMcpToolName;
+type ToolInput<TName extends ToolName> =
 	MobileE2EMcpToolContractMap[TName]["input"];
-type ToolOutputData<TName extends MobileE2EMcpToolName> =
+type ToolOutputData<TName extends ToolName> =
 	MobileE2EMcpToolContractMap[TName]["outputData"];
-type ToolHandler<TName extends MobileE2EMcpToolName> = (
+type ToolOutput<TName extends ToolName> = ToolResult<ToolOutputData<TName>>;
+type ToolHandler<TName extends ToolName> = (
 	input: ToolInput<TName>,
-) => Promise<ToolResult<ToolOutputData<TName>>>;
+) => Promise<ToolOutput<TName>>;
+type AnyToolHandler = {
+	bivarianceHack(input: unknown): Promise<ToolResult<unknown>>;
+}["bivarianceHack"];
 ⋮----
-export type MobileE2EMcpToolRegistry = {
-	[TName in MobileE2EMcpToolName]: ToolHandler<TName>;
+bivarianceHack(input: unknown): Promise<ToolResult<unknown>>;
+⋮----
+// ToolPolicyRequirement is imported from ./constants/policy-scopes.js
+⋮----
+interface ToolDescriptor {
+	name: ToolName;
+	description: string;
+	handler?: AnyToolHandler;
+	createHandler?: (
+		registry: Partial<MobileE2EMcpToolRegistry>,
+	) => AnyToolHandler;
+	policy: {
+		enforced: boolean;
+		requiredScopes: readonly ToolPolicyRequirement[];
+	};
+	session: {
+		required: boolean;
+		requireResolvedSessionContext?: boolean;
+	};
+	audit: {
+		captureResultEvidence: boolean;
+	};
+	typing: {
+		inputType: string;
+		outputType: string;
+	};
+}
+⋮----
+type SessionScopedInput = {
+	sessionId?: string;
+	platform?: Platform;
+	deviceId?: string;
+	appId?: string;
+	runnerProfile?: string | null;
 };
 ⋮----
-export class MobileE2EMcpServer
+export type ToolListItem = {
+	name: ToolName;
+	description: string;
+};
 ⋮----
-constructor(private readonly tools: MobileE2EMcpToolRegistry)
+function defineToolDescriptor<TName extends ToolName>(
+	descriptor: Omit<ToolDescriptor, "typing"> & { name: TName },
+): ToolDescriptor
 ⋮----
-listTools(): MobileE2EMcpToolName[]
+async function listActiveSessionCandidates(
+	repoRoot: string,
+): Promise<ActiveSessionCandidate[]>
 ⋮----
-async invoke<TName extends MobileE2EMcpToolName>(
-		toolName: TName,
-		input: ToolInput<TName>,
-	): Promise<ToolResult<ToolOutputData<TName>>>
+function pickImplicitSessionId(
+	input: {
+		platform?: Platform;
+		deviceId?: string;
+		appId?: string;
+		runnerProfile?: string | null;
+	},
+	candidates: ActiveSessionCandidate[],
+): { selectedSessionId?: string; ambiguity: boolean }
+⋮----
+function withPolicy<TName extends ToolName>(
+	toolName: TName,
+	handler: ToolHandler<TName>,
+): ToolHandler<TName>
+⋮----
+function withPolicyAndAudit<TName extends ToolName>(
+	toolName: TName,
+	handler: ToolHandler<TName>,
+): ToolHandler<TName>
+⋮----
+function withSessionExecution<TName extends ToolName>(
+	toolName: TName,
+	handler: ToolHandler<TName>,
+	options?: { requireResolvedSessionContext?: boolean },
+): ToolHandler<TName>
+⋮----
+const asOutput = (result: ToolResult<unknown>): ToolOutput<TName> =>
+⋮----
+// Phase 12-08: This cast is unavoidable because TypeScript cannot infer the exact
+// ToolOutputData<TName> type from a generic union at runtime. The union of all
+// possible data shapes does not overlap cleanly with Record<string, unknown>.
+⋮----
+function composeToolHandler(
+	descriptor: ToolDescriptor,
+	registry: Partial<MobileE2EMcpToolRegistry>,
+): AnyToolHandler
+⋮----
+export function buildToolListMetadata(
+	toolset: ToolSetName = TOOLSET_NAMES.full,
+): ToolListItem[]
+⋮----
+export function createServer(): MobileE2EMcpServer
 </file>
 
 <file path="packages/mcp-server/test/mcp-stdio-server.test.ts">
@@ -205402,424 +206680,6 @@ function hasSignal(card: EvidenceCard, signal: string): boolean
 function hasCommand(brief: GovernedEvidenceBrief, command: string): boolean
 ⋮----
 export async function validateGovernedEvidenceBrief(): Promise<void>
-</file>
-
-<file path="docs/guides/ai-agent-invocation.zh-CN.md">
-# AI Agent Invocation Guide（mobile-e2e-mcp）
-
-这份文档是 **AI Agent / MCP client 集成方的调用真相源**。
-
-它只回答一类问题：
-
-1. 什么时候先调用哪个工具；
-2. 默认应该如何串联 session / action / evidence / recovery；
-3. 出现失败、中断、歧义时如何分流；
-4. 哪些调用方式应该优先，哪些属于 fallback 或反模式。
-
-> 这不是完整工具目录，也不是架构总览。
->
-> - 工具注册与签名真相源：`packages/mcp-server/src/server.ts`
-> - 契约与类型真相源：`packages/contracts/src/*`
-> - 首跑前门闭环：[`golden-path.md`](./golden-path.md)
-> - 录制 / 导出 / 回放专题：[`flow-generation.md`](./flow-generation.md)
-
-## 1. 默认调用原则
-
-### 1.1 Deterministic-first
-
-默认优先级始终是：
-
-1. 稳定 selector / UI 树定位
-2. 结构化 session 上下文
-3. 有边界 action + evidence
-4. 失败归因 / 恢复
-5. 更重的 diagnostics
-
-不要把 OCR / CV / 坐标点击 / 全量诊断当作默认入口。
-
-### 1.2 Session-first for write actions
-
-凡是会改动设备、应用或 UI 状态的工具，优先放在同一个 `sessionId` 下执行。
-
-最低推荐顺序：
-
-`doctor -> describe_capabilities -> start_session -> action tools -> failure/recovery tools -> end_session`
-
-### 1.3 Outcome-first, not transport-first
-
-对 AI Agent 来说，**命令发出** 不等于 **目标达成**。
-
-优先使用能返回结构化 outcome、`reasonCode`、`artifacts`、`nextSuggestions` 的链路，而不是只看某个底层命令有没有发出去。
-
-### 1.4 工具集选择（core vs full）
-
-- **默认 `core` 工具集（20 个高频核心工具）**：MCP stdio 服务默认只暴露 `core`（含 `audit_ui_surface`、`perform_gesture`、`record_screen` 等高频工具），减少约 71% 的上下文 schema 开销。
-- **`full` 工具集（全部 68 个工具）**：当需要录制/回放、失败归因记忆、网络策略诊断、性能采集或 React Native JS 调试目标工具时，通过 `--toolset full` 或环境变量 `MOBILE_E2E_TOOLSET=full` 启用。
-
-## 2. 默认决策阶梯
-
-### Step 1：确认环境与平台边界
-
-优先工具：
-
-- `doctor`
-- `describe_capabilities`
-- `list_devices`（需要枚举目标设备时）
-
-### Step 2：建立会话上下文
-
-优先工具：
-
-- `start_session`
-- `get_session_state`（已有 session 时）
-
-### Step 3：优先走确定性 UI 感知与定位
-
-优先工具：
-
-- `get_screen_summary`
-- `inspect_ui`
-- `query_ui`
-- `resolve_ui_target`
-- `wait_for_ui`
-
-建议顺序：先确认当前页面是否 ready / blocked，再定位目标元素，最后执行动作。
-
-### Step 4：执行有边界动作
-
-优先工具：
-
-- `tap_element`
-- `type_into_element`
-- `scroll_and_tap_element`
-- `perform_action_with_evidence`
-- `execute_intent`
-- `complete_task`
-
-默认建议：
-
-- 单个关键动作、需要前后证据时，优先 `perform_action_with_evidence`
-- 高层 goal 明确、希望让系统规划 bounded action 时，优先 `execute_intent`
-- 多步但边界清楚的任务，优先 `complete_task`
-- 仅执行一个低层确定性动作时，再直接用 `tap_element` / `type_into_element`
-
-### Step 5：失败后先归因，再恢复，再升级诊断
-
-优先顺序：
-
-1. `explain_last_failure`
-2. `rank_failure_candidates`
-3. `suggest_known_remediation`
-4. `recover_to_known_state` / `resolve_interruption` / `resume_interrupted_action`
-5. `collect_debug_evidence`
-6. `get_logs` / `get_crash_signals`
-7. `collect_diagnostics`
-
-原则：先拿 **AI 可消费摘要**，再拿更重原始证据。
-
-补充：`suggest_known_remediation` 现在会在本地 failure memory / baseline 之外，默认给出一层 **readiness-skill 路由式建议**，包括：
-
-- `route`：推荐先走 baseline / Android / iOS 哪条 readiness 诊断链
-- `mostLikelyGap`：当前最可能的 contract / readiness 缺口
-- `askForNext`：下一步最值得补的证据
-- `firstFix`：先改哪一层，而不是先加 retry
-- `handoffSkill`：当 contract gap 已明确时，应该切到哪个实现型 skill
-
-## 3. 常见意图 → 推荐工具链
-
-### 3.1 确认环境是否可跑
-
-`doctor -> describe_capabilities -> list_devices`
-
-### 3.2 启动一次可审计执行
-
-`start_session -> launch_app -> get_screen_summary`
-
-### 3.3 找元素并点击
-
-`wait_for_ui -> resolve_ui_target -> tap_element`
-
-如果目标可能在滚动容器中：
-
-`scroll_only -> wait_for_ui -> resolve_ui_target`
-
-如果你已经确认"滚动直到目标出现并立即点击"更适合当前场景：
-
-- **Android**: `scroll_and_resolve_ui_target` / `scroll_and_tap_element`
-- **iOS**: 不支持 `scroll_and_resolve_ui_target` / `scroll_and_tap_element`。请使用 `scroll_only → wait_for_ui → resolve_ui_target → tap_element` 分步组合。
-
-### 3.4 对表单或输入框填值
-
-`wait_for_ui -> type_into_element`
-
-仅当焦点已明确、且没有更好的 selector 时，才考虑 `type_text`。
-
-### 3.4.1 返回上一页 / 后退导航
-
-`navigate_back`
-
-平台差异显著：
-
-- **Android**：确定性路径，通过 `adb shell input keyevent 4` 发送 KEYEVENT_BACK。支持级别 `full`。注意：在首页连续调用可能退出当前 app。
-- **iOS**：无系统级后退原语。支持两种策略：
-  - `selector_tap`（默认）：提供返回按钮 selector，通过点击 app 内返回按钮实现。支持级别 `conditional`。
-  - `edge_swipe`：从屏幕左边缘向右滑动。支持级别 `conditional`，依赖 axe（模拟器）或 WDA（真机）后端。
-- **iOS `target: "system"` 不支持**：会返回 `unsupportedOperation` 错误。
-
-建议：Android flow 中可直接使用；iOS flow 中优先用 `inspect_ui` 发现返回按钮 selector 后再调用。
-
-### 3.4.2 画布绘制 / 拖拽 / 缩放手势
-
-`perform_gesture`
-
-- 常规控件交互仍优先使用 `tap_element` / `scroll_only`；仅在画布绘制、拖拽排序、双指缩放、双击等场景使用 `perform_gesture`。
-- **iOS 模拟器**：通过 AXe 完整支持 `draw` / `drag` / `pinch` / `double_tap` / `two_finger_tap`。
-- **Android**：通过 `adb` 部分支持 `drag` / 两点 `draw` / `double_tap`。
-
-### 3.5 执行关键动作并拿到可解释证据
-
-`perform_action_with_evidence`
-
-### 3.5.1 UI 结构体检与基线增量门禁
-
-`audit_ui_surface`
-
-- 用于在关键页面做结构化布局/无障碍体检；传入 `baselinePath` 与 `baselineMode` 可与历史基线做增量回归门禁（ratchet diffing）。
-
-### 3.5.2 录制关键链路视频证据
-
-`record_screen`
-
-- 支持固定时长（`mode: "fixed"`）以及不阻塞动作执行的 `mode: "start"` / `mode: "stop"`（配合 `recordingId`、180s 上限，以及在绿灯通过时自动丢弃视频的 `discardOnStop`）。
-- **iOS 模拟器**：优先走 `axe record-video` 并带 `simctl` 兜底；**Android**：`adb shell screenrecord`；**iOS 真机**：明确返回 `UNSUPPORTED_OPERATION`。
-
-### 3.6 让系统帮你规划高层目标
-
-- `execute_intent`：单个高层意图
-- `complete_task`：多步有限任务
-
-### 3.7 处理失败或 flaky 行为
-
-`explain_last_failure -> rank_failure_candidates -> suggest_known_remediation`
-
-推荐理解：
-
-- `explain_last_failure` = 先看失败归因
-- `rank_failure_candidates` = 再看最可疑层
-- `suggest_known_remediation` = 默认给出 **skill-guided 下一步动作**，把问题分流到 baseline / Android / iOS readiness 逻辑，再决定是否切到实现型 skill
-
-如果怀疑是重复模式：
-
-- `find_similar_failures`
-- `compare_against_baseline`
-
-### 3.8 处理中断
-
-`detect_interruption -> classify_interruption -> resolve_interruption -> resume_interrupted_action`
-
-如果只是想回到可继续执行状态：
-
-- `recover_to_known_state`
-
-### 3.9 处理 OTP / 验证码 / 受保护页面
-
-`get_screen_summary -> get_session_state -> request_manual_handoff`
-
-建议分流：
-
-- 当 `screenSummary.manualHandoff.required=true` 时，不要继续假装全自动完成；
-- 如果是通过 `perform_action_with_evidence` 触达到 OTP / 验证码页，结果现在会显式返回：
-  - `reasonCode=MANUAL_HANDOFF_REQUIRED`
-  - `retryRecommendationTier=handoff_required`
-  - 开启 `autoRemediate` 时，`autoRemediation.stopReason=manual_handoff_required`
-- 对 OTP / 验证码 / 人机挑战，调用 `request_manual_handoff` 把人工接管点写入 session timeline；
-- 人工完成后，再重新调用 `get_screen_summary` 或 `get_session_state` 确认页面是否已退出受保护边界。
-
-### 3.10 录制、导出与回放
-
-这条链路只在专题文档维护：[`flow-generation.md`](./flow-generation.md)
-
-当前迁移状态：
-
-- `run_flow` 已支持对导出的 recorded flow 执行 **step-aware dry-run preview**
-- 该 preview 会返回 `executionMode`、`replayProgress`、`stepOutcomes`
-- Android 真机 replay 对常用命令走 `owned-adb` 主路径；`launchApp`、`tapOn`（selector/coordinate）、`inputText`、`assertVisible`、`assertNotVisible`、`swipe`、`back`、`home`、`hideKeyboard`、`stopApp`、`clearState` 不再要求 Maestro helper app
-- Maestro / `runner_compat` 仅作为 Android edge-case 命令 fallback，或用于尚未迁移的平台/路径；不要把 Android common-command replay 描述成仍以 helper app 为主
-- Android 真机 Explorer 已有完整实跑证据：`docs/showcase/evidence/android-explorer-full-2026-04-28T03-38-20/` 覆盖 45 页、0 failures
-
-### 3.11 抓 React Native / Expo JS 调试信号
-
-`list_js_debug_targets -> capture_js_console_logs` 或 `capture_js_network_events`
-
-### 3.12 诊断 release HTTP 策略风险
-
-优先入口：`diagnose_network_failure`
-
-底层静态检查：`inspect_network_policy`
-
-适用场景：
-
-- release 包中普通 `http://` 请求失败，但设备网络和后端可达性看起来正常；
-- 已经从 `capture_js_network_events`、日志或人工观察中拿到了失败请求 URL；
-- 需要自动判断 Android `usesCleartextTraffic` / `network_security_config` 或 iOS ATS 是否是失败原因。
-
-推荐调用：
-
-```json
-{
-  "tool": "diagnose_network_failure",
-  "arguments": {
-    "sessionId": "network-failure-demo",
-    "platform": "android",
-    "releaseHint": "release",
-    "artifactPath": "/path/to/app-release.apk",
-    "failedRequest": {
-      "url": "http://api.example.com/login",
-      "errorText": "CLEARTEXT communication to api.example.com not permitted"
-    }
-  }
-}
-```
-
-当只想静态确认某个 domain 是否在白名单中时，再直接调用 `inspect_network_policy`。
-
-边界：
-
-- 这是失败归因 + 静态 release policy 检查，不是抓包或代理；
-- 可以提供已解码的 `AndroidManifest.xml`、`network_security_config.xml`、`Info.plist`，也可以直接提供 ZIP-based APK/IPA artifact；
-- 如果 artifact 内是不可读的二进制 AXML / bplist，结果应视为 `unknown`，不能当作已放行。
-
-## 4. 推荐工具 vs fallback 工具
-
-### 4.1 交互类
-
-优先：
-
-- `tap_element`
-- `type_into_element`
-- `navigate_back` — Android: `adb keyevent 4`（full）；iOS: selector-based app back button tap 或 edge swipe（conditional），system back 不支持
-- `perform_gesture` — 画布/多点手势专用（iOS Simulator full via AXe；Android partial via `adb`）
-
-滚动辅助（Android only）：
-
-- `scroll_and_resolve_ui_target` — Android-only
-- `scroll_and_tap_element` — Android-only
-- iOS 回退：`scroll_only → wait_for_ui → resolve_ui_target → tap_element`
-
-后备：
-
-- `tap`
-- `type_text`
-
-### 4.2 感知类
-
-优先：
-
-- `get_screen_summary`
-- `query_ui`
-- `resolve_ui_target`
-- `wait_for_ui`
-- `audit_ui_surface` — 页面结构体检与基线门禁（支持 `baselinePath` / `baselineMode`）
-
-后备：重度日志与诊断工具。
-
-### 4.3 调试类
-
-优先：
-
-- `perform_action_with_evidence`
-- `explain_last_failure`
-- `collect_debug_evidence`
-- `record_screen` — 链路视频证据（非阻塞 `start`/`stop`，建议绿灯路径开启 `discardOnStop` 控制产物占用）
-
-后备：`collect_diagnostics`
-
-## 5. Session 规则
-
-### 5.1 什么时候必须显式传 `sessionId`
-
-以下情况建议显式传：
-
-- 已经存在多个活动会话
-- 执行 write / diagnostics / recovery 类工具
-- 想确保动作绑定到特定设备 / app / profile
-
-### 5.2 不传 `sessionId` 会发生什么
-
-当前仓库支持一定程度的隐式会话解析，但它不是推荐默认路径：
-
-- 只有一个活动会话时，工具可能自动绑定该会话
-- 同时有多个活动会话时，可能返回歧义错误
-
-所以对 AI Agent 来说，**显式 `sessionId` 比猜测更可靠**。
-
-### 5.3 同设备互斥，多设备可并发
-
-执行模型可以理解为：
-
-- 同一个 `platform + deviceId` 的写操作互斥
-- 不同设备可并行
-
-## 6. 常见失败分流
-
-### 6.1 目标元素找不到
-
-`get_screen_summary -> wait_for_ui -> query_ui -> resolve_ui_target`
-
-### 6.2 目标元素不唯一 / 存在歧义
-
-`query_ui -> resolve_ui_target`
-
-不要在歧义未消除时直接点击。
-
-### 6.3 动作执行了，但目标状态没变化
-
-`perform_action_with_evidence -> explain_last_failure`
-
-### 6.4 怀疑是中断或系统弹窗
-
-`detect_interruption -> classify_interruption -> resolve_interruption`
-
-### 6.5 怀疑 app 崩溃 / ANR / runtime 级异常
-
-`get_crash_signals -> collect_debug_evidence -> get_logs`
-
-必要时再升级到 `collect_diagnostics`。
-
-## 7. 反模式
-
-- 不要默认坐标点击；`tap` 是低层 fallback
-- 不要默认焦点输入；优先 `type_into_element`
-- 不要跳过 session 做长链路任务
-- 不要一失败就抓最重 diagnostics
-- 不要把 transport success 当成 business success
-- 不要假设 Android / iOS / simulator / real device 完全对称
-
-## 8. 版本变更
-
-### Unreleased (PR #20) — 工具集/统一 CLI、手势/体检/非阻塞录屏与 iOS 运行时加固
-
-- **MCP 工具集与统一 CLI**：默认暴露 20 个高频核心工具（`core`），通过 `--toolset full` 或 `MOBILE_E2E_TOOLSET=full` 暴露全部 68 个工具；单入口支持 `stdio` / `doctor` / `init` / `explore` / `run`。
-- **新增能力工具**：`audit_ui_surface`（支持 `baselinePath`/`baselineMode` 基线门禁）、`perform_gesture`（iOS 模拟器 AXe / Android 部分 `adb`）、非阻塞 `record_screen`（`fixed` / `start` / `stop`，`discardOnStop`，180s 上限）。
-- **iOS 模拟器与 Explorer 加固**：`AxeServePool` 常驻只读池（`M2E_DISABLE_AXE_SERVE=1` 可关闭）规避 `dtuhidd` 泄漏；`launch_app` 支持 `launchEnv`/`launchArgs`/`terminateRunning`；多屏模拟器截图兜底；iPad SplitView/Popover 作用域识别与前台防跑偏预检；`SIGINT`/`SIGTERM` 同步清理录屏与 `axe serve` 子进程。
-
-### v0.1.13 — iOS 真机 WDA 支持 + tap_element/type_into_element 验证修复
-
-- **iOS 真机 WebDriverAgent (WDA) 后端**：`tap_element`、`type_into_element`、`resolve_ui_target` 现在支持通过 WDA HTTP API 在 iOS 物理设备上执行。WDA 必须通过 `iproxy 8100 8100 --udid <udid>` 端口转发。
-- **tap_element/type_into_element 验证修复**：`verifyResolvedIosPointWithHooks` 和 `verifyTypedIosPostconditionWithHooks` 此前错误地用 UI 层级根节点（Application）与预期元素比较，导致模拟器/真机上总是返回 `NO_MATCH`。现在使用 `findNodeAtPoint` 在解析坐标处查找最深节点进行验证。
-- **WDA `/source` 格式兼容**：`parseIosInspectNodes` 现在同时支持 axe/idb 的数组格式和 WDA 的单对象格式。WDA 原始 XCUIElementType 格式会通过 `transformWdaElement` 归一化为兼容格式。
-- **调用方式不变**：AI Agent 无需改变任何调用逻辑。`tap_element` 和 `type_into_element` 会根据 session 中的 `runnerProfile`（`native_ios` = 模拟器, `native_ios_real_device` = 真机）自动选择 axe 或 WDA 后端。
-
-## 9. 与其它文档的关系
-
-- 想快速首跑闭环：看 [`golden-path.md`](./golden-path.md)
-- 想做录制、导出、回放：看 [`flow-generation.md`](./flow-generation.md)
-- 想看 demo 证据与复现素材：看 `docs/showcase/README.md`
-- 想确认架构边界与支持范围：看 `README.md`、`docs/architecture/*`
-
-如果你只记住一句话：
-
-> 先确认 readiness 与 capability，再建立 session；优先确定性定位与结构化 evidence，失败后先归因和恢复，最后才升级重诊断。
 </file>
 
 <file path="docs/showcase/governed-agent-mobile-control-live.md">
@@ -206762,24 +207622,6 @@ RN 不是单独一套执行 backend。当前架构是：
 这些完成后，RN 线才会从“能诊断为什么不能跑”变成“能稳定帮助 RN change 进入可审查的移动验证闭环”。
 </file>
 
-<file path="packages/adapter-maestro/src/capability-model.ts">
-import { TOOL_NAMES } from "@mobile-e2e-mcp/contracts";
-import { CAPABILITY_GROUPS } from "./constants/capability-groups.js";
-import { DEFAULT_OCR_FALLBACK_POLICY } from "@mobile-e2e-mcp/adapter-vision";
-import type { CapabilityGroup, CapabilityProfile, CapabilitySupportLevel, Platform, RunnerProfile, SupportPromotionGate, ToolCapability } from "@mobile-e2e-mcp/contracts";
-import { buildOcrHostSupportSummary } from "./toolchain-runtime.js";
-⋮----
-function buildToolCapability(toolName: string, supportLevel: CapabilitySupportLevel, note: string, requiresSession = true, promotionGate?: SupportPromotionGate, condition?: string): ToolCapability
-⋮----
-function buildAndroidToolCapabilities(): ToolCapability[]
-⋮----
-function buildIosToolCapabilities(): ToolCapability[]
-⋮----
-function summarizeGroup(toolCapabilities: ToolCapability[], groupName: string, toolNames: string[], note?: string): CapabilityGroup
-⋮----
-export function buildCapabilityProfile(platform: Platform, runnerProfile: RunnerProfile | null = null): CapabilityProfile
-</file>
-
 <file path="packages/adapter-maestro/src/device-runtime.ts">
 import { existsSync } from "node:fs";
 import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
@@ -206946,625 +207788,6 @@ export async function getLogsWithRuntime(input: GetLogsInput): Promise<ToolResul
 export async function getCrashSignalsWithRuntime(input: GetCrashSignalsInput): Promise<ToolResult<GetCrashSignalsData>>
 ⋮----
 export async function collectDiagnosticsWithRuntime(input: CollectDiagnosticsInput): Promise<ToolResult<CollectDiagnosticsData>>
-</file>
-
-<file path="packages/adapter-maestro/src/index.ts">
-import {
-  type ActionIntent,
-  type ActionOutcomeSummary,
-  type AndroidPerformancePreset,
-  type CollectDebugEvidenceData,
-  type CollectDebugEvidenceInput,
-  type CompareAgainstBaselineData,
-  type CompareAgainstBaselineInput,
-  type CompleteTaskData,
-  type CompleteTaskInput,
-  type CaptureJsConsoleLogsData,
-  type CaptureJsConsoleLogsInput,
-  type JsConsoleLogSummary,
-  type CaptureJsNetworkEventsData,
-  type CaptureJsNetworkEventsInput,
-  type DescribeCapabilitiesData,
-  type DescribeCapabilitiesInput,
-  type DetectInterruptionData,
-  type DetectInterruptionInput,
-  type CollectDiagnosticsData,
-  type CollectDiagnosticsInput,
-  type DebugSignalSummary,
-  type EvidenceDeltaSummary,
-  type ExplainLastFailureData,
-  type ExplainLastFailureInput,
-  type FailureAttribution,
-  type FailureSignature,
-  type FindSimilarFailuresData,
-  type FindSimilarFailuresInput,
-  type GetCrashSignalsData,
-  type GetCrashSignalsInput,
-  type ExecutionEvidence,
-  type GetActionOutcomeData,
-  type GetActionOutcomeInput,
-  type GetScreenSummaryData,
-  type GetScreenSummaryInput,
-  type GetSessionStateData,
-  type GetSessionStateInput,
-  type GetLogsData,
-  type GetLogsInput,
-  type GetPageContextData,
-  type GetPageContextInput,
-  type InspectUiData,
-  type InspectNetworkPolicyData,
-  type InspectNetworkPolicyInput,
-  type ResolveUiTargetData,
-  type ResolveUiTargetInput,
-  type DeviceInfo,
-  type DoctorCheck,
-  type DoctorInput,
-  type ExecuteIntentData,
-  type ExecuteIntentInput,
-  type ExecuteIntentStepInput,
-  type InspectUiInput,
-  type InspectUiNode,
-  type InspectUiSummary,
-  type InstallAppInput,
-  type InstallAppData,
-  type LaunchAppInput,
-  type LaunchAppData,
-  type ListJsDebugTargetsData,
-  type ListJsDebugTargetsInput,
-  type JsDebugTarget,
-  type JsFailureGroup,
-  type JsConsoleLogEntry,
-  type JsNetworkEvent,
-  type JsNetworkFailureSummary,
-  type JsStackFrame,
-  type ListDevicesInput,
-  type LogSummary,
-  type MeasureAndroidPerformanceData,
-  type MeasureAndroidPerformanceInput,
-  type MeasureIosPerformanceData,
-  type MeasureIosPerformanceInput,
-  type OcrEvidence,
-  type Platform,
-  type PerformActionWithEvidenceData,
-  type PerformActionWithEvidenceInput,
-  type PerformGestureData,
-  type PerformGestureInput,
-  type QueryUiData,
-  type QueryUiInput,
-  type QueryUiMatch,
-  type RankFailureCandidatesData,
-  type RankFailureCandidatesInput,
-  type RecoverToKnownStateData,
-  type RecoverToKnownStateInput,
-  type RecordScreenData,
-  type RecordScreenInput,
-  type ResetAppStateData,
-  type ResetAppStateInput,
-  type ResetAppStateStrategy,
-  type RecoverySummary,
-  type ReplayCheckpointChainData,
-  type ReplayCheckpointChainInput,
-  type ReplayLastStablePathData,
-  type ReplayLastStablePathInput,
-  type ReasonCode,
-  type RunFlowInput,
-  type RunFlowData,
-  type RunnerProfile,
-  type SessionTimelineEvent,
-  type SupportedActionType,
-  type ScreenshotInput,
-  type ScreenshotData,
-  type ScrollAndTapElementData,
-  type ScrollAndTapElementInput,
-  type ScrollAndResolveUiTargetData,
-  type ScrollAndResolveUiTargetInput,
-  type ScrollOnlyData,
-  type ScrollOnlyInput,
-  type IosPerformanceTemplate,
-  type InterruptionEvent,
-  type InterruptionPolicyRuleV2,
-  type TapElementData,
-  type TapElementInput,
-  type TapData,
-  type TapInput,
-  type NavigateBackData,
-  type NavigateBackInput,
-  type TerminateAppInput,
-  type TerminateAppData,
-  type ToolResult,
-  type TypeTextData,
-  type TypeTextInput,
-  type ClassifyInterruptionData,
-  type ClassifyInterruptionInput,
-  type TypeIntoElementData,
-  type TypeIntoElementInput,
-  type TaskStepOutcome,
-  type TaskStepPlan,
-  type ResolveInterruptionData,
-  type ResolveInterruptionInput,
-  type ResumeInterruptedActionData,
-  type ResumeInterruptedActionInput,
-  type ResumeCheckpoint,
-  type SimilarFailure,
-  type StateSummary,
-  type SuggestKnownRemediationData,
-  type SuggestKnownRemediationInput,
-  type UiOrchestrationStepResult,
-  type UiScrollDirection,
-  type WaitForUiData,
-  type WaitForUiInput,
-  type WaitForUiStableData,
-  type WaitForUiStableInput,
-  type WaitForUiMode,
-  REASON_CODES,
-} from "@mobile-e2e-mcp/contracts";
-import {
-  DEFAULT_OCR_FALLBACK_POLICY,
-  MacVisionOcrProvider,
-  minimumConfidenceForOcrAction,
-  resolveTextTarget,
-  shouldUseOcrFallback,
-  verifyOcrAction,
-  type OcrFallbackActionType,
-} from "@mobile-e2e-mcp/adapter-vision";
-import {
-  appendSessionTimelineEvent,
-  isHighRiskInterruptionActionAllowed,
-  isToolAllowedByProfile,
-  listActionRecordsForSession,
-  loadAccessProfile,
-  loadActionRecord,
-  loadBaselineIndex,
-  loadFailureIndex,
-  loadInterruptionPolicyConfig,
-  loadLatestActionRecordForSession,
-  loadSessionRecord,
-  persistActionRecord,
-  persistInterruptionEvent,
-  persistSessionState,
-  queryTimelineAroundAction,
-  recordBaselineEntry,
-  recordFailureSignature,
-  resolveInterruptionPlan,
-  type InterruptionPolicyContext,
-  type PersistedActionRecord,
-} from "@mobile-e2e-mcp/core";
-import { spawn } from "node:child_process";
-import { randomUUID } from "node:crypto";
-import { existsSync } from "node:fs";
-import { mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises";
-import path from "node:path";
-import { setTimeout as delay } from "node:timers/promises";
-import { buildCapabilityProfile } from "./capability-model.js";
-import {
-  type ArtifactDirectory,
-  buildArtifactsDir,
-  buildDefaultDeviceId,
-  DEFAULT_ANDROID_DEVICE_ID,
-  DEFAULT_IOS_SIMULATOR_UDID,
-  DEFAULT_FLOWS,
-  DEFAULT_HARNESS_CONFIG_PATH,
-  DEFAULT_RUNNER_PROFILE,
-  isRecord,
-  loadHarnessSelection,
-  parseHarnessConfig,
-  readNonEmptyString,
-  readStringArray,
-  resolveRepoPath,
-  resolveSessionDefaults,
-} from "./harness-config.js";
-import {
-  collectHarnessChecks,
-  collectDiagnosticsWithRuntime,
-  buildInstallCommandWithRuntime,
-  buildLaunchCommandWithRuntime,
-  buildResetPlanWithRuntime,
-  getCrashSignalsWithRuntime,
-  getLogsWithRuntime,
-  getInstallArtifactSpec,
-  listAvailableDevices as listAvailableDevicesRuntime,
-  recordScreenWithRuntime,
-  resolveInstallArtifactPath,
-  summarizeInfoCheck,
-  takeScreenshotWithRuntime,
-  terminateAppWithRuntime,
-} from "./device-runtime.js";
-import {
-  buildNonExecutedUiTargetResolution,
-  buildScrollSwipeCoordinates,
-  buildScrollOnlySwipeCoordinates,
-  buildUiTargetResolution,
-  buildInspectUiSummary,
-  hasQueryUiSelector,
-  isWaitConditionMet,
-  normalizeQueryUiSelector,
-  parseAndroidUiHierarchyNodes,
-  parseInspectUiSummary,
-  parseIosInspectNodes,
-  parseIosInspectSummary,
-  queryUiNodes,
-  reasonCodeForResolutionStatus,
-  shouldAbortWaitForUiAfterReadFailure,
-} from "./ui-model.js";
-import {
-  type AndroidUiSnapshot,
-  type AndroidUiSnapshotFailure,
-  type IosUiSnapshot,
-  type IosUiSnapshotFailure,
-  buildAndroidUiDumpCommands,
-  buildIdbCommand,
-  buildIosSwipeCommand,
-  buildIosUiDescribeCommand,
-  captureAndroidUiSnapshot,
-  captureIosUiSnapshot,
-  isAndroidUiSnapshotFailure,
-  isIosUiSnapshotFailure,
-  probeIdbAvailability,
-  resolveIdbCliPath,
-  resolveIdbCompanionPath,
-} from "./ui-runtime.js";
-import {
-  buildResolutionNextSuggestions,
-  inspectUiWithMaestroTool,
-  normalizeScrollDirection,
-  normalizeWaitForUiMode,
-  queryUiWithMaestroTool,
-  resolveUiTargetWithMaestroTool,
-  reasonCodeForWaitTimeout,
-  scrollAndResolveUiTargetWithMaestroTool,
-  scrollOnlyWithMaestroTool,
-  scrollAndTapElementWithMaestroTool,
-  performGestureWithMaestroTool,
-  tapElementWithMaestroTool,
-  tapWithMaestroTool,
-  typeIntoElementWithMaestroTool,
-  typeTextWithMaestroTool,
-  waitForUiWithMaestroTool,
-  waitForUiStableWithMaestro as waitForUiStableWithMaestroImpl,
-  navigateBackWithMaestroTool,
-  setNavigateBackTestHooksForTesting as setNavigateBackTestHooksForTestingFromUiActionTools,
-  resetNavigateBackTestHooksForTesting as resetNavigateBackTestHooksForTestingFromUiActionTools,
-  type NavigateBackTestHooks,
-} from "./ui-tools.js";
-import { classifyInterruptionFromSignals } from "./interruption-classifier.js";
-import { detectInterruptionFromSummary } from "./interruption-detector.js";
-import { runDoctorWithMaestro } from "./doctor-runtime.js";
-import {
-  type InterruptionGuardTestHooks,
-  type OcrFallbackTestHooks,
-  performActionWithEvidenceWithMaestro as performActionWithEvidenceWithMaestroFromActionOrchestrator,
-  resetInterruptionGuardTestHooksForTesting as resetInterruptionGuardTestHooksForTestingFromActionOrchestrator,
-  resetOcrFallbackTestHooksForTesting as resetOcrFallbackTestHooksForTestingFromActionOrchestrator,
-  setInterruptionGuardTestHooksForTesting as setInterruptionGuardTestHooksForTestingFromActionOrchestrator,
-  setOcrFallbackTestHooksForTesting as setOcrFallbackTestHooksForTestingFromActionOrchestrator,
-} from "./action-orchestrator.js";
-import {
-  installAppWithRuntime,
-  launchAppWithRuntime,
-  resetAppStateWithRuntime,
-} from "./app-lifecycle-tools.js";
-import {
-  compareAgainstBaselineWithMaestro as compareAgainstBaselineWithMaestroFromActionOutcome,
-  explainLastFailureWithMaestro as explainLastFailureWithMaestroFromActionOutcome,
-  findSimilarFailuresWithMaestro as findSimilarFailuresWithMaestroFromActionOutcome,
-  getActionOutcomeWithMaestro as getActionOutcomeWithMaestroFromActionOutcome,
-  rankFailureCandidatesWithMaestro as rankFailureCandidatesWithMaestroFromActionOutcome,
-  suggestKnownRemediationWithMaestro as suggestKnownRemediationWithMaestroFromActionOutcome,
-} from "./action-outcome.js";
-import {
-  buildInterruptionCheckpoint,
-  classifyInterruptionWithMaestro as classifyInterruptionWithMaestroFromInterruptionTools,
-  detectInterruptionWithMaestro as detectInterruptionWithMaestroFromInterruptionTools,
-  resolveInterruptionWithMaestro as resolveInterruptionWithMaestroFromInterruptionTools,
-  resumeInterruptedActionWithMaestro as resumeInterruptedActionWithMaestroFromInterruptionTools,
-} from "./interruption-tools.js";
-import {
-  buildDiagnosisBriefing as buildDiagnosisBriefingFromDiagnosticsTools,
-  collectDebugEvidenceWithRuntime,
-} from "./diagnostics-tools.js";
-import { getPageContextWithMaestro as getPageContextWithMaestroFromPageContextTools } from "./page-context-tools.js";
-import {
-  collectBasicRunResultWithRuntime,
-  runFlowWithRuntime,
-} from "./flow-runtime.js";
-import {
-  buildIosAppScopeNote as buildIosAppScopeNoteFromPerformanceTools,
-  isPerfettoShellProbeAvailable as isPerfettoShellProbeAvailableFromPerformanceTools,
-  measureAndroidPerformanceWithRuntime,
-  measureIosPerformanceWithRuntime,
-  shouldResolveIosAttachTarget as shouldResolveIosAttachTargetFromPerformanceTools,
-} from "./performance-tools.js";
-import {
-  buildLogSummary as buildLogSummaryWithSessionState,
-  buildStateSummaryFromSignals as buildStateSummaryFromSignalsWithSessionState,
-  getScreenSummaryWithMaestro as getScreenSummaryWithMaestroFromSessionState,
-  getSessionStateWithMaestro as getSessionStateWithMaestroFromSessionState,
-  summarizeStateDelta,
-} from "./session-state.js";
-import {
-  recoverToKnownStateWithMaestro as recoverToKnownStateWithMaestroFromRecoveryTools,
-  replayLastStablePathWithMaestro as replayLastStablePathWithMaestroFromRecoveryTools,
-} from "./recovery-tools.js";
-import {
-  replayCheckpointChain as replayCheckpointChainFromReplayChain,
-} from "./replay-chain.js";
-import {
-  completeTaskWithMaestro as completeTaskWithMaestroFromTaskPlanner,
-  executeIntentPlanWithMaestro as executeIntentPlanWithMaestroFromTaskPlanner,
-  executeIntentWithMaestro as executeIntentWithMaestroFromTaskPlanner,
-} from "./task-planner.js";
-import { buildInterruptionEvent, decideInterruptionResolution } from "./interruption-resolver.js";
-import { buildInterruptionTimelineEvent, buildResumeCheckpoint, hasStateDrift, pickEventSource, summarizeInterruptionDetail } from "./interruption-orchestrator.js";
-import {
-  buildInspectorExceptionLogEntry,
-  buildJsConsoleLogSummary,
-  buildJsDebugTargetSelectionNarrativeLine,
-  buildJsNetworkFailureSummary,
-  buildJsNetworkSuspectSentences,
-  captureJsConsoleLogsWithMaestro,
-  captureJsNetworkEventsWithMaestro,
-  classifyDebugSignal,
-  formatJsConsoleEntry,
-  listJsDebugTargetsWithMaestro,
-  normalizeMetroBaseUrl,
-  rankJsDebugTarget,
-  selectPreferredJsDebugTarget,
-  selectPreferredJsDebugTargetWithReason,
-} from "./js-debug.js";
-import {
-  buildAndroidPerformanceData,
-  buildIosPerformanceData,
-  buildPerformanceMarkdownReport,
-  buildPerformanceNextSuggestions,
-  parseTraceProcessorTsv,
-  summarizeAndroidPerformance,
-  summarizeIosPerformance,
-} from "./performance-model.js";
-import {
-  DEFAULT_PERFORMANCE_DURATION_MS,
-  buildAndroidPerformancePlan,
-  buildIosPerformancePlan,
-  buildTraceProcessorScript,
-  buildTraceProcessorShellCommand,
-  resolveAndroidPerformancePlanStrategy,
-  resolveTraceProcessorPath,
-} from "./performance-runtime.js";
-import {
-  buildExecutionEvidence,
-  buildFailureReason,
-  countNonEmptyLines,
-  executeRunner,
-  normalizePositiveInteger,
-  shellEscape,
-  toRelativePath,
-  type CommandExecution,
-  unrefTimer,
-} from "./runtime-shared.js";
-⋮----
-export function buildLogSummary(content: string, query?: string): LogSummary
-⋮----
-export function buildStateSummaryFromSignals(params: {
-  uiSummary?: InspectUiSummary;
-  logSummary?: LogSummary;
-  crashSummary?: LogSummary;
-}): StateSummary
-⋮----
-export function setOcrFallbackTestHooksForTesting(hooks: OcrFallbackTestHooks | undefined): void
-⋮----
-export function resetOcrFallbackTestHooksForTesting(): void
-⋮----
-export function setInterruptionGuardTestHooksForTesting(hooks: InterruptionGuardTestHooks | undefined): void
-⋮----
-export function resetInterruptionGuardTestHooksForTesting(): void
-⋮----
-// ─── Test Hooks ─────────────────────────────────────────────────────────
-// Inject mock implementations for testing without live devices.
-// Each set/reset pair affects only the current process and should be
-// cleaned up in afterEach to prevent test leakage.
-//
-// Available hooks:
-// - setOcrFallbackTestHooksForTesting / resetOcrFallbackTestHooksForTesting
-// - setInterruptionGuardTestHooksForTesting / resetInterruptionGuardTestHooksForTesting
-// - setNavigateBackTestHooksForTesting / resetNavigateBackTestHooksForTesting
-⋮----
-export function setNavigateBackTestHooksForTesting(hooks: NavigateBackTestHooks | undefined): void
-⋮----
-export function resetNavigateBackTestHooksForTesting(): void
-⋮----
-async function executeIntentWithMaestro(
-  params: {
-    sessionId: string;
-    platform: Platform;
-    runnerProfile: RunnerProfile;
-    harnessConfigPath?: string;
-    deviceId?: string;
-    appId?: string;
-    dryRun?: boolean;
-  },
-  action: ActionIntent,
-): Promise<ToolResult<TapElementData | TypeIntoElementData | WaitForUiData | LaunchAppData | TerminateAppData>>
-⋮----
-export async function executeIntentPlanWithMaestro(
-  input: ExecuteIntentInput,
-): Promise<ToolResult<ExecuteIntentData>>
-⋮----
-export async function completeTaskWithMaestro(
-  input: CompleteTaskInput,
-): Promise<ToolResult<CompleteTaskData>>
-⋮----
-export function buildDiagnosisBriefing(params: {
-  status: ToolResult["status"];
-  reasonCode: ReasonCode;
-  appId?: string;
-  suspectAreas: string[];
-  jsDebugTargetId?: string;
-  jsConsoleLogCount?: number;
-  jsNetworkEventCount?: number;
-  retryRecommendationTier?: PerformActionWithEvidenceData["retryRecommendationTier"];
-  retryRecommendation?: PerformActionWithEvidenceData["retryRecommendation"];
-}): string[]
-export async function describeCapabilitiesWithMaestro(
-  input: DescribeCapabilitiesInput,
-): Promise<ToolResult<DescribeCapabilitiesData>>
-⋮----
-export async function getScreenSummaryWithMaestro(
-  input: GetScreenSummaryInput,
-): Promise<ToolResult<GetScreenSummaryData>>
-⋮----
-export async function getSessionStateWithMaestro(
-  input: GetSessionStateInput,
-): Promise<ToolResult<GetSessionStateData>>
-⋮----
-export async function getPageContextWithMaestro(
-  input: GetPageContextInput,
-): Promise<ToolResult<GetPageContextData>>
-⋮----
-export async function detectInterruptionWithMaestro(
-  input: DetectInterruptionInput,
-): Promise<ToolResult<DetectInterruptionData>>
-⋮----
-export async function classifyInterruptionWithMaestro(
-  input: ClassifyInterruptionInput,
-): Promise<ToolResult<ClassifyInterruptionData>>
-⋮----
-export async function resolveInterruptionWithMaestro(
-  input: ResolveInterruptionInput,
-  policyContext?: InterruptionPolicyContext,
-): Promise<ToolResult<ResolveInterruptionData>>
-⋮----
-export async function resumeInterruptedActionWithMaestro(
-  input: ResumeInterruptedActionInput,
-): Promise<ToolResult<ResumeInterruptedActionData>>
-⋮----
-export async function performActionWithEvidenceWithMaestro(
-  input: PerformActionWithEvidenceInput,
-): Promise<ToolResult<PerformActionWithEvidenceData>>
-⋮----
-export async function getActionOutcomeWithMaestro(
-  input: GetActionOutcomeInput,
-): Promise<ToolResult<GetActionOutcomeData>>
-⋮----
-export async function explainLastFailureWithMaestro(
-  input: ExplainLastFailureInput,
-): Promise<ToolResult<ExplainLastFailureData>>
-⋮----
-export async function rankFailureCandidatesWithMaestro(
-  input: RankFailureCandidatesInput,
-): Promise<ToolResult<RankFailureCandidatesData>>
-⋮----
-export async function recoverToKnownStateWithMaestro(
-  input: RecoverToKnownStateInput,
-): Promise<ToolResult<RecoverToKnownStateData>>
-⋮----
-export async function replayLastStablePathWithMaestro(
-  input: ReplayLastStablePathInput,
-): Promise<ToolResult<ReplayLastStablePathData>>
-⋮----
-export async function replayCheckpointChainWithMaestro(
-  input: ReplayCheckpointChainInput,
-): Promise<ToolResult<ReplayCheckpointChainData>>
-⋮----
-export async function findSimilarFailuresWithMaestro(
-  input: FindSimilarFailuresInput,
-): Promise<ToolResult<FindSimilarFailuresData>>
-⋮----
-export async function compareAgainstBaselineWithMaestro(
-  input: CompareAgainstBaselineInput,
-): Promise<ToolResult<CompareAgainstBaselineData>>
-⋮----
-export async function suggestKnownRemediationWithMaestro(
-  input: SuggestKnownRemediationInput,
-): Promise<ToolResult<SuggestKnownRemediationData>>
-⋮----
-export async function collectBasicRunResult(params: {
-  repoRoot: string;
-  sessionId: string;
-  durationMs: number;
-  attempts: number;
-  artifactsDir: ArtifactDirectory;
-  harnessConfigPath: string;
-  runnerProfile: RunnerProfile;
-  runnerScript: string;
-  flowPath: string;
-  requestedFlowPath?: string;
-  configuredFlows: string[];
-  command: string[];
-  dryRun: boolean;
-  execution?: CommandExecution;
-  unsupportedCustomFlow?: boolean;
-}): Promise<ToolResult<RunFlowData>>
-⋮----
-export async function runFlowWithMaestro(input: RunFlowInput): Promise<ToolResult<RunFlowData>>
-⋮----
-export async function listAvailableDevices(
-  input: ListDevicesInput = {},
-): Promise<ToolResult<{ android: DeviceInfo[]; ios: DeviceInfo[] }>>
-⋮----
-export async function typeTextWithMaestro(input: TypeTextInput): Promise<ToolResult<TypeTextData>>
-⋮----
-export async function resolveUiTargetWithMaestro(input: ResolveUiTargetInput): Promise<ToolResult<ResolveUiTargetData>>
-⋮----
-export async function tapElementWithMaestro(input: TapElementInput): Promise<ToolResult<TapElementData>>
-⋮----
-export async function typeIntoElementWithMaestro(input: TypeIntoElementInput): Promise<ToolResult<TypeIntoElementData>>
-⋮----
-export async function scrollAndTapElementWithMaestro(input: ScrollAndTapElementInput): Promise<ToolResult<ScrollAndTapElementData>>
-⋮----
-export async function waitForUiWithMaestro(input: WaitForUiInput): Promise<ToolResult<WaitForUiData>>
-⋮----
-export async function waitForUiStableWithMaestro(input: WaitForUiStableInput): Promise<ToolResult<WaitForUiStableData>>
-⋮----
-export async function scrollAndResolveUiTargetWithMaestro(input: ScrollAndResolveUiTargetInput): Promise<ToolResult<ScrollAndResolveUiTargetData>>
-⋮----
-export async function scrollOnlyWithMaestro(input: ScrollOnlyInput): Promise<ToolResult<ScrollOnlyData>>
-⋮----
-export async function performGestureWithMaestro(input: PerformGestureInput): Promise<ToolResult<PerformGestureData>>
-⋮----
-export async function tapWithMaestro(input: TapInput): Promise<ToolResult<TapData>>
-⋮----
-export async function navigateBackWithMaestro(input: NavigateBackInput): Promise<ToolResult<NavigateBackData>>
-⋮----
-export async function inspectUiWithMaestro(input: InspectUiInput): Promise<ToolResult<InspectUiData>>
-⋮----
-export async function queryUiWithMaestro(input: QueryUiInput): Promise<ToolResult<QueryUiData>>
-⋮----
-export async function terminateAppWithMaestro(input: TerminateAppInput): Promise<ToolResult<TerminateAppData>>
-⋮----
-export async function takeScreenshotWithMaestro(input: ScreenshotInput): Promise<ToolResult<ScreenshotData>>
-⋮----
-export async function recordScreenWithMaestro(input: RecordScreenInput): Promise<ToolResult<RecordScreenData>>
-⋮----
-export async function resetAppStateWithMaestro(input: ResetAppStateInput): Promise<ToolResult<ResetAppStateData>>
-⋮----
-export async function getLogsWithMaestro(input: GetLogsInput): Promise<ToolResult<GetLogsData>>
-⋮----
-export async function getCrashSignalsWithMaestro(input: GetCrashSignalsInput): Promise<ToolResult<GetCrashSignalsData>>
-⋮----
-export async function collectDiagnosticsWithMaestro(input: CollectDiagnosticsInput): Promise<ToolResult<CollectDiagnosticsData>>
-⋮----
-export async function collectDebugEvidenceWithMaestro(input: CollectDebugEvidenceInput): Promise<ToolResult<CollectDebugEvidenceData>>
-⋮----
-export function isPerfettoShellProbeAvailable(execution: CommandExecution): boolean
-⋮----
-export function buildIosAppScopeNote(appId?: string, attachTarget?: string): string
-⋮----
-export function shouldResolveIosAttachTarget(params: {
-  dryRun?: boolean;
-  template: IosPerformanceTemplate;
-  appId?: string;
-}): boolean
-⋮----
-export async function measureAndroidPerformanceWithMaestro(input: MeasureAndroidPerformanceInput): Promise<ToolResult<MeasureAndroidPerformanceData>>
-⋮----
-export async function measureIosPerformanceWithMaestro(input: MeasureIosPerformanceInput): Promise<ToolResult<MeasureIosPerformanceData>>
-⋮----
-export async function launchAppWithMaestro(input: LaunchAppInput): Promise<ToolResult<LaunchAppData>>
-⋮----
-export async function installAppWithMaestro(input: InstallAppInput): Promise<ToolResult<InstallAppData>>
-⋮----
-export async function runDoctor(
-  input: DoctorInput = {},
-): Promise<ToolResult<{ checks: DoctorCheck[]; devices: { android: DeviceInfo[]; ios: DeviceInfo[] }; guidance: Array<{ dependency: string; status: "pass" | "warn" | "fail"; platformScope: "android" | "ios" | "cross"; installCommands: string[]; verifyCommands: string[]; envHints: string[] }> }>>
 </file>
 
 <file path="packages/adapter-maestro/src/ui-model.ts">
@@ -207830,10 +208053,6 @@ frame: { x: 0, y: 0, width: 430, height: 932 }, // rect → frame
 type: "Button", // XCUIElementTypeButton → Button
 ⋮----
 // Should parse root + child = 2 nodes
-</file>
-
-<file path="packages/contracts/src/index.ts">
-
 </file>
 
 <file path="packages/explorer/src/report/failure-review.ts">
@@ -208247,223 +208466,29 @@ export async function generateReport(
 // Update index.json
 </file>
 
-<file path="packages/mcp-server/src/index.ts">
-import { readdir } from "node:fs/promises";
+<file path="packages/mcp-server/test/server.test.ts">
+import assert from "node:assert/strict";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { resolveRepoPath, evidencePaths } from "@mobile-e2e-mcp/adapter-maestro";
-import type {
-  ClassifyInterruptionInput,
-  DetectInterruptionInput,
-  PerformActionWithEvidenceInput,
-  Platform,
-	RequestManualHandoffInput,
-	ResolveInterruptionInput,
-	ResumeInterruptedActionInput,
-	ToolResult,
-	ToolSetName,
-} from "@mobile-e2e-mcp/contracts";
-import { REASON_CODES, TOOL_NAMES, TOOLSET_NAMES } from "@mobile-e2e-mcp/contracts";
-import { filterToolListByToolset } from "./toolsets.js";
-import {
-	appendSessionTimelineEvent,
-	coreEvidencePaths,
-	legacyCoreEvidencePaths,
-	loadSessionRecord,
-	recoverStaleLeases,
-	runExclusive,
-} from "@mobile-e2e-mcp/core";
-import {
-  type ToolPolicyRequirement,
-} from "./constants/policy-scopes.js";
-import { enforcePolicyForTool } from "./policy-guard.js";
-import {
-	MobileE2EMcpServer,
-	type MobileE2EMcpToolContractMap,
-	type MobileE2EMcpToolName,
-	type MobileE2EMcpToolRegistry,
-} from "./server.js";
-import { cancelRecordSession } from "./tools/cancel-record-session.js";
-import { captureElementScreenshot } from "./tools/capture-element-screenshot.js";
-import { auditUiSurface } from "./tools/audit-ui-surface.js";
-import { captureJsConsoleLogs } from "./tools/capture-js-console-logs.js";
-import { captureJsNetworkEvents } from "./tools/capture-js-network-events.js";
-import { classifyInterruption } from "./tools/classify-interruption.js";
-import { collectDebugEvidence } from "./tools/collect-debug-evidence.js";
-import { collectDiagnostics } from "./tools/collect-diagnostics.js";
-import { compareAgainstBaseline } from "./tools/compare-against-baseline.js";
-import { compareVisualBaselineTool } from "./tools/compare-visual-baseline.js";
-import { completeTask } from "./tools/complete-task.js";
-import { describeCapabilities } from "./tools/describe-capabilities.js";
-import { detectInterruption } from "./tools/detect-interruption.js";
-import { diagnoseNetworkFailure } from "./tools/diagnose-network-failure.js";
-import { doctor } from "./tools/doctor.js";
-import { endRecordSession } from "./tools/end-record-session.js";
-import { endSession } from "./tools/end-session.js";
-import { executeIntent } from "./tools/execute-intent.js";
-import { explainLastFailure } from "./tools/explain-last-failure.js";
-import { exportSessionFlow } from "./tools/export-session-flow.js";
-import { findSimilarFailures } from "./tools/find-similar-failures.js";
-import { getActionOutcome } from "./tools/get-action-outcome.js";
-import { getCrashSignals } from "./tools/get-crash-signals.js";
-import { getLogs } from "./tools/get-logs.js";
-import { getPageContext } from "./tools/get-page-context.js";
-import { getRecordSessionStatus } from "./tools/get-record-session-status.js";
-import { getScreenSummary } from "./tools/get-screen-summary.js";
-import { getSessionState } from "./tools/get-session-state.js";
-import { inspectNetworkPolicy } from "./tools/inspect-network-policy.js";
-import { inspectUi } from "./tools/inspect-ui.js";
-import { installApp } from "./tools/install-app.js";
-import { launchApp } from "./tools/launch-app.js";
-import { listDevices } from "./tools/list-devices.js";
-import { listJsDebugTargets } from "./tools/list-js-debug-targets.js";
-import { measureAndroidPerformance } from "./tools/measure-android-performance.js";
-import { measureIosPerformance } from "./tools/measure-ios-performance.js";
-import { navigateBack } from "./tools/navigate-back.js";
-import { performActionWithAutoRemediation } from "./tools/perform-action-with-auto-remediation.js";
-import { performActionWithEvidence } from "./tools/perform-action-with-evidence.js";
-import { performGesture } from "./tools/perform-gesture.js";
-import { persistSessionEvidenceCapture } from "./tools/persist-session-evidence.js";
-import { probeNetworkReadinessTool } from "./tools/probe-network-readiness.js";
-import { queryUi } from "./tools/query-ui.js";
-import { rankFailureCandidates } from "./tools/rank-failure-candidates.js";
-import { recordScreen } from "./tools/record-screen.js";
-import { recordTaskFlow } from "./tools/record-task-flow.js";
-import { recoverToKnownState } from "./tools/recover-to-known-state.js";
-import { replayCheckpointChainTool } from "./tools/replay-checkpoint-chain.js";
-import { replayLastStablePath } from "./tools/replay-last-stable-path.js";
-import { requestManualHandoff } from "./tools/request-manual-handoff.js";
-import { resetAppState } from "./tools/reset-app-state.js";
-import { resolveInterruption } from "./tools/resolve-interruption.js";
-import { resolveUiTarget } from "./tools/resolve-ui-target.js";
-import { resumeInterruptedAction } from "./tools/resume-interrupted-action.js";
-import { runFlow } from "./tools/run-flow.js";
-import { scrollAndResolveUiTarget } from "./tools/scroll-and-resolve-ui-target.js";
-import { scrollAndTapElement } from "./tools/scroll-and-tap-element.js";
-import { scrollOnly } from "./tools/scroll-only.js";
-import { startRecordSession } from "./tools/start-record-session.js";
-import { startSession } from "./tools/start-session.js";
-import { suggestKnownRemediation } from "./tools/suggest-known-remediation.js";
-import { takeScreenshot } from "./tools/take-screenshot.js";
-import { tap } from "./tools/tap.js";
-import { tapElement } from "./tools/tap-element.js";
-import { terminateApp } from "./tools/terminate-app.js";
-import { typeIntoElement } from "./tools/type-into-element.js";
-import { typeText } from "./tools/type-text.js";
-import { validateFlowTool } from "./tools/validate-flow.js";
-import { waitForUi } from "./tools/wait-for-ui.js";
-import { waitForUiStable } from "./tools/wait-for-ui-stable.js";
+import test from "node:test";
+import { fileURLToPath } from "node:url";
+import { buildActionRecordRelativePath, buildDeviceLeaseRecordRelativePath, buildRecordEventsRelativePath, buildRecordedStepsRelativePath, buildRecordSessionRelativePath, buildSessionAuditRelativePath, buildSessionRecordRelativePath, persistActionRecord } from "@mobile-e2e-mcp/core";
+import { IOS_CONDITIONAL_GROUP_FRONTIER, IOS_CONDITIONAL_TOOL_FRONTIER } from "../../adapter-maestro/src/capability-model.ts";
+import { createServer } from "../src/index.ts";
 ⋮----
-interface ActiveSessionCandidate {
-	sessionId: string;
-	session: NonNullable<
-		Awaited<ReturnType<typeof loadSessionRecord>>
-	>["session"];
-}
+function buildTestDeviceId(sessionId: string): string
 ⋮----
-type ToolName = MobileE2EMcpToolName;
-type ToolInput<TName extends ToolName> =
-	MobileE2EMcpToolContractMap[TName]["input"];
-type ToolOutputData<TName extends ToolName> =
-	MobileE2EMcpToolContractMap[TName]["outputData"];
-type ToolOutput<TName extends ToolName> = ToolResult<ToolOutputData<TName>>;
-type ToolHandler<TName extends ToolName> = (
-	input: ToolInput<TName>,
-) => Promise<ToolOutput<TName>>;
-type AnyToolHandler = {
-	bivarianceHack(input: unknown): Promise<ToolResult<unknown>>;
-}["bivarianceHack"];
+async function cleanupSessionArtifact(sessionId: string): Promise<void>
 ⋮----
-bivarianceHack(input: unknown): Promise<ToolResult<unknown>>;
+async function cleanupActionArtifact(actionId: string): Promise<void>
 ⋮----
-// ToolPolicyRequirement is imported from ./constants/policy-scopes.js
+async function cleanupRecordSessionArtifacts(recordSessionId: string): Promise<void>
 ⋮----
-interface ToolDescriptor {
-	name: ToolName;
-	description: string;
-	handler?: AnyToolHandler;
-	createHandler?: (
-		registry: Partial<MobileE2EMcpToolRegistry>,
-	) => AnyToolHandler;
-	policy: {
-		enforced: boolean;
-		requiredScopes: readonly ToolPolicyRequirement[];
-	};
-	session: {
-		required: boolean;
-		requireResolvedSessionContext?: boolean;
-	};
-	audit: {
-		captureResultEvidence: boolean;
-	};
-	typing: {
-		inputType: string;
-		outputType: string;
-	};
-}
+// AXe CLI format: ["axe", "tap", "-x", "12", "-y", "34", "--udid", "..."]
 ⋮----
-type SessionScopedInput = {
-	sessionId?: string;
-	platform?: Platform;
-	deviceId?: string;
-	appId?: string;
-	runnerProfile?: string | null;
-};
+// AXe CLI format: ["axe", "type", "hello", "--udid", "..."]
 ⋮----
-export type ToolListItem = {
-	name: ToolName;
-	description: string;
-};
-⋮----
-function defineToolDescriptor<TName extends ToolName>(
-	descriptor: Omit<ToolDescriptor, "typing"> & { name: TName },
-): ToolDescriptor
-⋮----
-async function listActiveSessionCandidates(
-	repoRoot: string,
-): Promise<ActiveSessionCandidate[]>
-⋮----
-function pickImplicitSessionId(
-	input: {
-		platform?: Platform;
-		deviceId?: string;
-		appId?: string;
-		runnerProfile?: string | null;
-	},
-	candidates: ActiveSessionCandidate[],
-): { selectedSessionId?: string; ambiguity: boolean }
-⋮----
-function withPolicy<TName extends ToolName>(
-	toolName: TName,
-	handler: ToolHandler<TName>,
-): ToolHandler<TName>
-⋮----
-function withPolicyAndAudit<TName extends ToolName>(
-	toolName: TName,
-	handler: ToolHandler<TName>,
-): ToolHandler<TName>
-⋮----
-function withSessionExecution<TName extends ToolName>(
-	toolName: TName,
-	handler: ToolHandler<TName>,
-	options?: { requireResolvedSessionContext?: boolean },
-): ToolHandler<TName>
-⋮----
-const asOutput = (result: ToolResult<unknown>): ToolOutput<TName> =>
-⋮----
-// Phase 12-08: This cast is unavoidable because TypeScript cannot infer the exact
-// ToolOutputData<TName> type from a generic union at runtime. The union of all
-// possible data shapes does not overlap cleanly with Record<string, unknown>.
-⋮----
-function composeToolHandler(
-	descriptor: ToolDescriptor,
-	registry: Partial<MobileE2EMcpToolRegistry>,
-): AnyToolHandler
-⋮----
-export function buildToolListMetadata(
-	toolset: ToolSetName = TOOLSET_NAMES.full,
-): ToolListItem[]
-⋮----
-export function createServer(): MobileE2EMcpServer
+// Conditional tools do not have promotion gates — they are platform-dependent, not blocked.
 </file>
 
 <file path="scripts/showcase/react-native-one-command.ts">
@@ -208935,31 +208960,6 @@ pnpm run validate:governed-control-evidence
 ```
 
 Result: PASS. The tracked summary preserves the vivo proof verdict and compact evidence metrics without committing the full UI hierarchy.
-</file>
-
-<file path="packages/mcp-server/test/server.test.ts">
-import assert from "node:assert/strict";
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
-import path from "node:path";
-import test from "node:test";
-import { fileURLToPath } from "node:url";
-import { buildActionRecordRelativePath, buildDeviceLeaseRecordRelativePath, buildRecordEventsRelativePath, buildRecordedStepsRelativePath, buildRecordSessionRelativePath, buildSessionAuditRelativePath, buildSessionRecordRelativePath, persistActionRecord } from "@mobile-e2e-mcp/core";
-import { IOS_CONDITIONAL_GROUP_FRONTIER, IOS_CONDITIONAL_TOOL_FRONTIER } from "../../adapter-maestro/src/capability-model.ts";
-import { createServer } from "../src/index.ts";
-⋮----
-function buildTestDeviceId(sessionId: string): string
-⋮----
-async function cleanupSessionArtifact(sessionId: string): Promise<void>
-⋮----
-async function cleanupActionArtifact(actionId: string): Promise<void>
-⋮----
-async function cleanupRecordSessionArtifacts(recordSessionId: string): Promise<void>
-⋮----
-// AXe CLI format: ["axe", "tap", "-x", "12", "-y", "34", "--udid", "..."]
-⋮----
-// AXe CLI format: ["axe", "type", "hello", "--udid", "..."]
-⋮----
-// Conditional tools do not have promotion gates — they are platform-dependent, not blocked.
 </file>
 
 <file path="scripts/dev/android-tool-probe.ts">
@@ -209438,223 +209438,6 @@ async function main(): Promise<void>
 function isCliEntrypoint(): boolean
 </file>
 
-<file path="CHANGELOG.md">
-# Changelog
-
-All notable changes to this project will be documented in this file.
-
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
-and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-
-## [Unreleased]
-
-## [0.1.20] - 2026-11-26
-
-### Added
-- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
-- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
-
-### Changed
-- Improved diagnostics, evidence capture, and performance analysis workflows for mobile automation runs.
-- Refined operator documentation, governance guidance, and architecture references around the release.
-- Release scope includes 22 merged commits between mcp-server-v0.1.19 and the target tag.
-
-### Fixed
-- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
-
-## [0.1.19] - 2026-06-06
-
-### Added
-- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
-
-### Changed
-- Release scope includes 1 merged commit between mcp-server-v0.1.18 and the target tag.
-
-### Fixed
-- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
-
-## [0.1.18] - 2026-06-03
-
-### Added
-- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
-- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
-
-### Changed
-- Refined operator documentation, governance guidance, and architecture references around the release.
-- Release scope includes 1 merged commit between mcp-server-v0.1.17 and the target tag.
-
-### Fixed
-- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
-
-## [0.1.17] - 2026-06-03
-
-### Added
-- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
-- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
-
-### Changed
-- Refined operator documentation, governance guidance, and architecture references around the release.
-- Release scope includes 1 merged commit between mcp-server-v0.1.16 and the target tag.
-
-### Fixed
-- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
-
-## [0.1.16] - 2026-06-03
-
-### Added
-- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
-- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
-
-### Changed
-- Release scope includes 1 merged commit between mcp-server-v0.1.15 and the target tag.
-
-### Fixed
-- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
-
-## [0.1.15] - 2026-06-03
-
-### Added
-- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
-- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
-
-### Changed
-- Improved diagnostics, evidence capture, and performance analysis workflows for mobile automation runs.
-- Refined operator documentation, governance guidance, and architecture references around the release.
-- Release scope includes 103 merged commits between mcp-server-v0.1.14 and the target tag.
-
-### Fixed
-- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
-
-## [0.1.14] - 2026-05-04
-
-### Added
-- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
-- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
-
-### Changed
-- Improved diagnostics, evidence capture, and performance analysis workflows for mobile automation runs.
-- Refined operator documentation, governance guidance, and architecture references around the release.
-- Release scope includes 36 merged commits between mcp-server-v0.1.13 and the target tag.
-
-### Fixed
-- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
-
-## [0.1.13] - 2026-04-12
-
-### Added
-- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
-- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
-
-### Changed
-- Refined operator documentation, governance guidance, and architecture references around the release.
-- Release scope includes 15 merged commits between mcp-server-v0.1.12 and the target tag.
-
-### Fixed
-- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
-
-## [0.1.12] - 2026-04-12
-
-### Added
-- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
-- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
-- Improved bounded OCR and vision fallback support for cases where deterministic selectors are unavailable.
-
-### Changed
-- Improved diagnostics, evidence capture, and performance analysis workflows for mobile automation runs.
-- Refined operator documentation, governance guidance, and architecture references around the release.
-- Release scope includes 147 merged commits between mcp-server-v0.1.11 and the target tag.
-
-### Fixed
-- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
-
-## [0.1.11] - 2026-03-29
-
-### Added
-- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
-- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
-- Improved bounded OCR and vision fallback support for cases where deterministic selectors are unavailable.
-
-### Changed
-- Improved diagnostics, evidence capture, and performance analysis workflows for mobile automation runs.
-- Refined operator documentation, governance guidance, and architecture references around the release.
-- Release scope includes 48 merged commits between mcp-server-v0.1.9 and the target tag.
-
-### Fixed
-- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
-
-## [0.1.9] - 2026-03-26
-
-### Added
-- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
-- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
-- Improved bounded OCR and vision fallback support for cases where deterministic selectors are unavailable.
-
-### Changed
-- Refined operator documentation, governance guidance, and architecture references around the release.
-- Release scope includes 9 merged commits between mcp-server-v0.1.8 and the target tag.
-
-### Fixed
-- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
-
-## [0.1.8] - 2026-03-23
-
-### Added
-- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
-- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
-
-### Changed
-- Improved diagnostics, evidence capture, and performance analysis workflows for mobile automation runs.
-- Refined operator documentation, governance guidance, and architecture references around the release.
-- Release scope includes 19 merged commits between mcp-server-v0.1.7 and the target tag.
-
-### Fixed
-- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
-
-## [0.1.7] - 2026-03-21
-
-### Added
-- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
-- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
-- Improved bounded OCR and vision fallback support for cases where deterministic selectors are unavailable.
-
-### Changed
-- Improved diagnostics, evidence capture, and performance analysis workflows for mobile automation runs.
-- Refined operator documentation, governance guidance, and architecture references around the release.
-- Release scope includes 38 merged commits between mcp-server-v0.1.6 and the target tag.
-
-### Fixed
-- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
-
-## [0.1.6] - 2026-03-20
-
-### Added
-- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
-- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
-- Improved bounded OCR and vision fallback support for cases where deterministic selectors are unavailable.
-
-### Changed
-- Improved diagnostics, evidence capture, and performance analysis workflows for mobile automation runs.
-- Refined operator documentation, governance guidance, and architecture references around the release.
-- Release scope includes 39 merged commits between mcp-server-v0.1.5 and the target tag.
-
-### Fixed
-- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
-
-## [0.1.5] - 2026-03-20
-
-### Added
-- Introduced the first public AI-first mobile E2E MCP server with session lifecycle, app control, UI inspection, interaction, diagnostics, interruption handling, and failure-analysis tools.
-- Established deterministic-first execution adapters plus bounded OCR/vision fallback for Android, iOS, React Native, and Flutter automation workflows.
-- Published runnable sample flows, showcase demos, and real-device/simulator validation assets for login, recovery, and harness onboarding scenarios.
-
-### Changed
-- Reorganized the repository into a pnpm monorepo with explicit contracts, core orchestration, adapters, and MCP server package boundaries.
-- Added stdio/dev CLI entrypoints, package metadata, governance baselines, and release automation needed for public npm distribution.
-
-### Fixed
-- Hardened doctor checks, dry-run behavior, selector resolution, and session or lease stability during the initial release cycle.
-</file>
-
 <file path="docs/testing/android-tool-probe-checklist.md">
 # Android Tool Probe Checklist
 
@@ -209912,6 +209695,223 @@ pnpm run validate:explorer-android-evidence -- --min-pages 45 --min-depth 4
 
 - 正式入口: `pnpm run validate:android-tool-probe`
 - 兼容入口: `pnpm exec tsx tmp-tool-verification.ts`
+</file>
+
+<file path="CHANGELOG.md">
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+## [0.1.20] - 2026-11-26
+
+### Added
+- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
+- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
+
+### Changed
+- Improved diagnostics, evidence capture, and performance analysis workflows for mobile automation runs.
+- Refined operator documentation, governance guidance, and architecture references around the release.
+- Release scope includes 22 merged commits between mcp-server-v0.1.19 and the target tag.
+
+### Fixed
+- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
+
+## [0.1.19] - 2026-06-06
+
+### Added
+- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
+
+### Changed
+- Release scope includes 1 merged commit between mcp-server-v0.1.18 and the target tag.
+
+### Fixed
+- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
+
+## [0.1.18] - 2026-06-03
+
+### Added
+- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
+- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
+
+### Changed
+- Refined operator documentation, governance guidance, and architecture references around the release.
+- Release scope includes 1 merged commit between mcp-server-v0.1.17 and the target tag.
+
+### Fixed
+- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
+
+## [0.1.17] - 2026-06-03
+
+### Added
+- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
+- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
+
+### Changed
+- Refined operator documentation, governance guidance, and architecture references around the release.
+- Release scope includes 1 merged commit between mcp-server-v0.1.16 and the target tag.
+
+### Fixed
+- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
+
+## [0.1.16] - 2026-06-03
+
+### Added
+- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
+- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
+
+### Changed
+- Release scope includes 1 merged commit between mcp-server-v0.1.15 and the target tag.
+
+### Fixed
+- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
+
+## [0.1.15] - 2026-06-03
+
+### Added
+- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
+- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
+
+### Changed
+- Improved diagnostics, evidence capture, and performance analysis workflows for mobile automation runs.
+- Refined operator documentation, governance guidance, and architecture references around the release.
+- Release scope includes 103 merged commits between mcp-server-v0.1.14 and the target tag.
+
+### Fixed
+- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
+
+## [0.1.14] - 2026-05-04
+
+### Added
+- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
+- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
+
+### Changed
+- Improved diagnostics, evidence capture, and performance analysis workflows for mobile automation runs.
+- Refined operator documentation, governance guidance, and architecture references around the release.
+- Release scope includes 36 merged commits between mcp-server-v0.1.13 and the target tag.
+
+### Fixed
+- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
+
+## [0.1.13] - 2026-04-12
+
+### Added
+- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
+- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
+
+### Changed
+- Refined operator documentation, governance guidance, and architecture references around the release.
+- Release scope includes 15 merged commits between mcp-server-v0.1.12 and the target tag.
+
+### Fixed
+- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
+
+## [0.1.12] - 2026-04-12
+
+### Added
+- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
+- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
+- Improved bounded OCR and vision fallback support for cases where deterministic selectors are unavailable.
+
+### Changed
+- Improved diagnostics, evidence capture, and performance analysis workflows for mobile automation runs.
+- Refined operator documentation, governance guidance, and architecture references around the release.
+- Release scope includes 147 merged commits between mcp-server-v0.1.11 and the target tag.
+
+### Fixed
+- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
+
+## [0.1.11] - 2026-03-29
+
+### Added
+- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
+- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
+- Improved bounded OCR and vision fallback support for cases where deterministic selectors are unavailable.
+
+### Changed
+- Improved diagnostics, evidence capture, and performance analysis workflows for mobile automation runs.
+- Refined operator documentation, governance guidance, and architecture references around the release.
+- Release scope includes 48 merged commits between mcp-server-v0.1.9 and the target tag.
+
+### Fixed
+- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
+
+## [0.1.9] - 2026-03-26
+
+### Added
+- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
+- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
+- Improved bounded OCR and vision fallback support for cases where deterministic selectors are unavailable.
+
+### Changed
+- Refined operator documentation, governance guidance, and architecture references around the release.
+- Release scope includes 9 merged commits between mcp-server-v0.1.8 and the target tag.
+
+### Fixed
+- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
+
+## [0.1.8] - 2026-03-23
+
+### Added
+- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
+- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
+
+### Changed
+- Improved diagnostics, evidence capture, and performance analysis workflows for mobile automation runs.
+- Refined operator documentation, governance guidance, and architecture references around the release.
+- Release scope includes 19 merged commits between mcp-server-v0.1.7 and the target tag.
+
+### Fixed
+- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
+
+## [0.1.7] - 2026-03-21
+
+### Added
+- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
+- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
+- Improved bounded OCR and vision fallback support for cases where deterministic selectors are unavailable.
+
+### Changed
+- Improved diagnostics, evidence capture, and performance analysis workflows for mobile automation runs.
+- Refined operator documentation, governance guidance, and architecture references around the release.
+- Release scope includes 38 merged commits between mcp-server-v0.1.6 and the target tag.
+
+### Fixed
+- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
+
+## [0.1.6] - 2026-03-20
+
+### Added
+- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
+- Extended deterministic UI inspection, targeting, and interaction coverage for mobile flows.
+- Improved bounded OCR and vision fallback support for cases where deterministic selectors are unavailable.
+
+### Changed
+- Improved diagnostics, evidence capture, and performance analysis workflows for mobile automation runs.
+- Refined operator documentation, governance guidance, and architecture references around the release.
+- Release scope includes 39 merged commits between mcp-server-v0.1.5 and the target tag.
+
+### Fixed
+- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
+
+## [0.1.5] - 2026-03-20
+
+### Added
+- Introduced the first public AI-first mobile E2E MCP server with session lifecycle, app control, UI inspection, interaction, diagnostics, interruption handling, and failure-analysis tools.
+- Established deterministic-first execution adapters plus bounded OCR/vision fallback for Android, iOS, React Native, and Flutter automation workflows.
+- Published runnable sample flows, showcase demos, and real-device/simulator validation assets for login, recovery, and harness onboarding scenarios.
+
+### Changed
+- Reorganized the repository into a pnpm monorepo with explicit contracts, core orchestration, adapters, and MCP server package boundaries.
+- Added stdio/dev CLI entrypoints, package metadata, governance baselines, and release automation needed for public npm distribution.
+
+### Fixed
+- Hardened doctor checks, dry-run behavior, selector resolution, and session or lease stability during the initial release cycle.
 </file>
 
 <file path="packages/contracts/src/types.ts">
@@ -212750,29 +212750,30 @@ Quick reference:
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **mobile-e2e-mcp** (13814 symbols, 22824 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **mobile-e2e-mcp** (22719 symbols, 47926 relationships, 578 execution flows).
 
-> If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
+> Index stale? Run `node .gitnexus/run.cjs analyze --index-only` from the project root — it auto-selects an available runner. No `.gitnexus/run.cjs` yet? Bootstrap with `npx`, `bunx`, or `pnpm dlx` — e.g. `bunx gitnexus@latest analyze` (npm 11 npx crash; #1939).
 
 ## Always Do
 
-- **MUST run impact analysis before editing any symbol.** Before modifying a function, class, or method, run `gitnexus_impact({target: "symbolName", direction: "upstream"})` and report the blast radius (direct callers, affected processes, risk level) to the user.
-- **MUST run `gitnexus_detect_changes()` before committing** to verify your changes only affect expected symbols and execution flows.
-- **MUST warn the user** if impact analysis returns HIGH or CRITICAL risk before proceeding with edits.
-- When exploring unfamiliar code, use `gitnexus_query({query: "concept"})` to find execution flows instead of grepping. It returns process-grouped results ranked by relevance.
-- When you need full context on a specific symbol — callers, callees, which execution flows it participates in — use `gitnexus_context({name: "symbolName"})`.
+- **MUST run impact before editing.** Use `impact({target: "symbolName", direction: "upstream"})` or `node .gitnexus/run.cjs impact "symbolName" --direction upstream --repo .`; report callers, processes, and risk. Never substitute grep for graph analysis.
+- **MUST analyze graph changes before committing.** Use `detect_changes({scope: "all"})` (MCP) or `node .gitnexus/run.cjs detect-changes --scope all --repo .` (CLI fallback). `partial: true` or `truncated: true` is not a clean check — a zero means unseen, not unaffected; re-run it. For regression review: `detect_changes({scope: "compare", base_ref: "main"})` or `node .gitnexus/run.cjs detect-changes --scope compare --base-ref "main" --repo .`.
+- MUST warn on HIGH/CRITICAL `risk` pre-edit; never use `riskSharedAxes` to waive a HIGH/CRITICAL `risk` warning. Compare File/symbol: MCP File omits axes; Graph-RAG expands File.
+- **MUST treat `risk: UNKNOWN` as unresolved, not as low.** An empty caller set is not evidence the symbol is unused — it can also mean the callers are not resolvable by the index (plain-object property access, dynamic dispatch, cross-language calls). `impact` pairs `UNKNOWN` with a `riskNote` saying so. Confirm with a text search before treating the symbol as safe to change or delete; do not proceed on the strength of a zero.
+- **MUST use `query({search_query: "concept"})` for concepts/flows, `context({name: "symbolName"})` for a named symbol, or `impact` for blast radius, on read-only callers, dependencies, imports, or execution flow.** Graph first; text search only for empty/`UNKNOWN`/literals.
+- For security review, `explain({target: "fileOrSymbol"})` lists taint findings (source→sink flows; needs `analyze --pdg`).
 
 ## Never Do
 
-- NEVER edit a function, class, or method without first running `gitnexus_impact` on it.
-- NEVER ignore HIGH or CRITICAL risk warnings from impact analysis.
-- NEVER rename symbols with find-and-replace — use `gitnexus_rename` which understands the call graph.
-- NEVER commit changes without running `gitnexus_detect_changes()` to check affected scope.
+- NEVER edit a function, class, or method before MCP/CLI impact analysis.
+- NEVER ignore HIGH or CRITICAL risk warnings from impact analysis, and never read `UNKNOWN` as an all-clear — it means the walk could not answer, which is the one verdict that requires confirming by other means.
+- NEVER rename symbols with find-and-replace — use `rename` which understands the call graph.
+- NEVER commit before MCP/CLI graph change analysis.
 
 ## Resources
 
 | Resource | Use for |
-|----------|---------|
+| --- | --- |
 | `gitnexus://repo/mobile-e2e-mcp/context` | Codebase overview, check index freshness |
 | `gitnexus://repo/mobile-e2e-mcp/clusters` | All functional areas |
 | `gitnexus://repo/mobile-e2e-mcp/processes` | All execution flows |
@@ -212781,13 +212782,13 @@ This project is indexed by GitNexus as **mobile-e2e-mcp** (13814 symbols, 22824 
 ## CLI
 
 | Task | Read this skill file |
-|------|---------------------|
-| Understand architecture / "How does X work?" | `.claude/skills/gitnexus/gitnexus-exploring/SKILL.md` |
-| Blast radius / "What breaks if I change X?" | `.claude/skills/gitnexus/gitnexus-impact-analysis/SKILL.md` |
-| Trace bugs / "Why is X failing?" | `.claude/skills/gitnexus/gitnexus-debugging/SKILL.md` |
-| Rename / extract / split / refactor | `.claude/skills/gitnexus/gitnexus-refactoring/SKILL.md` |
-| Tools, resources, schema reference | `.claude/skills/gitnexus/gitnexus-guide/SKILL.md` |
-| Index, status, clean, wiki CLI commands | `.claude/skills/gitnexus/gitnexus-cli/SKILL.md` |
+| --- | --- |
+| Understand architecture / "How does X work?" | `.claude/skills/gitnexus-exploring/SKILL.md` |
+| Blast radius / "What breaks if I change X?" | `.claude/skills/gitnexus-impact-analysis/SKILL.md` |
+| Trace bugs / "Why is X failing?" | `.claude/skills/gitnexus-debugging/SKILL.md` |
+| Rename / extract / split / refactor | `.claude/skills/gitnexus-refactoring/SKILL.md` |
+| Tools, resources, schema reference | `.claude/skills/gitnexus-guide/SKILL.md` |
+| Index, status, clean, wiki CLI commands | `.claude/skills/gitnexus-cli/SKILL.md` |
 
 <!-- gitnexus:end -->
 </file>
