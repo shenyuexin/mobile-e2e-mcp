@@ -10,6 +10,8 @@ export type UiGestureCommandPlan =
       supported: true;
       commands: string[][];
       interCommandDelayMs?: number;
+      stepDelaysMs?: number[];
+      commandTimeoutMs?: number;
       supportLevel: "full" | "partial";
       backendId?: string;
       caveat?: string;

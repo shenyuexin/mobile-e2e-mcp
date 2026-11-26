@@ -151,3 +151,119 @@ test("performGestureWithMaestroTool returns dry-run preview and rejects unsuppor
   assert.equal(androidMultiPointDraw.status, "failed");
   assert.equal(androidMultiPointDraw.reasonCode, REASON_CODES.unsupportedOperation);
 });
+
+test("sequence gesture coalesces draw/sleep into axe batch and isolates drag/pinch on iOS", async () => {
+  const axe = new AxeSimulatorBackend();
+  const drawSeq = axe.buildBatchGestureCommands("SIM-UDID", [
+    { type: "draw", points: [{ x: 100, y: 200 }, { x: 200, y: 300 }], durationMs: 400 },
+    { type: "sleep", durationMs: 150 },
+    { type: "draw", points: [{ x: 150, y: 250 }, { x: 260, y: 340 }], durationMs: 400 },
+    { type: "sleep", durationMs: 180 },
+    { type: "pinch", scale: 1.4, center: { x: 300, y: 400 }, durationMs: 500 },
+  ]);
+  assert.deepEqual(drawSeq.commands, [
+    [
+      "axe", "batch", "--udid", "SIM-UDID",
+      "--step", "draw 100,200 200,300 --duration 0.4",
+      "--step", "sleep 0.15",
+      "--step", "draw 150,250 260,340 --duration 0.4",
+    ],
+    [
+      "axe", "gesture", "pinch", "--scale", "1.4", "-x", "300", "-y", "400", "--duration", "0.5", "--udid", "SIM-UDID",
+    ],
+  ]);
+  assert.deepEqual(drawSeq.stepDelaysMs, [180, 0]);
+
+  const mixed = axe.buildBatchGestureCommands("SIM-UDID", [
+    { type: "draw", points: [{ x: 10, y: 10 }, { x: 20, y: 20 }], durationMs: 300 },
+    { type: "drag", start: { x: 50, y: 50 }, end: { x: 150, y: 50 }, durationMs: 500 },
+    { type: "sleep", durationMs: 160 },
+    { type: "draw", points: [{ x: 30, y: 30 }, { x: 40, y: 40 }], durationMs: 300 },
+  ]);
+  assert.equal(mixed.commands.length, 3);
+  assert.equal(mixed.commands[0]?.[1], "batch");
+  assert.equal(mixed.commands[1]?.[1], "drag");
+  assert.equal(mixed.commands[2]?.[1], "batch");
+  assert.deepEqual(mixed.stepDelaysMs, [0, 160, 0]);
+
+  const preview = await performGestureWithMaestroTool({
+    sessionId: "gesture-ios-sequence",
+    platform: "ios",
+    deviceId: "FB1859DD-41E1-4DAC-8031-6E831DC5CB04",
+    dryRun: true,
+    gesture: {
+      type: "sequence",
+      coordinateMode: "normalized",
+      containerBounds: { x: 100, y: 100, width: 400, height: 400 },
+      steps: [
+        { type: "draw", points: [{ x: 0.25, y: 0.25 }, { x: 0.75, y: 0.25 }], durationMs: 300 },
+        { type: "sleep", durationMs: 200 },
+        { type: "pinch", scale: 1.25, durationMs: 400 },
+      ],
+    },
+  });
+  assert.equal(preview.status, "success");
+  assert.equal(preview.data.gestureType, "sequence");
+  assert.equal(preview.data.stepCount, 3);
+  assert.equal(preview.data.coordinateScope, "container");
+  assert.equal(preview.data.commandHistory.length, 2);
+  assert.equal(preview.data.commandHistory[0]?.[1], "batch");
+  assert.equal(preview.data.commandHistory[1]?.[1], "gesture");
+  assert.deepEqual(preview.data.resolvedPoints, [
+    { x: 200, y: 200 },
+    { x: 400, y: 200 },
+    { x: 300, y: 300 },
+  ]);
+});
+
+test("sequence gesture validates limits and handles Android partial support cleanly", async () => {
+  assert.match(String(normalizePerformGesture({ type: "sequence", steps: [] })), /1 to 64 steps/);
+  assert.match(
+    String(normalizePerformGesture({ type: "sequence", steps: [{ type: "sleep", durationMs: 100 }] })),
+    /at least 1 non-sleep/,
+  );
+  assert.match(
+    String(normalizePerformGesture({
+      type: "sequence",
+      steps: [{ type: "sequence", steps: [{ type: "sleep", durationMs: 100 }] } as never],
+    })),
+    /Nested sequence/,
+  );
+
+  const hooks = createAndroidUiRuntimeHooks();
+  const normalizedAndroid = normalizePerformGesture({
+    type: "sequence",
+    coordinateMode: "absolute",
+    steps: [
+      { type: "drag", start: { x: 10, y: 20 }, end: { x: 100, y: 20 }, durationMs: 300 },
+      { type: "sleep", durationMs: 120 },
+      { type: "double_tap", point: { x: 50, y: 60 }, intervalMs: 80 },
+    ],
+  });
+  assert.equal(typeof normalizedAndroid, "object");
+  if (typeof normalizedAndroid === "string") throw new Error(normalizedAndroid);
+  const resolvedAndroid = resolveGestureCoordinates(normalizedAndroid);
+  const androidPlan = hooks.buildGestureCommands?.("emulator-5554", resolvedAndroid.resolved);
+  assert.equal(androidPlan?.supported, true);
+  if (androidPlan?.supported) {
+    assert.equal(androidPlan.commands.length, 3);
+    assert.deepEqual(androidPlan.stepDelaysMs, [120, 80, 0]);
+    assert.equal(androidPlan.supportLevel, "partial");
+  }
+
+  const androidPinchSeq = await performGestureWithMaestroTool({
+    sessionId: "gesture-android-seq-unsupported",
+    platform: "android",
+    deviceId: "emulator-5554",
+    dryRun: true,
+    gesture: {
+      type: "sequence",
+      steps: [
+        { type: "drag", start: { x: 10, y: 20 }, end: { x: 100, y: 20 } },
+        { type: "pinch", scale: 1.5 },
+      ],
+    },
+  });
+  assert.equal(androidPinchSeq.status, "failed");
+  assert.equal(androidPinchSeq.reasonCode, REASON_CODES.unsupportedOperation);
+});

@@ -63,7 +63,7 @@ npx -y @shenyuexin/mobile-e2e-mcp@latest verify --fail-on-regression --json
 
 `explore` writes a single canonical run under `<output>/<runId>/` per run (`--run-id`, `--json`), updates `<output>/index.json` once, and maintains `<output>/latest.json` pointing to `report.html` and `summary.json`. `--export-flows <dir>` writes deterministic Maestro-compatible smoke flows from the deepest reachable, non-failed, non-blocked paths, including `appId` launch and explicit settle delays.
 
-`verify` reads `.e2e/config.yaml` (`verify:` / `audit:` / `explorer:` sections) and runs deterministic flows + `audit_ui_surface` + bounded `explore`, emitting `<output>/summary.json`, `report.md`, and self-contained `report.html`.
+`verify` reads `.e2e/config.yaml` (`verify:` / `audit:` / `explorer:` sections) and runs deterministic flows + `audit_ui_surface` + bounded `explore` + optional `--probe-config` / `--target` / `--matrix-config` HTTP telemetry ratchets and device matrices, emitting `<output>/summary.json`, `report.md`, self-contained `report.html`, and `<output>/failure-packet.json` on failure.
 
 `audit` options: `--platform`, `--device-id`, `--app-id`, `--baseline-path`, `--baseline-mode <compare|update>`, `--output`, `--config`, `--dry-run`, `--json`, `--fail-on-regression`, `--help`. It invokes `start_session` → `audit_ui_surface` → `end_session` and exits non-zero on regression/failure.
 

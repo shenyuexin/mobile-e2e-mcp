@@ -67,7 +67,7 @@ npx -y @shenyuexin/mobile-e2e-mcp@latest diff ./explore-report/base ./explore-re
 npx -y @shenyuexin/mobile-e2e-mcp@latest verify --fail-on-regression
 ```
 
-`verify` 从 `.e2e/config.yaml`（含 `verify:`、`audit:`、`explorer:` 段）或 CLI 参数串行编排 Maestro flows（文件或目录）、`audit_ui_surface` 与有界 `explore`，输出统一的 `<output>/summary.json`、`report.md` 与自包含 `report.html`（自动串联失败录屏、Selector 修复建议与 Explorer 报告；`--dry-run` 下跳过真实录屏与 Explorer）。`audit` 通过 `start_session` → `audit_ui_surface` → `end_session` 调用现有工具；设置 `--fail-on-regression` 后，一旦检测到基线回归即以非零码退出。`diff` 读取两次运行的 `summary.json`、`failure-review.json` 与可选的 `audit*.json`，配合 `--fail-on-regression` 即可作为零脚本 CI 质量门禁。
+`verify` 从 `.e2e/config.yaml`（含 `verify:`、`audit:`、`explorer:` 段）或 CLI 参数编排 Maestro flows（文件或目录）、`audit_ui_surface`、有界 `explore`，以及可选的 `--probe-config` / `--target` / `--matrix-config` HTTP 遥测棘轮与多设备矩阵，输出统一的 `<output>/summary.json`、`report.md`、自包含 `report.html`，并在失败时生成结构化诊断包 `<output>/failure-packet.json`（自动串联失败录屏、Selector 修复建议与 Explorer 报告；`--dry-run` 下跳过真实录屏、Explorer 与实时 HTTP 探针）。`audit` 通过 `start_session` → `audit_ui_surface` → `end_session` 调用现有工具；设置 `--fail-on-regression` 后，一旦检测到基线回归即以非零码退出。`diff` 读取两次运行的 `summary.json`、`failure-review.json` 与可选的 `audit*.json`，配合 `--fail-on-regression` 即可作为零脚本 CI 质量门禁。
 
 `run` 支持单个 YAML 文件或包含 YAML 的目录（按字典序执行，可配 `--fail-fast` 与 `--output <dir>` 生成 `summary.json`），并对未知选项直接以退出码 `2` 报错。`run --record-on-failure` 在 `run_flow` 前启动 `record_screen`，并在 `finally` 中停止：通过时丢弃录像，失败时保留为证据，文本输出与 `--json` 都会带上保存路径（或丢弃状态）；`--dry-run` 下跳过真实录屏。`run --suggest-heal` 在失败时组合 `explain_last_failure`、`suggest_known_remediation` 与只读 `inspect_ui`，生成结构化建议和 unified diff 片段——严格只做提案，绝不修改用户的 flow YAML。
 
@@ -302,7 +302,7 @@ Source-of-truth 说明：
 
 ### 4）UI 感知、定位与交互
 
-`inspect_ui`、`query_ui`、`resolve_ui_target`、`audit_ui_surface`（支持通过 `baselinePath` / `baselineMode` 做结构基线增量门禁比对）、`scroll_only`、`perform_gesture`（iOS 模拟器通过 AXe v2.2+ 完整支持 `draw` / `drag` / `pinch` / `double_tap` / `two_finger_tap`；Android 通过 `adb` 部分支持 `drag` / 两点 `draw` / `double_tap`）、`scroll_and_resolve_ui_target`、`wait_for_ui`、`wait_for_ui_stable`、`tap`、`tap_element`、`scroll_and_tap_element`、`type_text`、`type_into_element`、`navigate_back`（iOS 模拟器 AXe 只读/采集命令 `describe-ui` / `displays` / `screenshot` / `ping` 默认复用按 UDID 维护的常驻 `axe serve` 传输池，空闲自动释放，支持 `M2E_DISABLE_AXE_SERVE=1` 关闭；HID 输入命令保持单次调用以避免 `dtuhidd` 虚拟 HID 服务泄漏）
+`inspect_ui`、`query_ui`、`resolve_ui_target`、`audit_ui_surface`（支持通过 `baselinePath` / `baselineMode` 做结构基线增量门禁比对）、`scroll_only`、`perform_gesture`（iOS 模拟器通过 AXe v2.2+ 完整支持 `draw` / `drag` / `pinch` / `double_tap` / `two_finger_tap` 及单会话 `axe batch` 连发 `sequence`；Android 通过 `adb` 部分支持 `drag` / 两点 `draw` / `double_tap` 及对应 `sequence`）、`scroll_and_resolve_ui_target`、`wait_for_ui`、`wait_for_ui_stable`、`tap`、`tap_element`、`scroll_and_tap_element`、`type_text`、`type_into_element`、`navigate_back`（iOS 模拟器 AXe 只读/采集命令 `describe-ui` / `displays` / `screenshot` / `ping` 默认复用按 UDID 维护的常驻 `axe serve` 传输池，空闲自动释放，支持 `M2E_DISABLE_AXE_SERVE=1` 关闭；HID 输入命令保持单次调用以避免 `dtuhidd` 虚拟 HID 服务泄漏）
 
 ### 5）证据、可观测与诊断
 

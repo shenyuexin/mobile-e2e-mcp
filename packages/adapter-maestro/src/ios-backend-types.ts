@@ -43,6 +43,11 @@ export interface IosExecutionBackend {
   buildDragCommand?: (deviceId: string, drag: IosDragGestureParams) => string[];
   /** Optional multi-touch gesture builder (pinch / double-tap / two-finger-tap). */
   buildMultiTouchGestureCommand?: (deviceId: string, gesture: IosMultiTouchGestureParams) => string[];
+  /** Optional batch sequence gesture builder coalescing multi-stroke `draw`+`sleep` sequences into `axe batch`. */
+  buildBatchGestureCommands?: (
+    deviceId: string,
+    steps: IosSequenceGestureStep[],
+  ) => { commands: string[][]; stepDelaysMs: number[] };
   /** Build a hierarchy capture command that returns JSON/XML hierarchy data. */
   buildHierarchyCaptureCommand(deviceId: string): string[];
   /**
@@ -114,3 +119,9 @@ export type IosMultiTouchGestureParams =
       preDelayMs?: number;
       postDelayMs?: number;
     };
+
+export type IosSequenceGestureStep =
+  | ({ type: "draw" } & IosDrawGestureParams)
+  | ({ type: "drag" } & IosDragGestureParams)
+  | IosMultiTouchGestureParams
+  | { type: "sleep"; durationMs: number };

@@ -18,6 +18,7 @@ import { requireCliFlagValue } from "./cli-args.js";
 import { loadProjectConfig } from "./project-config.js";
 import { discoverFlowFiles, executeSingleFlow } from "./run-command.js";
 import {
+  buildVerifyFailurePacket,
   formatVerifyHtml,
   formatVerifyMarkdown,
   type VerifyAuditSummary,
@@ -25,6 +26,19 @@ import {
   type VerifyFlowEntry,
   type VerifySuiteSummary,
 } from "./verify-report.js";
+import {
+  loadMatrixConfig,
+  parseInlineTargetFlag,
+  type VerifyMatrixTargetSpec,
+  type VerifyMatrixTargetSummary,
+} from "./verify-matrix.js";
+import {
+  executeVerifyProbes,
+  loadProbeConfig,
+  type FetchProbeFn,
+  type VerifyProbeConfigFile,
+  type VerifyProbesSummary,
+} from "./verify-probes.js";
 
 export interface VerifyCommandOptions {
   configPath?: string;
@@ -40,6 +54,10 @@ export interface VerifyCommandOptions {
   exploreTimeoutMs?: number;
   baselinePath?: string;
   baselineMode?: UiAuditBaselineMode;
+  probeConfig?: string;
+  updateProbeBaseline?: boolean;
+  targets: VerifyMatrixTargetSpec[];
+  matrixConfig?: string;
   recordOnFailure?: boolean;
   suggestHeal?: boolean;
   failFast: boolean;
@@ -53,6 +71,7 @@ export interface VerifyCommandOptions {
 
 export interface VerifyCommandDependencies {
   runExplore: (server: InvokableServer, input: RunnerInput) => Promise<ExplorerResult>;
+  fetchProbe?: FetchProbeFn;
 }
 
 const VALID_RUNNER_PROFILES: readonly RunnerProfile[] = [
@@ -86,6 +105,10 @@ Options:
   --explore-timeout-ms <ms>     Explorer timeout override in ms (>= 1000)
   --baseline-path <path>        UI audit baseline JSON path override
   --baseline-mode <compare|update>  UI audit baseline mode override
+  --probe-config <path>         Custom HTTP telemetry probe & ratchet JSON path
+  --update-probe-baseline       Write/refresh probe baseline when all probes pass
+  --target <label:plat[:udid]>  Multi-device matrix target override (repeatable)
+  --matrix-config <path>        Multi-device matrix JSON config path
   --record-on-failure           Record failure-only video per flow (default from config)
   --no-record-on-failure        Disable per-flow video recording
   --suggest-heal                Emit proposal-only heal diffs when a flow fails
@@ -93,7 +116,7 @@ Options:
   --fail-fast                   Stop remaining flows on first failure
   --fail-on-regression          Fail acceptance if UI audit reports a regression
   --output <dir>                Output directory (default: ./output/e2e-verify/<runId>)
-  --dry-run                     Validate flows & audit without device mutations; skip Explorer
+  --dry-run                     Validate flows & audit without device mutations; skip Explorer & live probes
   --json                        Print full structured VerifySuiteSummary JSON
   --help, -h                    Show this help message`);
 }
@@ -101,6 +124,7 @@ Options:
 export function parseVerifyArgs(argv: string[]): VerifyCommandOptions {
   const options: VerifyCommandOptions = {
     flows: [],
+    targets: [],
     failFast: false,
     failOnRegression: false,
     dryRun: false,
@@ -235,6 +259,41 @@ export function parseVerifyArgs(argv: string[]): VerifyCommandOptions {
       }
       options.baselineMode = next;
       i += 1;
+    } else if (arg === "--probe-config") {
+      const missing = requireCliFlagValue(arg, next);
+      if (missing) {
+        options.error = missing;
+        return options;
+      }
+      options.probeConfig = next;
+      i += 1;
+    } else if (arg === "--update-probe-baseline") {
+      options.updateProbeBaseline = true;
+    } else if (arg === "--target") {
+      const missing = requireCliFlagValue(arg, next);
+      if (missing) {
+        options.error = missing;
+        return options;
+      }
+      const parsedTarget = parseInlineTargetFlag(next!);
+      if (parsedTarget.error || !parsedTarget.target) {
+        options.error = parsedTarget.error ?? `Invalid --target "${next}".`;
+        return options;
+      }
+      if (options.targets.some((t) => t.label === parsedTarget.target!.label)) {
+        options.error = `Duplicate --target label "${parsedTarget.target.label}".`;
+        return options;
+      }
+      options.targets.push(parsedTarget.target);
+      i += 1;
+    } else if (arg === "--matrix-config") {
+      const missing = requireCliFlagValue(arg, next);
+      if (missing) {
+        options.error = missing;
+        return options;
+      }
+      options.matrixConfig = next;
+      i += 1;
     } else if (arg === "--output") {
       const missing = requireCliFlagValue(arg, next);
       if (missing) {
@@ -274,79 +333,66 @@ function toRelOrPosix(baseDir: string, targetPath: string): string {
   return path.relative(baseDir, targetPath).split(path.sep).join("/");
 }
 
-export async function executeVerify(
-  server: MobileE2EMcpServer,
-  argv: string[],
-  deps: Partial<VerifyCommandDependencies> = {},
-  cwd: string = process.cwd(),
-): Promise<number> {
-  const options = parseVerifyArgs(argv);
-  if (options.help) {
-    printVerifyHelp();
-    return 0;
-  }
-  if (options.error) {
-    console.error(options.error);
-    return 2;
-  }
+async function executeSingleTargetVerify(params: {
+  server: MobileE2EMcpServer;
+  cwd: string;
+  runId: string;
+  startedAt: string;
+  startedAtMs: number;
+  outputDirAbs: string;
+  platform: Platform;
+  deviceId?: string;
+  appId?: string;
+  runnerProfile?: RunnerProfile;
+  policyProfile?: string;
+  harnessConfigPath?: string;
+  expandedFlows: string[];
+  auditEnabled: boolean;
+  exploreEnabled: boolean;
+  exploreMode?: "smoke" | "scoped" | "full";
+  exploreMaxDepth?: number;
+  exploreTimeoutMs?: number;
+  launchEnv?: Record<string, string>;
+  baselinePath?: string;
+  baselineMode?: UiAuditBaselineMode;
+  probeConfig?: VerifyProbeConfigFile;
+  updateProbeBaseline?: boolean;
+  recordOnFailure: boolean;
+  suggestHeal: boolean;
+  failFast: boolean;
+  failOnRegression: boolean;
+  dryRun: boolean;
+  deps: VerifyCommandDependencies;
+}): Promise<VerifySuiteSummary> {
+  const {
+    server,
+    cwd,
+    runId,
+    startedAt,
+    startedAtMs,
+    outputDirAbs,
+    platform,
+    deviceId,
+    appId,
+    runnerProfile,
+    policyProfile,
+    harnessConfigPath,
+    expandedFlows,
+    auditEnabled,
+    exploreEnabled,
+    baselinePath,
+    baselineMode,
+    probeConfig,
+    updateProbeBaseline,
+    recordOnFailure,
+    suggestHeal,
+    failFast,
+    failOnRegression,
+    dryRun,
+    deps,
+  } = params;
 
-  let projectConfig;
-  try {
-    projectConfig = (await loadProjectConfig(cwd, options.configPath))?.config;
-  } catch (error) {
-    console.error(error instanceof Error ? error.message : String(error));
-    return 2;
-  }
-
-  const verifyCfg = projectConfig?.verify;
-  const platform: Platform = options.platform ?? projectConfig?.platform ?? "android";
-  const deviceId = options.deviceId ?? projectConfig?.deviceId;
-  const appId = options.appId ?? projectConfig?.appId;
-  const runnerProfile = options.runnerProfile ?? projectConfig?.runnerProfile;
-  const policyProfile = options.policyProfile ?? projectConfig?.policyProfile;
-  const harnessConfigPath = options.harnessConfigPath ?? projectConfig?.harnessConfigPath;
-
-  const configuredFlowInputs = options.flows.length > 0
-    ? options.flows
-    : verifyCfg?.flows && verifyCfg.flows.length > 0
-      ? verifyCfg.flows
-      : projectConfig?.flowPath
-        ? [projectConfig.flowPath]
-        : [];
-
-  const auditEnabled = options.audit ?? verifyCfg?.audit ?? Boolean(projectConfig?.audit);
-  const exploreEnabled = options.explore ?? verifyCfg?.explore ?? false;
-  const recordOnFailure = options.recordOnFailure ?? verifyCfg?.recordOnFailure ?? true;
-  const suggestHeal = options.suggestHeal ?? verifyCfg?.suggestHeal ?? true;
-  const failFast = options.failFast || verifyCfg?.failFast === true;
-  const failOnRegression = options.failOnRegression || projectConfig?.audit?.failOnRegression === true;
-
-  if (configuredFlowInputs.length === 0 && !auditEnabled && !exploreEnabled) {
-    console.error("Nothing enabled for verify: configure verify.flows / --flows, --audit, or --explore.");
-    return 2;
-  }
-
-  const startedAtMs = Date.now();
-  const startedAt = new Date(startedAtMs).toISOString();
-  const runId = defaultVerifyRunId();
-  const outputRelOrRaw = options.output ?? verifyCfg?.output ?? path.join("output", "e2e-verify", runId);
-  const outputDirAbs = resolve(cwd, outputRelOrRaw);
   mkdirSync(outputDirAbs, { recursive: true });
-
-  // Expand flow files & directories
-  const expandedFlows: string[] = [];
-  for (const flowItem of configuredFlowInputs) {
-    const discovered = discoverFlowFiles(flowItem, cwd);
-    if (discovered.isDirectory && discovered.files.length === 0) {
-      console.error(`No .yaml or .yml flow files found in directory "${flowItem}".`);
-      return 2;
-    }
-    for (const file of discovered.files) {
-      if (file && !expandedFlows.includes(file)) {
-        expandedFlows.push(file);
-      }
-    }
-  }
 
   // Stage 1: Flows
   const flowEntries: VerifyFlowEntry[] = [];
@@ -367,7 +413,7 @@ export async function executeVerify(
       policyProfile,
       harnessConfigPath,
       runCount: 1,
-      dryRun: options.dryRun,
+      dryRun,
       recordOnFailure,
       recordOutput: videoAbsPath,
       suggestHeal,
@@ -426,8 +472,6 @@ export async function executeVerify(
     } else {
       const sessionId = auditStart.data.sessionId;
       auditJsonPath = path.join(outputDirAbs, "audit.json");
-      const baselinePath = options.baselinePath ?? projectConfig?.audit?.baselinePath;
-      const baselineMode = options.baselineMode ?? projectConfig?.audit?.baselineMode;
       const auditInput: AuditUiSurfaceInput = {
         sessionId,
         platform,
@@ -435,7 +479,7 @@ export async function executeVerify(
         ...(appId ? { appId } : {}),
         outputPath: auditJsonPath,
         ...(baselinePath ? { baselinePath, baselineMode: baselineMode ?? "compare" } : {}),
-        dryRun: options.dryRun,
+        dryRun,
       };
       const auditResult = (await server.invoke(
         TOOL_NAMES.auditUiSurface,
@@ -463,14 +507,13 @@ export async function executeVerify(
   }
 
   // Stage 3: Bounded Explorer
-  const resolvedDeps: VerifyCommandDependencies = { ...defaultDeps, ...deps };
   let explorerSummary: VerifyExplorerSummary = {
     enabled: exploreEnabled,
     status: "skipped",
   };
   let explorerHtmlAbsPath: string | undefined;
   if (exploreEnabled) {
-    if (options.dryRun) {
+    if (dryRun) {
       explorerSummary = {
         enabled: true,
         status: "skipped_dry_run",
@@ -483,14 +526,14 @@ export async function executeVerify(
       };
     } else {
       const exploreReportDir = path.join(outputDirAbs, "explore");
-      const expResult = await resolvedDeps.runExplore(server as unknown as InvokableServer, {
+      const expResult = await deps.runExplore(server as unknown as InvokableServer, {
         appId,
         platform: platform === "ios" ? "ios-simulator" : "android-emulator",
         deviceId,
-        mode: projectConfig?.explorer?.mode ?? "smoke",
-        maxDepth: projectConfig?.explorer?.maxDepth,
-        timeoutMs: options.exploreTimeoutMs,
-        launchEnv: projectConfig?.launchEnv,
+        mode: params.exploreMode ?? "smoke",
+        maxDepth: params.exploreMaxDepth,
+        timeoutMs: params.exploreTimeoutMs,
+        launchEnv: params.launchEnv,
         reportDir: exploreReportDir,
         runId,
         skipInterview: true,
@@ -515,31 +558,48 @@ export async function executeVerify(
     }
   }
 
+  // Stage 4: Custom HTTP Telemetry Probes & Performance Ratchets
+  let probesSummary: VerifyProbesSummary | undefined;
+  if (probeConfig) {
+    probesSummary = await executeVerifyProbes({
+      config: probeConfig,
+      cwd,
+      outputDirAbs,
+      dryRun,
+      updateBaseline: updateProbeBaseline,
+      fetchProbe: deps.fetchProbe,
+    });
+  }
+
   const completedAtMs = Date.now();
   const passedFlows = flowEntries.filter((e) => e.status === "passed").length;
   const failedFlows = flowEntries.length - passedFlows;
   const anyFlowFailed = failedFlows > 0;
   const anyAuditFailed = auditSummary.status === "failed";
   const anyExplorerFailed = explorerSummary.status === "failed";
-  const overallStatus = anyFlowFailed || anyAuditFailed || anyExplorerFailed ? "failed" : "passed";
+  const anyProbeFailed = probesSummary?.status === "failed";
+  const overallStatus =
+    anyFlowFailed || anyAuditFailed || anyExplorerFailed || anyProbeFailed ? "failed" : "passed";
 
   const nextSuggestions = Array.from(
     new Set([
       ...flowEntries.flatMap((e) => e.nextSuggestions),
       ...auditSummary.nextSuggestions,
       ...(explorerSummary.error ? [explorerSummary.error] : []),
+      ...(probesSummary?.entries.flatMap((e) => e.failures) ?? []),
     ]),
   );
 
   const summaryJsonPath = path.join(outputDirAbs, "summary.json");
   const reportMdPath = path.join(outputDirAbs, "report.md");
   const reportHtmlPath = path.join(outputDirAbs, "report.html");
+  const failurePacketPath = overallStatus === "failed" ? path.join(outputDirAbs, "failure-packet.json") : undefined;
 
   const summary: VerifySuiteSummary = {
     schemaVersion: "e2e-verify-summary/v1",
     runId,
     overallStatus,
-    dryRun: options.dryRun,
+    dryRun,
     platform,
     ...(appId ? { appId } : {}),
     ...(deviceId ? { deviceId } : {}),
@@ -556,19 +616,304 @@ export async function executeVerify(
     },
     audit: auditSummary,
     explorer: explorerSummary,
+    ...(probesSummary ? { probes: probesSummary } : {}),
     artifacts: {
       summaryJsonPath,
       reportMdPath,
       reportHtmlPath,
       ...(auditJsonPath ? { auditJsonPath } : {}),
       ...(explorerHtmlAbsPath ? { explorerHtmlReportPath: explorerHtmlAbsPath } : {}),
+      ...(failurePacketPath ? { failurePacketPath } : {}),
     },
     nextSuggestions,
   };
 
+  if (failurePacketPath) {
+    writeFileSync(failurePacketPath, JSON.stringify(buildVerifyFailurePacket(summary), null, 2), "utf-8");
+  }
   writeFileSync(summaryJsonPath, JSON.stringify(summary, null, 2), "utf-8");
   writeFileSync(reportMdPath, formatVerifyMarkdown(summary), "utf-8");
   writeFileSync(reportHtmlPath, formatVerifyHtml(summary), "utf-8");
+
+  return summary;
+}
+
+export async function executeVerify(
+  server: MobileE2EMcpServer,
+  argv: string[],
+  deps: Partial<VerifyCommandDependencies> = {},
+  cwd: string = process.cwd(),
+): Promise<number> {
+  const options = parseVerifyArgs(argv);
+  if (options.help) {
+    printVerifyHelp();
+    return 0;
+  }
+  if (options.error) {
+    console.error(options.error);
+    return 2;
+  }
+
+  let projectConfig;
+  try {
+    projectConfig = (await loadProjectConfig(cwd, options.configPath))?.config;
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : String(error));
+    return 2;
+  }
+
+  const verifyCfg = projectConfig?.verify;
+  const platform: Platform = options.platform ?? projectConfig?.platform ?? "android";
+  const deviceId = options.deviceId ?? projectConfig?.deviceId;
+  const appId = options.appId ?? projectConfig?.appId;
+  const runnerProfile = options.runnerProfile ?? projectConfig?.runnerProfile;
+  const policyProfile = options.policyProfile ?? projectConfig?.policyProfile;
+  const harnessConfigPath = options.harnessConfigPath ?? projectConfig?.harnessConfigPath;
+
+  const configuredFlowInputs = options.flows.length > 0
+    ? options.flows
+    : verifyCfg?.flows && verifyCfg.flows.length > 0
+      ? verifyCfg.flows
+      : projectConfig?.flowPath
+        ? [projectConfig.flowPath]
+        : [];
+
+  const auditEnabled = options.audit ?? verifyCfg?.audit ?? Boolean(projectConfig?.audit);
+  const exploreEnabled = options.explore ?? verifyCfg?.explore ?? false;
+  const recordOnFailure = options.recordOnFailure ?? verifyCfg?.recordOnFailure ?? true;
+  const suggestHeal = options.suggestHeal ?? verifyCfg?.suggestHeal ?? true;
+  const failFast = options.failFast || verifyCfg?.failFast === true;
+  const failOnRegression = options.failOnRegression || projectConfig?.audit?.failOnRegression === true;
+
+  const defaultProbeConfigPath = options.probeConfig ?? verifyCfg?.probeConfig;
+  let defaultProbeConfig: VerifyProbeConfigFile | undefined;
+  if (defaultProbeConfigPath) {
+    try {
+      defaultProbeConfig = loadProbeConfig(defaultProbeConfigPath, cwd);
+    } catch (error) {
+      console.error(error instanceof Error ? error.message : String(error));
+      return 2;
+    }
+  }
+
+  let matrixTargets: VerifyMatrixTargetSpec[] = [];
+  const matrixConfigPath = options.matrixConfig ?? verifyCfg?.matrixConfig;
+  if (options.targets.length > 0) {
+    matrixTargets = options.targets;
+  } else if (matrixConfigPath) {
+    try {
+      matrixTargets = loadMatrixConfig(matrixConfigPath, cwd).targets;
+    } catch (error) {
+      console.error(error instanceof Error ? error.message : String(error));
+      return 2;
+    }
+  }
+
+  // Preload & validate per-target probe configs upfront so errors fail fast with exit code 2
+  const probeConfigByTarget = new Map<string, VerifyProbeConfigFile | undefined>();
+  for (const target of matrixTargets) {
+    if (target.probeConfig) {
+      try {
+        probeConfigByTarget.set(target.label, loadProbeConfig(target.probeConfig, cwd));
+      } catch (error) {
+        console.error(error instanceof Error ? error.message : String(error));
+        return 2;
+      }
+    } else {
+      probeConfigByTarget.set(target.label, defaultProbeConfig);
+    }
+  }
+
+  const hasAnyProbe = Boolean(defaultProbeConfig) || Array.from(probeConfigByTarget.values()).some(Boolean);
+  if (configuredFlowInputs.length === 0 && !auditEnabled && !exploreEnabled && !hasAnyProbe) {
+    console.error("Nothing enabled for verify: configure verify.flows / --flows, --audit, --explore, or --probe-config.");
+    return 2;
+  }
+
+  const expandedFlows: string[] = [];
+  for (const flowItem of configuredFlowInputs) {
+    const discovered = discoverFlowFiles(flowItem, cwd);
+    if (discovered.isDirectory && discovered.files.length === 0) {
+      console.error(`No .yaml or .yml flow files found in directory "${flowItem}".`);
+      return 2;
+    }
+    for (const file of discovered.files) {
+      if (file && !expandedFlows.includes(file)) {
+        expandedFlows.push(file);
+      }
+    }
+  }
+
+  const startedAtMs = Date.now();
+  const startedAt = new Date(startedAtMs).toISOString();
+  const runId = defaultVerifyRunId();
+  const outputRelOrRaw = options.output ?? verifyCfg?.output ?? path.join("output", "e2e-verify", runId);
+  const outputDirAbs = resolve(cwd, outputRelOrRaw);
+  const resolvedDeps: VerifyCommandDependencies = { ...defaultDeps, ...deps };
+
+  let summary: VerifySuiteSummary;
+  if (matrixTargets.length === 0) {
+    summary = await executeSingleTargetVerify({
+      server,
+      cwd,
+      runId,
+      startedAt,
+      startedAtMs,
+      outputDirAbs,
+      platform,
+      deviceId,
+      appId,
+      runnerProfile,
+      policyProfile,
+      harnessConfigPath,
+      expandedFlows,
+      auditEnabled,
+      exploreEnabled,
+      exploreMode: projectConfig?.explorer?.mode,
+      exploreMaxDepth: projectConfig?.explorer?.maxDepth,
+      exploreTimeoutMs: options.exploreTimeoutMs,
+      launchEnv: projectConfig?.launchEnv,
+      baselinePath: options.baselinePath ?? projectConfig?.audit?.baselinePath,
+      baselineMode: options.baselineMode ?? projectConfig?.audit?.baselineMode,
+      probeConfig: defaultProbeConfig,
+      updateProbeBaseline: options.updateProbeBaseline,
+      recordOnFailure,
+      suggestHeal,
+      failFast,
+      failOnRegression,
+      dryRun: options.dryRun,
+      deps: resolvedDeps,
+    });
+  } else {
+    mkdirSync(outputDirAbs, { recursive: true });
+    const targetSummaries: VerifyMatrixTargetSummary[] = [];
+    const targetSuiteResults: VerifySuiteSummary[] = [];
+    for (const target of matrixTargets) {
+      const targetStartMs = Date.now();
+      const targetOutAbs = path.join(outputDirAbs, "targets", target.label);
+      const targetSuite = await executeSingleTargetVerify({
+        server,
+        cwd,
+        runId: `${runId}-${target.label}`,
+        startedAt: new Date(targetStartMs).toISOString(),
+        startedAtMs: targetStartMs,
+        outputDirAbs: targetOutAbs,
+        platform: target.platform,
+        deviceId: target.deviceId ?? deviceId,
+        appId: target.appId ?? appId,
+        runnerProfile: target.runnerProfile ?? runnerProfile,
+        policyProfile,
+        harnessConfigPath,
+        expandedFlows,
+        auditEnabled,
+        exploreEnabled,
+        exploreMode: projectConfig?.explorer?.mode,
+        exploreMaxDepth: projectConfig?.explorer?.maxDepth,
+        exploreTimeoutMs: options.exploreTimeoutMs,
+        launchEnv: projectConfig?.launchEnv,
+        baselinePath: target.baselinePath ?? options.baselinePath ?? projectConfig?.audit?.baselinePath,
+        baselineMode: options.baselineMode ?? projectConfig?.audit?.baselineMode,
+        probeConfig: probeConfigByTarget.get(target.label),
+        updateProbeBaseline: options.updateProbeBaseline,
+        recordOnFailure,
+        suggestHeal,
+        failFast,
+        failOnRegression,
+        dryRun: options.dryRun,
+        deps: resolvedDeps,
+      });
+      targetSuiteResults.push(targetSuite);
+      targetSummaries.push({
+        label: target.label,
+        platform: target.platform,
+        ...(targetSuite.deviceId ? { deviceId: targetSuite.deviceId } : {}),
+        overallStatus: targetSuite.overallStatus,
+        durationMs: targetSuite.durationMs,
+        flowsPassed: targetSuite.flows.passed,
+        flowsTotal: targetSuite.flows.total,
+        auditStatus: targetSuite.audit.status,
+        probeStatus: targetSuite.probes?.enabled ? targetSuite.probes.status : "skipped",
+        explorerStatus: targetSuite.explorer.status,
+        summaryJsonRelPath: toRelOrPosix(outputDirAbs, targetSuite.artifacts.summaryJsonPath),
+        reportHtmlRelPath: toRelOrPosix(outputDirAbs, targetSuite.artifacts.reportHtmlPath),
+        ...(targetSuite.artifacts.failurePacketPath
+          ? { failurePacketRelPath: toRelOrPosix(outputDirAbs, targetSuite.artifacts.failurePacketPath) }
+          : {}),
+      });
+    }
+
+    const completedAtMs = Date.now();
+    const totalFlows = targetSuiteResults.reduce((acc, s) => acc + s.flows.total, 0);
+    const passedFlows = targetSuiteResults.reduce((acc, s) => acc + s.flows.passed, 0);
+    const failedFlows = totalFlows - passedFlows;
+    const anyTargetFailed = targetSummaries.some((t) => t.overallStatus === "failed");
+    const passedTargets = targetSummaries.filter((t) => t.overallStatus === "passed").length;
+    const allFlowEntries = targetSuiteResults.flatMap((s) => s.flows.entries);
+    const summaryJsonPath = path.join(outputDirAbs, "summary.json");
+    const reportMdPath = path.join(outputDirAbs, "report.md");
+    const reportHtmlPath = path.join(outputDirAbs, "report.html");
+    const failurePacketPath = anyTargetFailed ? path.join(outputDirAbs, "failure-packet.json") : undefined;
+
+    const aggregatedAuditFailed = targetSuiteResults.some((s) => s.audit.status === "failed");
+    const aggregatedExplorerFailed = targetSuiteResults.some((s) => s.explorer.status === "failed");
+    const nextSuggestions = Array.from(new Set(targetSuiteResults.flatMap((s) => s.nextSuggestions)));
+
+    summary = {
+      schemaVersion: "e2e-verify-summary/v1",
+      runId,
+      overallStatus: anyTargetFailed ? "failed" : "passed",
+      dryRun: options.dryRun,
+      platform: matrixTargets[0]!.platform,
+      ...(appId ? { appId } : {}),
+      startedAt,
+      completedAt: new Date(completedAtMs).toISOString(),
+      durationMs: completedAtMs - startedAtMs,
+      outputDir: outputDirAbs,
+      flows: {
+        enabled: expandedFlows.length > 0,
+        total: totalFlows,
+        passed: passedFlows,
+        failed: failedFlows,
+        entries: allFlowEntries,
+      },
+      audit: {
+        enabled: auditEnabled,
+        status: !auditEnabled ? "skipped" : aggregatedAuditFailed ? "failed" : "passed",
+        nextSuggestions: [],
+      },
+      explorer: {
+        enabled: exploreEnabled,
+        status: !exploreEnabled
+          ? "skipped"
+          : options.dryRun
+            ? "skipped_dry_run"
+            : aggregatedExplorerFailed
+              ? "failed"
+              : "passed",
+      },
+      matrix: {
+        enabled: true,
+        total: targetSummaries.length,
+        passed: passedTargets,
+        failed: targetSummaries.length - passedTargets,
+        targets: targetSummaries,
+      },
+      artifacts: {
+        summaryJsonPath,
+        reportMdPath,
+        reportHtmlPath,
+        ...(failurePacketPath ? { failurePacketPath } : {}),
+      },
+      nextSuggestions,
+    };
+
+    if (failurePacketPath) {
+      writeFileSync(failurePacketPath, JSON.stringify(buildVerifyFailurePacket(summary), null, 2), "utf-8");
+    }
+    writeFileSync(summaryJsonPath, JSON.stringify(summary, null, 2), "utf-8");
+    writeFileSync(reportMdPath, formatVerifyMarkdown(summary), "utf-8");
+    writeFileSync(reportHtmlPath, formatVerifyHtml(summary), "utf-8");
+  }
 
   if (options.json) {
     console.log(JSON.stringify(summary, null, 2));
@@ -583,10 +928,19 @@ export async function executeVerify(
     if (summary.explorer.enabled) {
       console.log(`  explorer: ${summary.explorer.status}${summary.explorer.visitedPages !== undefined ? ` (pages=${summary.explorer.visitedPages}, failures=${summary.explorer.failedCount ?? 0})` : ""}`);
     }
-    console.log(`  summary:  ${summaryJsonPath}`);
-    console.log(`  markdown: ${reportMdPath}`);
-    console.log(`  html:     ${reportHtmlPath}`);
+    if (summary.probes?.enabled) {
+      console.log(`  probes:   ${summary.probes.passed}/${summary.probes.total} passed (${summary.probes.status})`);
+    }
+    if (summary.matrix?.enabled) {
+      console.log(`  matrix:   ${summary.matrix.passed}/${summary.matrix.total} targets passed`);
+    }
+    if (summary.artifacts.failurePacketPath) {
+      console.log(`  failure:  ${summary.artifacts.failurePacketPath}`);
+    }
+    console.log(`  summary:  ${summary.artifacts.summaryJsonPath}`);
+    console.log(`  markdown: ${summary.artifacts.reportMdPath}`);
+    console.log(`  html:     ${summary.artifacts.reportHtmlPath}`);
   }
 
-  return overallStatus === "passed" ? 0 : 1;
+  return summary.overallStatus === "passed" ? 0 : 1;
 }

@@ -37,6 +37,8 @@ export interface ProjectE2EVerifyConfig {
   suggestHeal?: boolean;
   failFast?: boolean;
   output?: string;
+  probeConfig?: string;
+  matrixConfig?: string;
 }
 
 export interface ProjectE2EConfig {
@@ -230,6 +232,12 @@ function coerceParsedRecord(rawObj: Record<string, unknown>): ProjectE2EConfig {
     if (typeof verifyObj.output === "string" && verifyObj.output.length > 0) {
       verify.output = verifyObj.output;
     }
+    if (typeof verifyObj.probeConfig === "string" && verifyObj.probeConfig.length > 0) {
+      verify.probeConfig = verifyObj.probeConfig;
+    }
+    if (typeof verifyObj.matrixConfig === "string" && verifyObj.matrixConfig.length > 0) {
+      verify.matrixConfig = verifyObj.matrixConfig;
+    }
     if (Object.keys(verify).length > 0) config.verify = verify;
   }
 
@@ -309,6 +317,8 @@ export function serializeProjectConfigYaml(config: ProjectE2EConfig): string {
     if (config.verify.suggestHeal !== undefined) lines.push(`  suggestHeal: ${config.verify.suggestHeal}`);
     if (config.verify.failFast !== undefined) lines.push(`  failFast: ${config.verify.failFast}`);
     if (config.verify.output) lines.push(`  output: ${formatYamlScalar(config.verify.output)}`);
+    if (config.verify.probeConfig) lines.push(`  probeConfig: ${formatYamlScalar(config.verify.probeConfig)}`);
+    if (config.verify.matrixConfig) lines.push(`  matrixConfig: ${formatYamlScalar(config.verify.matrixConfig)}`);
   }
 
   lines.push("");

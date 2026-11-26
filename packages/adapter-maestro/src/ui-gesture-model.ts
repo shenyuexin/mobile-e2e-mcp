@@ -2,12 +2,14 @@ import type {
   DragGestureSpec,
   DrawGestureSpec,
   DoubleTapGestureSpec,
+  PerformGestureAtomicSpec,
   PerformGestureCoordinateMode,
   PerformGestureInput,
   PerformGestureKind,
   PerformGestureSpec,
   PinchGestureSpec,
   ScrollOnlyContainerBounds,
+  SequenceGestureSpec,
   TwoFingerTapGestureSpec,
   UiPoint,
 } from "@mobile-e2e-mcp/contracts";
@@ -19,8 +21,10 @@ export const DEFAULT_GESTURE_DOUBLE_TAP_INTERVAL_MS = 100;
 export const DEFAULT_GESTURE_SETTLE_DELAY_MS = 400;
 export const DEFAULT_GESTURE_VIEWPORT_WIDTH = 1080;
 export const DEFAULT_GESTURE_VIEWPORT_HEIGHT = 1920;
+export const MAX_SEQUENCE_GESTURE_STEPS = 64;
+export const MAX_SEQUENCE_TOTAL_POINTS = 4000;
 
-export type NormalizedPerformGesture =
+export type NormalizedAtomicGesture =
   | {
       type: "draw";
       coordinateMode: PerformGestureCoordinateMode;
@@ -74,6 +78,23 @@ export type NormalizedPerformGesture =
       postDelayMs?: number;
     };
 
+export type NormalizedSequenceStep =
+  | NormalizedAtomicGesture
+  | {
+      type: "sleep";
+      durationMs: number;
+    };
+
+export interface NormalizedSequenceGesture {
+  type: "sequence";
+  coordinateMode: PerformGestureCoordinateMode;
+  containerBounds?: ScrollOnlyContainerBounds;
+  steps: NormalizedSequenceStep[];
+  durationMs: number;
+}
+
+export type NormalizedPerformGesture = NormalizedAtomicGesture | NormalizedSequenceGesture;
+export type ResolvedSequenceStep = NormalizedSequenceStep;
 export type ResolvedPerformGesture = NormalizedPerformGesture;
 
 function roundCoord(value: number): number {
@@ -131,7 +152,7 @@ function parseCoordinateMode(
   };
 }
 
-function validateDrawGesture(spec: DrawGestureSpec): NormalizedPerformGesture | string {
+function validateDrawGesture(spec: DrawGestureSpec): NormalizedAtomicGesture | string {
   const modeResult = parseCoordinateMode(spec.coordinateMode);
   if ("error" in modeResult) return modeResult.error;
   const mode = modeResult.mode;
@@ -167,7 +188,7 @@ function validateDrawGesture(spec: DrawGestureSpec): NormalizedPerformGesture | 
   };
 }
 
-function validateDragGesture(spec: DragGestureSpec): NormalizedPerformGesture | string {
+function validateDragGesture(spec: DragGestureSpec): NormalizedAtomicGesture | string {
   const modeResult = parseCoordinateMode(spec.coordinateMode);
   if ("error" in modeResult) return modeResult.error;
   const mode = modeResult.mode;
@@ -209,7 +230,7 @@ function validateDragGesture(spec: DragGestureSpec): NormalizedPerformGesture | 
   };
 }
 
-function validatePinchGesture(spec: PinchGestureSpec): NormalizedPerformGesture | string {
+function validatePinchGesture(spec: PinchGestureSpec): NormalizedAtomicGesture | string {
   const modeResult = parseCoordinateMode(spec.coordinateMode);
   if ("error" in modeResult) return modeResult.error;
   const mode = modeResult.mode;
@@ -253,7 +274,7 @@ function validatePinchGesture(spec: PinchGestureSpec): NormalizedPerformGesture 
   };
 }
 
-function validateDoubleTapGesture(spec: DoubleTapGestureSpec): NormalizedPerformGesture | string {
+function validateDoubleTapGesture(spec: DoubleTapGestureSpec): NormalizedAtomicGesture | string {
   const modeResult = parseCoordinateMode(spec.coordinateMode);
   if ("error" in modeResult) return modeResult.error;
   const mode = modeResult.mode;
@@ -281,7 +302,7 @@ function validateDoubleTapGesture(spec: DoubleTapGestureSpec): NormalizedPerform
   };
 }
 
-function validateTwoFingerTapGesture(spec: TwoFingerTapGestureSpec): NormalizedPerformGesture | string {
+function validateTwoFingerTapGesture(spec: TwoFingerTapGestureSpec): NormalizedAtomicGesture | string {
   const modeResult = parseCoordinateMode(spec.coordinateMode);
   if ("error" in modeResult) return modeResult.error;
   const mode = modeResult.mode;
@@ -307,11 +328,7 @@ function validateTwoFingerTapGesture(spec: TwoFingerTapGestureSpec): NormalizedP
   };
 }
 
-/** Validates and normalizes `perform_gesture` input into an explicit gesture descriptor or error reason. */
-export function normalizePerformGesture(spec: PerformGestureSpec | undefined): NormalizedPerformGesture | string {
-  if (!spec || typeof spec !== "object") {
-    return "gesture object is required.";
-  }
+function normalizeAtomicGesture(spec: PerformGestureAtomicSpec): NormalizedAtomicGesture | string {
   switch (spec.type) {
     case "draw":
       return validateDrawGesture(spec);
@@ -324,8 +341,119 @@ export function normalizePerformGesture(spec: PerformGestureSpec | undefined): N
     case "two_finger_tap":
       return validateTwoFingerTapGesture(spec);
     default:
-      return `Unsupported gesture type '${String((spec as { type?: unknown }).type)}'. Expected draw, drag, pinch, double_tap, or two_finger_tap.`;
+      return `Unsupported gesture type '${String((spec as { type?: unknown }).type)}'. Expected draw, drag, pinch, double_tap, two_finger_tap, or sequence.`;
   }
+}
+
+function estimateAtomicStepDurationMs(step: NormalizedAtomicGesture): number {
+  const preDelay = step.preDelayMs ?? 0;
+  const postDelay = step.postDelayMs ?? 0;
+  switch (step.type) {
+    case "draw":
+    case "pinch":
+      return step.durationMs + preDelay + postDelay;
+    case "drag":
+      return step.durationMs + (step.holdMs ?? 0) + preDelay + postDelay;
+    case "double_tap":
+      return step.intervalMs + preDelay + postDelay;
+    case "two_finger_tap":
+      return 100 + preDelay + postDelay;
+  }
+}
+
+function validateSequenceGesture(spec: SequenceGestureSpec): NormalizedSequenceGesture | string {
+  const modeResult = parseCoordinateMode(spec.coordinateMode);
+  if ("error" in modeResult) return modeResult.error;
+  const topMode = modeResult.mode;
+  const topBounds = validateContainerBounds(spec.containerBounds);
+  if (typeof topBounds === "string") return topBounds;
+
+  if (!Array.isArray(spec.steps) || spec.steps.length === 0) {
+    return "sequence gesture requires 1 to 64 steps.";
+  }
+  if (spec.steps.length > MAX_SEQUENCE_GESTURE_STEPS) {
+    return `sequence gesture supports at most ${MAX_SEQUENCE_GESTURE_STEPS} steps (got ${spec.steps.length}).`;
+  }
+
+  const steps: NormalizedSequenceStep[] = [];
+  let totalPoints = 0;
+  let totalDurationMs = 0;
+  let hasActionableStep = false;
+
+  for (let i = 0; i < spec.steps.length; i += 1) {
+    const rawStep = spec.steps[i];
+    if (!rawStep || typeof rawStep !== "object") {
+      return `steps[${i}] must be a valid gesture step object.`;
+    }
+    const rawType = (rawStep as { type?: unknown }).type;
+    if (rawType === "sequence") {
+      return "Nested sequence gestures are not supported.";
+    }
+    if (rawType === "sleep") {
+      const durationMs = (rawStep as { durationMs?: unknown }).durationMs;
+      if (typeof durationMs !== "number" || !Number.isFinite(durationMs) || durationMs <= 0 || durationMs > 10000) {
+        return `steps[${i}].durationMs must be > 0 and <= 10000 ms for sleep steps.`;
+      }
+      const rounded = Math.round(durationMs);
+      steps.push({ type: "sleep", durationMs: rounded });
+      totalDurationMs += rounded;
+      continue;
+    }
+
+    const atomicSpec = rawStep as PerformGestureAtomicSpec;
+    const inheritedSpec: PerformGestureAtomicSpec = {
+      ...atomicSpec,
+      coordinateMode: atomicSpec.coordinateMode ?? topMode,
+      ...(atomicSpec.containerBounds ?? topBounds
+        ? { containerBounds: atomicSpec.containerBounds ?? topBounds }
+        : {}),
+    };
+    const normalizedStep = normalizeAtomicGesture(inheritedSpec);
+    if (typeof normalizedStep === "string") {
+      return `steps[${i}]: ${normalizedStep}`;
+    }
+    if (normalizedStep.type === "draw") {
+      totalPoints += normalizedStep.points.length;
+      if (totalPoints > MAX_SEQUENCE_TOTAL_POINTS) {
+        return `sequence gesture total points exceeded ${MAX_SEQUENCE_TOTAL_POINTS}.`;
+      }
+    }
+    hasActionableStep = true;
+    totalDurationMs += estimateAtomicStepDurationMs(normalizedStep);
+    steps.push(normalizedStep);
+  }
+
+  if (!hasActionableStep) {
+    return "sequence gesture must contain at least 1 non-sleep gesture step.";
+  }
+
+  return {
+    type: "sequence",
+    coordinateMode: topMode,
+    ...(topBounds ? { containerBounds: topBounds } : {}),
+    steps,
+    durationMs: totalDurationMs,
+  };
+}
+
+/** Validates and normalizes `perform_gesture` input into an explicit gesture descriptor or error reason. */
+export function normalizePerformGesture(spec: PerformGestureSpec | undefined): NormalizedPerformGesture | string {
+  if (!spec || typeof spec !== "object") {
+    return "gesture object is required.";
+  }
+  if (spec.type === "sequence") {
+    return validateSequenceGesture(spec);
+  }
+  return normalizeAtomicGesture(spec);
+}
+
+export function gestureRequiresViewportBounds(normalized: NormalizedPerformGesture): boolean {
+  if (normalized.type !== "sequence") {
+    return normalized.coordinateMode === "normalized" && !normalized.containerBounds;
+  }
+  return normalized.steps.some(
+    (step) => step.type !== "sleep" && step.coordinateMode === "normalized" && !step.containerBounds,
+  );
 }
 
 function resolvePoint(
@@ -345,12 +473,11 @@ function resolvePoint(
   };
 }
 
-/** Converts normalized coordinates against containerBounds or viewport bounds into absolute points. */
-export function resolveGestureCoordinates(
-  normalized: NormalizedPerformGesture,
+function resolveAtomicGestureCoordinates(
+  normalized: NormalizedAtomicGesture,
   viewportBounds?: { width: number; height: number },
 ): {
-  resolved: ResolvedPerformGesture;
+  resolved: NormalizedAtomicGesture;
   resolvedPoints: UiPoint[];
   coordinateScope: "viewport" | "container";
 } {
@@ -415,9 +542,55 @@ export function resolveGestureCoordinates(
   }
 }
 
+/** Converts normalized coordinates against containerBounds or viewport bounds into absolute points. */
+export function resolveGestureCoordinates(
+  normalized: NormalizedPerformGesture,
+  viewportBounds?: { width: number; height: number },
+): {
+  resolved: ResolvedPerformGesture;
+  resolvedPoints: UiPoint[];
+  coordinateScope: "viewport" | "container";
+} {
+  if (normalized.type !== "sequence") {
+    return resolveAtomicGestureCoordinates(normalized, viewportBounds);
+  }
+
+  const resolvedSteps: ResolvedSequenceStep[] = [];
+  const resolvedPoints: UiPoint[] = [];
+  let hasContainerScope = Boolean(normalized.containerBounds);
+  let hasViewportScope = false;
+
+  for (const step of normalized.steps) {
+    if (step.type === "sleep") {
+      resolvedSteps.push(step);
+      continue;
+    }
+    const atomic = resolveAtomicGestureCoordinates(step, viewportBounds);
+    resolvedSteps.push(atomic.resolved);
+    resolvedPoints.push(...atomic.resolvedPoints);
+    if (atomic.coordinateScope === "container") {
+      hasContainerScope = true;
+    } else {
+      hasViewportScope = true;
+    }
+  }
+
+  const coordinateScope: "viewport" | "container" =
+    hasContainerScope && !hasViewportScope ? "container" : normalized.containerBounds ? "container" : "viewport";
+
+  return {
+    resolved: {
+      ...normalized,
+      steps: resolvedSteps,
+    },
+    resolvedPoints,
+    coordinateScope,
+  };
+}
+
 export function extractFallbackGestureKind(input: PerformGestureInput): PerformGestureKind {
   const kind = (input.gesture as { type?: string } | undefined)?.type;
-  if (kind === "draw" || kind === "drag" || kind === "pinch" || kind === "double_tap" || kind === "two_finger_tap") {
+  if (kind === "draw" || kind === "drag" || kind === "pinch" || kind === "double_tap" || kind === "two_finger_tap" || kind === "sequence") {
     return kind;
   }
   return "draw";

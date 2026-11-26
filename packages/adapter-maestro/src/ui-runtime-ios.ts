@@ -521,7 +521,19 @@ export function createIosUiRuntimeHooks(): UiRuntimePlatformHooks {
 		},
 		buildGestureCommands: (deviceId, gesture) => {
 			const backend = router.selectBackend(deviceId);
-			if (gesture.type === "draw") {
+			if (gesture.type === "sequence") {
+				if (backend.buildBatchGestureCommands) {
+					const batchPlan = backend.buildBatchGestureCommands(deviceId, gesture.steps);
+					return {
+						supported: true,
+						commands: batchPlan.commands,
+						stepDelaysMs: batchPlan.stepDelaysMs,
+						commandTimeoutMs: Math.max(30000, gesture.durationMs + 15000),
+						supportLevel: "full",
+						backendId: backend.backendId,
+					};
+				}
+			} else if (gesture.type === "draw") {
 				if (backend.buildDrawCommand) {
 					return {
 						supported: true,

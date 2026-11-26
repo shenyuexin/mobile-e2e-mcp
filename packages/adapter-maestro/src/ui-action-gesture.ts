@@ -23,6 +23,7 @@ import { buildMissingPlatformSuggestion } from "./ui-tool-shared.js";
 import {
   DEFAULT_GESTURE_SETTLE_DELAY_MS,
   extractFallbackGestureKind,
+  gestureRequiresViewportBounds,
   normalizePerformGesture,
   resolveGestureCoordinates,
 } from "./ui-gesture-model.js";
@@ -125,8 +126,7 @@ export async function performGestureWithMaestroTool(
 
   let viewportBounds: { width: number; height: number } | undefined;
   if (
-    normalized.coordinateMode === "normalized" &&
-    !normalized.containerBounds &&
+    gestureRequiresViewportBounds(normalized) &&
     !input.dryRun &&
     platform === "ios"
   ) {
@@ -160,6 +160,7 @@ export async function performGestureWithMaestroTool(
       };
 
   const durationMsField = "durationMs" in resolved ? resolved.durationMs : undefined;
+  const stepCountField = resolved.type === "sequence" ? resolved.steps.length : undefined;
 
   if (!plan.supported) {
     return {
@@ -178,6 +179,7 @@ export async function performGestureWithMaestroTool(
         ...(resolved.containerBounds ? { containerBoundsApplied: resolved.containerBounds } : {}),
         resolvedPoints,
         ...(durationMsField !== undefined ? { durationMs: durationMsField } : {}),
+        ...(stepCountField !== undefined ? { stepCount: stepCountField } : {}),
         commandHistory: [],
         exitCode: null,
         supportLevel: "partial",
@@ -204,6 +206,7 @@ export async function performGestureWithMaestroTool(
         ...(resolved.containerBounds ? { containerBoundsApplied: resolved.containerBounds } : {}),
         resolvedPoints,
         ...(durationMsField !== undefined ? { durationMs: durationMsField } : {}),
+        ...(stepCountField !== undefined ? { stepCount: stepCountField } : {}),
         commandHistory: plan.commands,
         exitCode: 0,
         supportLevel: plan.supportLevel,
@@ -216,7 +219,7 @@ export async function performGestureWithMaestroTool(
   }
 
   const commandHistory: string[][] = [];
-  let lastExitCode: number | null = null;
+  let lastExitCode: number | null = plan.commands.length === 0 ? 0 : null;
 
   for (let i = 0; i < plan.commands.length; i += 1) {
     const command = plan.commands[i];
@@ -225,14 +228,16 @@ export async function performGestureWithMaestroTool(
       repoRoot,
       command,
       requiresProbe: false,
+      timeoutMs: plan.commandTimeoutMs,
     });
     lastExitCode = execution.execution?.exitCode ?? null;
     commandHistory.push([...command]);
     if (lastExitCode !== 0) {
       break;
     }
-    if (plan.interCommandDelayMs && plan.interCommandDelayMs > 0 && i < plan.commands.length - 1) {
-      await new Promise((r) => setTimeout(r, plan.interCommandDelayMs));
+    const stepDelay = plan.stepDelaysMs?.[i] ?? plan.interCommandDelayMs ?? 0;
+    if (stepDelay > 0 && i < plan.commands.length - 1) {
+      await new Promise((r) => setTimeout(r, stepDelay));
     }
   }
 
@@ -261,6 +266,7 @@ export async function performGestureWithMaestroTool(
       ...(resolved.containerBounds ? { containerBoundsApplied: resolved.containerBounds } : {}),
       resolvedPoints,
       ...(durationMsField !== undefined ? { durationMs: durationMsField } : {}),
+      ...(stepCountField !== undefined ? { stepCount: stepCountField } : {}),
       commandHistory,
       exitCode: lastExitCode,
       supportLevel: plan.supportLevel,

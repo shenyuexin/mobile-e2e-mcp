@@ -1,6 +1,8 @@
 import { escapeHtml } from "@mobile-e2e-mcp/explorer";
 import type { Platform } from "@mobile-e2e-mcp/contracts";
 import type { SelectorHealProposal } from "./selector-heal.js";
+import type { VerifyMatrixSummary, VerifyMatrixTargetSummary } from "./verify-matrix.js";
+import type { VerifyProbesSummary } from "./verify-probes.js";
 
 export interface VerifyFlowEntry {
   flowPath: string;
@@ -59,14 +61,143 @@ export interface VerifySuiteSummary {
   };
   audit: VerifyAuditSummary;
   explorer: VerifyExplorerSummary;
+  probes?: VerifyProbesSummary;
+  matrix?: VerifyMatrixSummary;
   artifacts: {
     summaryJsonPath: string;
     reportMdPath: string;
     reportHtmlPath: string;
     auditJsonPath?: string;
     explorerHtmlReportPath?: string;
+    failurePacketPath?: string;
   };
   nextSuggestions: string[];
+}
+
+export interface VerifyFailurePacket {
+  schemaVersion: "e2e-failure-packet/v1";
+  runId: string;
+  generatedAt: string;
+  platform: Platform;
+  appId?: string;
+  deviceId?: string;
+  failedStages: string[];
+  failedFlows: Array<{
+    flowPath: string;
+    reasonCode: string;
+    sessionId?: string;
+    recordingPath?: string | null;
+    healProposalDiff?: string;
+    nextSuggestions: string[];
+  }>;
+  auditFailure?: {
+    reasonCode?: string;
+    surfaceName?: string;
+    totalIssues?: number;
+    regressionDetected?: boolean;
+    outputPath?: string;
+    nextSuggestions: string[];
+  };
+  explorerFailure?: {
+    runId?: string;
+    failedCount?: number;
+    htmlReportRelPath?: string;
+    summaryJsonRelPath?: string;
+    error?: string;
+  };
+  failedProbes: Array<{
+    name: string;
+    url: string;
+    httpStatus?: number;
+    rawJsonRelPath?: string;
+    failures: string[];
+  }>;
+  failedTargets: VerifyMatrixTargetSummary[];
+  recommendedRerunCommand: string;
+  nextSuggestions: string[];
+}
+
+export function buildVerifyFailurePacket(
+  summary: VerifySuiteSummary,
+  options: { rerunCommand?: string } = {},
+): VerifyFailurePacket {
+  const failedStages: string[] = [];
+  const failedFlows = summary.flows.entries
+    .filter((entry) => entry.status === "failed")
+    .map((entry) => ({
+      flowPath: entry.flowPath,
+      reasonCode: entry.reasonCode,
+      ...(entry.sessionId ? { sessionId: entry.sessionId } : {}),
+      ...(entry.recordingPath && !entry.recordingDiscarded ? { recordingPath: entry.recordingPath } : {}),
+      ...(entry.healProposal?.unifiedDiff ? { healProposalDiff: entry.healProposal.unifiedDiff } : {}),
+      nextSuggestions: entry.nextSuggestions,
+    }));
+  if (failedFlows.length > 0) failedStages.push("flows");
+
+  const auditFailure =
+    summary.audit.enabled && summary.audit.status === "failed"
+      ? {
+          ...(summary.audit.reasonCode ? { reasonCode: summary.audit.reasonCode } : {}),
+          ...(summary.audit.surfaceName ? { surfaceName: summary.audit.surfaceName } : {}),
+          ...(summary.audit.totalIssues !== undefined ? { totalIssues: summary.audit.totalIssues } : {}),
+          ...(summary.audit.regressionDetected !== undefined
+            ? { regressionDetected: summary.audit.regressionDetected }
+            : {}),
+          ...(summary.audit.outputPath ? { outputPath: summary.audit.outputPath } : {}),
+          nextSuggestions: summary.audit.nextSuggestions,
+        }
+      : undefined;
+  if (auditFailure) failedStages.push("audit");
+
+  const explorerFailure =
+    summary.explorer.enabled && summary.explorer.status === "failed"
+      ? {
+          ...(summary.explorer.runId ? { runId: summary.explorer.runId } : {}),
+          ...(summary.explorer.failedCount !== undefined ? { failedCount: summary.explorer.failedCount } : {}),
+          ...(summary.explorer.htmlReportRelPath ? { htmlReportRelPath: summary.explorer.htmlReportRelPath } : {}),
+          ...(summary.explorer.summaryJsonRelPath ? { summaryJsonRelPath: summary.explorer.summaryJsonRelPath } : {}),
+          ...(summary.explorer.error ? { error: summary.explorer.error } : {}),
+        }
+      : undefined;
+  if (explorerFailure) failedStages.push("explorer");
+
+  const failedProbes = (summary.probes?.entries ?? [])
+    .filter((entry) => entry.status === "failed")
+    .map((entry) => ({
+      name: entry.name,
+      url: entry.url,
+      ...(entry.httpStatus !== undefined ? { httpStatus: entry.httpStatus } : {}),
+      ...(entry.rawJsonRelPath ? { rawJsonRelPath: entry.rawJsonRelPath } : {}),
+      failures: entry.failures,
+    }));
+  if (failedProbes.length > 0) failedStages.push("probes");
+
+  const failedTargets = (summary.matrix?.targets ?? []).filter((t) => t.overallStatus === "failed");
+  if (failedTargets.length > 0) failedStages.push("matrix");
+
+  const defaultRerunParts = ["mobile-e2e-mcp verify", "--platform", summary.platform];
+  if (summary.appId) defaultRerunParts.push("--app-id", summary.appId);
+  if (summary.deviceId) defaultRerunParts.push("--device-id", summary.deviceId);
+  if (failedFlows.length > 0) {
+    defaultRerunParts.push("--flows", failedFlows[0]!.flowPath);
+  }
+
+  return {
+    schemaVersion: "e2e-failure-packet/v1",
+    runId: summary.runId,
+    generatedAt: summary.completedAt,
+    platform: summary.platform,
+    ...(summary.appId ? { appId: summary.appId } : {}),
+    ...(summary.deviceId ? { deviceId: summary.deviceId } : {}),
+    failedStages,
+    failedFlows,
+    ...(auditFailure ? { auditFailure } : {}),
+    ...(explorerFailure ? { explorerFailure } : {}),
+    failedProbes,
+    failedTargets,
+    recommendedRerunCommand: options.rerunCommand ?? defaultRerunParts.join(" "),
+    nextSuggestions: summary.nextSuggestions,
+  };
 }
 
 export function formatVerifyMarkdown(summary: VerifySuiteSummary): string {
@@ -135,8 +266,35 @@ export function formatVerifyMarkdown(summary: VerifySuiteSummary): string {
     );
   }
 
+  if (summary.probes?.enabled) {
+    lines.push("## 4. Custom Probes & Performance Ratchets", "");
+    lines.push(`Passed **${summary.probes.passed}/${summary.probes.total}** probe(s) (status: \`${summary.probes.status}\`).`, "");
+    lines.push("| Probe | Status | HTTP | Duration | Details |", "|---|---|---|---|---|");
+    for (const entry of summary.probes.entries) {
+      const detail = entry.failures.length > 0 ? entry.failures.join("; ") : Object.entries(entry.metrics).map(([k, v]) => `${k}=${String(v)}`).join(", ") || "ok";
+      lines.push(`| \`${entry.name}\` | ${entry.status} | ${entry.httpStatus ?? "—"} | ${entry.durationMs}ms | ${detail} |`);
+    }
+    lines.push("");
+  }
+
+  if (summary.matrix?.enabled) {
+    lines.push("## 5. Device Matrix", "");
+    lines.push(`Passed **${summary.matrix.passed}/${summary.matrix.total}** target(s).`, "");
+    lines.push("| Target | Platform | Status | Flows | Audit | Probes | Explorer | Report |", "|---|---|---|---|---|---|---|---|");
+    for (const target of summary.matrix.targets) {
+      lines.push(
+        `| \`${target.label}\` | ${target.platform} | ${target.overallStatus} | ${target.flowsPassed}/${target.flowsTotal} | ${target.auditStatus} | ${target.probeStatus} | ${target.explorerStatus} | [\`${target.reportHtmlRelPath}\`](${target.reportHtmlRelPath}) |`,
+      );
+    }
+    lines.push("");
+  }
+
+  if (summary.artifacts.failurePacketPath) {
+    lines.push("## Failure Packet", "", `- JSON diagnostics: \`${summary.artifacts.failurePacketPath}\``, "");
+  }
+
   if (summary.nextSuggestions.length > 0) {
-    lines.push("## 4. Next Actions", "");
+    lines.push("## Next Actions", "");
     for (const item of summary.nextSuggestions) {
       lines.push(`- ${item}`);
     }
@@ -172,6 +330,34 @@ export function formatVerifyHtml(summary: VerifySuiteSummary): string {
     ? `<a href="${escapeHtml(summary.explorer.htmlReportRelPath)}">${escapeHtml(summary.explorer.htmlReportRelPath)}</a>`
     : "—";
 
+  const probesSection = summary.probes?.enabled
+    ? `<section><h2>Custom Probes &amp; Performance Ratchets</h2><p>Status: <strong>${escapeHtml(summary.probes.status)}</strong> (${summary.probes.passed}/${summary.probes.total} passed)</p><table><thead><tr><th>Probe</th><th>Status</th><th>HTTP</th><th>Duration</th><th>Details</th></tr></thead><tbody>${summary.probes.entries
+        .map((entry) => {
+          const badge = entry.status === "passed" ? "good" : entry.status === "skipped_dry_run" ? "muted" : "warn";
+          const details =
+            entry.failures.length > 0
+              ? entry.failures.join("; ")
+              : Object.entries(entry.metrics)
+                  .map(([k, v]) => `${k}=${String(v)}`)
+                  .join(", ") || "ok";
+          return `<tr><td><code>${escapeHtml(entry.name)}</code></td><td class="${badge}">${escapeHtml(entry.status)}</td><td>${entry.httpStatus ?? "—"}</td><td>${entry.durationMs}ms</td><td>${escapeHtml(details)}</td></tr>`;
+        })
+        .join("")}</tbody></table></section>`
+    : "";
+
+  const matrixSection = summary.matrix?.enabled
+    ? `<section><h2>Device Matrix</h2><p>Targets passed: <strong>${summary.matrix.passed}/${summary.matrix.total}</strong></p><table><thead><tr><th>Target</th><th>Platform</th><th>Status</th><th>Flows</th><th>Audit</th><th>Probes</th><th>Explorer</th><th>Report</th></tr></thead><tbody>${summary.matrix.targets
+        .map((t) => {
+          const badge = t.overallStatus === "passed" ? "good" : "warn";
+          return `<tr><td><code>${escapeHtml(t.label)}</code></td><td>${escapeHtml(t.platform)}</td><td class="${badge}">${escapeHtml(t.overallStatus)}</td><td>${t.flowsPassed}/${t.flowsTotal}</td><td>${escapeHtml(t.auditStatus)}</td><td>${escapeHtml(t.probeStatus)}</td><td>${escapeHtml(t.explorerStatus)}</td><td><a href="${escapeHtml(t.reportHtmlRelPath)}">${escapeHtml(t.reportHtmlRelPath)}</a></td></tr>`;
+        })
+        .join("")}</tbody></table></section>`
+    : "";
+
+  const failurePacketNotice = summary.artifacts.failurePacketPath
+    ? `<p>Failure diagnostics packet: <code>${escapeHtml(summary.artifacts.failurePacketPath)}</code></p>`
+    : "";
+
   const suggestionsList = summary.nextSuggestions.length === 0
     ? '<p class="muted">No follow-up actions required.</p>'
     : `<ul>${summary.nextSuggestions.map((s) => `<li>${escapeHtml(s)}</li>`).join("")}</ul>`;
@@ -205,10 +391,12 @@ pre { background: #8881; padding: 12px; border-radius: 8px; overflow-x: auto; fo
   <h1>Mobile E2E Verification Report</h1>
   <div class="muted">Run ID: <code>${escapeHtml(summary.runId)}</code> · Platform: <code>${escapeHtml(summary.platform)}</code> · App: <code>${escapeHtml(summary.appId ?? "—")}</code></div>
   <div class="gate ${gateClass}">OVERALL: ${escapeHtml(summary.overallStatus.toUpperCase())}${summary.dryRun ? " (DRY RUN)" : ""}</div>
+  ${failurePacketNotice}
   <div class="kpis">
     <div class="kpi"><span class="kpi-label">Flows Passed</span><span class="kpi-value">${summary.flows.passed}/${summary.flows.total}</span></div>
     <div class="kpi"><span class="kpi-label">UI Audit</span><span class="kpi-value">${escapeHtml(summary.audit.status)}</span></div>
     <div class="kpi"><span class="kpi-label">Explorer</span><span class="kpi-value">${escapeHtml(summary.explorer.status)}</span></div>
+    <div class="kpi"><span class="kpi-label">Probes</span><span class="kpi-value">${summary.probes?.enabled ? escapeHtml(summary.probes.status) : "off"}</span></div>
     <div class="kpi"><span class="kpi-label">Duration</span><span class="kpi-value">${(summary.durationMs / 1000).toFixed(1)}s</span></div>
   </div>
   <section>
@@ -224,6 +412,8 @@ pre { background: #8881; padding: 12px; border-radius: 8px; overflow-x: auto; fo
     <h2>Bounded Explorer</h2>
     <p>Status: <strong>${escapeHtml(summary.explorer.status)}</strong> · Pages: ${summary.explorer.visitedPages ?? 0} · Failures: ${summary.explorer.failedCount ?? 0} · HTML Report: ${explorerLink}</p>
   </section>
+  ${probesSection}
+  ${matrixSection}
   <section>
     <h2>Next Actions</h2>
     ${suggestionsList}

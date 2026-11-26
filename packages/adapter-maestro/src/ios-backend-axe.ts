@@ -4,6 +4,7 @@ import type {
   IosDrawGestureParams,
   IosExecutionBackend,
   IosMultiTouchGestureParams,
+  IosSequenceGestureStep,
 } from "./ios-backend-types.js";
 import { executeRunnerWithTestHooks } from "./runtime-shared.js";
 import { formatAxeSeconds } from "./ui-gesture-model.js";
@@ -199,6 +200,77 @@ export class AxeSimulatorBackend implements IosExecutionBackend {
     }
     command.push("--udid", deviceId);
     return command;
+  }
+
+  /**
+   * Coalesces consecutive `draw` steps (and intervening `sleep` waits) into single `axe batch`
+   * CLI invocations, while isolating `drag` and coordinate multi-touch steps (`pinch`, `double_tap`,
+   * `two_finger_tap`) which AXe v2.2 `batch` rejects.
+   */
+  buildBatchGestureCommands(
+    deviceId: string,
+    steps: IosSequenceGestureStep[],
+  ): { commands: string[][]; stepDelaysMs: number[] } {
+    const commands: string[][] = [];
+    const stepDelaysMs: number[] = [];
+    let pendingDrawSteps: string[] = [];
+    let pendingSleepMs = 0;
+
+    const stripAxeAndUdid = (cmd: string[]): string => {
+      const inner = cmd.slice(1, cmd.length >= 3 && cmd[cmd.length - 2] === "--udid" ? -2 : undefined);
+      return inner.join(" ");
+    };
+
+    const appendDelayToPreviousCommand = (delayMs: number) => {
+      if (delayMs > 0 && stepDelaysMs.length > 0) {
+        const lastIdx = stepDelaysMs.length - 1;
+        stepDelaysMs[lastIdx] = (stepDelaysMs[lastIdx] ?? 0) + delayMs;
+      }
+    };
+
+    const flushDrawBatch = () => {
+      if (pendingDrawSteps.length === 0) {
+        appendDelayToPreviousCommand(pendingSleepMs);
+        pendingSleepMs = 0;
+        return;
+      }
+      const batchCmd = ["axe", "batch", "--udid", deviceId];
+      for (const stepText of pendingDrawSteps) {
+        batchCmd.push("--step", stepText);
+      }
+      commands.push(batchCmd);
+      stepDelaysMs.push(pendingSleepMs);
+      pendingDrawSteps = [];
+      pendingSleepMs = 0;
+    };
+
+    for (const step of steps) {
+      if (step.type === "sleep") {
+        pendingSleepMs += step.durationMs;
+        continue;
+      }
+      if (step.type === "draw") {
+        if (pendingDrawSteps.length > 0 && pendingSleepMs > 0) {
+          pendingDrawSteps.push(`sleep ${formatAxeSeconds(pendingSleepMs)}`);
+        } else if (pendingSleepMs > 0) {
+          appendDelayToPreviousCommand(pendingSleepMs);
+        }
+        pendingSleepMs = 0;
+        pendingDrawSteps.push(stripAxeAndUdid(this.buildDrawCommand(deviceId, step)));
+        continue;
+      }
+
+      flushDrawBatch();
+      if (step.type === "drag") {
+        commands.push(this.buildDragCommand(deviceId, step));
+      } else {
+        commands.push(this.buildMultiTouchGestureCommand(deviceId, step));
+      }
+      stepDelaysMs.push(0);
+    }
+
+    flushDrawBatch();
+    return { commands, stepDelaysMs };
   }
 
   buildHierarchyCaptureCommand(deviceId: string): string[] {

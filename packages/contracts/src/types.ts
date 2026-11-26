@@ -2092,7 +2092,7 @@ export interface ScrollOnlyData {
 }
 
 /** Supported canvas/multi-touch gesture kinds for `perform_gesture`. */
-export type PerformGestureKind = "draw" | "drag" | "pinch" | "double_tap" | "two_finger_tap";
+export type PerformGestureKind = "draw" | "drag" | "pinch" | "double_tap" | "two_finger_tap" | "sequence";
 export type PerformGestureCoordinateMode = "absolute" | "normalized";
 
 export interface DrawGestureSpec {
@@ -2152,12 +2152,28 @@ export interface TwoFingerTapGestureSpec {
   postDelayMs?: number;
 }
 
-export type PerformGestureSpec =
+export interface SleepGestureStep {
+  type: "sleep";
+  durationMs: number;
+}
+
+export type PerformGestureAtomicSpec =
   | DrawGestureSpec
   | DragGestureSpec
   | PinchGestureSpec
   | DoubleTapGestureSpec
   | TwoFingerTapGestureSpec;
+
+export type PerformGestureSequenceStep = PerformGestureAtomicSpec | SleepGestureStep;
+
+export interface SequenceGestureSpec {
+  type: "sequence";
+  coordinateMode?: PerformGestureCoordinateMode;
+  containerBounds?: ScrollOnlyContainerBounds;
+  steps: PerformGestureSequenceStep[];
+}
+
+export type PerformGestureSpec = PerformGestureAtomicSpec | SequenceGestureSpec;
 
 export interface PerformGestureInput {
   sessionId: string;
@@ -2179,6 +2195,7 @@ export interface PerformGestureData {
   containerBoundsApplied?: ScrollOnlyContainerBounds;
   resolvedPoints?: UiPoint[];
   durationMs?: number;
+  stepCount?: number;
   commandHistory: string[][];
   exitCode: number | null;
   supportLevel: "full" | "partial";

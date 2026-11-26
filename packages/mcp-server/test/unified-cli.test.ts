@@ -68,6 +68,8 @@ test("project-config serializes and parses YAML round-trip cleanly", () => {
       suggestHeal: true,
       failFast: false,
       output: "./output/e2e-verify",
+      probeConfig: "./probes.json",
+      matrixConfig: "./matrix.json",
     },
   };
 

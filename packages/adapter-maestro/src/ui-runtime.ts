@@ -404,6 +404,7 @@ export async function executeUiActionCommand(options: {
 	repoRoot: string;
 	command: string[];
 	requiresProbe: boolean;
+	timeoutMs?: number;
 	probeRuntimeAvailability?: (
 		repoRoot: string,
 	) => Promise<CommandExecution | undefined>;
@@ -568,6 +569,7 @@ export async function executeUiActionCommand(options: {
 		return result;
 	}
 
+	const actionTimeoutMs = options.timeoutMs ?? DEFAULT_UI_ACTION_TIMEOUT_MS;
 	result.execution =
 		options.command[0] === "axe"
 			? await executeAxeCommandWithPool(
@@ -575,7 +577,7 @@ export async function executeUiActionCommand(options: {
 					options.repoRoot,
 					process.env,
 					{
-						timeoutMs: DEFAULT_UI_ACTION_TIMEOUT_MS,
+						timeoutMs: actionTimeoutMs,
 					},
 				)
 			: await executeRunnerWithTestHooks(
@@ -583,7 +585,7 @@ export async function executeUiActionCommand(options: {
 					options.repoRoot,
 					process.env,
 					{
-						timeoutMs: DEFAULT_UI_ACTION_TIMEOUT_MS,
+						timeoutMs: actionTimeoutMs,
 					},
 				);
 	return result;

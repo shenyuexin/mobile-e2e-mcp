@@ -820,7 +820,7 @@ const TOOL_DESCRIPTORS: ReadonlyArray<ToolDescriptor> = [
 	defineToolDescriptor({
 		name: TOOL_NAMES.performGesture,
 		description:
-			"Perform canvas/multi-touch gestures (draw polyline stroke, drag, pinch, double_tap, two_finger_tap) with absolute or container-normalized coordinates. Full simulator support on iOS via AXe v2.2+; partial support on Android (drag, 2-point draw, double_tap via adb).",
+			"Perform canvas/multi-touch gestures (draw polyline stroke, drag, pinch, double_tap, two_finger_tap, or coalesced sequence flows via axe batch) with absolute or container-normalized coordinates. Full simulator support on iOS via AXe v2.2+; partial support on Android (drag, 2-point draw, double_tap via adb).",
 		handler: performGesture,
 		policy: { enforced: true, requiredScopes: ["write"] },
 		session: { required: true, requireResolvedSessionContext: true },

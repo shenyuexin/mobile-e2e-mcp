@@ -255,3 +255,159 @@ test("unified CLI dispatches verify and prints verify usage in help", async () =
   const help = await captureConsole(() => runUnifiedCli(["--help"]));
   assert.match(help.stdout, /mobile-e2e-mcp verify \[options\]/);
 });
+
+test("parseVerifyArgs supports probe-config, matrix targets, and rejects invalid/duplicate targets", () => {
+  const parsed = parseVerifyArgs([
+    "--probe-config", "probes.json",
+    "--update-probe-baseline",
+    "--target", "ipad-pro:ios:UDID-1",
+    "--target", "ipad-mini:ios:UDID-2",
+    "--matrix-config", "matrix.json",
+  ]);
+  assert.equal(parsed.probeConfig, "probes.json");
+  assert.equal(parsed.updateProbeBaseline, true);
+  assert.equal(parsed.targets.length, 2);
+  assert.deepEqual(parsed.targets[1], { label: "ipad-mini", platform: "ios", deviceId: "UDID-2" });
+  assert.equal(parsed.matrixConfig, "matrix.json");
+
+  assert.match(parseVerifyArgs(["--target", "bad"]).error ?? "", /Invalid --target/);
+  assert.match(parseVerifyArgs(["--target", "a:ios", "--target", "a:ios"]).error ?? "", /Duplicate --target/);
+});
+
+test("executeVerify evaluates probes with baseline ratchet, emits failure-packet.json, and handles multi-target matrix", async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), "m2e-verify-probe-matrix-"));
+  try {
+    const flowPath = path.join(dir, "smoke.yaml");
+    const failFlowPath = path.join(dir, "fail-mini.yaml");
+    const probeConfigPath = path.join(dir, "probes.json");
+    const baselinePath = path.join(dir, "perf-baseline.json");
+    const matrixPath = path.join(dir, "matrix.json");
+
+    await writeFile(flowPath, "appId: com.example.verify\n---\n- launchApp\n", "utf-8");
+    await writeFile(failFlowPath, "appId: com.example.verify\n---\n- launchApp\n", "utf-8");
+    await writeFile(
+      probeConfigPath,
+      JSON.stringify({
+        baselinePath: "perf-baseline.json",
+        probes: [
+          {
+            name: "fps",
+            url: "http://127.0.0.1:8091/debug/fps",
+            assertions: [
+              { path: "jankLast1s", op: "lte", value: 2 },
+              { path: "measuredFrameP50Ms", op: "lte", value: 33.4, maxRatioOfBaseline: 1.5 },
+            ],
+          },
+        ],
+      }),
+      "utf-8",
+    );
+
+    const { server } = makeVerifyServer({ failFlowName: "fail-mini.yaml" });
+
+    // 1. Live passing probe run with --update-probe-baseline writes baseline and omits failure-packet.json
+    const passOut = path.join(dir, "out-pass");
+    const passRun = await captureConsole(() =>
+      executeVerify(
+        server,
+        ["--flows", flowPath, "--probe-config", probeConfigPath, "--update-probe-baseline", "--output", passOut, "--json"],
+        {
+          fetchProbe: async () => ({
+            ok: true,
+            status: 200,
+            bodyText: JSON.stringify({ jankLast1s: 0, measuredFrameP50Ms: 8.3 }),
+          }),
+        },
+        dir,
+      ),
+    );
+    assert.equal(passRun.result, 0);
+    assert.equal(existsSync(baselinePath), true);
+    assert.equal(existsSync(path.join(passOut, "failure-packet.json")), false);
+
+    // 2. Regression exceeding maxRatioOfBaseline (8.3 * 1.5 = 12.45) fails and writes failure-packet.json
+    const regOut = path.join(dir, "out-reg");
+    const regRun = await captureConsole(() =>
+      executeVerify(
+        server,
+        ["--flows", flowPath, "--probe-config", probeConfigPath, "--output", regOut, "--json"],
+        {
+          fetchProbe: async () => ({
+            ok: true,
+            status: 200,
+            bodyText: JSON.stringify({ jankLast1s: 0, measuredFrameP50Ms: 20.0 }),
+          }),
+        },
+        dir,
+      ),
+    );
+    assert.equal(regRun.result, 1);
+    assert.equal(existsSync(path.join(regOut, "failure-packet.json")), true);
+    const packet = JSON.parse(await readFile(path.join(regOut, "failure-packet.json"), "utf-8")) as {
+      schemaVersion: string;
+      failedStages: string[];
+      failedProbes: Array<{ name: string; failures: string[] }>;
+    };
+    assert.equal(packet.schemaVersion, "e2e-failure-packet/v1");
+    assert.deepEqual(packet.failedStages, ["probes"]);
+    assert.equal(packet.failedProbes[0]?.name, "fps");
+
+    // 3. Dry-run skips HTTP probe fetches
+    let fetchedInDryRun = false;
+    const dryRun = await captureConsole(() =>
+      executeVerify(
+        server,
+        ["--flows", flowPath, "--probe-config", probeConfigPath, "--dry-run", "--output", path.join(dir, "out-dry"), "--json"],
+        {
+          fetchProbe: async () => {
+            fetchedInDryRun = true;
+            return { ok: true, status: 200, bodyText: "{}" };
+          },
+        },
+        dir,
+      ),
+    );
+    assert.equal(dryRun.result, 0);
+    assert.equal(fetchedInDryRun, false);
+
+    // 4. Multi-target matrix config produces per-target folders and top-level summary + failure packet on failure
+    await writeFile(
+      matrixPath,
+      JSON.stringify({
+        targets: [
+          { label: "ipad-pro", platform: "ios", deviceId: "UDID-PRO" },
+          { label: "ipad-mini", platform: "ios", deviceId: "UDID-MINI" },
+        ],
+      }),
+      "utf-8",
+    );
+    const matrixOut = path.join(dir, "out-matrix");
+    const matrixRun = await captureConsole(() =>
+      executeVerify(
+        server,
+        ["--flows", failFlowPath, "--matrix-config", matrixPath, "--output", matrixOut, "--json"],
+        {},
+        dir,
+      ),
+    );
+    assert.equal(matrixRun.result, 1);
+    const matrixSummary = JSON.parse(matrixRun.stdout) as {
+      matrix: { enabled: boolean; total: number; failed: number; targets: Array<{ label: string; reportHtmlRelPath: string }> };
+      artifacts: { failurePacketPath?: string; reportHtmlPath: string };
+    };
+    assert.equal(matrixSummary.matrix.enabled, true);
+    assert.equal(matrixSummary.matrix.total, 2);
+    assert.equal(matrixSummary.matrix.failed, 2);
+    assert.equal(existsSync(path.join(matrixOut, "targets", "ipad-pro", "summary.json")), true);
+    assert.equal(existsSync(path.join(matrixOut, "targets", "ipad-mini", "failure-packet.json")), true);
+    assert.equal(existsSync(matrixSummary.artifacts.failurePacketPath ?? ""), true);
+
+    // 5. Invalid probe/matrix path returns exit code 2
+    const badCfgRun = await captureConsole(() =>
+      executeVerify(server, ["--probe-config", "does-not-exist.json"], {}, dir),
+    );
+    assert.equal(badCfgRun.result, 2);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
