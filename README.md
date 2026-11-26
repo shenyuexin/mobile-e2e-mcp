@@ -39,14 +39,17 @@ By default, the MCP stdio server exposes the **`core` toolset (20 high-frequency
 
 ### Unified CLI Commands
 
-The single package entrypoint supports both MCP stdio serving and local CLI workflows (`stdio`, `doctor`, `init`, `explore`, `run`, `audit`, `diff`):
+The single package entrypoint supports both MCP stdio serving and local CLI workflows (`stdio`, `doctor`, `init`, `explore`, `run`, `audit`, `diff`, `setup-agent`):
 
 ```bash
 # Check Android/iOS host tools and connected devices
 npx -y @shenyuexin/mobile-e2e-mcp@latest doctor
 
-# Interactive or flag-driven .e2e/config.yaml setup
-npx -y @shenyuexin/mobile-e2e-mcp@latest init --platform ios --app-id com.example.app --no-prompt
+# Auto-detect Android / iOS / RN / Expo / Flutter and scaffold a starter smoke flow
+npx -y @shenyuexin/mobile-e2e-mcp@latest init --no-prompt --with-smoke-flow
+
+# One-command MCP + workflow setup for an AI client (claude|cursor|opencode|codex)
+npx -y @shenyuexin/mobile-e2e-mcp@latest setup-agent --target claude --toolset core
 
 # Run a deterministic flow inside a governed session
 npx -y @shenyuexin/mobile-e2e-mcp@latest run flows/smoke.yaml --dry-run
@@ -66,7 +69,9 @@ npx -y @shenyuexin/mobile-e2e-mcp@latest diff ./explore-report/base ./explore-re
 
 `audit` wraps `audit_ui_surface` in `start_session` → `audit_ui_surface` → `end_session`, inherits defaults from `.e2e/config.yaml` (including an `audit:` section), and exits non-zero on a detected regression when `--fail-on-regression` is set. `diff` reads `summary.json`, `failure-review.json`, and optional `audit*.json` from both run directories; add `--fail-on-regression` for a zero-script CI quality gate.
 
-`run --record-on-failure` starts `record_screen` before `run_flow` and stops it in a `finally` block: the video is discarded on pass and preserved on failure (reported as a path in text and `--json`). Live recording is skipped under `--dry-run`. `run --suggest-heal` combines `explain_last_failure`, `suggest_known_remediation`, and read-only `inspect_ui` into a structured proposal plus a unified diff snippet on failure — it is strictly proposal-only and never edits flow YAML files. None of these flags add MCP tools — the registry stays at 68 tools / 20 core tools.
+`run --record-on-failure` starts `record_screen` before `run_flow` and stops it in a `finally` block: the video is discarded on pass and preserved on failure (reported as a path in text and `--json`). Live recording is skipped under `--dry-run`. `run --suggest-heal` combines `explain_last_failure`, `suggest_known_remediation`, and read-only `inspect_ui` into a structured proposal plus a unified diff snippet on failure — it is strictly proposal-only and never edits flow YAML files.
+
+`init` auto-detects Android, iOS, React Native / Expo and Flutter projects and prefills `platform`, `appId`, `runnerProfile`, and an informational `buildCommand`; `--with-smoke-flow` scaffolds `.e2e/flows/smoke.yaml` with a launch step and explicit settle delay. Explicit flags always win over detection. `setup-agent` idempotently merges the `@shenyuexin/mobile-e2e-mcp@latest` MCP entry and concise workflow guidance into the target client's config, preserving unrelated MCP servers. `doctor` parses `axe --version` and warns with a copy-pasteable `brew upgrade cameroncooke/axe/axe` when AXe is older than v2.2.0 (required by `perform_gesture` and `axe serve`). None of these commands add MCP tools — the registry stays at 68 tools / 20 core tools.
 
 ## Explorer: Primary Product Surface
 

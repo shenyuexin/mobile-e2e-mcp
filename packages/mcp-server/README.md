@@ -22,14 +22,17 @@ npx -y @shenyuexin/mobile-e2e-mcp@latest --toolset full
 
 ## Unified CLI Commands
 
-The single package binary supports both MCP stdio serving and local CLI workflows (`stdio`, `doctor`, `init`, `explore`, `run`, `audit`, `diff`):
+The single package binary supports both MCP stdio serving and local CLI workflows (`stdio`, `doctor`, `init`, `explore`, `run`, `audit`, `diff`, `setup-agent`):
 
 ```bash
 # Check Android/iOS host tools and connected devices
 npx -y @shenyuexin/mobile-e2e-mcp@latest doctor
 
-# Generate .e2e/config.yaml in the current project
-npx -y @shenyuexin/mobile-e2e-mcp@latest init --platform ios --app-id com.example.app --no-prompt
+# Auto-detect the project and scaffold .e2e/config.yaml + a starter smoke flow
+npx -y @shenyuexin/mobile-e2e-mcp@latest init --no-prompt --with-smoke-flow
+
+# Install MCP config + workflow guide for an AI client
+npx -y @shenyuexin/mobile-e2e-mcp@latest setup-agent --target claude --toolset core
 
 # Run automatic page exploration
 npx -y @shenyuexin/mobile-e2e-mcp@latest explore --app-id com.example.app --platform android --output ./explore-report
@@ -49,6 +52,12 @@ npx -y @shenyuexin/mobile-e2e-mcp@latest audit \
 npx -y @shenyuexin/mobile-e2e-mcp@latest diff <baseDir> <headDir> \
   --markdown diff.md --html diff.html --json --fail-on-regression
 ```
+
+`init` options: all previous flags plus `--with-smoke-flow` / `--no-smoke-flow`. Project files are auto-detected (Android `app/build.gradle*`, iOS `*.xcodeproj/project.pbxproj` / `Info.plist`, RN / Expo `app.json` / `app.config.json`, Flutter `pubspec.yaml` + native folders) to prefill `platform`, `appId`, `runnerProfile`, and `buildCommand`; explicit flags take precedence.
+
+`setup-agent --target <claude|cursor|opencode|codex> [--toolset core|full] [--cwd <path>] [--dry-run] [--force] [--json]` writes the `@shenyuexin/mobile-e2e-mcp@latest` MCP entry and a concise managed workflow guide, merging idempotently so unrelated MCP servers are preserved.
+
+`doctor` parses `axe --version` and, for AXe < 2.2.0, prints a warning plus copy-pasteable `brew upgrade cameroncooke/axe/axe` and `axe --version` commands (`--json` adds `versionWarnings`).
 
 `run` recovery options: `--record-on-failure` starts `record_screen` before the flow and stops it in `finally` with `discardOnStop: true` on pass / `false` on failure; `--record-output <path>` sets the video path; `--suggest-heal` produces a proposal-only structured selector heal suggestion plus unified diff on failure using `explain_last_failure`, `suggest_known_remediation`, and read-only `inspect_ui`. Flow files are never edited. Recording is skipped under `--dry-run`.
 

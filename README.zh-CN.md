@@ -39,14 +39,17 @@
 
 ### 统一单入口 CLI
 
-单包二进制入口同时提供 MCP stdio 服务与本地 CLI 工作流（`stdio`、`doctor`、`init`、`explore`、`run`、`audit`、`diff`）：
+单包二进制入口同时提供 MCP stdio 服务与本地 CLI 工作流（`stdio`、`doctor`、`init`、`explore`、`run`、`audit`、`diff`、`setup-agent`）：
 
 ```bash
 # 检查本地 Android/iOS 工具链与已连接设备
 npx -y @shenyuexin/mobile-e2e-mcp@latest doctor
 
-# 生成轻量 .e2e/config.yaml 工程配置
-npx -y @shenyuexin/mobile-e2e-mcp@latest init --platform ios --app-id com.example.app --no-prompt
+# 自动识别 Android / iOS / RN / Expo / Flutter，并生成带 settle 等待的 smoke flow
+npx -y @shenyuexin/mobile-e2e-mcp@latest init --no-prompt --with-smoke-flow
+
+# 为 AI 客户端一键安装 MCP 配置与工作流指引（claude|cursor|opencode|codex）
+npx -y @shenyuexin/mobile-e2e-mcp@latest setup-agent --target claude --toolset core
 
 # 在受治理 session 内运行确定性 flow
 npx -y @shenyuexin/mobile-e2e-mcp@latest run flows/smoke.yaml --dry-run
@@ -66,7 +69,9 @@ npx -y @shenyuexin/mobile-e2e-mcp@latest diff ./explore-report/base ./explore-re
 
 `audit` 通过 `start_session` → `audit_ui_surface` → `end_session` 调用现有工具，默认从 `.e2e/config.yaml`（含 `audit:` 段）继承配置；设置 `--fail-on-regression` 后，一旦检测到基线回归即以非零码退出。`diff` 读取两次运行的 `summary.json`、`failure-review.json` 与可选的 `audit*.json`，配合 `--fail-on-regression` 即可作为零脚本 CI 质量门禁。
 
-`run --record-on-failure` 在 `run_flow` 前启动 `record_screen`，并在 `finally` 中停止：通过时丢弃录像，失败时保留为证据，文本输出与 `--json` 都会带上保存路径（或丢弃状态）；`--dry-run` 下跳过真实录屏。`run --suggest-heal` 在失败时组合 `explain_last_failure`、`suggest_known_remediation` 与只读 `inspect_ui`，生成结构化建议和 unified diff 片段——严格只做提案，绝不修改用户的 flow YAML。以上都不新增 MCP 工具——注册表仍为 68 个工具 / 20 个核心工具。
+`run --record-on-failure` 在 `run_flow` 前启动 `record_screen`，并在 `finally` 中停止：通过时丢弃录像，失败时保留为证据，文本输出与 `--json` 都会带上保存路径（或丢弃状态）；`--dry-run` 下跳过真实录屏。`run --suggest-heal` 在失败时组合 `explain_last_failure`、`suggest_known_remediation` 与只读 `inspect_ui`，生成结构化建议和 unified diff 片段——严格只做提案，绝不修改用户的 flow YAML。
+
+`init` 会自动识别 Android、iOS、React Native / Expo 与 Flutter 工程，预填 `platform`、`appId`、`runnerProfile` 和仅供参考的 `buildCommand`；`--with-smoke-flow` 会生成带启动步骤与显式 settle 等待的 `.e2e/flows/smoke.yaml`。显式 flag 始终优先于自动识别。`setup-agent` 幂等地把 `@shenyuexin/mobile-e2e-mcp@latest` MCP 条目与简洁工作流指引合并进目标客户端配置，并保留无关 MCP server。`doctor` 解析 `axe --version`，当 AXe 低于 v2.2.0（`perform_gesture` 与 `axe serve` 的最低要求）时给出可直接复制的 `brew upgrade cameroncooke/axe/axe` 升级命令。以上都不新增 MCP 工具——注册表仍为 68 个工具 / 20 个核心工具。
 
 ## Explorer：核心产品面
 

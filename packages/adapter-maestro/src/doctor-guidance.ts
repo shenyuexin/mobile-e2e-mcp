@@ -72,6 +72,7 @@ const GUIDANCE_RULES: DoctorGuidanceRule[] = [
     envHints: [
       "Primary backend for iOS simulator UI actions (hierarchy, tap, type, swipe).",
       "Single binary, no daemon required.",
+      "AXe v2.2+ is required for perform_gesture and axe serve; upgrade with brew upgrade cameroncooke/axe/axe.",
       "Set IOS_EXECUTION_BACKEND=axe to force axe backend.",
     ],
   },

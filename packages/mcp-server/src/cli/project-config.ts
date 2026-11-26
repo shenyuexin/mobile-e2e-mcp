@@ -35,6 +35,8 @@ export interface ProjectE2EConfig {
   platform?: Platform;
   deviceId?: string;
   runnerProfile?: RunnerProfile;
+  /** Detected project build command (informational; not executed by init). */
+  buildCommand?: string;
   policyProfile?: string;
   harnessConfigPath?: string;
   flowPath?: string;
@@ -128,6 +130,9 @@ function coerceParsedRecord(rawObj: Record<string, unknown>): ProjectE2EConfig {
   if (typeof rawObj.runnerProfile === "string" && VALID_RUNNER_PROFILES.has(rawObj.runnerProfile as RunnerProfile)) {
     config.runnerProfile = rawObj.runnerProfile as RunnerProfile;
   }
+  if (typeof rawObj.buildCommand === "string" && rawObj.buildCommand.length > 0) {
+    config.buildCommand = rawObj.buildCommand;
+  }
   if (typeof rawObj.policyProfile === "string" && rawObj.policyProfile.length > 0) config.policyProfile = rawObj.policyProfile;
   if (typeof rawObj.harnessConfigPath === "string" && rawObj.harnessConfigPath.length > 0) {
     config.harnessConfigPath = rawObj.harnessConfigPath;
@@ -200,6 +205,7 @@ export function serializeProjectConfigYaml(config: ProjectE2EConfig): string {
   if (config.appId) lines.push(`appId: ${formatYamlScalar(config.appId)}`);
   if (config.deviceId) lines.push(`deviceId: ${formatYamlScalar(config.deviceId)}`);
   if (config.runnerProfile) lines.push(`runnerProfile: ${config.runnerProfile}`);
+  if (config.buildCommand) lines.push(`buildCommand: ${formatYamlScalar(config.buildCommand)}`);
   if (config.policyProfile) lines.push(`policyProfile: ${formatYamlScalar(config.policyProfile)}`);
   if (config.harnessConfigPath) lines.push(`harnessConfigPath: ${formatYamlScalar(config.harnessConfigPath)}`);
   if (config.flowPath) lines.push(`flowPath: ${formatYamlScalar(config.flowPath)}`);

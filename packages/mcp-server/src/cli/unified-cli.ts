@@ -12,6 +12,7 @@ import { executeDoctor } from "./doctor-command.js";
 import { executeInit } from "./init-command.js";
 import { loadProjectConfig, type ProjectE2EConfig } from "./project-config.js";
 import { executeRun } from "./run-command.js";
+import { executeSetupAgent } from "./setup-agent-command.js";
 
 export function printUnifiedHelp(): void {
   const coreCount = CORE_TOOL_NAMES.length;
@@ -26,6 +27,7 @@ Usage:
   mobile-e2e-mcp run [flowPath] [options]         Run a deterministic flow with session governance
   mobile-e2e-mcp audit [options]                  Run a governed UI-surface audit with baseline gating
   mobile-e2e-mcp diff <baseDir> <headDir> [opts]  Diff two Explorer runs (Markdown + self-contained HTML)
+  mobile-e2e-mcp setup-agent [options]            Install MCP config + workflow guide for an AI client
 
 Toolsets:
   --toolset core    Expose ${coreCount} high-frequency core tools (default; lowest context overhead)
@@ -40,7 +42,8 @@ Examples:
   mobile-e2e-mcp explore --app-id com.example.app --platform android --output ./explore-report --export-flows ./flows/generated
   mobile-e2e-mcp run flows/smoke.yaml --dry-run
   mobile-e2e-mcp audit --baseline-path .e2e/ui-baseline.json --fail-on-regression
-  mobile-e2e-mcp diff ./explore-report/base ./explore-report/head --markdown diff.md --html diff.html`);
+  mobile-e2e-mcp diff ./explore-report/base ./explore-report/head --markdown diff.md --html diff.html
+  mobile-e2e-mcp setup-agent --target claude --toolset core --dry-run`);
 }
 
 function printStdioHelp(): void {
@@ -130,6 +133,7 @@ export interface UnifiedCliDependencies {
   executeRun: typeof executeRun;
   executeAudit: typeof executeAudit;
   executeDiff: typeof executeDiff;
+  executeSetupAgent: typeof executeSetupAgent;
   runDevCli: typeof runDevCli;
   createServer: typeof createServer;
   loadProjectConfig: typeof loadProjectConfig;
@@ -143,6 +147,7 @@ const defaultDeps: UnifiedCliDependencies = {
   executeRun,
   executeAudit,
   executeDiff,
+  executeSetupAgent,
   runDevCli,
   createServer,
   loadProjectConfig,
@@ -226,6 +231,10 @@ export async function runUnifiedCli(
 
   if (first === "diff") {
     return resolvedDeps.executeDiff(rest, {}, cwd);
+  }
+
+  if (first === "setup-agent") {
+    return resolvedDeps.executeSetupAgent(rest, cwd);
   }
 
   if (first.startsWith("-")) {

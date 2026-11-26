@@ -9,6 +9,7 @@ import {
   serializeProjectConfigYaml,
   type ProjectE2EConfig,
 } from "./project-config.js";
+import { detectProject, type DetectedProject } from "./project-detector.js";
 
 export interface InitCommandOptions {
   appId?: string;
@@ -22,6 +23,8 @@ export interface InitCommandOptions {
   force: boolean;
   json: boolean;
   help: boolean;
+  /** undefined = not specified; true/false = explicit smoke-flow choice. */
+  smokeFlow?: boolean;
   error?: string;
 }
 
@@ -36,6 +39,7 @@ function printInitHelp(): void {
   console.log(`Usage: mobile-e2e-mcp init [options]
 
 Scaffold a lightweight .e2e/config.yaml in the current workspace.
+Project files are auto-detected (Android / iOS / React Native / Expo / Flutter) to prefill defaults.
 
 Options:
   --app-id <id>             Application bundle ID / package name
@@ -44,6 +48,8 @@ Options:
   --runner-profile <name>   phase1 | native_android | native_ios | flutter_android
   --policy-profile <name>   Default policy profile (e.g. interactive, read-only)
   --flow-path <path>        Default flow YAML path for "mobile-e2e-mcp run"
+  --with-smoke-flow         Scaffold a starter smoke flow and set flowPath
+  --no-smoke-flow           Explicitly skip smoke flow scaffolding
   --output <path>           Output file path (default: ${DEFAULT_PROJECT_CONFIG_PATH})
   --no-prompt               Do not prompt interactively; use flags and defaults
   --force                   Overwrite existing config file
@@ -71,6 +77,10 @@ export function parseInitArgs(argv: string[]): InitCommandOptions {
       options.force = true;
     } else if (arg === "--json") {
       options.json = true;
+    } else if (arg === "--with-smoke-flow") {
+      options.smokeFlow = true;
+    } else if (arg === "--no-smoke-flow") {
+      options.smokeFlow = false;
     } else if (arg === "--app-id" && next) {
       options.appId = next;
       i += 1;
@@ -112,6 +122,21 @@ function defaultRunnerProfileForPlatform(platform: Platform): RunnerProfile {
 
 function defaultAppIdForPlatform(platform: Platform): string {
   return platform === "ios" ? "com.example.app" : "com.example.app";
+}
+
+/** Minimal Maestro smoke flow: launch + explicit settle delay before any UI action. */
+function buildSmokeFlowYaml(appId: string): string {
+  return [
+    `appId: "${appId}"`,
+    "---",
+    "- launchApp:",
+    `    appId: "${appId}"`,
+    "    clearState: false",
+    "- waitForAnimationToEnd:",
+    "    timeout: 3000",
+    "  # launch settle 3000ms (ui-stabilization-timing.md)",
+    "",
+  ].join("\n");
 }
 
 async function promptInteractive(question: string): Promise<string> {
@@ -161,12 +186,14 @@ export async function executeInit(
   const interactive = runtimeOptions.isInteractive ?? Boolean(process.stdin.isTTY && process.stdout.isTTY);
   const ask = runtimeOptions.promptFn ?? promptInteractive;
 
-  let platform: Platform = parsed.platform ?? "android";
-  let appId = parsed.appId;
+  const detected: DetectedProject = detectProject(cwd);
+  let platform: Platform = parsed.platform ?? detected.platform ?? "android";
+  let appId = parsed.appId ?? detected.appId;
+  let runnerProfile: RunnerProfile | undefined = parsed.runnerProfile ?? detected.runnerProfile;
   let deviceId = parsed.deviceId;
 
   if (interactive && !parsed.noPrompt) {
-    if (!parsed.platform) {
+    if (!parsed.platform && !detected.platform) {
       const answer = await ask("Target platform [ios/android] (android): ");
       if (answer === "ios" || answer === "android") {
         platform = answer;
@@ -185,7 +212,18 @@ export async function executeInit(
   }
 
   const resolvedAppId = appId ?? defaultAppIdForPlatform(platform);
-  const resolvedRunnerProfile = parsed.runnerProfile ?? defaultRunnerProfileForPlatform(platform);
+  const resolvedRunnerProfile = runnerProfile ?? defaultRunnerProfileForPlatform(platform);
+
+  let flowPath = parsed.flowPath;
+  let smokeFlowPath: string | undefined;
+  if (parsed.smokeFlow === true) {
+    smokeFlowPath = path.join(path.dirname(targetPath), "flows", "smoke.yaml");
+    await mkdir(path.dirname(smokeFlowPath), { recursive: true });
+    if (!existsSync(smokeFlowPath)) {
+      await writeFile(smokeFlowPath, buildSmokeFlowYaml(resolvedAppId), "utf8");
+    }
+    flowPath = path.relative(cwd, smokeFlowPath).split(path.sep).join("/");
+  }
 
   const config: ProjectE2EConfig = {
     version: 1,
@@ -193,8 +231,9 @@ export async function executeInit(
     appId: resolvedAppId,
     ...(deviceId ? { deviceId } : {}),
     runnerProfile: resolvedRunnerProfile,
+    ...(detected.buildCommand ? { buildCommand: detected.buildCommand } : {}),
     policyProfile: parsed.policyProfile ?? "interactive",
-    ...(parsed.flowPath ? { flowPath: parsed.flowPath } : {}),
+    ...(flowPath ? { flowPath } : {}),
     explorer: {
       mode: "scoped",
       output: "./explorer-reports",
@@ -206,9 +245,21 @@ export async function executeInit(
   await writeFile(targetPath, yamlContent, "utf8");
 
   if (parsed.json) {
-    console.log(JSON.stringify({ ok: true, outputPath: targetPath, config }, null, 2));
+    console.log(JSON.stringify({
+      ok: true,
+      outputPath: targetPath,
+      config,
+      detected,
+      ...(smokeFlowPath ? { smokeFlowPath } : {}),
+    }, null, 2));
   } else {
     console.log(`Created ${path.relative(cwd, targetPath) || targetPath}`);
+    if (detected.kind !== "unknown") {
+      console.log(`Detected project: ${detected.kind}${detected.appId ? ` (${detected.appId})` : ""}`);
+    }
+    if (smokeFlowPath) {
+      console.log(`Created smoke flow: ${path.relative(cwd, smokeFlowPath) || smokeFlowPath}`);
+    }
     console.log("");
     console.log("Next steps:");
     console.log("  1. Check local tools & devices:  mobile-e2e-mcp doctor");
