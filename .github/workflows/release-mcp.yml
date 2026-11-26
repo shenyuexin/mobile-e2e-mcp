@@ -27,7 +27,6 @@ jobs:
         with:
           node-version: 24
           cache: pnpm
-          registry-url: https://registry.npmjs.org
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -74,9 +73,12 @@ jobs:
         run: pnpm --filter @shenyuexin/mobile-e2e-mcp run bundle
 
       - name: Publish package to npm
-        run: pnpm --filter @shenyuexin/mobile-e2e-mcp run release:publish:ci
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          npm --version
+          PACK_DIR="$(mktemp -d)"
+          TARBALL="$(pnpm --filter @shenyuexin/mobile-e2e-mcp pack --pack-destination "$PACK_DIR" | tail -n 1)"
+          test -f "$TARBALL"
+          npm publish "$TARBALL" --access public --provenance
 
       - name: Create GitHub release
         env:

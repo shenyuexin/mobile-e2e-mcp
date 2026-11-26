@@ -31,3 +31,13 @@ test("release metadata commits include GitNexus-updated AGENTS guide", () => {
   assert.match(workflow, /git add CHANGELOG\.md repomix-output\.xml AGENTS\.md/);
   assert.match(prepareScript, /AGENTS\.md/);
 });
+
+test("release workflow uses pure npm OIDC trusted publishing without NODE_AUTH_TOKEN", () => {
+  const workflow = readFileSync(resolve(repoRoot, ".github/workflows/release-mcp.yml"), "utf8");
+
+  assert.match(workflow, /id-token:\s*write/);
+  assert.match(workflow, /npm publish "\$TARBALL" --access public --provenance/);
+  assert.doesNotMatch(workflow, /NODE_AUTH_TOKEN/);
+  assert.doesNotMatch(workflow, /secrets\.NPM_TOKEN/);
+  assert.doesNotMatch(workflow, /registry-url:/);
+});

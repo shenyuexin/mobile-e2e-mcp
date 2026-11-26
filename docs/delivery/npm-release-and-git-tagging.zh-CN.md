@@ -48,7 +48,7 @@
 5. 将同步后的 `CHANGELOG.md` 回写到默认分支
 6. 同步生成最新 `repomix-output.xml`，并将 GitNexus 刷新可能更新的 `AGENTS.md` 与 release 元数据一起回写默认分支
 7. 构建打包
-8. 发布到 npm（使用 `NPM_TOKEN`）
+8. 发布到 npm（通过 GitHub Actions OIDC Trusted Publishing + `--provenance`，不依赖长期 `NPM_TOKEN`）
 9. 创建 GitHub Release
 
 发布打包使用 `@shenyuexin/mobile-e2e-mcp` 的 `bundle` 脚本作为最终路径。该脚本必须先构建所有被 MCP server 源码直接导入的 workspace 包，包括 `@mobile-e2e-mcp/explorer`，再执行 MCP server 的 TypeScript 编译与 tsup bundle；否则 fresh CI checkout 会因为缺少 workspace 包的 `dist/*.d.ts` 而在 npm publish 前失败。
@@ -178,9 +178,13 @@ pnpm release:mcp:sync-changelog -- --tag mcp-server-v0.1.5
 
 ## 仓库管理员一次性配置
 
-在 GitHub 仓库 Secrets 中设置：
+在 npmjs.com 对应包 `@shenyuexin/mobile-e2e-mcp` 的 **Settings → Trusted Publisher → GitHub Actions** 中配置：
 
-- `NPM_TOKEN`：具备 publish 权限的 npm token
+- **Repository owner**：`shenyuexin`
+- **Repository name**：`mobile-e2e-mcp`
+- **Workflow filename**：`release-mcp.yml`
+
+工作流通过 `permissions: id-token: write` 直接获取 OIDC 临时凭证并携带 `--provenance` 发布；**不要**在 `setup-node` 中配置 `registry-url` 或向发布步骤传递 `NODE_AUTH_TOKEN`（避免覆盖 OIDC 鉴权）。
 
 ## 回滚与应急
 
