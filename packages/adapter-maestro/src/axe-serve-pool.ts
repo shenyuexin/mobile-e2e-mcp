@@ -276,13 +276,17 @@ class AxeServeWorker {
   private readonly termGraceMs: number;
   private readonly killGraceMs: number;
   private readonly onEvict: () => void;
+  private readonly onChildExit?: () => void;
   private readonly bufferedLines: string[] = [];
   private currentWaiter: LineWaiter | null = null;
   private stdoutBuffer = "";
   private stderrTail = "";
   private closed = false;
+  private childExited = false;
   private inFlight = 0;
   private idleTimer: ReturnType<typeof setTimeout> | undefined;
+  private termTimer: ReturnType<typeof setTimeout> | undefined;
+  private killTimer: ReturnType<typeof setTimeout> | undefined;
   private serialChain: Promise<void> = Promise.resolve();
   readonly readyPromise: Promise<void>;
 
@@ -296,12 +300,14 @@ class AxeServeWorker {
     killGraceMs: number;
     spawnFn: AxeServeSpawnFn;
     onEvict: () => void;
+    onChildExit?: () => void;
   }) {
     this.udid = params.udid;
     this.idleTimeoutMs = params.idleTimeoutMs;
     this.termGraceMs = params.termGraceMs;
     this.killGraceMs = params.killGraceMs;
     this.onEvict = params.onEvict;
+    this.onChildExit = params.onChildExit;
 
     this.child = params.spawnFn("axe", ["serve", "--udid", params.udid], {
       cwd: params.repoRoot,
@@ -337,11 +343,17 @@ class AxeServeWorker {
       this.stderrTail = (this.stderrTail + chunk.toString()).slice(-2000);
     });
 
+    this.child.once("exit", () => {
+      this.markChildExited();
+    });
+
     this.child.on("error", (error) => {
+      this.markChildExited();
       this.terminate(new Error(`axe serve spawn error: ${error.message}`));
     });
 
     this.child.on("close", (code, signal) => {
+      this.markChildExited();
       const detail = this.stderrTail.trim();
       const suffix = detail ? `: ${detail}` : "";
       this.terminate(
@@ -357,6 +369,30 @@ class AxeServeWorker {
 
   get isClosed(): boolean {
     return this.closed;
+  }
+
+  get hasChildExited(): boolean {
+    return this.childExited || this.child.exitCode !== null || this.child.signalCode !== null;
+  }
+
+  private clearEscalationTimers(): void {
+    if (this.termTimer !== undefined) {
+      clearTimeout(this.termTimer);
+      this.termTimer = undefined;
+    }
+    if (this.killTimer !== undefined) {
+      clearTimeout(this.killTimer);
+      this.killTimer = undefined;
+    }
+  }
+
+  private markChildExited(): void {
+    this.clearEscalationTimers();
+    if (this.childExited) {
+      return;
+    }
+    this.childExited = true;
+    this.onChildExit?.();
   }
 
   get recentStderr(): string {
@@ -522,9 +558,15 @@ class AxeServeWorker {
     } catch {
       // ignore
     }
+    if (this.hasChildExited) {
+      this.markChildExited();
+      return;
+    }
     // Schedule SIGTERM then SIGKILL on unref'd timers using exitCode/signalCode
     // rather than child.killed (which Node sets true immediately on SIGTERM).
-    const termTimer = setTimeout(() => {
+    this.clearEscalationTimers();
+    this.termTimer = setTimeout(() => {
+      this.termTimer = undefined;
       try {
         if (this.child.exitCode === null && this.child.signalCode === null) {
           this.child.kill("SIGTERM");
@@ -533,9 +575,10 @@ class AxeServeWorker {
         // ignore
       }
     }, this.termGraceMs);
-    unrefTimer(termTimer);
+    unrefTimer(this.termTimer);
 
-    const killTimer = setTimeout(() => {
+    this.killTimer = setTimeout(() => {
+      this.killTimer = undefined;
       try {
         if (this.child.exitCode === null && this.child.signalCode === null) {
           this.child.kill("SIGKILL");
@@ -544,12 +587,13 @@ class AxeServeWorker {
         // ignore
       }
     }, this.killGraceMs);
-    unrefTimer(killTimer);
+    unrefTimer(this.killTimer);
   }
 
   forceKillSync(): void {
     this.closed = true;
     this.clearIdleShutdown();
+    this.clearEscalationTimers();
     try {
       if (this.child.exitCode === null && this.child.signalCode === null) {
         this.child.kill("SIGKILL");
@@ -562,6 +606,7 @@ class AxeServeWorker {
 
 export class AxeServePool {
   private readonly workers = new Map<string, AxeServeWorker>();
+  private readonly closingWorkers = new Set<AxeServeWorker>();
   private readonly idleTimeoutMs: number;
   private readonly startupTimeoutMs: number;
   private readonly termGraceMs: number;
@@ -593,6 +638,10 @@ export class AxeServePool {
     return this.workers.size;
   }
 
+  get closingWorkerCount(): number {
+    return this.closingWorkers.size;
+  }
+
   hasWorker(deviceId: string): boolean {
     const worker = this.workers.get(deviceId);
     return Boolean(worker && !worker.isClosed);
@@ -616,6 +665,12 @@ export class AxeServePool {
         if (this.workers.get(udid) === worker) {
           this.workers.delete(udid);
         }
+        if (!worker.hasChildExited) {
+          this.closingWorkers.add(worker);
+        }
+      },
+      onChildExit: () => {
+        this.closingWorkers.delete(worker);
       },
     });
     this.workers.set(udid, worker);
@@ -703,6 +758,9 @@ export class AxeServePool {
     const worker = this.workers.get(deviceId);
     if (worker) {
       this.workers.delete(deviceId);
+      if (!worker.hasChildExited) {
+        this.closingWorkers.add(worker);
+      }
       worker.close();
     }
   }
@@ -711,13 +769,20 @@ export class AxeServePool {
     const all = [...this.workers.values()];
     this.workers.clear();
     for (const worker of all) {
+      if (!worker.hasChildExited) {
+        this.closingWorkers.add(worker);
+      }
       worker.close();
     }
   }
 
   forceKillAllSync(): void {
-    const all = [...this.workers.values()];
+    const all = new Set<AxeServeWorker>([
+      ...this.workers.values(),
+      ...this.closingWorkers.values(),
+    ]);
     this.workers.clear();
+    this.closingWorkers.clear();
     for (const worker of all) {
       worker.forceKillSync();
     }
@@ -745,4 +810,8 @@ export function closeAxeServeForDevice(deviceId: string): void {
 
 export function closeAllAxeServeSessions(): void {
   defaultAxeServePool.closeAll();
+}
+
+export function forceKillAllAxeServeSessionsSync(): void {
+  defaultAxeServePool.forceKillAllSync();
 }

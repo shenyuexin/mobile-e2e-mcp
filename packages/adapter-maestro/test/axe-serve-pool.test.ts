@@ -349,3 +349,49 @@ test("AxeServePool evicts worker on transient serve error and retries one-shot H
   assert.equal(hidSpawnCount, 0);
   assert.equal(hidFallbackCalls, 2);
 });
+
+test("AxeServePool tracks closingWorkers until child exit so forceKillAllSync kills mid-shutdown workers", async () => {
+  let stubbornChild: (ChildProcess & { killedSignals: string[]; stdinLines: string[] }) | undefined;
+  const pool = new AxeServePool({
+    termGraceMs: 5_000,
+    killGraceMs: 10_000,
+    spawnFn: () => {
+      stubbornChild = createFakeAxeServeChild(
+        (_line, respond) => {
+          respond({ command: "ping", didError: false, data: { result: { pong: true } } });
+        },
+        { ignoreSignalsExceptKill: true },
+      );
+      return stubbornChild;
+    },
+  });
+
+  await pool.execute(["axe", "ping", "--udid", SIM_UDID], process.cwd(), {});
+  pool.closeDevice(SIM_UDID);
+  assert.equal(pool.hasWorker(SIM_UDID), false);
+  assert.equal(pool.closingWorkerCount, 1);
+
+  pool.forceKillAllSync();
+  assert.equal(pool.closingWorkerCount, 0);
+  assert.deepEqual(stubbornChild?.killedSignals, ["SIGKILL"]);
+
+  // Clean worker close removes itself from closingWorkers upon child exit/close.
+  let cleanChild: (ChildProcess & { killedSignals: string[]; stdinLines: string[] }) | undefined;
+  const cleanPool = new AxeServePool({
+    termGraceMs: 5_000,
+    killGraceMs: 10_000,
+    spawnFn: () => {
+      cleanChild = createFakeAxeServeChild((_line, respond) => {
+        respond({ command: "ping", didError: false, data: { result: { pong: true } } });
+      });
+      return cleanChild;
+    },
+  });
+
+  await cleanPool.execute(["axe", "ping", "--udid", SIM_UDID], process.cwd(), {});
+  cleanPool.closeDevice(SIM_UDID);
+  assert.equal(cleanPool.closingWorkerCount, 1);
+  cleanChild!.exitCode = 0;
+  cleanChild!.emit("close", 0, null);
+  assert.equal(cleanPool.closingWorkerCount, 0);
+});

@@ -10,7 +10,7 @@ import type {
   ToolResult,
 } from "@mobile-e2e-mcp/contracts";
 import { REASON_CODES } from "@mobile-e2e-mcp/contracts";
-import { closeAxeServeForDevice } from "./axe-serve-pool.js";
+import { closeAxeServeForDevice, forceKillAllAxeServeSessionsSync } from "./axe-serve-pool.js";
 import { CLI_COMMANDS } from "./constants/cli-commands.js";
 import {
   buildExecutionEvidence,
@@ -66,6 +66,7 @@ interface ActiveScreenRecording {
 }
 
 const activeRecordings = new Map<string, ActiveScreenRecording>();
+const stoppingRecordings = new Set<ActiveScreenRecording>();
 let recordingSeq = 0;
 
 let _testSpawnFn: ScreenRecordingSpawnFn | null = null;
@@ -910,12 +911,17 @@ export async function stopBackgroundScreenRecording(params: {
   }
 
   activeRecordings.delete(recording.recordingId);
+  stoppingRecordings.add(recording);
   const discardOnStop = Boolean(input.discardOnStop);
 
-  if (!discardOnStop) {
-    await waitForAxeFollowWarmup(recording);
+  try {
+    if (!discardOnStop) {
+      await waitForAxeFollowWarmup(recording);
+    }
+    await stopRecordingChild(recording);
+  } finally {
+    stoppingRecordings.delete(recording);
   }
-  await stopRecordingChild(recording);
   const recordedDurationMs = Math.max(0, Date.now() - recording.startedAtMs);
 
   const effectiveCommands = [...recording.commands];
@@ -1083,6 +1089,7 @@ export async function cleanupActiveRecordingsForSession(sessionId: string): Prom
   const matching = [...activeRecordings.values()].filter((rec) => rec.sessionId === sessionId);
   for (const recording of matching) {
     activeRecordings.delete(recording.recordingId);
+    stoppingRecordings.add(recording);
     try {
       await stopRecordingChild(recording);
       await rm(recording.absoluteOutputPath, { force: true }).catch(() => undefined);
@@ -1096,6 +1103,8 @@ export async function cleanupActiveRecordingsForSession(sessionId: string): Prom
       }
     } catch {
       // Best-effort cleanup on session end
+    } finally {
+      stoppingRecordings.delete(recording);
     }
   }
 }
@@ -1119,16 +1128,38 @@ export async function cleanupSessionRuntimeResources(params: {
   }
 }
 
-process.once("exit", () => {
-  for (const recording of activeRecordings.values()) {
+function forceKillAllActiveRecordingsSync(): void {
+  const allRecordings = new Set<ActiveScreenRecording>([
+    ...activeRecordings.values(),
+    ...stoppingRecordings.values(),
+  ]);
+  activeRecordings.clear();
+  stoppingRecordings.clear();
+  for (const recording of allRecordings) {
     clearTimeout(recording.maxDurationTimer);
     try {
-      if (recording.child.exitCode === null && recording.child.signalCode === null) {
+      if (
+        (recording.child.exitCode === null || recording.child.exitCode === undefined) &&
+        (recording.child.signalCode === null || recording.child.signalCode === undefined)
+      ) {
         recording.child.kill("SIGKILL");
       }
     } catch {
       // ignore
     }
   }
-  activeRecordings.clear();
+}
+
+/**
+ * Synchronously SIGKILL any active/stopping recording processes and persistent
+ * `axe serve` workers (including workers mid-shutdown). Safe to invoke inside
+ * synchronous SIGINT/SIGTERM/exit hooks.
+ */
+export function forceCleanupAllRuntimeResourcesSync(): void {
+  forceKillAllActiveRecordingsSync();
+  forceKillAllAxeServeSessionsSync();
+}
+
+process.once("exit", () => {
+  forceKillAllActiveRecordingsSync();
 });
