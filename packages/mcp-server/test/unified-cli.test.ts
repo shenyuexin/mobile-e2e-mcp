@@ -60,6 +60,15 @@ test("project-config serializes and parses YAML round-trip cleanly", () => {
       maxDepth: 6,
       output: "./artifacts/explorer",
     },
+    verify: {
+      flows: ["flows/01-login.yaml", "flows/02-note.yaml"],
+      audit: true,
+      explore: false,
+      recordOnFailure: true,
+      suggestHeal: true,
+      failFast: false,
+      output: "./output/e2e-verify",
+    },
   };
 
   const yaml = serializeProjectConfigYaml(original);

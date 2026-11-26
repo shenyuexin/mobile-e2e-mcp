@@ -72,6 +72,9 @@ jobs:
       - name: Build and package
         run: pnpm --filter @shenyuexin/mobile-e2e-mcp run bundle
 
+      - name: Verify packed CLI tarball
+        run: pnpm run test:mcp-tarball-smoke
+
       - name: Publish package to npm
         run: |
           npm --version

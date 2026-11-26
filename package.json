@@ -53,6 +53,7 @@
     "mcp:stdio": "pnpm build && pnpm --filter @shenyuexin/mobile-e2e-mcp stdio",
     "release:mcp:publish": "pnpm --filter @shenyuexin/mobile-e2e-mcp run release:publish",
     "release:mcp:publish:dry-run": "pnpm --filter @shenyuexin/mobile-e2e-mcp run release:publish:dry-run",
+    "test:mcp-tarball-smoke": "node scripts/release/smoke-test-mcp-tarball.mjs",
     "test:release-scripts": "pnpm exec tsx --test scripts/release/*.test.ts",
     "release:mcp:check": "pnpm tsx scripts/release/validate-mcp-release.ts",
     "release:mcp:sync-changelog": "pnpm tsx scripts/release/sync-mcp-release-changelog.ts",

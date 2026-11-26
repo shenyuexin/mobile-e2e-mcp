@@ -408,8 +408,21 @@ Plans:
 - **Out of scope**: Replacing Explorer with a narrow golden-path E2E lane, broad cloud device farm support, or adding unrelated MCP tool families before Explorer consumption is sharper.
 
 Planned slices:
-- [ ] Explorer positioning and showcase refresh — make README/docs present Explorer as the key product capability and curate current Android/iOS large-run evidence safely.
-- [ ] Explorer PR summary — consume existing summary/failure-review artifacts and emit a compact review artifact with page count, failures, rule decisions, skipped/gated pages, and next actions.
-- [ ] Explorer coverage diff — compare two runs and report added/removed pages, changed paths, changed failures, and changed rule decisions.
-- [ ] Explorer replay-path extraction — turn discovered state-graph paths into candidate deterministic flows or replay checkpoints for follow-up verification.
+- [x] Explorer positioning and showcase refresh — make README/docs present Explorer as the key product capability and curate current Android/iOS large-run evidence safely.
+- [x] Explorer PR summary — consume existing summary/failure-review artifacts and emit a compact review artifact with page count, failures, rule decisions, skipped/gated pages, and next actions.
+- [x] Explorer coverage diff — compare two runs and report added/removed pages, changed paths, changed failures, and changed rule decisions (`mobile-e2e-mcp diff`).
+- [x] Explorer replay-path extraction — turn discovered state-graph paths into candidate deterministic flows or replay checkpoints (`explore --export-flows`).
 - [ ] Explorer evidence redaction/curation — protect account/device/app text in large real-device runs before promoting output into public showcase evidence.
+
+## Phase 72: Production Hardening, Unified Verify Suite & iOS Depth Parity
+
+- **Goal**: Harden CLI/Explorer contracts learned from external repo integration (`mobile-e2e-mcp` v0.1.23), add the one-command `verify` acceptance suite, and improve iOS parity for `type_into_element` keyboard diagnostics and `navigate_back` auto-discovery.
+- **Depends on**: Phase 71
+- **Key constraint**: Zero new MCP tools (keep 68 total / 20 core), shrink `ui-action-tools.ts`, and preserve honest `conditional` support boundaries on iOS.
+- **Support level**: `ci-verified` for CLI/Explorer/adapter contracts + external tarball smoke; `conditional` for live iOS device actions.
+
+Plans:
+- [x] Eliminate double `generateReport` write between Explorer `engine.ts` and `runner.ts`; add `latest.json`, `--run-id`, and `--json`.
+- [x] Harden CLI flag parsing (fail fast exit code 2), add `run <dir> --output --fail-fast`, and add unified `verify` acceptance command.
+- [x] Align iOS `type_into_element` keyboard/IME state diagnostics (hardware-keyboard-safe) and `navigate_back` `iosStrategy: "auto"`.
+- [x] Add external npm tarball installation smoke test in CI and release workflows.

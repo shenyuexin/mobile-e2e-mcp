@@ -39,7 +39,7 @@ By default, the MCP stdio server exposes the **`core` toolset (20 high-frequency
 
 ### Unified CLI Commands
 
-The single package entrypoint supports both MCP stdio serving and local CLI workflows (`stdio`, `doctor`, `init`, `explore`, `run`, `audit`, `diff`, `setup-agent`):
+The single package entrypoint supports both MCP stdio serving and local CLI workflows (`stdio`, `doctor`, `init`, `explore`, `run`, `audit`, `diff`, `verify`, `setup-agent`):
 
 ```bash
 # Check Android/iOS host tools and connected devices
@@ -51,12 +51,9 @@ npx -y @shenyuexin/mobile-e2e-mcp@latest init --no-prompt --with-smoke-flow
 # One-command MCP + workflow setup for an AI client (claude|cursor|opencode|codex)
 npx -y @shenyuexin/mobile-e2e-mcp@latest setup-agent --target claude --toolset core
 
-# Run a deterministic flow inside a governed session
+# Run a deterministic flow or a sorted directory of flows inside a governed session
 npx -y @shenyuexin/mobile-e2e-mcp@latest run flows/smoke.yaml --dry-run
-
-# Record only failures and get a proposal-only selector heal diff when a flow breaks
-npx -y @shenyuexin/mobile-e2e-mcp@latest run flows/smoke.yaml \
-  --record-on-failure --record-output artifacts/run.mp4 --suggest-heal
+npx -y @shenyuexin/mobile-e2e-mcp@latest run flows/ --output artifacts/run --record-on-failure --suggest-heal
 
 # Governed UI-surface audit with baseline ratcheting; gate a PR on regressions
 npx -y @shenyuexin/mobile-e2e-mcp@latest audit \
@@ -65,11 +62,14 @@ npx -y @shenyuexin/mobile-e2e-mcp@latest audit \
 # Diff two Explorer runs into PR Markdown + a self-contained HTML report
 npx -y @shenyuexin/mobile-e2e-mcp@latest diff ./explore-report/base ./explore-report/head \
   --markdown diff.md --html diff.html --fail-on-regression
+
+# Project-level acceptance suite: flows + UI audit + bounded Explorer + unified HTML/MD/JSON report
+npx -y @shenyuexin/mobile-e2e-mcp@latest verify --fail-on-regression
 ```
 
-`audit` wraps `audit_ui_surface` in `start_session` → `audit_ui_surface` → `end_session`, inherits defaults from `.e2e/config.yaml` (including an `audit:` section), and exits non-zero on a detected regression when `--fail-on-regression` is set. `diff` reads `summary.json`, `failure-review.json`, and optional `audit*.json` from both run directories; add `--fail-on-regression` for a zero-script CI quality gate.
+`verify` orchestrates configured/passed Maestro flows (files or directories), `audit_ui_surface`, and bounded `explore` into one `<output>/summary.json`, `report.md`, and self-contained `report.html` (linking per-flow failure videos and nested Explorer reports; under `--dry-run`, live recording and Explorer are skipped). `audit` wraps `audit_ui_surface` in `start_session` → `audit_ui_surface` → `end_session`, inherits defaults from `.e2e/config.yaml` (including an `audit:` section), and exits non-zero on a detected regression when `--fail-on-regression` is set. `diff` reads `summary.json`, `failure-review.json`, and optional `audit*.json` from both run directories; add `--fail-on-regression` for a zero-script CI quality gate.
 
-`run --record-on-failure` starts `record_screen` before `run_flow` and stops it in a `finally` block: the video is discarded on pass and preserved on failure (reported as a path in text and `--json`). Live recording is skipped under `--dry-run`. `run --suggest-heal` combines `explain_last_failure`, `suggest_known_remediation`, and read-only `inspect_ui` into a structured proposal plus a unified diff snippet on failure — it is strictly proposal-only and never edits flow YAML files.
+`run` accepts either a single YAML file or a directory of YAML flows (executed in sorted order, with optional `--fail-fast` and `--output <dir>` to write `summary.json`), rejecting unknown options with exit code `2`. `run --record-on-failure` starts `record_screen` before `run_flow` and stops it in a `finally` block: the video is discarded on pass and preserved on failure (reported as a path in text and `--json`). Live recording is skipped under `--dry-run`. `run --suggest-heal` combines `explain_last_failure`, `suggest_known_remediation`, and read-only `inspect_ui` into a structured proposal plus a unified diff snippet on failure — it is strictly proposal-only and never edits flow YAML files.
 
 `init` auto-detects Android, iOS, React Native / Expo and Flutter projects and prefills `platform`, `appId`, `runnerProfile`, and an informational `buildCommand`; `--with-smoke-flow` scaffolds `.e2e/flows/smoke.yaml` with a launch step and explicit settle delay. Explicit flags always win over detection. `setup-agent` idempotently merges the `@shenyuexin/mobile-e2e-mcp@latest` MCP entry and concise workflow guidance into the target client's config, preserving unrelated MCP servers. `doctor` parses `axe --version` and warns with a copy-pasteable `brew upgrade cameroncooke/axe/axe` when AXe is older than v2.2.0 (required by `perform_gesture` and `axe serve`). None of these commands add MCP tools — the registry stays at 68 tools / 20 core tools.
 
@@ -105,7 +105,7 @@ Key features:
 
 ### Output
 
-Explorer writes fixed, reviewable artifacts:
+Explorer writes a single canonical run under `<output>/<runId>/` per execution (supporting `--run-id <id>` and `--json`) plus `<output>/latest.json` and `<output>/index.json`:
 
 | File | Description |
 |------|-------------|
@@ -116,6 +116,7 @@ Explorer writes fixed, reviewable artifacts:
 | `failure-review.json` | Machine-consumable failure triage summary |
 | `summary.json` | Machine-consumable metrics and page metadata |
 | `config.json` | Runtime configuration and rule settings used for the run |
+| `../latest.json` | Pointer to the most recent run's `report.html` and `summary.json` |
 
 Example output from a real run against iOS Settings (181 pages, max depth 5):
 

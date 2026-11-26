@@ -22,7 +22,7 @@ npx -y @shenyuexin/mobile-e2e-mcp@latest --toolset full
 
 ## Unified CLI Commands
 
-The single package binary supports both MCP stdio serving and local CLI workflows (`stdio`, `doctor`, `init`, `explore`, `run`, `audit`, `diff`, `setup-agent`):
+The single package binary supports both MCP stdio serving and local CLI workflows (`stdio`, `doctor`, `init`, `explore`, `run`, `audit`, `diff`, `verify`, `setup-agent`):
 
 ```bash
 # Check Android/iOS host tools and connected devices
@@ -34,15 +34,12 @@ npx -y @shenyuexin/mobile-e2e-mcp@latest init --no-prompt --with-smoke-flow
 # Install MCP config + workflow guide for an AI client
 npx -y @shenyuexin/mobile-e2e-mcp@latest setup-agent --target claude --toolset core
 
-# Run automatic page exploration
-npx -y @shenyuexin/mobile-e2e-mcp@latest explore --app-id com.example.app --platform android --output ./explore-report
+# Run automatic page exploration (single canonical run dir + latest.json pointer)
+npx -y @shenyuexin/mobile-e2e-mcp@latest explore --app-id com.example.app --platform android --output ./explore-report --run-id smoke --json
 
-# Run a deterministic flow inside a governed session
+# Run a single deterministic flow or a sorted directory of flows inside a governed session
 npx -y @shenyuexin/mobile-e2e-mcp@latest run flows/smoke.yaml --dry-run
-
-# Record only failures; on failure emit a proposal-only selector heal diff
-npx -y @shenyuexin/mobile-e2e-mcp@latest run flows/smoke.yaml \
-  --record-on-failure --record-output artifacts/run.mp4 --suggest-heal
+npx -y @shenyuexin/mobile-e2e-mcp@latest run flows/ --output artifacts/run --record-on-failure --suggest-heal
 
 # Governed UI audit (inherits .e2e/config.yaml; gate on regressions)
 npx -y @shenyuexin/mobile-e2e-mcp@latest audit \
@@ -51,6 +48,9 @@ npx -y @shenyuexin/mobile-e2e-mcp@latest audit \
 # Diff two Explorer runs and emit PR-ready Markdown + self-contained HTML
 npx -y @shenyuexin/mobile-e2e-mcp@latest diff <baseDir> <headDir> \
   --markdown diff.md --html diff.html --json --fail-on-regression
+
+# Project-level acceptance suite (flows + UI audit + bounded Explorer -> unified report)
+npx -y @shenyuexin/mobile-e2e-mcp@latest verify --fail-on-regression --json
 ```
 
 `init` options: all previous flags plus `--with-smoke-flow` / `--no-smoke-flow`. Project files are auto-detected (Android `app/build.gradle*`, iOS `*.xcodeproj/project.pbxproj` / `Info.plist`, RN / Expo `app.json` / `app.config.json`, Flutter `pubspec.yaml` + native folders) to prefill `platform`, `appId`, `runnerProfile`, and `buildCommand`; explicit flags take precedence.
@@ -59,9 +59,11 @@ npx -y @shenyuexin/mobile-e2e-mcp@latest diff <baseDir> <headDir> \
 
 `doctor` parses `axe --version` and, for AXe < 2.2.0, prints a warning plus copy-pasteable `brew upgrade cameroncooke/axe/axe` and `axe --version` commands (`--json` adds `versionWarnings`).
 
-`run` recovery options: `--record-on-failure` starts `record_screen` before the flow and stops it in `finally` with `discardOnStop: true` on pass / `false` on failure; `--record-output <path>` sets the video path; `--suggest-heal` produces a proposal-only structured selector heal suggestion plus unified diff on failure using `explain_last_failure`, `suggest_known_remediation`, and read-only `inspect_ui`. Flow files are never edited. Recording is skipped under `--dry-run`.
+`run` supports both single YAML files and directories of YAML flows (`--output <dir>`, `--fail-fast`, and fail-fast exit code `2` on unknown options). `run --record-on-failure` starts `record_screen` before the flow and stops it in `finally` with `discardOnStop: true` on pass / `false` on failure; `--record-output <path>` sets the video path; `--suggest-heal` produces a proposal-only structured selector heal suggestion plus unified diff on failure using `explain_last_failure`, `suggest_known_remediation`, and read-only `inspect_ui`. Flow files are never edited. Recording is skipped under `--dry-run`.
 
-`explore --export-flows <dir>` writes deterministic Maestro-compatible smoke flows from the deepest reachable, non-failed, non-blocked paths, including `appId` launch and explicit settle delays.
+`explore` writes a single canonical run under `<output>/<runId>/` per run (`--run-id`, `--json`), updates `<output>/index.json` once, and maintains `<output>/latest.json` pointing to `report.html` and `summary.json`. `--export-flows <dir>` writes deterministic Maestro-compatible smoke flows from the deepest reachable, non-failed, non-blocked paths, including `appId` launch and explicit settle delays.
+
+`verify` reads `.e2e/config.yaml` (`verify:` / `audit:` / `explorer:` sections) and runs deterministic flows + `audit_ui_surface` + bounded `explore`, emitting `<output>/summary.json`, `report.md`, and self-contained `report.html`.
 
 `audit` options: `--platform`, `--device-id`, `--app-id`, `--baseline-path`, `--baseline-mode <compare|update>`, `--output`, `--config`, `--dry-run`, `--json`, `--fail-on-regression`, `--help`. It invokes `start_session` → `audit_ui_surface` → `end_session` and exits non-zero on regression/failure.
 

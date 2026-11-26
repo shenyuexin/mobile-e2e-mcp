@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-03-28)
 
 ## Current Position
 
-Phase: Phase 71 Explorer Product Capability Roadmap planned
-Plan: Productize Explorer as the external product surface by improving positioning, PR consumption, coverage diffing, replay-path extraction, and redacted showcase evidence from existing Explorer artifacts.
-Status: Phase 71 is added to the roadmap as a planned productization track. The direction explicitly builds on existing Explorer artifacts (`tree.txt`, `report.md`, `summary.json`, `config.json`, failure review outputs) instead of re-creating their evidence contract.
-Last activity: 2026-06-02 -- Explorer product capability roadmap and project positioning updated.
+Phase: Phase 72 Production Hardening, Unified Verify Suite & iOS Depth Parity
+Plan: Landed Route A (single-write Explorer reports, `latest.json`, strict CLI validation, `run <dir> --output`, tarball smoke CI/release gate) and Route B (unified `verify` acceptance suite, iOS `type_into_element` keyboard/IME parity, and `navigate_back` `iosStrategy: "auto"`). Remaining Phase 71 slice is Explorer evidence redaction/curation (`--redact`).
+Status: Phase 72 implemented and verified for `0.1.23`.
+Last activity: 2026-11-26 -- Phase 72 hardening, `verify` suite, and iOS parity completed for `@shenyuexin/mobile-e2e-mcp@0.1.23`.
 
 Progress: [██████████] 100%
 
@@ -93,8 +93,8 @@ Recent decisions affecting current work:
 - Decide whether the next canonical skill wave should focus on overlays/framework-specific skills or a more opinionated installation target layer.
 - Keep strategy/planning docs aligned with live tool registry; do not list shipped tools such as `replay_checkpoint_chain`, `capture_element_screenshot`, `compare_visual_baseline`, or network diagnosis as missing.
 - Keep Android physical-device Explorer evidence as the current primary live-device proof point (`artifacts/explorer/android-full/2026-04-28T03-38-20/`).
-- Execute Phase 71 as Explorer productization: positioning/showcase refresh, PR summary, coverage diff, replay-path extraction, and redacted evidence promotion.
-- Follow up on Android keyboard-state typing hardening with iOS parity, IME type reporting, and richer focus-cause diagnostics.
+- Execute remaining Phase 71 slice: Explorer evidence redaction/curation before promoting private real-device outputs into public showcase evidence.
+- Android keyboard-state typing parity on iOS (`keyboardState`, `imeType`, `focusCause`) shipped in Phase 72; live physical/simulator soak testing remains ongoing as `conditional`.
 - Follow up on Explorer/probe visual evidence with baseline lifecycle governance: expiry policy and richer review metadata.
 - After `10-01`, return to `02-02` framework acceptance evidence wiring.
 - Phase 18 planned: capability completion (iOS partial promotion, CV template, Linux OCR, network anomaly runtime) + code quality refactoring.

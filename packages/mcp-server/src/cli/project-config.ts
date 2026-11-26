@@ -29,6 +29,16 @@ export interface ProjectE2EAuditConfig {
   failOnRegression?: boolean;
 }
 
+export interface ProjectE2EVerifyConfig {
+  flows?: string[];
+  audit?: boolean;
+  explore?: boolean;
+  recordOnFailure?: boolean;
+  suggestHeal?: boolean;
+  failFast?: boolean;
+  output?: string;
+}
+
 export interface ProjectE2EConfig {
   version: 1;
   appId?: string;
@@ -45,6 +55,7 @@ export interface ProjectE2EConfig {
   hooks?: ProjectE2EHooksConfig;
   explorer?: ProjectE2EExplorerConfig;
   audit?: ProjectE2EAuditConfig;
+  verify?: ProjectE2EVerifyConfig;
 }
 
 const VALID_RUNNER_PROFILES = new Set<RunnerProfile>([
@@ -191,6 +202,37 @@ function coerceParsedRecord(rawObj: Record<string, unknown>): ProjectE2EConfig {
     if (Object.keys(audit).length > 0) config.audit = audit;
   }
 
+  if (rawObj.verify && typeof rawObj.verify === "object" && !Array.isArray(rawObj.verify)) {
+    const verifyObj = rawObj.verify as Record<string, unknown>;
+    const verify: ProjectE2EVerifyConfig = {};
+    if (Array.isArray(verifyObj.flows)) {
+      const flows = verifyObj.flows
+        .filter((item): item is string => typeof item === "string" && item.trim().length > 0)
+        .map((item) => item.trim());
+      if (flows.length > 0) verify.flows = flows;
+    }
+    const readBool = (val: unknown): boolean | undefined => {
+      if (typeof val === "boolean") return val;
+      if (val === "true") return true;
+      if (val === "false") return false;
+      return undefined;
+    };
+    const auditFlag = readBool(verifyObj.audit);
+    if (auditFlag !== undefined) verify.audit = auditFlag;
+    const exploreFlag = readBool(verifyObj.explore);
+    if (exploreFlag !== undefined) verify.explore = exploreFlag;
+    const recFlag = readBool(verifyObj.recordOnFailure);
+    if (recFlag !== undefined) verify.recordOnFailure = recFlag;
+    const healFlag = readBool(verifyObj.suggestHeal);
+    if (healFlag !== undefined) verify.suggestHeal = healFlag;
+    const failFastFlag = readBool(verifyObj.failFast);
+    if (failFastFlag !== undefined) verify.failFast = failFastFlag;
+    if (typeof verifyObj.output === "string" && verifyObj.output.length > 0) {
+      verify.output = verifyObj.output;
+    }
+    if (Object.keys(verify).length > 0) config.verify = verify;
+  }
+
   return config;
 }
 
@@ -253,6 +295,22 @@ export function serializeProjectConfigYaml(config: ProjectE2EConfig): string {
     }
   }
 
+  if (config.verify && Object.keys(config.verify).length > 0) {
+    lines.push("verify:");
+    if (config.verify.flows && config.verify.flows.length > 0) {
+      lines.push("  flows:");
+      for (const flowItem of config.verify.flows) {
+        lines.push(`    - ${formatYamlScalar(flowItem)}`);
+      }
+    }
+    if (config.verify.audit !== undefined) lines.push(`  audit: ${config.verify.audit}`);
+    if (config.verify.explore !== undefined) lines.push(`  explore: ${config.verify.explore}`);
+    if (config.verify.recordOnFailure !== undefined) lines.push(`  recordOnFailure: ${config.verify.recordOnFailure}`);
+    if (config.verify.suggestHeal !== undefined) lines.push(`  suggestHeal: ${config.verify.suggestHeal}`);
+    if (config.verify.failFast !== undefined) lines.push(`  failFast: ${config.verify.failFast}`);
+    if (config.verify.output) lines.push(`  output: ${formatYamlScalar(config.verify.output)}`);
+  }
+
   lines.push("");
   return lines.join("\n");
 }
@@ -268,7 +326,8 @@ export function parseProjectConfigYaml(raw: string): ProjectE2EConfig {
   }
 
   const root: Record<string, unknown> = { version: 1 };
-  let activeSection: "launchEnv" | "hooks" | "explorer" | "audit" | undefined;
+  let activeSection: "launchEnv" | "hooks" | "explorer" | "audit" | "verify" | undefined;
+  let activeVerifyList = false;
 
   for (const rawLine of raw.split(/\r?\n/)) {
     const withoutComment = stripInlineComment(rawLine);
@@ -278,6 +337,19 @@ export function parseProjectConfigYaml(raw: string): ProjectE2EConfig {
 
     const indent = withoutComment.length - withoutComment.trimStart().length;
     const content = withoutComment.trim();
+
+    if (indent > 0 && activeSection === "verify" && activeVerifyList && content.startsWith("- ")) {
+      const verifyObj = (root.verify as Record<string, unknown>) ?? {};
+      const list = Array.isArray(verifyObj.flows) ? (verifyObj.flows as string[]) : [];
+      const item = unquoteYamlScalar(content.slice(2));
+      if (item.length > 0) {
+        list.push(item);
+      }
+      verifyObj.flows = list;
+      root.verify = verifyObj;
+      continue;
+    }
+
     const kv = parseKeyValueLine(content);
     if (!kv) {
       continue;
@@ -285,8 +357,15 @@ export function parseProjectConfigYaml(raw: string): ProjectE2EConfig {
 
     if (indent === 0) {
       activeSection = undefined;
+      activeVerifyList = false;
       if (kv.value.length === 0) {
-        if (kv.key === "launchEnv" || kv.key === "hooks" || kv.key === "explorer" || kv.key === "audit") {
+        if (
+          kv.key === "launchEnv" ||
+          kv.key === "hooks" ||
+          kv.key === "explorer" ||
+          kv.key === "audit" ||
+          kv.key === "verify"
+        ) {
           activeSection = kv.key;
           if (!root[kv.key]) {
             root[kv.key] = {};
@@ -304,20 +383,39 @@ export function parseProjectConfigYaml(raw: string): ProjectE2EConfig {
       continue;
     }
 
-    if (indent > 0 && activeSection && kv.value.length > 0) {
+    if (indent > 0 && activeSection) {
       const sectionObj = (root[activeSection] as Record<string, unknown>) ?? {};
-      const unquoted = unquoteYamlScalar(kv.value);
-      if (activeSection === "explorer" && kv.key === "maxDepth") {
-        const parsedDepth = Number(unquoted);
-        if (Number.isFinite(parsedDepth) && parsedDepth > 0) {
-          sectionObj.maxDepth = Math.floor(parsedDepth);
+      if (activeSection === "verify" && kv.key === "flows" && kv.value.length === 0) {
+        activeVerifyList = true;
+        if (!Array.isArray(sectionObj.flows)) {
+          sectionObj.flows = [];
         }
-      } else if (activeSection === "audit" && kv.key === "failOnRegression") {
-        sectionObj.failOnRegression = unquoted === "true";
-      } else {
-        sectionObj[kv.key] = unquoted;
+        root.verify = sectionObj;
+        continue;
       }
-      root[activeSection] = sectionObj;
+      activeVerifyList = false;
+      if (kv.value.length > 0) {
+        const unquoted = unquoteYamlScalar(kv.value);
+        if (activeSection === "explorer" && kv.key === "maxDepth") {
+          const parsedDepth = Number(unquoted);
+          if (Number.isFinite(parsedDepth) && parsedDepth > 0) {
+            sectionObj.maxDepth = Math.floor(parsedDepth);
+          }
+        } else if (
+          (activeSection === "audit" && kv.key === "failOnRegression") ||
+          (activeSection === "verify" &&
+            (kv.key === "audit" ||
+              kv.key === "explore" ||
+              kv.key === "recordOnFailure" ||
+              kv.key === "suggestHeal" ||
+              kv.key === "failFast"))
+        ) {
+          sectionObj[kv.key] = unquoted === "true";
+        } else {
+          sectionObj[kv.key] = unquoted;
+        }
+        root[activeSection] = sectionObj;
+      }
     }
   }
 

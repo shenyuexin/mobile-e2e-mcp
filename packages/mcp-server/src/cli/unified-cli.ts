@@ -13,6 +13,7 @@ import { executeInit } from "./init-command.js";
 import { loadProjectConfig, type ProjectE2EConfig } from "./project-config.js";
 import { executeRun } from "./run-command.js";
 import { executeSetupAgent } from "./setup-agent-command.js";
+import { executeVerify } from "./verify-command.js";
 
 export function printUnifiedHelp(): void {
   const coreCount = CORE_TOOL_NAMES.length;
@@ -24,9 +25,10 @@ Usage:
   mobile-e2e-mcp doctor [--json]                  Check local Android/iOS tools and devices
   mobile-e2e-mcp init [options]                   Generate .e2e/config.yaml in current project
   mobile-e2e-mcp explore [options]                Run automatic page exploration
-  mobile-e2e-mcp run [flowPath] [options]         Run a deterministic flow with session governance
+  mobile-e2e-mcp run [flowPath] [options]         Run a deterministic flow or directory with session governance
   mobile-e2e-mcp audit [options]                  Run a governed UI-surface audit with baseline gating
   mobile-e2e-mcp diff <baseDir> <headDir> [opts]  Diff two Explorer runs (Markdown + self-contained HTML)
+  mobile-e2e-mcp verify [options]                 Run flows + UI audit + bounded Explorer with unified report
   mobile-e2e-mcp setup-agent [options]            Install MCP config + workflow guide for an AI client
 
 Toolsets:
@@ -133,6 +135,7 @@ export interface UnifiedCliDependencies {
   executeRun: typeof executeRun;
   executeAudit: typeof executeAudit;
   executeDiff: typeof executeDiff;
+  executeVerify: typeof executeVerify;
   executeSetupAgent: typeof executeSetupAgent;
   runDevCli: typeof runDevCli;
   createServer: typeof createServer;
@@ -147,6 +150,7 @@ const defaultDeps: UnifiedCliDependencies = {
   executeRun,
   executeAudit,
   executeDiff,
+  executeVerify,
   executeSetupAgent,
   runDevCli,
   createServer,
@@ -231,6 +235,10 @@ export async function runUnifiedCli(
 
   if (first === "diff") {
     return resolvedDeps.executeDiff(rest, {}, cwd);
+  }
+
+  if (first === "verify") {
+    return resolvedDeps.executeVerify(resolvedDeps.createServer(), rest, {}, cwd);
   }
 
   if (first === "setup-agent") {
