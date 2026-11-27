@@ -10,15 +10,14 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 ## [0.1.24] - 2026-11-27
 
 ### Added
-- Expanded replay, recording, and session-orchestration capabilities across the MCP harness.
+- Multi-step continuous gesture sequences (`perform_gesture` `type: "sequence"`, up to 64 steps / 4000 points) coalescing consecutive `draw` + `sleep` steps into `axe batch` while isolating `drag` and coordinate multi-touch gestures (`pinch`, `double_tap`, `two_finger_tap`) with exact `stepDelaysMs` preservation on iOS simulators (AXe v2.2+) and fail-fast partial support on Android (`adb`).
+- `mobile-e2e-mcp verify` HTTP JSON telemetry probes & relative baseline ratchets (`--probe-config`, `--update-probe-baseline`, `packages/mcp-server/src/cli/verify-probes.ts`), multi-device target matrix (`--target`, `--matrix-config`, `verify-matrix.ts`), and structured `failure-packet.json` (`e2e-failure-packet/v1`) emission on failure, integrated into `.e2e/config.yaml` (`probeConfig` / `matrixConfig`) and HTML/Markdown/JSON verify reports.
 
 ### Changed
-- Improved diagnostics, evidence capture, and performance analysis workflows for mobile automation runs.
-- Refined operator documentation, governance guidance, and architecture references around the release.
-- Release scope includes 4 merged commits between mcp-server-v0.1.23 and the target tag.
+- Preserved the 68 total / 20 core MCP tool registry and honest `perform_gesture` support claims (`conditional` on iOS, `partial` on Android); synced `README.md`, `README.zh-CN.md`, and `packages/mcp-server/README.md`.
 
 ### Fixed
-- Hardened release reliability, runtime guardrails, and end-to-end flow stability on supported platforms.
+- Added bounded single-retry recovery for transient AXe `Input stopped` errors in `perform_gesture` (excluding `quarantined` / `rejectedBeforeInput`) and surfaced `failedCommandIndex`, `stderrSummary`, and failing subcommand location in `PerformGestureData` and `nextSuggestions`.
 
 ## [0.1.23] - 2026-11-26
 
